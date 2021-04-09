@@ -1,0 +1,9 @@
+node_modules
+.idea
+.vscode
+
+contracts/.deps
+#Hardhat files
+cache
+artifacts
+
