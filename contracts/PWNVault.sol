@@ -1,7 +1,6 @@
 pragma abicoder v2;
 pragma solidity >=0.6.0 <0.8.0;
 
-import "hardhat/console.sol";
 import "./MultiToken.sol";
 import "./PWN.sol";
 import "./PWNDeed.sol";
@@ -41,7 +40,6 @@ contract PWNVault is Ownable, ERC1155Receiver{
     }
 
     function pullProxy(MultiToken.Asset memory _asset, address _origin, address _beneficiary) external onlyPWN returns (bool){
-        console.log(_asset.amount);
         _asset.transferAssetFrom(_origin, _beneficiary);
         emit VaultProxy(_asset, _origin, _beneficiary);
         return true;

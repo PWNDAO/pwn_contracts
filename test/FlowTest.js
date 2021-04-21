@@ -1,4 +1,5 @@
 const { expect } = require("chai");
+const { time } = require('@openzeppelin/test-helpers');
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
@@ -56,9 +57,9 @@ beforeEach(async function () {
   await PWNDeed.setPWN(PWN.address);
   await PWNVault.setPWN(PWN.address);
 
-  await DAI.mint(lender1.getAddress(),1000);
-  await DAI.mint(borrower.getAddress(),200);
-  await NFT.mint(borrower.getAddress(),42);
+  await DAI.mint(await lender1.getAddress(),1000);
+  await DAI.mint(await borrower.getAddress(),200);
+  await NFT.mint(await borrower.getAddress(),42);
 
   bDAI = DAI.connect(borrower);
   lDAI = DAI.connect(lender1);
@@ -85,8 +86,8 @@ describe("Pawnage contract", function () {
       expect(await PWNDeed.PWN()).to.equal(await PWN.address);
     });
     it("Should set initial balances", async function () {
-      expect(await DAI.balanceOf(borrower.getAddress())).to.equal(200);
-      expect(await DAI.balanceOf(lender1.getAddress())).to.equal(1000);
+      expect(await DAI.balanceOf(await borrower.getAddress())).to.equal(200);
+      expect(await DAI.balanceOf(await lender1.getAddress())).to.equal(1000);
       expect(await NFT.ownerOf(42)).to.equal(await borrower.getAddress());
     });
   });
@@ -100,7 +101,7 @@ describe("Pawnage contract", function () {
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = events[0].args[5];
 
-      const balance = await PWNDeed.balanceOf(borrower.getAddress(), DID.toNumber());
+      const balance = await PWNDeed.balanceOf(await borrower.getAddress(), DID.toNumber());
 
       expect(await DAI.balanceOf(PWNVault.address)).to.equal(100);
       expect(balance.toNumber()).to.equal(1);
@@ -117,7 +118,7 @@ describe("Pawnage contract", function () {
       //   DeedID = did.toNumber();
       // });
 
-      const balance = await PWNDeed.balanceOf(borrower.getAddress(), DID.toNumber());
+      const balance = await PWNDeed.balanceOf(await borrower.getAddress(), DID.toNumber());
       expect(await NFT.ownerOf(42)).to.equal(PWNVault.address);
       expect(balance).to.equal(1);
     });
@@ -135,7 +136,7 @@ describe("Pawnage contract", function () {
       await lPWN.makeOffer(0, 1000, lDAI.address, DID, 1200);
       const eventFilter2 = PWN.filters.NewOffer();
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
-      const offer = (events2[0].args[5]);
+      const offer = (events2[0].args[6]);
 
       const offers = await PWNDeed.getOffers(DID);
 
@@ -153,39 +154,148 @@ describe("Pawnage contract", function () {
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = (events[0].args[5]).toNumber();
 
-
-      console.log("DAI Balalnce:" + await DAI.balanceOf(lender1.getAddress()));
-      const a = await lDAI.approve(PWNVault.address, 1000);
-      console.log(a);
+      await lDAI.approve(PWNVault.address, 1000);
       await lPWN.makeOffer(0, 1000, DAI.address, DID, 1200);
       const eventFilter2 = PWN.filters.NewOffer();
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
-      const offer = (events2[0].args[5]);
+      const offer = (events2[0].args[6]);
 
       // const offers = await PWNDeed.getOffers(DID); /TODO: make multiple offers and pick at random
 
       await bPWN.acceptOffer(DID, offer);
 
-      const eventFilter3 = PWN.filters.OfferAccepted();
-      const events3 = await PWN.queryFilter(eventFilter3, "latest");
-      const args3 = (events3[0].args);
-
-      console.log("B: " + borrower.getAddress());
-      console.log("L: " + lender1.getAddress());
+      // const eventFilter3 = PWN.filters.OfferAccepted();
+      // const events3 = await PWN.queryFilter(eventFilter3, "latest");
+      // const args3 = (events3[0].args);
 
       expect(await PWNDeed.getAcceptedOffer(DID)).is.equal(offer);
-      expect(await DAI.balanceOf(borrower.getAddress())).is.equal(1200);
-      expect(await DAI.balanceOf(lender1.getAddress())).is.equal(0);
-      expect(await DAI.balanceOf(borrower.getAddress())).is.equal(1200);
+      expect(await DAI.balanceOf(await borrower.getAddress())).is.equal(1200);
+      expect(await DAI.balanceOf(await lender1.getAddress())).is.equal(0);
+      expect(await DAI.balanceOf(PWNVault.address)).is.equal(0);
       expect(await NFT.ownerOf(42)).to.equal(PWNVault.address);
 
-      BBalance = await PWNDeed.balanceOf(borrower.getAddress(), DID.toNumber());
-      LBalance = await PWNDeed.balanceOf(lender1.getAddress(), DID.toNumber());
+      BBalance = await PWNDeed.balanceOf(await borrower.getAddress(), DID);
+      LBalance = await PWNDeed.balanceOf(await lender1.getAddress(), DID);
 
       expect(BBalance.toNumber()).to.equal(0);
       expect(LBalance.toNumber()).to.equal(1);
     });
 
+    it("Should be possible to pay back", async function () {
+
+      await bPWND.setApprovalForAll(PWNVault.address, true);
+
+      await bNFT.approve(PWNVault.address, 42);
+      await bPWN.newDeed(1, 42, 0, NFT.address, date.setDate(date.getDate() + 1));
+      const eventFilter = PWN.filters.NewDeed();
+      const events = await PWN.queryFilter(eventFilter, "latest");
+      const DID = (events[0].args[5]).toNumber();
+
+      await lDAI.approve(PWNVault.address, 1000);
+      await lPWN.makeOffer(0, 1000, DAI.address, DID, 1200);
+      const eventFilter2 = PWN.filters.NewOffer();
+      const events2 = await PWN.queryFilter(eventFilter2, "latest");
+      const offer = (events2[0].args[6]);
+
+      await bPWN.acceptOffer(DID, offer);
+
+      // const eventFilter3 = PWN.filters.OfferAccepted();
+      // const events3 = await PWN.queryFilter(eventFilter3, "latest");
+      // const args3 = (events3[0].args);
+
+      await bDAI.approve(PWNVault.address,1200);
+      await bPWN.payBack(DID);
+
+      expect(await DAI.balanceOf(await borrower.getAddress())).is.equal(0);
+      expect(await DAI.balanceOf(await lender1.getAddress())).is.equal(0);
+      expect(await DAI.balanceOf(PWNVault.address)).is.equal(1200);
+      expect(await NFT.ownerOf(42)).to.equal(await borrower.getAddress());
+
+      BBalance = await PWNDeed.balanceOf(await borrower.getAddress(), DID);
+      LBalance = await PWNDeed.balanceOf(await lender1.getAddress(), DID);
+
+      expect(BBalance.toNumber()).to.equal(0);
+      expect(LBalance.toNumber()).to.equal(1);
+    });
+
+    it("Should be possible to claim after deed was paid", async function () {
+
+      await bPWND.setApprovalForAll(PWNVault.address, true);
+
+      await bNFT.approve(PWNVault.address, 42);
+      await bPWN.newDeed(1, 42, 0, NFT.address, date.setDate(date.getDate() + 1));
+      const eventFilter = PWN.filters.NewDeed();
+      const events = await PWN.queryFilter(eventFilter, "latest");
+      const DID = (events[0].args[5]).toNumber();
+
+      await lDAI.approve(PWNVault.address, 1000);
+      await lPWN.makeOffer(0, 1000, DAI.address, DID, 1200);
+      const eventFilter2 = PWN.filters.NewOffer();
+      const events2 = await PWN.queryFilter(eventFilter2, "latest");
+      const offer = (events2[0].args[6]);
+
+      await bPWN.acceptOffer(DID, offer);
+
+      // const eventFilter3 = PWN.filters.OfferAccepted();
+      // const events3 = await PWN.queryFilter(eventFilter3, "latest");
+      // const args3 = (events3[0].args);
+
+      await bDAI.approve(PWNVault.address,1200);
+      await bPWN.payBack(DID);
+
+      await lPWN.claimDeed(DID);
+
+      expect(await DAI.balanceOf(await borrower.getAddress())).is.equal(0);
+      expect(await DAI.balanceOf(await lender1.getAddress())).is.equal(1200);
+      expect(await DAI.balanceOf(PWNVault.address)).is.equal(0);
+      expect(await NFT.ownerOf(42)).to.equal(await borrower.getAddress());
+
+      BBalance = await PWNDeed.balanceOf(await borrower.getAddress(), DID);
+      LBalance = await PWNDeed.balanceOf(await lender1.getAddress(), DID);
+
+      expect(BBalance.toNumber()).to.equal(0);
+      expect(LBalance.toNumber()).to.equal(0);
+    });
+    it("Should be possible to claim if deed wasn't paid", async function () {
+
+      await bPWND.setApprovalForAll(PWNVault.address, true);
+
+      const expiration = parseInt(Math.floor(Date.now() / 1000)) + parseInt(time.duration.days(7)) + 1000;
+      await bNFT.approve(PWNVault.address, 42);
+      await bPWN.newDeed(1, 42, 0, NFT.address, expiration);
+      const eventFilter = PWN.filters.NewDeed();
+      const events = await PWN.queryFilter(eventFilter, "latest");
+      const DID = (events[0].args[5]).toNumber();
+
+      await lDAI.approve(PWNVault.address, 1000);
+      await lPWN.makeOffer(0, 1000, DAI.address, DID, 1200);
+      const eventFilter2 = PWN.filters.NewOffer();
+      const events2 = await PWN.queryFilter(eventFilter2, "latest");
+      const offer = (events2[0].args[6]);
+
+      await bPWN.acceptOffer(DID, offer);
+
+      // const eventFilter3 = PWN.filters.OfferAccepted();
+      // const events3 = await PWN.queryFilter(eventFilter3, "latest");
+      // const args3 = (events3[0].args);
+
+      await ethers.provider.send("evm_increaseTime", [parseInt(time.duration.days(7)) + 2000]); // move
+      await ethers.provider.send("evm_mine");
+
+      await lPWN.claimDeed(DID);
+
+
+      expect(await DAI.balanceOf(await borrower.getAddress())).is.equal(1200);
+      expect(await DAI.balanceOf(await lender1.getAddress())).is.equal(0);
+      expect(await DAI.balanceOf(PWNVault.address)).is.equal(0);
+      expect(await NFT.ownerOf(42)).to.equal(await lender1.getAddress());
+
+      BBalance = await PWNDeed.balanceOf(borrower.getAddress(), DID);
+      LBalance = await PWNDeed.balanceOf(lender1.getAddress(), DID);
+
+      expect(BBalance.toNumber()).to.equal(0);
+      expect(LBalance.toNumber()).to.equal(0);
+    });
   });
 });
 

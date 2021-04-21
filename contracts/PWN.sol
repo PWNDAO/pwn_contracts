@@ -15,7 +15,7 @@ contract PWN is Ownable {
     uint256 public minDuration = 7 days;
 
     event NewDeed(uint8 cat, uint256 id, uint256 amount, address tokenAddress, uint256 expiration, uint256 did);
-    event NewOffer(uint8 cat, uint256 amount, address tokenAddress, uint256 did, uint256 toBePaid, bytes32 offer);
+    event NewOffer(uint8 cat, uint256 amount, address tokenAddress, address lender, uint256 toBePaid, uint256 did, bytes32 offer);
     event OfferAccepted(uint256 did, bytes32 offer);
     event PaidBack(uint256 did, bytes32 offer);
     event DeedClaimed(uint256 did);
@@ -59,8 +59,8 @@ contract PWN is Ownable {
         require(_did <= token.id(), "Contract not found"); //replace with borrower addres present
         require(token.getDeedStatus(_did) == 0, "Contract can't accept offers");
 
-        bytes32 offer = token.setOffer(_cat, _amount, _tokenAddress, _toBePaid, _did);
-        emit NewOffer(_cat, _amount, _tokenAddress, _did, _toBePaid, offer);
+        bytes32 offer = token.setOffer(_cat, _amount, _tokenAddress, msg.sender, _toBePaid, _did);
+        emit NewOffer(_cat, _amount, _tokenAddress,  msg.sender, _toBePaid, _did, offer);
 
         return offer;
     }
@@ -124,7 +124,7 @@ contract PWN is Ownable {
         }
 
         emit DeedClaimed(_did);
-        token.burn(_did);
+        token.burn(_did, msg.sender);
         return true;
     }
 

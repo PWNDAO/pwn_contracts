@@ -73,17 +73,20 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     }
 
     function burn(
-        uint256 _id
+        uint256 _did,
+        address _owner
     ) 
         external 
     {
-        delete deeds[_id];
+        delete deeds[_did];
+        _burn(_owner, _did, 1);
     }
 
     function setOffer(
         uint8 _cat,
         uint256 _amount,
         address _tokenAddress,
+        address _lender,
         uint256 _toBePaid,
         uint256 _did
     ) 
@@ -98,7 +101,7 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         offers[hash].asset.amount = _amount;
         offers[hash].asset.tokenAddress = _tokenAddress;
         offers[hash].toBePaid = _toBePaid;
-        offers[hash].lender = msg.sender;
+        offers[hash].lender = _lender;
         offers[hash].deedID = _did;
         
         deeds[_did].pendingOffers.push(hash);
