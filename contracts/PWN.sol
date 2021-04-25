@@ -16,6 +16,8 @@ contract PWN is Ownable {
 
     event NewDeed(uint8 cat, uint256 id, uint256 amount, address tokenAddress, uint256 expiration, uint256 did);
     event NewOffer(uint8 cat, uint256 amount, address tokenAddress, address lender, uint256 toBePaid, uint256 did, bytes32 offer);
+    event DeedRevoked(uint256 did);
+    event OfferRevoked(bytes32 offer);
     event OfferAccepted(uint256 did, bytes32 offer);
     event PaidBack(uint256 did, bytes32 offer);
     event DeedClaimed(uint256 did);
@@ -64,6 +66,26 @@ contract PWN is Ownable {
 
         return offer;
     }
+
+    function revokeOffer(
+        bytes32 _offer
+    ) external {
+        require(token.getLender(_offer) == msg.sender, "You are not the lender");
+        require(token.getDeedStatus(token.getDeedID(_offer)) == 0, "Contract already started");
+        token.deleteOffer(_offer);
+        emit OfferRevoked(_offer);
+    }
+
+    function revokeDeed(
+        uint256 _did
+    ) external {
+        require(msg.sender == token.getBorrower(_did), "The deed doesn't belong to the caller");
+        require(token.getDeedStatus(_did) == 0);
+
+        token.burn(_did, msg.sender);
+        emit DeedRevoked(_did);
+    }
+
 
     // sets STATUS =  1
     function acceptOffer(

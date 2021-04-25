@@ -76,7 +76,8 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         uint256 _did,
         address _owner
     ) 
-        external 
+        external
+        onlyPWN
     {
         delete deeds[_did];
         _burn(_owner, _did, 1);
@@ -106,6 +107,15 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         
         deeds[_did].pendingOffers.push(hash);
         return hash;
+    }
+
+    function deleteOffer(
+        bytes32 _hash
+    )
+        external
+        onlyPWN
+    {
+        delete offers[_hash];
     }
 
     function setCredit(

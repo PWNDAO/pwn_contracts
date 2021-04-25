@@ -13,7 +13,7 @@ contract Basic1155 is ERC1155, Ownable {
         Ownable()
     { }
 
-    function mint(address account, uint256 id, uint256 amount, bytes memory data) public onlyOwner {
+    function mint(address account, uint256 id, uint256 amount, bytes memory data) public {
         _mint(account, id, amount, data);
     }
 

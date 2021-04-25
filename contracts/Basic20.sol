@@ -13,7 +13,7 @@ contract Basic20 is ERC20, Ownable {
         Ownable()
     { }
 
-    function mint(address account, uint256 amount) public onlyOwner {
+    function mint(address account, uint256 amount) public {
         _mint(account, amount);
     }
 

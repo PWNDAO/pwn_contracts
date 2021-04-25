@@ -2,10 +2,10 @@ pragma solidity >=0.6.0 <0.8.0;
 
 // @dev importing contract interfaces - for supported contracts; nothing more than the interface is needed!
 // TODO: substitute interfaces with ABI bytes4 based function identifiers to decrease size
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-// import "@openzeppelin/contracts/token/ERC777/IERC777.sol";
- import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 library MultiToken {
     /**
@@ -13,7 +13,7 @@ library MultiToken {
      *  @param uint8 cat:
      *      cat == 0 -> ERC20
      *      cat == 1 -> ERC721
-     *      cat == 3 -> ERC1155
+     *      cat == 2 -> ERC1155
      *  @param address tokenAddress - address of the token contract
      *  @param uint256 num - either amount of fungible tokens or tokenID of an NFT
      */
@@ -38,7 +38,7 @@ library MultiToken {
             IERC721 token = IERC721(_asset.tokenAddress);
             token.transferFrom(address(this), _dest, _asset.id);
 
-        } else if (_asset.cat == 1 ) {
+        } else if (_asset.cat == 2 ) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
             if (_asset.amount == 0) {
                 _asset.amount = 1;
@@ -66,7 +66,7 @@ library MultiToken {
             IERC721 token = IERC721(_asset.tokenAddress);
             token.transferFrom(_source, _dest, _asset.id);
             // TODO: set try/catch  for when ('ERC721 token transfer failed');
-        } else if (_asset.cat == 3 ) {
+        } else if (_asset.cat == 2 ) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
             if (_asset.amount == 0) {
                 _asset.amount = 1;
@@ -97,7 +97,7 @@ library MultiToken {
                 return 0;
             }
 
-        } else if (_asset.cat == 3 ) {
+        } else if (_asset.cat == 2 ) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
             return token.balanceOf(_target,_asset.id);
 
@@ -121,7 +121,7 @@ library MultiToken {
             IERC721 token = IERC721(_asset.tokenAddress);
             token.approve(_target, _asset.id); //throws if this fails
 
-        } else if (_asset.cat == 3 ) {
+        } else if (_asset.cat == 2 ) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
             token.setApprovalForAll(_target, true); //throws if this fails
 

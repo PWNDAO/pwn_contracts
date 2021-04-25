@@ -1,5 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require('@openzeppelin/hardhat-upgrades');
+import * as KEYS from "./artifacts/PRIVATE.json";
+
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -14,10 +16,18 @@ task("accounts", "Prints the list of accounts", async () => {
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
+const KOVAN_PRIVATE_KEY = KEYS.key1;
+
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
   solidity: "0.7.6",
+  networks: {
+    kovan: {
+      url: `https://kovan.infura.io/v3/2e64f610a85f433d83a708df23e6e71f`,
+      accounts: [`0x${KOVAN_PRIVATE_KEY}`]
+    }
+  }
 };
 
