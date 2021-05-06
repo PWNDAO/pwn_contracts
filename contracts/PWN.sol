@@ -15,7 +15,7 @@ contract PWN is Ownable {
     uint256 public minDuration = 7 days;
 
     event NewDeed(uint8 cat, uint256 id, uint256 amount, address tokenAddress, uint256 expiration, uint256 did);
-    event NewOffer(uint8 cat, uint256 amount, address tokenAddress, address lender, uint256 toBePaid, uint256 did, bytes32 offer);
+    event NewOffer(uint8 cat, uint256 amount, address indexed tokenAddress, address indexed lender, uint256 toBePaid, uint256 did, bytes32 offer);
     event DeedRevoked(uint256 did);
     event OfferRevoked(bytes32 offer);
     event OfferAccepted(uint256 did, bytes32 offer);

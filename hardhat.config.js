@@ -1,7 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require('@openzeppelin/hardhat-upgrades');
-import * as KEYS from "./artifacts/PRIVATE.json";
-
+const KEYS = require("./.keys/PRIVATE.json");
+// import * as KEYS from './.keys/PRIVATE.json';
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -31,3 +31,4 @@ module.exports = {
   }
 };
 
+// npx hardhat run script.js
