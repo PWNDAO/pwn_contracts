@@ -12,7 +12,7 @@ contract PWN is Ownable {
     PWNDeed public token;
     PWNVault public vault;
 
-    uint256 public minDuration = 7 days;
+    uint256 public minDuration = 0;
 
     event NewDeed(uint8 cat, uint256 id, uint256 amount, address tokenAddress, uint256 expiration, uint256 did);
     event NewOffer(uint8 cat, uint256 amount, address indexed tokenAddress, address indexed lender, uint256 toBePaid, uint256 did, bytes32 offer);
@@ -21,8 +21,10 @@ contract PWN is Ownable {
     event OfferAccepted(uint256 did, bytes32 offer);
     event PaidBack(uint256 did, bytes32 offer);
     event DeedClaimed(uint256 did);
+    event MinDurationChange(uint256 minDuration);
 
-    constructor(
+
+constructor(
         address _PWND,
         address _PWNV
     ) 
@@ -148,6 +150,11 @@ contract PWN is Ownable {
         emit DeedClaimed(_did);
         token.burn(_did, msg.sender);
         return true;
+    }
+
+    function changeMinDuration(uint256 _newMinDuration) external onlyOwner {
+        minDuration = _newMinDuration;
+        emit MinDurationChange(_newMinDuration);
     }
 
 }
