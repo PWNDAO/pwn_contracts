@@ -69,7 +69,7 @@ contract PWNVault is Ownable, ERC1155Receiver{
         external
         returns(bytes4)
     {
-        return "";
+        return 0xf23a6e61;
     }
     
     /**
@@ -96,8 +96,9 @@ contract PWNVault is Ownable, ERC1155Receiver{
         external
         returns(bytes4)
     {
-        return "";
+        return 0xbc197c81;
     }
+
 
     function setPWN(address _address) external onlyOwner {
         PWN = _address;

@@ -84,6 +84,8 @@ constructor(
         require(msg.sender == token.getBorrower(_did), "The deed doesn't belong to the caller");
         require(token.getDeedStatus(_did) == 0);
 
+        vault.pull(token.getDeedAsset(_did), msg.sender);
+
         token.burn(_did, msg.sender);
         emit DeedRevoked(_did);
     }
@@ -103,7 +105,7 @@ constructor(
         vault.pullProxy(token.getOfferAsset(_offer), lender, msg.sender);
 
         MultiToken.Asset memory Deed;
-        Deed.cat = 3;
+        Deed.cat = 2;
         Deed.id = _did;
         Deed.tokenAddress = address(token);
 
