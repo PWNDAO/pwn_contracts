@@ -1,4 +1,4 @@
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity ^0.8.0;
 
 // @dev importing contract interfaces - for supported contracts; nothing more than the interface is needed!
 // TODO: substitute interfaces with ABI bytes4 based function identifiers to decrease size

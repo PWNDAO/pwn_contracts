@@ -1,13 +1,13 @@
 pragma abicoder v2;
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity ^0.8.0;
 
 import "./MultiToken.sol";
 import "./PWN.sol";
 import "./PWNDeed.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-contract PWNVault is Ownable, ERC1155Receiver{
+contract PWNVault is Ownable, IERC1155Receiver{
     using MultiToken for MultiToken.Asset;
 
     address public PWN;

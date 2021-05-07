@@ -1,11 +1,11 @@
 pragma abicoder v2;
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity ^0.8.0;
 
 import "./MultiToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Pausable.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Burnable.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Pausable.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 //import "@openzeppelin/contracts/token/ERC1155/ERC1155Holder.sol";
 
 contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {

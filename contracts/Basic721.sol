@@ -1,13 +1,13 @@
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
 /**
  * @dev this is just a dummy mintable/burnable ERC20 for testing purposes
  */
-contract Basic721 is ERC721, Ownable {
+contract Basic721 is ERC721, IERC721Metadata, Ownable {
     
     constructor(string memory name, string memory symbol) public 
         ERC721(name, symbol)
