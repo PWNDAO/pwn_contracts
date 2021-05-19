@@ -97,6 +97,7 @@ constructor(
         bytes32 _offer
     ) external returns (bool) {
         require(msg.sender == token.getBorrower(_did), "The deed doesn't belong to the caller");
+        require(block.timestamp < token.getExpiration(_did), "The deed has expired");
         require(token.getDeedStatus(_did) == 0);
         require(token.getDeedID(_offer) == _did);
 
