@@ -7,7 +7,7 @@ let ERC20;
 let ERC721;
 let ERC1155;
 
-let NFT, WETH, DAI;
+let NFT, WETH, DAI, GAME;
 
 let PWN;
 let PWNDeed;
@@ -43,6 +43,7 @@ beforeEach(async function () {
   WETH = await ERC20.deploy("Fake wETH", "WETH");
   DAI = await ERC20.deploy("Fake Dai", "DAI");
   NFT = await ERC721.deploy("Real NFT", "NFT");
+  GAME = await ERC1155.deploy("https://pwn.finance/game/")
 
   PWNDeed = await PWNDeed.deploy("https://pwn.finance/");
   PWNVault = await PWNVault.deploy();
@@ -50,6 +51,7 @@ beforeEach(async function () {
 
   await NFT.deployed();
   await DAI.deployed();
+  await GAME.deployed();
   await PWNDeed.deployed();
   await PWNVault.deployed();
   await PWN.deployed();
@@ -60,18 +62,21 @@ beforeEach(async function () {
   await DAI.mint(await lender1.getAddress(),1000);
   await DAI.mint(await borrower.getAddress(),200);
   await NFT.mint(await borrower.getAddress(),42);
+  await GAME.mint(await borrower.getAddress(), 1337, 1, 0);
 
   bDAI = DAI.connect(borrower);
   lDAI = DAI.connect(lender1);
   bNFT = NFT.connect(borrower);
   lNFT = NFT.connect(lender1);
+  bGAME = GAME.connect(borrower);
+  lGAME = GAME.connect(lender1);
   bPWN = PWN.connect(borrower);
   lPWN = PWN.connect(lender1);
   bPWND = PWNDeed.connect(borrower);
   lPWND = PWNDeed.connect(lender1);
 });
 
-describe("Pawnage contract", function () {
+describe("PWN contract", function () {
 
   // You can nest describe calls to create subsections.
   describe("Deployment", function () {
@@ -89,10 +94,12 @@ describe("Pawnage contract", function () {
       expect(await DAI.balanceOf(await borrower.getAddress())).to.equal(200);
       expect(await DAI.balanceOf(await lender1.getAddress())).to.equal(1000);
       expect(await NFT.ownerOf(42)).to.equal(await borrower.getAddress());
+      expect((await GAME.balanceOf(await borrower.getAddress(), 1337)).toNumber()).to.equal(1);
+
     });
   });
 
-  describe("Workflow", function () {
+  describe("Workflow - New deeds with arbitrary collateral", function () {
     it("Should be possible to create an ERC20 deed", async function () {
       await bDAI.approve(PWNVault.address, 100);
       await bPWN.newDeed(0, 0, 100, DAI.address, date.setDate(date.getDate() + 1));
@@ -122,7 +129,72 @@ describe("Pawnage contract", function () {
       expect(await NFT.ownerOf(42)).to.equal(PWNVault.address);
       expect(balance).to.equal(1);
     });
-    it("Should be possible get an offer", async function () {
+
+    it("Should be possible to create an 1155 deed", async function () {
+      await bGAME.setApprovalForAll(PWNVault.address, true);
+      await bPWN.newDeed(2, 1337, 1, GAME.address, date.setDate(date.getDate() + 1));
+      const eventFilter = PWN.filters.NewDeed();
+      const events = await PWN.queryFilter(eventFilter, "latest");
+      const DID = events[0].args[5];
+
+      const balance = await PWNDeed.balanceOf(await borrower.getAddress(), DID.toNumber());
+      expect(await GAME.balanceOf(await borrower.getAddress(), 1337)).to.equal(0);
+      expect(await GAME.balanceOf(await PWNVault.address, 1337)).to.equal(1);
+      expect(balance).to.equal(1);
+    });
+
+  });
+
+  describe("Workflow - New deeds with arbitrary collateral", function () {
+    it("Should be possible to revoke an ERC20 deed", async function () {
+      await bDAI.approve(PWNVault.address, 100);
+      await bPWN.newDeed(0, 0, 100, DAI.address, date.setDate(date.getDate() + 1));
+
+      const eventFilter = PWN.filters.NewDeed();
+      const events = await PWN.queryFilter(eventFilter, "latest");
+      const DID = events[0].args[5];
+
+      await bPWN.revokeDeed(DID.toNumber());
+      const balance = await PWNDeed.balanceOf(await borrower.getAddress(), DID.toNumber());
+
+      expect(await DAI.balanceOf(PWNVault.address)).to.equal(0);
+      expect(await DAI.balanceOf(borrower.getAddress())).to.equal(200);
+      expect(balance.toNumber()).to.equal(0);
+    });
+
+    it("Should be possible to revoke an NFT deed", async function () {
+      await bNFT.approve(PWNVault.address, 42);
+      await bPWN.newDeed(1, 42, 0, NFT.address, date.setDate(date.getDate() + 1));
+      const eventFilter = PWN.filters.NewDeed();
+      const events = await PWN.queryFilter(eventFilter, "latest");
+      const DID = events[0].args[5];
+
+      await bPWN.revokeDeed(DID.toNumber());
+      const balance = await PWNDeed.balanceOf(await borrower.getAddress(), DID.toNumber());
+
+      expect(await NFT.ownerOf(42)).to.equal(await borrower.getAddress());
+      expect(balance).to.equal(0);
+    });
+
+    it("Should be possible to revoke an 1155 deed", async function () {
+      await bGAME.setApprovalForAll(PWNVault.address, true);
+      await bPWN.newDeed(2, 1337, 1, GAME.address, date.setDate(date.getDate() + 1));
+      const eventFilter = PWN.filters.NewDeed();
+      const events = await PWN.queryFilter(eventFilter, "latest");
+      const DID = events[0].args[5];
+
+      await bPWN.revokeDeed(DID.toNumber());
+
+      const balance = await PWNDeed.balanceOf(await borrower.getAddress(), DID.toNumber());
+
+      expect(await GAME.balanceOf(await borrower.getAddress(), 1337)).to.equal(1);
+      expect(await GAME.balanceOf(await PWNVault.address, 1337)).to.equal(0);
+      expect(balance).to.equal(0);
+    });
+  });
+
+  describe("Workflow - Offers handling", function () {
+    it("Should be possible make an offer", async function () {
 
       await bPWND.setApprovalForAll(PWNVault.address, true);
 
@@ -141,7 +213,26 @@ describe("Pawnage contract", function () {
       const offers = await PWNDeed.getOffers(DID);
 
       expect(offers[0]).is.equal(offer);
-      // expect(await PWNDeed.getDeedID(offer)).is.equal(DID);
+    });
+
+    it("Should be possible to revoke an offer", async function () {
+
+      await bPWND.setApprovalForAll(PWNVault.address, true);
+
+      await bNFT.approve(PWNVault.address, 42);
+      await bPWN.newDeed(1, 42, 0, NFT.address, date.setDate(date.getDate() + 1));
+      const eventFilter = PWN.filters.NewDeed();
+      const events = await PWN.queryFilter(eventFilter, "latest");
+      const DID = (events[0].args[5]).toNumber();
+
+      await lDAI.approve(PWNVault.address, 1000);
+      await lPWN.makeOffer(0, 1000, lDAI.address, DID, 1200);
+      const eventFilter2 = PWN.filters.NewOffer();
+      const events2 = await PWN.queryFilter(eventFilter2, "latest");
+      const offer = (events2[0].args[6]);
+
+      await lPWN.revokeOffer(offer);
+      expect((await PWNDeed.getDeedID(offer)).toNumber()).is.equal(0);
     });
 
     it("Should be possible to accept an offer", async function () {
@@ -160,13 +251,7 @@ describe("Pawnage contract", function () {
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
 
-      // const offers = await PWNDeed.getOffers(DID); /TODO: make multiple offers and pick at random
-
-      await bPWN.acceptOffer(DID, offer);
-
-      // const eventFilter3 = PWN.filters.OfferAccepted();
-      // const events3 = await PWN.queryFilter(eventFilter3, "latest");
-      // const args3 = (events3[0].args);
+      await bPWN.acceptOffer(offer);
 
       expect(await PWNDeed.getAcceptedOffer(DID)).is.equal(offer);
       expect(await DAI.balanceOf(await borrower.getAddress())).is.equal(1200);
@@ -180,7 +265,9 @@ describe("Pawnage contract", function () {
       expect(BBalance.toNumber()).to.equal(0);
       expect(LBalance.toNumber()).to.equal(1);
     });
+  });
 
+  describe("Workflow - Settlement", function () {
     it("Should be possible to pay back", async function () {
 
       await bPWND.setApprovalForAll(PWNVault.address, true);
@@ -197,11 +284,7 @@ describe("Pawnage contract", function () {
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
 
-      await bPWN.acceptOffer(DID, offer);
-
-      // const eventFilter3 = PWN.filters.OfferAccepted();
-      // const events3 = await PWN.queryFilter(eventFilter3, "latest");
-      // const args3 = (events3[0].args);
+      await bPWN.acceptOffer(offer);
 
       await bDAI.approve(PWNVault.address,1200);
       await bPWN.payBack(DID);
@@ -234,11 +317,7 @@ describe("Pawnage contract", function () {
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
 
-      await bPWN.acceptOffer(DID, offer);
-
-      // const eventFilter3 = PWN.filters.OfferAccepted();
-      // const events3 = await PWN.queryFilter(eventFilter3, "latest");
-      // const args3 = (events3[0].args);
+      await bPWN.acceptOffer(offer);
 
       await bDAI.approve(PWNVault.address,1200);
       await bPWN.payBack(DID);
@@ -273,11 +352,7 @@ describe("Pawnage contract", function () {
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
 
-      await bPWN.acceptOffer(DID, offer);
-
-      // const eventFilter3 = PWN.filters.OfferAccepted();
-      // const events3 = await PWN.queryFilter(eventFilter3, "latest");
-      // const args3 = (events3[0].args);
+      await bPWN.acceptOffer(offer);
 
       await ethers.provider.send("evm_increaseTime", [parseInt(time.duration.days(7)) + 2000]); // move
       await ethers.provider.send("evm_mine");
@@ -298,4 +373,3 @@ describe("Pawnage contract", function () {
     });
   });
 });
-
