@@ -143,6 +143,7 @@ contract PWNVault is Ownable, IERC1155Receiver{
         return 0xbc197c81;
     }
 
+
     function setPWN(address _address) external onlyOwner {
         PWN = _address;
     }
