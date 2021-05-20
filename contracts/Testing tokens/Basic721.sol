@@ -1,8 +1,7 @@
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
 
 /**
  * @dev this is just a dummy mintable/burnable ERC20 for testing purposes
@@ -14,6 +13,8 @@ contract Basic721 is ERC721, Ownable {
         Ownable()
     { }
 
+    string baseURI;
+
     function mint(address account, uint256 id) public {
         _mint(account, id);
     }
@@ -22,7 +23,15 @@ contract Basic721 is ERC721, Ownable {
         _burn(id);
     }
 
-    function setBaseURI(string memory baseURI_) public onlyOwner {
-        _setBaseURI(baseURI_);
+    /**
+     * @dev Base URI for computing {tokenURI}. Empty by default, can be overriden
+     * in child contracts.
+     */
+    function _baseURI() internal view virtual override returns (string memory) {
+        return baseURI;
+    }
+
+    function setBaseURI(string memory _baseURI) public onlyOwner {
+        baseURI = _baseURI;
     }
 }

@@ -1,44 +1,88 @@
 pragma abicoder v2;
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity ^0.8.0;
 
 import "./MultiToken.sol";
 import "./PWN.sol";
 import "./PWNDeed.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-contract PWNVault is Ownable, ERC1155Receiver{
+contract PWNVault is Ownable, IERC1155Receiver{
     using MultiToken for MultiToken.Asset;
 
+    /*----------------------------------------------------------*|
+    |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
+    |*----------------------------------------------------------*/
+
     address public PWN;
+
+    /*----------------------------------------------------------*|
+    |*  # MODIFIERS                                             *|
+    |*----------------------------------------------------------*/
 
     modifier onlyPWN() {
         require(msg.sender == PWN);
         _;
     }
 
-    event VaultPush(MultiToken.Asset asset);
-    event VaultPull(MultiToken.Asset asset, address beneficiary);
-    event VaultProxy(MultiToken.Asset asset, address origin, address beneficiary);
+    /*----------------------------------------------------------*|
+    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*----------------------------------------------------------*/
 
+    event VaultPush(MultiToken.Asset asset);
+    event VaultPull(MultiToken.Asset asset, address indexed beneficiary);
+    event VaultProxy(MultiToken.Asset asset, address indexed origin, address indexed beneficiary);
+
+
+    /*----------------------------------------------------------*|
+    |*  # CONSTRUCTOR & FUNCTIONS                               *|
+    |*----------------------------------------------------------*/
+
+    /*
+    *  Constructor
+    *  @title PWN Vault
+    *  @dev this contract holds balances of all locked collateral & paid back credit prior to their rightful claims
+    *  @dev in order for the vault to work it has to have an association with the PWN logic via `.setPWN(PWN.address)`
+    */
     constructor()
     Ownable()
-    ERC1155Receiver()
+    IERC1155Receiver()
     {
     }
-    
+
+    /*
+     *  push
+     *  @dev function accessing an asset and pushing it INTO the vault
+     *  @dev the function assumes a prior token approval was made with the PWNVault.address to be approved
+     *  @param _asset - an asset construct - for definition see { MultiToken.sol }
+     */
     function push(MultiToken.Asset memory _asset) external onlyPWN returns (bool) {
         _asset.transferAssetFrom(tx.origin, address(this));
         emit VaultPush(_asset);
         return true;
     }
 
+    /*
+     *  pull
+     *  @dev function pulling an asset FROM the vault, sending to a defined recipient
+     *  @dev this is used for unlocking the collateral on revocations & claims or when claiming a paidback credit
+     *  @param _asset - an asset construct - for definition see { MultiToken.sol }
+     *  @param _beneficiary and address of the recipient of the asset - is set in the PWN logic contract
+     */
     function pull(MultiToken.Asset memory _asset, address _beneficiary) external onlyPWN returns (bool) {
         _asset.transferAsset(_beneficiary);
         emit VaultPull(_asset, _beneficiary);
         return true;
     }
 
+    /*
+     *  pullProxy
+     *  @dev function pulling an asset FROM a lender, sending to a borrower
+     *  @dev this function assumes prior approval for the asset to be spend by the PWNVault.address
+     *  @param _asset - an asset construct - for definition see { MultiToken.sol }
+     *  @param _origin - an address of the lender who is providing the credit asset
+     *  @param _beneficiary and address of the recipient of the asset - is set in the PWN logic contract
+     */
     function pullProxy(MultiToken.Asset memory _asset, address _origin, address _beneficiary) external onlyPWN returns (bool){
         _asset.transferAssetFrom(_origin, _beneficiary);
         emit VaultProxy(_asset, _origin, _beneficiary);
@@ -102,5 +146,28 @@ contract PWNVault is Ownable, ERC1155Receiver{
 
     function setPWN(address _address) external onlyOwner {
         PWN = _address;
+    }
+
+    /**
+     * @dev Returns true if this contract implements the interface defined by
+     * `interfaceId`. See the corresponding
+     * https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section]
+     * to learn more about how these ids are created.
+     *
+     * This function call must use less than 30 000 gas.
+     */
+    function supportsInterface(bytes4 interfaceId) external view override returns (bool) {
+        return
+            interfaceId == this.supportsInterface.selector || // ERC165
+            interfaceId == this.owner.selector
+                            ^ this.renounceOwnership.selector
+                            ^ this.transferOwnership.selector || // Ownable
+            interfaceId == this.PWN.selector
+                            ^ this.push.selector
+                            ^ this.pull.selector
+                            ^ this.pullProxy.selector
+                            ^ this.setPWN.selector || // PWN Vault
+            interfaceId == this.onERC1155Received.selector
+                            ^ this.onERC1155BatchReceived.selector; // ERC1155Receiver
     }
 }

@@ -251,7 +251,7 @@ describe("PWN contract", function () {
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
 
-      await bPWN.acceptOffer(DID, offer);
+      await bPWN.acceptOffer(offer);
 
       expect(await PWNDeed.getAcceptedOffer(DID)).is.equal(offer);
       expect(await DAI.balanceOf(await borrower.getAddress())).is.equal(1200);
@@ -284,7 +284,7 @@ describe("PWN contract", function () {
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
 
-      await bPWN.acceptOffer(DID, offer);
+      await bPWN.acceptOffer(offer);
 
       await bDAI.approve(PWNVault.address,1200);
       await bPWN.payBack(DID);
@@ -317,7 +317,7 @@ describe("PWN contract", function () {
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
 
-      await bPWN.acceptOffer(DID, offer);
+      await bPWN.acceptOffer(offer);
 
       await bDAI.approve(PWNVault.address,1200);
       await bPWN.payBack(DID);
@@ -352,7 +352,7 @@ describe("PWN contract", function () {
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
 
-      await bPWN.acceptOffer(DID, offer);
+      await bPWN.acceptOffer(offer);
 
       await ethers.provider.send("evm_increaseTime", [parseInt(time.duration.days(7)) + 2000]); // move
       await ethers.provider.send("evm_mine");
@@ -373,4 +373,3 @@ describe("PWN contract", function () {
     });
   });
 });
-

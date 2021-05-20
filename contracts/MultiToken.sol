@@ -1,8 +1,6 @@
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity ^0.8.0;
 
 // @dev importing contract interfaces - for supported contracts; nothing more than the interface is needed!
-// TODO: substitute interfaces with ABI bytes4 based function identifiers to decrease size
-
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -11,9 +9,9 @@ library MultiToken {
     /**
      *  Struct asset
      *  @param uint8 cat:
-     *      cat == 0 -> ERC20
-     *      cat == 1 -> ERC721
-     *      cat == 2 -> ERC1155
+     *      cat == 0 := ERC20
+     *      cat == 1 := ERC721
+     *      cat == 2 := ERC1155
      *  @param address tokenAddress - address of the token contract
      *  @param uint256 num - either amount of fungible tokens or tokenID of an NFT
      */
@@ -24,8 +22,9 @@ library MultiToken {
         address tokenAddress;                       // Address of the token contract defining the asset
     }
 
-    /**
-     * @dev transferAsset - is a wrapping function for transfer From calls on various token interfaces
+    /*
+     * transferAsset
+     * @dev wrapping function for transfer From calls on various token interfaces
      * @param _asset Asset - struck defining all necessary context of a token
      * @param _dest address  - destination address
      */
@@ -46,12 +45,13 @@ library MultiToken {
             token.safeTransferFrom(address(this), _dest, _asset.id, _asset.amount, "");
 
         } else {
-            assert(false);
+            revert("Unsupported category");
         }
     }
 
-    /**
-     * @dev transferAssetFrom - is a wrapping function for transfer From calls on various token interfaces
+    /*
+     * transferAssetFrom
+     * @dev wrapping function for transfer From calls on various token interfaces
      * @param _asset Asset  - struck defining all necessary context of a token
      * @param _source address  - account/address that provided the allowance
      * @param _dest address  - destination address
@@ -65,7 +65,7 @@ library MultiToken {
         } else if (_asset.cat == 1 ) {
             IERC721 token = IERC721(_asset.tokenAddress);
             token.transferFrom(_source, _dest, _asset.id);
-            // TODO: set try/catch  for when ('ERC721 token transfer failed');
+
         } else if (_asset.cat == 2 ) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
             if (_asset.amount == 0) {
@@ -74,16 +74,16 @@ library MultiToken {
             token.safeTransferFrom(_source, _dest, _asset.id, _asset.amount, "");
 
         } else {
-            assert(false);
-
+            revert("Unsupported category");
         }
     }
 
-    /**
-    * @dev balanceOf - is a wrapping function for checking balances on various token interfaces
-    * @param _asset Asset - struck defining all necessary context of a token
-    * @param _target address - target address to be checked
-    */
+    /*
+     * balanceOf
+     * @dev wrapping function for checking balances on various token interfaces
+     * @param _asset Asset - struck defining all necessary context of a token
+     * @param _target address - target address to be checked
+     */
     function balanceOf(Asset memory _asset, address _target) internal view returns (uint256) {
         if (_asset.cat == 0) {
             IERC20 token = IERC20(_asset.tokenAddress);
@@ -102,16 +102,18 @@ library MultiToken {
             return token.balanceOf(_target,_asset.id);
 
         } else {
-            assert(false);
+            revert("Unsupported category");
         }
+
         return 0;
     }
 
-    /**
-    * @dev approveAsset - is a wrapping function for transfer From calls on various token interfaces
-    * @param _asset Asset  - struck defining all necessary context of a token
-    * @param _target address  - target address to be checked
-    */
+    /*
+     * approveAsset
+     * @dev wrapping function for transfer From calls on various token interfaces
+     * @param _asset Asset  - struck defining all necessary context of a token
+     * @param _target address  - target address to be checked
+     */
     function approveAsset(Asset memory _asset, address  _target) internal {
         if (_asset.cat == 0) {
             IERC20 token = IERC20(_asset.tokenAddress);
@@ -126,7 +128,7 @@ library MultiToken {
             token.setApprovalForAll(_target, true); //throws if this fails
 
         } else {
-            assert(false);
+            revert("Unsupported category");
         }
     }
 }

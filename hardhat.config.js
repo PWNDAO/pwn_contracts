@@ -22,7 +22,7 @@ const KOVAN_PRIVATE_KEY = KEYS.key1;
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  solidity: "0.7.6",
+  solidity: "0.8.4",
   networks: {
     kovan: {
       url: `https://kovan.infura.io/v3/2e64f610a85f433d83a708df23e6e71f`,
