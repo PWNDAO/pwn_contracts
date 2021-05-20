@@ -7,3 +7,5 @@ contracts/.deps
 cache
 artifacts
 
+/.vscode/
+/.keys/
