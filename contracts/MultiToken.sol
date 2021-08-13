@@ -34,11 +34,11 @@ library MultiToken {
             IERC20 token = IERC20(_asset.tokenAddress);
             require(token.transfer(_dest, _asset.amount), 'ERC20 token transfer failed');
 
-        } else if (_asset.cat == 1 ) {
+        } else if (_asset.cat == 1) {
             IERC721 token = IERC721(_asset.tokenAddress);
             token.transferFrom(address(this), _dest, _asset.id);
 
-        } else if (_asset.cat == 2 ) {
+        } else if (_asset.cat == 2) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
             if (_asset.amount == 0) {
                 _asset.amount = 1;
@@ -62,11 +62,11 @@ library MultiToken {
             IERC20 token = IERC20(_asset.tokenAddress);
             token.transferFrom(_source, _dest, _asset.amount);
 
-        } else if (_asset.cat == 1 ) {
+        } else if (_asset.cat == 1) {
             IERC721 token = IERC721(_asset.tokenAddress);
             token.transferFrom(_source, _dest, _asset.id);
 
-        } else if (_asset.cat == 2 ) {
+        } else if (_asset.cat == 2) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
             if (_asset.amount == 0) {
                 _asset.amount = 1;
@@ -89,7 +89,7 @@ library MultiToken {
             IERC20 token = IERC20(_asset.tokenAddress);
             return token.balanceOf(_target);
 
-        } else if (_asset.cat == 1 ) {
+        } else if (_asset.cat == 1) {
             IERC721 token = IERC721(_asset.tokenAddress);
             if (token.ownerOf(_asset.id) == _target) {
                 return 1;
@@ -97,7 +97,7 @@ library MultiToken {
                 return 0;
             }
 
-        } else if (_asset.cat == 2 ) {
+        } else if (_asset.cat == 2) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
             return token.balanceOf(_target,_asset.id);
 
@@ -114,16 +114,16 @@ library MultiToken {
      * @param _asset Struck defining all necessary context of a token
      * @param _target Target address to be checked
      */
-    function approveAsset(Asset memory _asset, address  _target) internal {
+    function approveAsset(Asset memory _asset, address _target) internal {
         if (_asset.cat == 0) {
             IERC20 token = IERC20(_asset.tokenAddress);
             token.approve(_target, _asset.amount);
 
-        } else if (_asset.cat == 1 ) {
+        } else if (_asset.cat == 1) {
             IERC721 token = IERC721(_asset.tokenAddress);
             token.approve(_target, _asset.id);
 
-        } else if (_asset.cat == 2 ) {
+        } else if (_asset.cat == 2) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
             token.setApprovalForAll(_target, true);
 
