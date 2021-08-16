@@ -79,7 +79,7 @@ contract PWNVault is Ownable, IERC1155Receiver{
     /**
      * pullProxy
      * @dev function pulling an asset FROM a lender, sending to a borrower
-     * @dev this function assumes prior approval for the asset to be spend by the PWNVault.address
+     * @dev this function assumes prior approval for the asset to be spend by the borrower address
      * @param _asset An asset construct - for definition see { MultiToken.sol }
      * @param _origin An address of the lender who is providing the credit asset
      * @param _beneficiary An address of the recipient of the asset - is set in the PWN logic contract
