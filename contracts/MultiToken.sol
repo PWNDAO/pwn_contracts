@@ -24,7 +24,7 @@ library MultiToken {
     }
 
     /**
-     * @title transferAsset
+     * transferAsset
      * @dev wrapping function for transfer calls on various token interfaces
      * @param _asset Struck defining all necessary context of a token
      * @param _dest Destination address
@@ -51,7 +51,7 @@ library MultiToken {
     }
 
     /**
-     * @title transferAssetFrom
+     * transferAssetFrom
      * @dev wrapping function for transfer From calls on various token interfaces
      * @param _asset Struck defining all necessary context of a token
      * @param _source Account/address that provided the allowance
@@ -79,7 +79,7 @@ library MultiToken {
     }
 
     /**
-     * @title balanceOf
+     * balanceOf
      * @dev wrapping function for checking balances on various token interfaces
      * @param _asset Struck defining all necessary context of a token
      * @param _target Target address to be checked
@@ -109,7 +109,7 @@ library MultiToken {
     }
 
     /**
-     * @title approveAsset
+     * approveAsset
      * @dev wrapping function for approve calls on various token interfaces
      * @param _asset Struck defining all necessary context of a token
      * @param _target Target address to be checked
