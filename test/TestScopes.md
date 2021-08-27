@@ -7,13 +7,13 @@ Deployment
 
 Workflow - New deeds with arbitrary collateral
 ✓ Should be possible to create an ERC20 deed (79ms)
-✓ Should be possible to create an NFT deed (75ms)
-✓ Should be possible to create an 1155 deed (68ms)
+✓ Should be possible to create an ERC721 deed (75ms)
+✓ Should be possible to create an ERC1155 deed (68ms)
 
 Workflow - New deeds with arbitrary collateral
 ✓ Should be possible to revoke an ERC20 deed (110ms)
-✓ Should be possible to revoke an NFT deed (104ms)
-✓ Should be possible to revoke an 1155 deed (102ms)
+✓ Should be possible to revoke an ERC721 deed (104ms)
+✓ Should be possible to revoke an ERC1155 deed (102ms)
 
 Workflow - Offers handling
 ✓ Should be possible make an offer (112ms)
@@ -32,8 +32,8 @@ MultiToken
 Transfer
 - Should call transfer on ERC20 token
 - Should fail when passing ERC20 category without ERC20 token address
-- Should call transfer from current address on NFT
-- Should fail when passing NFT category without NFT address
+- Should call transfer from current address on ERC721
+- Should fail when passing ERC721 category without ERC721 address
 - Should call safe transfer from current address on ERC1155 token
 - SHould update amount on ERC1155 token transfer
 - Should fail when passing ERC1155 category without ERC1155 token address
@@ -42,8 +42,8 @@ Transfer
 TransferFrom
 - Should call transfer from on ERC20 token
 - Should fail when passing ERC20 category without ERC20 token address
-- Should call transfer from on NFT
-- Should fail when passing NFT category without NFT address
+- Should call transfer from on ERC721
+- Should fail when passing ERC721 category without ERC721 address
 - Should call safe transfer from on ERC1155 token
 - SHould update amount on ERC1155 token transfer
 - Should fail when passing ERC1155 category without ERC1155 token address
@@ -52,8 +52,8 @@ TransferFrom
 BalanceOf
 - Should return balance of ERC20 token
 - Should fail when passing ERC20 category without ERC20 token address
-- Should return ownership of NFT
-- Should fail when passing NFT category without NFT address
+- Should return ownership of ERC721
+- Should fail when passing ERC721 category without ERC721 address
 - Should return balance ERC1155 token
 - Should fail when passing ERC1155 category without ERC1155 token address
 - Should fail when passing unsupported category
@@ -61,8 +61,8 @@ BalanceOf
 ApproveAsset
 - Should call approve on ERC20 token
 - Should fail when passing ERC20 category without ERC20 token address
-- Should call approve on NFT
-- Should fail when passing NFT category without NFT address
+- Should call approve on ERC721
+- Should fail when passing ERC721 category without ERC721 address
 - Should call set approval for all on ERC1155 token
 - Should fail when passing ERC1155 category without ERC1155 token address
 - Should fail when passing unsupported category
@@ -71,7 +71,7 @@ ApproveAsset
 PWN contract
 New deed
 - Should be able to create ERC20 deed
-- Should be able to create NFT deed
+- Should be able to create ERC721 deed
 - Should be able to crate ERC1155 deed
 - Should fail for unknown asset category
 - Should fail for expiration duration smaller than min duration
@@ -89,7 +89,7 @@ Revoke deed
 
 Make offer
 - Should be able to make ERC20 offer
-- Should be able to make NFT offer
+- Should be able to make ERC721 offer
 - Should be able to make ERC1155 offer
 - Should fail for unknown asset category
 - Should fail when deed is not in new/open state
