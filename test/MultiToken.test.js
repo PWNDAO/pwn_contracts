@@ -1,8 +1,8 @@
 const { expect } = require("chai");
 
-describe("MultiToken library", () => {
+describe("MultiToken library", function() {
 
-	describe("Transfer", () => {
+	describe("Transfer", function() {
 		it("Should call transfer on ERC20 token");
 		it("Should fail when passing ERC20 category without ERC20 token address");
 		it("Should call transfer from current address on NFT");
@@ -13,7 +13,7 @@ describe("MultiToken library", () => {
 		it("Should fail when passing unsupported category");
 	});
 
-	describe("TransferFrom", () => {
+	describe("TransferFrom", function() {
 		it("Should call transfer from on ERC20 token");
 		it("Should fail when passing ERC20 category without ERC20 token address");
 		it("Should call transfer from on NFT");
@@ -24,7 +24,7 @@ describe("MultiToken library", () => {
 		it("Should fail when passing unsupported category");
 	});
 
-	describe("BalanceOf", () => {
+	describe("BalanceOf", function() {
 		it("Should return balance of ERC20 token");
 		it("Should fail when passing ERC20 category without ERC20 token address");
 		it("Should return ownership of NFT");
@@ -34,7 +34,7 @@ describe("MultiToken library", () => {
 		it("Should fail when passing unsupported category");
 	});
 
-	describe("ApproveAsset", () => {
+	describe("ApproveAsset", function() {
 		it("Should call approve on ERC20 token");
 		it("Should fail when passing ERC20 category without ERC20 token address");
 		it("Should call approve on NFT");
