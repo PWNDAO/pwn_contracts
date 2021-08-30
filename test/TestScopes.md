@@ -25,6 +25,43 @@ Workflow - Settlement
 ✓ Should be possible to claim after deed was paid (309ms)
 ✓ Should be possible to claim if deed wasn't paid (226ms)
 
+PWNVault
+Constructor
+✓ Should set correct owner
+
+Push
+✓ Should fail when sender is not PWN
+✓ Should send asset from address to vault
+✓ Should emit VaultPush event
+✓ Should return true if successful
+
+Pull
+✓ Should fail when sender is not PWN
+✓ Should send asset from vault to address
+✓ Should emit VaultPull event
+✓ Should return true if successful
+
+PullProxy
+✓ Should fail when sender is not PWN
+✓ Should send asset from address to address
+✓ Should emit VaultProxy event
+✓ Should return true if successful
+
+On ERC1155 received
+✓ Should return correct bytes
+
+On ERC1155 batch received
+✓ Should return correct bytes
+
+Set PWN
+✓ Should fail when sender is not owner
+✓ Should set PWN address
+
+Supports interface
+✓ Should support ERC165 interface
+✓ Should support Ownable interface
+✓ Should support PWN Vault interface
+✓ Should support ERC1155Receiver interface
 
 Missing:
 
@@ -211,39 +248,3 @@ Get lender
 Set PWN
 - Should fail when sender is not owner
 - Should set PWN address
-
-
-PWNVault
-Constructor
-- Should set correct owner
-
-Push
-- Should fail when sender is not PWN contract
-- Should send asset from address to vault
-- Should emit VaultPush event
-- Should return true if successful
-
-Pull
-- Should fail when sender is not PWN contract
-- Should send asset from vault to address
-- Should emit VaultPull event
-- Should return true if successful
-
-PullProxy
-- Should fail when sender is not PWN contract
-- Should send asset from address to address
-- Should emit VaultProxy event
-- Should return true if successful
-
-On ERC1155 received
-- Should return correct bytes
-
-On ERC1155 batch received
-- Should return correct bytes
-
-Set PWN
-- Should fail when sender is not owner
-- Should set PWN address
-
-Supports interface
-- Should return true for supported interfaces

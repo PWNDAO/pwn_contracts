@@ -1,10 +1,10 @@
 const { expect } = require("chai");
 
-describe("PWN contract", () => {
+describe("PWN contract", function() {
 
-	describe("New deed", () => {
+	describe("New deed", function() {
 		it("Should be able to create ERC20 deed");
-		it("Should be able to create NFT deed");
+		it("Should be able to create ERC721 deed");
 		it("Should be able to crate ERC1155 deed");
 		it("Should fail for unknown asset category");
 		it("Should fail for expiration duration smaller than min duration");
@@ -14,7 +14,7 @@ describe("PWN contract", () => {
 		it("Should mint new deed in correct state");
 	});
 
-	describe("Revoke deed", () => {
+	describe("Revoke deed", function() {
 		it("Should fail when sender is not borrower");
 		it("Should fail when deed is not in new/open state");
 		it("Should send deed collateral to borrower from vault");
@@ -22,9 +22,9 @@ describe("PWN contract", () => {
 		it("Should emit DeedRevoked event");
 	});
 
-	describe("Make offer", () => {
+	describe("Make offer", function() {
 		it("Should be able to make ERC20 offer");
-		it("Should be able to make NFT offer");
+		it("Should be able to make ERC721 offer");
 		it("Should be able to make ERC1155 offer");
 		it("Should fail for unknown asset category");
 		it("Should fail when deed is not in new/open state");
@@ -33,14 +33,14 @@ describe("PWN contract", () => {
 		it("Should return new offer hash as bytes");
 	});
 
-	describe("Revoke offer", () => {
+	describe("Revoke offer", function() {
 		it("Should fail when sender is not the offer maker");
 		it("Should fail when deed of the offer is not in new/open state");
 		it("Should remove offer from deed");
 		it("Should emit OfferRevoked event");
 	});
 
-	describe("Accept offer", () => {
+	describe("Accept offer", function() {
 		it("Should fail when sender is not the borrower");
 		it("Should fail when deed is not in new/open state");
 		it("Should set offer as accepted in deed");
@@ -51,7 +51,7 @@ describe("PWN contract", () => {
 		it("Should return true if successful");
 	});
 
-	describe("Pay back", () => {
+	describe("Pay back", function() {
 		it("Should fail when sender is not the borrower");
 		it("Should fail when deed is not in running state");
 		it("Should update deed to paid back state");
@@ -61,7 +61,7 @@ describe("PWN contract", () => {
 		it("Should return true if successful");
 	});
 
-	describe("Claim deed", () => {
+	describe("Claim deed", function() {
 		it("Should fail when sender is not deed owner");
 		it("Should fail when deed is not in paid back nor expired state");
 		it("Should send collateral from vault to lender when deed is expired");
@@ -71,7 +71,7 @@ describe("PWN contract", () => {
 		it("Should return true if successful");
 	});
 
-	describe("Change min duration", () => {
+	describe("Change min duration", function() {
 		it("Should fail when sender is not owner");
 		it("Should set new min duration");
 		it("Shoudl emit MinDurationChange event");
