@@ -4,7 +4,7 @@ describe("PWN contract", function() {
 
 	describe("New deed", function() {
 		it("Should be able to create ERC20 deed");
-		it("Should be able to create NFT deed");
+		it("Should be able to create ERC721 deed");
 		it("Should be able to crate ERC1155 deed");
 		it("Should fail for unknown asset category");
 		it("Should fail for expiration duration smaller than min duration");
@@ -24,7 +24,7 @@ describe("PWN contract", function() {
 
 	describe("Make offer", function() {
 		it("Should be able to make ERC20 offer");
-		it("Should be able to make NFT offer");
+		it("Should be able to make ERC721 offer");
 		it("Should be able to make ERC1155 offer");
 		it("Should fail for unknown asset category");
 		it("Should fail when deed is not in new/open state");
