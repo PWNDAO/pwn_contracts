@@ -74,7 +74,7 @@ describe("PWN contract", function() {
 	describe("Change min duration", function() {
 		it("Should fail when sender is not owner");
 		it("Should set new min duration");
-		it("Shoudl emit MinDurationChange event");
+		it("Should emit MinDurationChange event");
 	});
 
 });

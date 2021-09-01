@@ -246,7 +246,7 @@ Claim deed
 Change min duration
 - Should fail when sender is not owner
 - Should set new min duration
-- Shoudl emit MinDurationChange event
+- Should emit MinDurationChange event
 
 
 PWNDeed contract
