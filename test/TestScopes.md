@@ -25,6 +25,7 @@ Workflow - Settlement
 ✓ Should be possible to claim after deed was paid (309ms)
 ✓ Should be possible to claim if deed wasn't paid (226ms)
 
+
 PWNVault
 Constructor
 ✓ Should set correct owner
@@ -62,6 +63,80 @@ Supports interface
 ✓ Should support Ownable interface
 ✓ Should support PWN Vault interface
 ✓ Should support ERC1155Receiver interface
+
+
+PWNDeed contract
+Constructor
+✓ Should set correct owner
+✓ Should set correct uri
+
+Mint
+✓ Should fail when sender is not PWN contract
+✓ Should mint deed ERC1155 token
+✓ Should save deed data
+✓ Should return minted deed ID
+✓ Should increase global deed ID
+
+Burn
+✓ Should fail when sender is not PWN contract
+✓ Should burn deed ERC1155 token
+✓ Should delete deed data
+
+Set offer
+✓ Should fail when sender is not PWN contract
+✓ Should set offer to deed
+✓ Should save offer data
+✓ Should return offer hash as bytes
+✓ Should increase global nonce
+
+Delete offer
+✓ Should fail when sender is not PWN contract
+✓ Should delete offer
+
+Set credit
+✓ Should fail when sender is not PWN contract
+✓ Should set offer as accepted in deed
+✓ Should delete deed pending offers
+
+Change status
+✓ Should fail when sender is not PWN contract
+✓ Should set deed state
+
+Get deed status
+✓ Should return none/dead state
+✓ Should return new/open state
+✓ Should return running state
+✓ Should return paid back state
+✓ Should return expired state
+
+Get expiration
+✓ Should return deed expiration
+
+Get borrower
+✓ Should return borrower address
+
+Get deed asset
+✓ Should return deed asset
+
+Get accepted offer
+✓ Should return deed accepted offer
+
+Get deed ID
+✓ Should return deed ID
+
+Get offer asset
+✓ Should return offer asset
+
+To be paid
+✓ Should return offer to be paid value
+
+Get lender
+✓ Should return lender address
+
+Set PWN
+✓ Should fail when sender is not owner
+✓ Should set PWN address
+
 
 Missing:
 
@@ -175,76 +250,10 @@ Change min duration
 
 
 PWNDeed contract
-Constructor
-- Should set correct owner
-- Should set correct uri
-
-Mint
-- Should fail when sender is not PWN contract
-- Should mint deed ERC1155 token
-- Should save deed data
-- Should return minted deed ID
-
-Burn
-- Should fail when sender is not PWN contract
-- Should burn deed ERC1155 token
-- Should delete deed data
-
-Set offer
-- Should fail when sender is not PWN contract
-- Should save offer data
-- Should set offer to deed
-- Should return offer hash as bytes
-
 Delete offer
-- Should fail when sender is not PWN contract
-- Should delete offer
-
-Set credit
-- Should fail when sender is not PWN contract
-- Should set offer as accepted in deed
-- Should delete deed pending offers
-
-Change status
-- Should fail when sender is not PWN contract
-- Should set deed state
-
-beforeTokenTransfer??
-
-Get deed status
-- Should return none/dead state
-- Should return new/open state
-- Should return running state
-- Should return paid back state
-- Should return expired state
-
-Get expiration
-- Should return deed expiration
-
-Get borrower
-- Should return borrower address
-
-Get deed asset
-- Should return deed asset
+- Should delete pending offer
 
 Get offers
 - Should return deed pending offers byte array
 
-Get accepted offer
-- Should return deed accepted offer
-
-Get deed ID
-- Should return deed ID
-
-Get offer asset
-- Should return offer asset
-
-To be paid
-- Should return offer to be paid value
-
-Get lender
-- Should return lender address
-
-Set PWN
-- Should fail when sender is not owner
-- Should set PWN address
+beforeTokenTransfer??
