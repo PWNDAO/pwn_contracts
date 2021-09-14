@@ -99,7 +99,7 @@ library MultiToken {
 
         } else if (_asset.cat == 2) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
-            return token.balanceOf(_target,_asset.id);
+            return token.balanceOf(_target, _asset.id);
 
         } else {
             revert("Unsupported category");

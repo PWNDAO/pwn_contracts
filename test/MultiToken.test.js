@@ -151,22 +151,70 @@ describe("MultiToken library", function() {
 	});
 
 	describe("BalanceOf", function() {
-		it("Should return balance of ERC20 token");
-		it("Should fail when passing ERC20 category without ERC20 token address");
-		it("Should return ownership of ERC721 token");
-		it("Should fail when passing ERC721 category without ERC721 address");
-		it("Should return balance ERC1155 token");
-		it("Should fail when passing ERC1155 category without ERC1155 token address");
-		it("Should fail when passing unsupported category");
+		it("Should return balance of ERC20 token", async function() {
+			const amount = 888;
+			const fakeToken = await smock.fake("Basic20");
+			fakeToken.balanceOf.returns(amount);
+
+			const balance = await multiTokenAdapter.balanceOf(0, 732, 0, fakeToken.address, addr1.address);
+
+			expect(balance).to.equal(amount);
+			expect(fakeToken.balanceOf).to.have.been.calledOnce;
+			expect(fakeToken.balanceOf).to.have.been.calledWith(addr1.address);
+		});
+
+		it("Should return balance of 1 if target address is ERC721 token owner", async function() {
+			const assetId = 123;
+			const fakeToken = await smock.fake("Basic721");
+			fakeToken.ownerOf.returns(addr1.address);
+
+			const balance = await multiTokenAdapter.balanceOf(1, 1, assetId, fakeToken.address, addr1.address);
+
+			expect(balance).to.equal(1);
+			expect(fakeToken.ownerOf).to.have.been.calledOnce;
+			expect(fakeToken.ownerOf).to.have.been.calledWith(assetId);
+		});
+
+		it("Should return balance of 0 if target address is not ERC721 token owner", async function() {
+			const assetId = 123;
+			const fakeToken = await smock.fake("Basic721");
+			fakeToken.ownerOf.returns(addr2.address);
+
+			const balance = await multiTokenAdapter.balanceOf(1, 1, assetId, fakeToken.address, addr1.address);
+
+			expect(balance).to.equal(0);
+			expect(fakeToken.ownerOf).to.have.been.calledOnce;
+			expect(fakeToken.ownerOf).to.have.been.calledWith(assetId);
+		});
+
+		it("Should return balance of ERC1155 token", async function() {
+			const assetId = 123;
+			const amount = 24;
+			const fakeToken = await smock.fake("Basic1155");
+			fakeToken.balanceOf.returns(amount);
+
+			const balance = await multiTokenAdapter.balanceOf(2, 732, assetId, fakeToken.address, addr1.address);
+
+			expect(balance).to.equal(amount);
+			expect(fakeToken.balanceOf).to.have.been.calledOnce;
+			expect(fakeToken.balanceOf).to.have.been.calledWith(addr1.address, assetId);
+		});
+
+		it("Should fail when passing unsupported category", async function() {
+			try {
+				await multiTokenAdapter.balanceOf(3, 1, 0, addr4.address, addr1.address);
+				expect.fail();
+			} catch(error) {
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Unsupported category");
+			}
+		});
 	});
 
 	describe("ApproveAsset", function() {
 		it("Should call approve on ERC20 token");
-		it("Should fail when passing ERC20 category without ERC20 token address");
 		it("Should call approve on ERC721 token");
-		it("Should fail when passing ERC721 category without ERC721 address");
 		it("Should call set approval for all on ERC1155 token");
-		it("Should fail when passing ERC1155 category without ERC1155 token address");
 		it("Should fail when passing unsupported category");
 	});
 
