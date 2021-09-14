@@ -155,8 +155,8 @@ describe("PWNDeed contract", function() {
 
 			await deed.setOffer(0, 100, addr3.address, addr4.address, tokenId, 70);
 
-			// Cannot get pendingOffers from deed.pendingOffers because ethers.js would not return the pendingOffers array in a deed object.
-			// Bug reported: https://github.com/ethers-io/ethers.js/issues/1973
+			// Cannot get pendingOffers from deed.pendingOffers because `solc` generates incorrect ABI for implicit property getters with dynamic array
+			// GH issue: https://github.com/ethereum/solidity/issues/4244
 			const pendingOffers = await deed.callStatic.getOffers(tokenId);
 			expect(pendingOffers.length).to.equal(1);
 		});
@@ -426,8 +426,8 @@ describe("PWNDeed contract", function() {
 	});
 
 	describe("Get offers", function() {
-		// Cannot get pendingOffers from deed.pendingOffers because ethers.js would not return the pendingOffers array in a deed object.
-		// Bug reported: https://github.com/ethers-io/ethers.js/issues/1973
+		// Cannot get pendingOffers from deed.pendingOffers because `solc` generates incorrect ABI for implicit property getters with dynamic array
+		// GH issue: https://github.com/ethereum/solidity/issues/4244
 		it("Should return deed pending offers byte array");
 	});
 
