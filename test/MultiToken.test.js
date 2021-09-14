@@ -32,17 +32,6 @@ describe("MultiToken library", function() {
 			expect(fakeToken.transfer).to.have.been.calledWith(addr1.address, amount);
 		});
 
-		it("Should fail when passing ERC20 category without ERC20 token address", async function() {
-			const fakeToken = await smock.fake("Basic721");
-
-			try {
-				await multiTokenAdapter.transferAsset(0, 1, 0, fakeToken.address, addr1.address);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-			}
-		});
-
 		it("Should call transfer from current address on ERC721 token", async function() {
 			const assetId = 2047;
 			const fakeToken = await smock.fake("Basic721");
@@ -95,17 +84,6 @@ describe("MultiToken library", function() {
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr1.address, addr2.address, amount);
-		});
-
-		it("Should fail when passing ERC20 category without ERC20 token address", async function() {
-			const fakeToken = await smock.fake("PWNDeed");
-
-			try {
-				await multiTokenAdapter.transferAssetFrom(0, 1, 0, fakeToken.address, addr1.address, addr2.address);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-			}
 		});
 
 		it("Should call transfer from on ERC721 token", async function() {
