@@ -212,10 +212,45 @@ describe("MultiToken library", function() {
 	});
 
 	describe("ApproveAsset", function() {
-		it("Should call approve on ERC20 token");
-		it("Should call approve on ERC721 token");
-		it("Should call set approval for all on ERC1155 token");
-		it("Should fail when passing unsupported category");
+		it("Should call approve on ERC20 token", async function() {
+			const amount = 657;
+			const fakeToken = await smock.fake("Basic20");
+			fakeToken.approve.returns(true);
+
+			await multiTokenAdapter.approveAsset(0, amount, 0, fakeToken.address, addr1.address);
+
+			expect(fakeToken.approve).to.have.been.calledOnce;
+			expect(fakeToken.approve).to.have.been.calledWith(addr1.address, amount);
+		});
+
+		it("Should call approve on ERC721 token", async function() {
+			const assetId = 657;
+			const fakeToken = await smock.fake("Basic721");
+
+			await multiTokenAdapter.approveAsset(1, 0, assetId, fakeToken.address, addr1.address);
+
+			expect(fakeToken.approve).to.have.been.calledOnce;
+			expect(fakeToken.approve).to.have.been.calledWith(addr1.address, assetId);
+		});
+
+		it("Should call set approval for all on ERC1155 token", async function() {
+			const fakeToken = await smock.fake("Basic1155");
+
+			await multiTokenAdapter.approveAsset(2, 0, 657, fakeToken.address, addr1.address);
+
+			expect(fakeToken.setApprovalForAll).to.have.been.calledOnce;
+			expect(fakeToken.setApprovalForAll).to.have.been.calledWith(addr1.address, true);
+		});
+
+		it("Should fail when passing unsupported category", async function() {
+			try {
+				await multiTokenAdapter.approveAsset(3, 1, 0, addr4.address, addr1.address);
+				expect.fail();
+			} catch(error) {
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Unsupported category");
+			}
+		});
 	});
 
 });
