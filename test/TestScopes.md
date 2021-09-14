@@ -26,6 +26,32 @@ Workflow - Settlement
 ✓ Should be possible to claim if deed wasn't paid (226ms)
 
 
+MultiToken
+Transfer
+✓ Should call transfer on ERC20 token
+✓ Should call transfer from current address on ERC721 token
+✓ Should call safe transfer from current address on ERC1155 token
+✓ Should pass at least amount 1 on ERC1155 token transfer
+✓ Should fail when passing unsupported category
+TransferFrom
+✓ Should call transfer from on ERC20 token
+✓ Should call transfer from on ERC721 token
+✓ Should call safe transfer from on ERC1155 token
+✓ Should pass at least amount 1 on ERC1155 token transfer
+✓ Should fail when passing unsupported category
+BalanceOf
+✓ Should return balance of ERC20 token
+✓ Should return balance of 1 if target address is ERC721 token owner
+✓ Should return balance of 0 if target address is not ERC721 token owner
+✓ Should return balance of ERC1155 token
+✓ Should fail when passing unsupported category
+ApproveAsset
+✓ Should call approve on ERC20 token
+✓ Should call approve on ERC721 token
+✓ Should call set approval for all on ERC1155 token
+✓ Should fail when passing unsupported category
+
+
 PWNVault
 Constructor
 ✓ Should set correct owner
@@ -139,46 +165,6 @@ Set PWN
 
 
 Missing:
-
-MultiToken
-Transfer
-- Should call transfer on ERC20 token
-- Should fail when passing ERC20 category without ERC20 token address
-- Should call transfer from current address on ERC721
-- Should fail when passing ERC721 category without ERC721 address
-- Should call safe transfer from current address on ERC1155 token
-- SHould update amount on ERC1155 token transfer
-- Should fail when passing ERC1155 category without ERC1155 token address
-- Should fail when passing unsupported category
-
-TransferFrom
-- Should call transfer from on ERC20 token
-- Should fail when passing ERC20 category without ERC20 token address
-- Should call transfer from on ERC721
-- Should fail when passing ERC721 category without ERC721 address
-- Should call safe transfer from on ERC1155 token
-- SHould update amount on ERC1155 token transfer
-- Should fail when passing ERC1155 category without ERC1155 token address
-- Should fail when passing unsupported category
-
-BalanceOf
-- Should return balance of ERC20 token
-- Should fail when passing ERC20 category without ERC20 token address
-- Should return ownership of ERC721
-- Should fail when passing ERC721 category without ERC721 address
-- Should return balance ERC1155 token
-- Should fail when passing ERC1155 category without ERC1155 token address
-- Should fail when passing unsupported category
-
-ApproveAsset
-- Should call approve on ERC20 token
-- Should fail when passing ERC20 category without ERC20 token address
-- Should call approve on ERC721
-- Should fail when passing ERC721 category without ERC721 address
-- Should call set approval for all on ERC1155 token
-- Should fail when passing ERC1155 category without ERC1155 token address
-- Should fail when passing unsupported category
-
 
 PWN contract
 New deed
