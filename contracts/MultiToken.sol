@@ -36,7 +36,7 @@ library MultiToken {
 
         } else if (_asset.cat == 1) {
             IERC721 token = IERC721(_asset.tokenAddress);
-            token.safeTransferFrom(address(this), _dest, _asset.id);
+            token.transferFrom(address(this), _dest, _asset.id);
 
         } else if (_asset.cat == 2) {
             IERC1155 token = IERC1155(_asset.tokenAddress);
@@ -64,7 +64,7 @@ library MultiToken {
 
         } else if (_asset.cat == 1) {
             IERC721 token = IERC721(_asset.tokenAddress);
-            token.safeTransferFrom(_source, _dest, _asset.id);
+            token.transferFrom(_source, _dest, _asset.id);
 
         } else if (_asset.cat == 2) {
             IERC1155 token = IERC1155(_asset.tokenAddress);

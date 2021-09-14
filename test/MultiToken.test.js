@@ -43,14 +43,14 @@ describe("MultiToken library", function() {
 			}
 		});
 
-		it("Should call safe transfer from current address on ERC721 token", async function() {
+		it("Should call transfer from current address on ERC721 token", async function() {
 			const assetId = 2047;
 			const fakeToken = await smock.fake("Basic721");
 
 			await multiTokenAdapter.transferAsset(1, 1, assetId, fakeToken.address, addr1.address);
 
-			expect(fakeToken["safeTransferFrom(address,address,uint256)"]).to.have.been.calledOnce;
-			expect(fakeToken["safeTransferFrom(address,address,uint256)"]).to.have.been.calledWith(multiTokenAdapter.address, addr1.address, assetId);
+			expect(fakeToken.transferFrom).to.have.been.calledOnce;
+			expect(fakeToken.transferFrom).to.have.been.calledWith(multiTokenAdapter.address, addr1.address, assetId);
 		});
 
 		it("Should call safe transfer from current address on ERC1155 token", async function() {
@@ -108,14 +108,14 @@ describe("MultiToken library", function() {
 			}
 		});
 
-		it("Should call safe transfer from on ERC721 token", async function() {
+		it("Should call transfer from on ERC721 token", async function() {
 			const assetId = 2047;
 			const fakeToken = await smock.fake("Basic721");
 
 			await multiTokenAdapter.transferAssetFrom(1, 1, assetId, fakeToken.address, addr1.address, addr2.address);
 
-			expect(fakeToken["safeTransferFrom(address,address,uint256)"]).to.have.been.calledOnce;
-			expect(fakeToken["safeTransferFrom(address,address,uint256)"]).to.have.been.calledWith(addr1.address, addr2.address, assetId);
+			expect(fakeToken.transferFrom).to.have.been.calledOnce;
+			expect(fakeToken.transferFrom).to.have.been.calledWith(addr1.address, addr2.address, assetId);
 		});
 
 		it("Should call safe transfer from on ERC1155 token", async function() {
