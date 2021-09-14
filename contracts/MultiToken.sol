@@ -32,7 +32,7 @@ library MultiToken {
     function transferAsset(Asset memory _asset, address _dest) internal {
         if (_asset.cat == 0) {
             IERC20 token = IERC20(_asset.tokenAddress);
-            require(token.transfer(_dest, _asset.amount), 'ERC20 token transfer failed');
+            token.transfer(_dest, _asset.amount);
 
         } else if (_asset.cat == 1) {
             IERC721 token = IERC721(_asset.tokenAddress);
