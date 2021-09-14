@@ -11,7 +11,7 @@ describe("PWNDeed contract", function() {
 	let deed;
 
 	let Deed;
-	let owner, addr1, addr2, addr3, addr4, addr5;
+	let pwn, addr1, addr2, addr3, addr4, addr5;
 
 	before(async function() {
 		Deed = await ethers.getContractFactory("PWNDeed");
