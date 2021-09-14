@@ -57,7 +57,7 @@ library MultiToken {
      * @param _source Account/address that provided the allowance
      * @param _dest Destination address
      */
-    function transferAssetFrom(Asset memory _asset, address _source, address  _dest) internal {
+    function transferAssetFrom(Asset memory _asset, address _source, address _dest) internal {
         if (_asset.cat == 0) {
             IERC20 token = IERC20(_asset.tokenAddress);
             token.transferFrom(_source, _dest, _asset.amount);
