@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "../MultiToken.sol";
 import "../PWNVault.sol";
 
-contract TestVaultPWNMock {
+contract PWNVaultTestAdapter {
 
 	PWNVault public vault;
 

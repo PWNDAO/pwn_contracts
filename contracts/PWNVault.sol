@@ -7,7 +7,7 @@ import "./PWNDeed.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-contract PWNVault is Ownable, IERC1155Receiver{
+contract PWNVault is Ownable, IERC1155Receiver {
     using MultiToken for MultiToken.Asset;
 
     /*----------------------------------------------------------*|

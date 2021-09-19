@@ -8,16 +8,16 @@ chai.use(smock.matchers);
 describe("PWNVault contract", async function() {
 
 	let vault;
-	let pwnMock;
+	let vaultAdapter;
 
 	let Vault;
-	let PWNMock;
+	let VaultAdapter;
 	let vaultEventIface;
 	let owner, addr1, addr2, addr3, addr4;
 
 	before(async function() {
 		Vault = await ethers.getContractFactory("PWNVault");
-		PWNMock = await ethers.getContractFactory("TestVaultPWNMock"); // Needed for passing MultiToken.Asset struct as a parameter
+		VaultAdapter = await ethers.getContractFactory("PWNVaultTestAdapter"); // Needed for passing MultiToken.Asset struct as a parameter
 		[owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
 
 		vaultEventIface = new ethers.utils.Interface([
@@ -29,8 +29,8 @@ describe("PWNVault contract", async function() {
 
 	beforeEach(async function() {
 		vault = await Vault.deploy();
-		pwnMock = await PWNMock.deploy(vault.address);
-		await vault.setPWN(pwnMock.address);
+		vaultAdapter = await VaultAdapter.deploy(vault.address);
+		await vault.setPWN(vaultAdapter.address);
 	});
 
 	describe("Constructor", function() {
@@ -70,7 +70,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			await pwnMock.connect(addr1).push(0, amount, 0, fakeToken.address);
+			await vaultAdapter.connect(addr1).push(0, amount, 0, fakeToken.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr1.address, vault.address, amount);
@@ -81,7 +81,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const tx = await pwnMock.push(0, amount, 0, fakeToken.address);
+			const tx = await vaultAdapter.push(0, amount, 0, fakeToken.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -98,7 +98,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const success = await pwnMock.callStatic.push(0, 84, 0, fakeToken.address);
+			const success = await vaultAdapter.callStatic.push(0, 84, 0, fakeToken.address);
 
 			expect(success).to.equal(true);
 		});
@@ -130,7 +130,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			await pwnMock.pull(0, amount, 0, fakeToken.address, addr2.address);
+			await vaultAdapter.pull(0, amount, 0, fakeToken.address, addr2.address);
 
 			expect(fakeToken.transfer).to.have.been.calledOnce;
 			expect(fakeToken.transfer).to.have.been.calledWith(addr2.address, amount);
@@ -141,7 +141,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			const tx = await pwnMock.pull(0, amount, 0, fakeToken.address, addr2.address);
+			const tx = await vaultAdapter.pull(0, amount, 0, fakeToken.address, addr2.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -159,7 +159,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			const success = await pwnMock.callStatic.pull(0, 48, 0, fakeToken.address, addr2.address);
+			const success = await vaultAdapter.callStatic.pull(0, 48, 0, fakeToken.address, addr2.address);
 
 			expect(success).to.equal(true);
 		});
@@ -191,7 +191,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			await pwnMock.pullProxy(0, amount, 0, fakeToken.address, addr2.address, addr3.address);
+			await vaultAdapter.pullProxy(0, amount, 0, fakeToken.address, addr2.address, addr3.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr2.address, addr3.address, amount);
@@ -202,7 +202,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const tx = await pwnMock.pullProxy(0, amount, 0, fakeToken.address, addr2.address, addr3.address);
+			const tx = await vaultAdapter.pullProxy(0, amount, 0, fakeToken.address, addr2.address, addr3.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -221,7 +221,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const success = await pwnMock.callStatic.pullProxy(0, 22, 0, fakeToken.address, addr2.address, addr3.address);
+			const success = await vaultAdapter.callStatic.pullProxy(0, 22, 0, fakeToken.address, addr2.address, addr3.address);
 
 			expect(success).to.equal(true);
 		});
