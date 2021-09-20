@@ -57,7 +57,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
      * @return true if successful
      */
     function push(MultiToken.Asset memory _asset) external onlyPWN returns (bool) {
-        _asset.transferAssetFrom(tx.origin, address(this));
+        _asset.transferAssetFrom(tx.origin, address(this)); // Will not work for multi-sign
         emit VaultPush(_asset);
         return true;
     }
