@@ -74,6 +74,7 @@ describe("PWN contract", function() {
 			const expiration = await getExpiration(110);
 
 			await pwn.newDeed(0, 0, amount, fakeToken.address, expiration);
+			//TODO: add expected result
 		});
 
 		it("Should be able to create ERC721 deed", async function() {
@@ -82,6 +83,7 @@ describe("PWN contract", function() {
 			const expiration = await getExpiration(110);
 
 			await pwn.newDeed(1, tokenId, 1, fakeToken.address, expiration);
+			//TODO: add expected result
 		});
 
 		it("Should be able to create ERC1155 deed", async function() {
@@ -90,6 +92,7 @@ describe("PWN contract", function() {
 			const expiration = await getExpiration(110);
 
 			await pwn.newDeed(2, tokenId, 5, fakeToken.address, expiration);
+			//TODO: add expected result
 		});
 
 		it("Should fail for unknown asset category", async function() {
