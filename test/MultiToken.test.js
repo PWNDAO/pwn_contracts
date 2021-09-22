@@ -62,16 +62,6 @@ describe("MultiToken library", function() {
 			expect(fakeToken.safeTransferFrom).to.have.been.calledOnce;
 			expect(fakeToken.safeTransferFrom).to.have.been.calledWith(multiTokenAdapter.address, addr1.address, assetId, 1, "0x");
 		});
-
-		it("Should fail when passing unsupported category", async function() {
-			try {
-				await multiTokenAdapter.transferAsset(addr4.address, 3, 0, 0, addr1.address);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Unsupported category");
-			}
-		});
 	});
 
 	describe("TransferFrom", function() {
@@ -115,16 +105,6 @@ describe("MultiToken library", function() {
 
 			expect(fakeToken.safeTransferFrom).to.have.been.calledOnce;
 			expect(fakeToken.safeTransferFrom).to.have.been.calledWith(addr1.address, addr2.address, assetId, 1, "0x");
-		});
-
-		it("Should fail when passing unsupported category", async function() {
-			try {
-				await multiTokenAdapter.transferAssetFrom(addr4.address, 3, 0, 0, addr1.address, addr2.address);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Unsupported category");
-			}
 		});
 	});
 
@@ -177,16 +157,6 @@ describe("MultiToken library", function() {
 			expect(fakeToken.balanceOf).to.have.been.calledOnce;
 			expect(fakeToken.balanceOf).to.have.been.calledWith(addr1.address, assetId);
 		});
-
-		it("Should fail when passing unsupported category", async function() {
-			try {
-				await multiTokenAdapter.balanceOf(addr4.address, 3, 1, 0, addr1.address);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Unsupported category");
-			}
-		});
 	});
 
 	describe("ApproveAsset", function() {
@@ -218,16 +188,6 @@ describe("MultiToken library", function() {
 
 			expect(fakeToken.setApprovalForAll).to.have.been.calledOnce;
 			expect(fakeToken.setApprovalForAll).to.have.been.calledWith(addr1.address, true);
-		});
-
-		it("Should fail when passing unsupported category", async function() {
-			try {
-				await multiTokenAdapter.approveAsset(addr4.address, 3, 1, 0, addr1.address);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Unsupported category");
-			}
 		});
 	});
 

@@ -96,13 +96,15 @@ describe("PWN contract", function() {
 		});
 
 		it("Should fail for unknown asset category", async function() {
+			let failed;
+
 			try {
 				await pwn.newDeed(addr4.address, 3, 0, 10, 1);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Unknown asset type");
+			} catch {
+				failed = true;
 			}
+
+			expect(failed).to.equal(true);
 		});
 
 		it("Should fail for expiration duration smaller than min duration", async function() {
@@ -286,13 +288,15 @@ describe("PWN contract", function() {
 		});
 
 		it("Should fail for unknown asset category", async function() {
+			let failed;
+
 			try {
 				await pwn.makeOffer(fakeToken.address, 3, 1, did, 2);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Unknown asset type");
+			} catch {
+				failed = true;
 			}
+
+			expect(failed).to.equal(true);
 		});
 
 		it("Should fail when deed is not in new/open state", async function() {

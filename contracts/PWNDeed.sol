@@ -100,7 +100,7 @@ contract PWNDeed is ERC1155, Ownable  {
      */
     function mint(
         address _tokenAddress,
-        uint8 _cat,
+        MultiToken.Category _cat,
         uint256 _id,
         uint256 _amount,
         uint256 _expiration,
@@ -152,7 +152,7 @@ contract PWNDeed is ERC1155, Ownable  {
      */
     function setOffer(
         address _tokenAddress,
-        uint8 _cat,
+        MultiToken.Category _cat,
         uint256 _amount,
         address _lender,
         uint256 _did,

@@ -12,15 +12,15 @@ contract PWNVaultTestAdapter {
 	}
 
 
-	function push(address _tokenAddress, uint8 _cat, uint256 _amount, uint256 _id, address _origin) external returns (bool) {
+	function push(address _tokenAddress, MultiToken.Category _cat, uint256 _amount, uint256 _id, address _origin) external returns (bool) {
 		return vault.push(MultiToken.Asset(_tokenAddress, _cat, _amount, _id), _origin);
 	}
 
-	function pull(address _tokenAddress, uint8 _cat, uint256 _amount, uint256 _id, address _beneficiary) external returns (bool) {
+	function pull(address _tokenAddress, MultiToken.Category _cat, uint256 _amount, uint256 _id, address _beneficiary) external returns (bool) {
 		return vault.pull(MultiToken.Asset(_tokenAddress, _cat, _amount, _id), _beneficiary);
 	}
 
-	function pullProxy(address _tokenAddress, uint8 _cat, uint256 _amount, uint256 _id, address _origin, address _beneficiary) external returns (bool) {
+	function pullProxy(address _tokenAddress, MultiToken.Category _cat, uint256 _amount, uint256 _id, address _origin, address _beneficiary) external returns (bool) {
 		return vault.pullProxy(MultiToken.Asset(_tokenAddress, _cat, _amount, _id), _origin, _beneficiary);
 	}
 

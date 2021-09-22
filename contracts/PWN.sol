@@ -23,8 +23,8 @@ contract PWN is Ownable {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event NewDeed(address indexed tokenAddress, uint8 cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did);
-    event NewOffer(address tokenAddress, uint8 cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
+    event NewDeed(address indexed tokenAddress, MultiToken.Category cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did);
+    event NewOffer(address tokenAddress, MultiToken.Category cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
     event DeedRevoked(uint256 did);
     event OfferRevoked(bytes32 offer);
     event OfferAccepted(uint256 did, bytes32 offer);
@@ -67,12 +67,11 @@ contract PWN is Ownable {
      */
     function newDeed(
         address _tokenAddress,
-        uint8 _cat,
+        MultiToken.Category _cat,
         uint256 _id,
         uint256 _amount,
         uint256 _expiration
     ) external returns (uint256) {
-        require(_cat < 3, "Unknown asset type");
         require(_expiration > (block.timestamp + minDuration));
 
         uint256 did = token.mint(_tokenAddress, _cat, _id, _amount, _expiration, msg.sender);
@@ -113,12 +112,11 @@ contract PWN is Ownable {
      */
     function makeOffer(
         address _tokenAddress,
-        uint8 _cat,
+        MultiToken.Category _cat,
         uint256 _amount,
         uint256 _did,
         uint256 _toBePaid
     ) external returns (bytes32) {
-        require(_cat < 3, "Unknown asset type");
         require(token.getDeedStatus(_did) == 1, "Deed not accepting offers");
 
         bytes32 offer = token.setOffer(_tokenAddress, _cat, _amount, msg.sender, _did, _toBePaid);
@@ -163,7 +161,7 @@ contract PWN is Ownable {
         vault.pullProxy(token.getOfferAsset(_offer), lender, msg.sender);
 
         MultiToken.Asset memory deed;
-        deed.cat = 2;
+        deed.cat = MultiToken.Category.ERC1155;
         deed.id = did;
         deed.tokenAddress = address(token);
 
