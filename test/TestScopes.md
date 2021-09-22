@@ -26,6 +26,71 @@ Workflow - Settlement
 ✓ Should be possible to claim if deed wasn't paid (226ms)
 
 
+PWN contract
+Constructor
+✓ Should set correct owner
+✓ Should set correct contract addresses
+New deed
+✓ Should be able to create ERC20 deed
+✓ Should be able to create ERC721 deed
+✓ Should be able to create ERC1155 deed
+✓ Should fail for unknown asset category
+✓ Should fail for expiration duration smaller than min duration
+✓ Should emit NewDeed event
+✓ Should return newly created deed ID
+✓ Should send borrower collateral to vault
+✓ Should mint new deed in correct state
+Revoke deed
+✓ Should fail when sender is not borrower
+✓ Should fail when deed is not in new/open state
+✓ Should send deed collateral to borrower from vault
+✓ Should burn deed token
+✓ Should emit DeedRevoked event
+Make offer
+✓ Should be able to make ERC20 offer
+✓ Should be able to make ERC721 offer
+✓ Should be able to make ERC1155 offer
+✓ Should fail for unknown asset category
+✓ Should fail when deed is not in new/open state
+✓ Should set new offer to the deed
+✓ Should emit NewOffer event
+✓ Should return new offer hash
+Revoke offer
+✓ Should fail when sender is not the offer maker
+✓ Should fail when deed of the offer is not in new/open state
+✓ Should remove offer from deed
+✓ Should emit OfferRevoked event
+Accept offer
+✓ Should fail when sender is not the borrower
+✓ Should fail when deed is not in new/open state
+✓ Should set offer as accepted in deed
+✓ Should update deed to running state
+✓ Should send lender asset to borrower
+✓ Should send deed token to lender
+✓ Should emit OfferAccepted event
+✓ Should return true if successful
+Pay back
+✓ Should accept when sender is not the borrower
+✓ Should fail when deed is not in running state
+✓ Should update deed to paid back state
+✓ Should send deed collateral to borrower from vault
+✓ Should send paid back amount to vault
+✓ Should emit PaidBack event
+✓ Should return true if successful
+Claim deed
+✓ Should fail when sender is not deed owner
+✓ Should fail when deed is not in paid back nor expired state
+✓ Should send collateral from vault to lender when deed is expired
+✓ Should send paid back amount from vault to lender when deed is paid back
+✓ Should emit DeedClaimed event
+✓ Should burn deed token
+✓ Should return true if successful
+Change min duration
+✓ Should fail when sender is not owner
+✓ Should set new min duration
+✓ Should emit MinDurationChange event
+
+
 MultiToken
 Transfer
 ✓ Should call transfer on ERC20 token
@@ -165,76 +230,6 @@ Set PWN
 
 
 Missing:
-
-PWN contract
-New deed
-- Should be able to create ERC20 deed
-- Should be able to create ERC721 deed
-- Should be able to crate ERC1155 deed
-- Should fail for unknown asset category
-- Should fail for expiration duration smaller than min duration
-- Should emit NewDeed event
-- Should return newly created deed ID
-- Should send borrower collateral to vault
-- Should mint new deed in correct state
-
-Revoke deed
-- Should fail when sender is not borrower
-- Should fail when deed is not in new/open state
-- Should send deed collateral to borrower from vault
-- Should burn deed token
-- Should emit DeedRevoked event
-
-Make offer
-- Should be able to make ERC20 offer
-- Should be able to make ERC721 offer
-- Should be able to make ERC1155 offer
-- Should fail for unknown asset category
-- Should fail when deed is not in new/open state
-- Should set new offer to the deed
-- Should emit NewOffer event
-- Should return new offer hash as bytes
-
-Revoke offer
-- Should fail when sender is not the offer maker
-- Should fail when deed of the offer is not in new/open state
-- Should remove offer from deed
-- Should emit OfferRevoked event
-
-Accept offer
-- Should fail when sender is not the borrower
-- Should fail when deed is not in new/open state
-- Should set offer as accepted in deed
-- Should update deed to running state
-- Should send lender asset to borrower
-- Should send deed token to lender
-- Should emit OfferAccepted event
-- Should return true if successful
-
-Pay back
-- Should fail when sender is not the borrower
-- Should fail when deed is not in running state
-- Should update deed to paid back state
-- Should send pay back amount to vault
-- Should send deed collateral to borrower from vault
-- Should emit PaidBack event
-- Should return true if successful
-
-Claim deed
-- Should fail when sender is not deed owner
-- Should fail when deed is not in paid back nor expired state
-- Should send collateral from vault to lender when deed is expired
-- Should send paid back amount from vault to lender when deed is paid back
-- Should emit DeedClaimed event
-- Should burn deed token
-- Should return true if successful
-
-Change min duration
-- Should fail when sender is not owner
-- Should set new min duration
-- Should emit MinDurationChange event
-
-
 PWNDeed contract
 Delete offer
 - Should delete pending offer

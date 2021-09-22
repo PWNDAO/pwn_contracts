@@ -95,7 +95,6 @@ contract PWN is Ownable {
         require(token.getDeedStatus(_did) == 1, "Deed can't be revoked at this stage");
 
         vault.pull(token.getDeedAsset(_did), msg.sender);
-        token.changeStatus(0, _did);
         token.burn(_did, msg.sender);
         emit DeedRevoked(_did);
     }
@@ -119,6 +118,7 @@ contract PWN is Ownable {
         uint256 _did,
         uint256 _toBePaid
     ) external returns (bytes32) {
+        require(_cat < 3, "Unknown asset type");
         require(token.getDeedStatus(_did) == 1, "Deed not accepting offers");
 
         bytes32 offer = token.setOffer(_cat, _amount, _tokenAddress, msg.sender, _did, _toBePaid);
@@ -135,7 +135,7 @@ contract PWN is Ownable {
     function revokeOffer(
         bytes32 _offer
     ) external {
-        require(token.getLender(_offer) == msg.sender, "This address didn't create ths offer");
+        require(token.getLender(_offer) == msg.sender, "This address didn't create the offer");
         require(token.getDeedStatus(token.getDeedID(_offer)) == 1, "Can only remove offers from open Deeds");
         token.deleteOffer(_offer);
         emit OfferRevoked(_offer);
@@ -162,12 +162,12 @@ contract PWN is Ownable {
         address lender = token.getLender(_offer);
         vault.pullProxy(token.getOfferAsset(_offer), lender, msg.sender);
 
-        MultiToken.Asset memory Deed;
-        Deed.cat = 2;
-        Deed.id = did;
-        Deed.tokenAddress = address(token);
+        MultiToken.Asset memory deed;
+        deed.cat = 2;
+        deed.id = did;
+        deed.tokenAddress = address(token);
 
-        vault.pullProxy(Deed, msg.sender, lender);
+        vault.pullProxy(deed, msg.sender, lender);
         emit OfferAccepted(did, _offer);
 
         return true;
@@ -199,7 +199,7 @@ contract PWN is Ownable {
 
     /**
      * claim Deed
-     * @dev The current Deed owner can call this function if the Deed
+     * @dev The current Deed owner can call this function if the Deed is expired or payed back
      * @param _did Deed ID of the deed to be claimed
      * @return true if successful
      */
