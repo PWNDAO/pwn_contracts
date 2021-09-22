@@ -13,6 +13,13 @@ describe("PWNDeed contract", function() {
 	let Deed;
 	let pwn, addr1, addr2, addr3, addr4, addr5;
 
+	const CATEGORY = {
+		ERC20: 0,
+		ERC721: 1,
+		ERC1155: 2,
+		unknown: 3,
+	};
+
 	before(async function() {
 		Deed = await ethers.getContractFactory("PWNDeed");
 		[pwn, addr1, addr2, addr3, addr4, addr5] = await ethers.getSigners();
@@ -46,7 +53,7 @@ describe("PWNDeed contract", function() {
 	describe("Mint", function() { // -> PWN is trusted source so we believe that it would not send invalid data
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).mint(addr2.address, 0, 0, 0, 0, addr3.address);
+				await deed.connect(addr1).mint(addr2.address, CATEGORY.ERC20, 0, 0, 0, addr3.address);
 
 				expect().fail();
 			} catch(error) {
@@ -55,7 +62,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should mint deed ERC1155 token", async function () {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
 			const balance = await deed.balanceOf(addr3.address, tokenId);
@@ -63,7 +70,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should save deed data", async function () {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
 			const deedToken = await deed.deeds(tokenId);
@@ -76,16 +83,16 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should return minted deed ID", async function() {
-			const tokenId = await deed.callStatic.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			const tokenId = await deed.callStatic.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 
 			expect(ethers.BigNumber.isBigNumber(tokenId)).to.equal(true);
 		});
 
 		it("Should increase global deed ID", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId1 = await deed.id();
 
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId2 = await deed.id();
 
 			expect(tokenId2).to.equal(tokenId1.add(1));
@@ -95,7 +102,7 @@ describe("PWNDeed contract", function() {
 	describe("Burn", function() { // -> PWN is trusted source so we believe that it would not send invalid data
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+				await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 				const tokenId = await deed.id();
 
 				await deed.connect(addr1).burn(tokenId, addr3.address);
@@ -106,7 +113,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should burn deed ERC1155 token", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
 			await deed.burn(tokenId, addr3.address);
@@ -116,7 +123,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should delete deed data", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
 			await deed.burn(tokenId, addr3.address);
@@ -138,10 +145,10 @@ describe("PWNDeed contract", function() {
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+				await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 				const tokenId = await deed.id();
 
-				await deed.connect(addr1).setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+				await deed.connect(addr1).setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 
 				expect().fail();
 			} catch(error) {
@@ -150,10 +157,10 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should set offer to deed", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 
 			// Cannot get pendingOffers from deed.pendingOffers because `solc` generates incorrect ABI for implicit property getters with dynamic array
 			// GH issue: https://github.com/ethereum/solidity/issues/4244
@@ -162,15 +169,15 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should save offer data", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 
 			const pendingOffers = await deed.callStatic.getOffers(tokenId);
 			const offerHash = pendingOffers[0];
 			const offer = await deed.offers(offerHash);
-			expect(offer.asset.cat).to.equal(0);
+			expect(offer.asset.cat).to.equal(CATEGORY.ERC20);
 			expect(offer.asset.amount).to.equal(100);
 			expect(offer.asset.tokenAddress).to.equal(addr3.address);
 			expect(offer.toBePaid).to.equal(70);
@@ -179,10 +186,10 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should return offer hash as bytes", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
-			const offerHash = await deed.callStatic.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			const offerHash = await deed.callStatic.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 
 			const expectedOfferHash = makeOfferHash(pwn.address, 0);
 			expect(ethers.utils.isBytesLike(offerHash)).to.equal(true);
@@ -190,11 +197,11 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should increase global nonce", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
-			await deed.setOffer(addr3.address, 0, 101, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 101, addr4.address, tokenId, 70);
 
 			const expectedFirstOfferHash = makeOfferHash(pwn.address, 0);
 			const expectedSecondOfferHash = makeOfferHash(pwn.address, 1);
@@ -208,9 +215,9 @@ describe("PWNDeed contract", function() {
 	describe("Delete offer", function() { // -> PWN is trusted source so we believe that it would not send invalid data
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+				await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 				const tokenId = await deed.id();
-				await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+				await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 				const pendingOffers = await deed.callStatic.getOffers(tokenId);
 
 				await deed.connect(addr1).deleteOffer(pendingOffers[0]);
@@ -222,16 +229,16 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should delete offer", async function() {
-			await deed.mint(addr2.address, 1, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC721, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 			const pendingOffers = await deed.callStatic.getOffers(tokenId);
 			const offerHash = pendingOffers[0]
 
 			await deed.deleteOffer(offerHash);
 
 			const offer = await deed.offers(offerHash);
-			expect(offer.asset.cat).to.equal(0);
+			expect(offer.asset.cat).to.equal(CATEGORY.ERC20);
 			expect(offer.asset.amount).to.equal(0);
 			expect(offer.asset.tokenAddress).to.equal(ethers.constants.AddressZero);
 			expect(offer.toBePaid).to.equal(0);
@@ -245,9 +252,9 @@ describe("PWNDeed contract", function() {
 	describe("Set credit", function() { // -> PWN is trusted source so we believe that it would not send invalid data
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+				await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 				const tokenId = await deed.id();
-				await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+				await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 				const pendingOffers = await deed.callStatic.getOffers(tokenId);
 
 				await deed.connect(addr1).setCredit(tokenId, pendingOffers[0]);
@@ -259,9 +266,9 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should set offer as accepted in deed", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 			const pendingOffers = await deed.callStatic.getOffers(tokenId);
 
 			await deed.setCredit(tokenId, pendingOffers[0]);
@@ -271,9 +278,9 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should delete deed pending offers", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 			const formerPendingOffers = await deed.callStatic.getOffers(tokenId);
 
 			await deed.setCredit(tokenId, formerPendingOffers[0]);
@@ -286,7 +293,7 @@ describe("PWNDeed contract", function() {
 	describe("Change status", function() { // -> PWN is trusted source so we believe that it would not send invalid data
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+				await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 				const tokenId = await deed.id();
 
 				await deed.connect(addr1).changeStatus(0, tokenId);
@@ -298,7 +305,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should set deed state", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
 			await deed.changeStatus(8, tokenId);
@@ -317,7 +324,7 @@ describe("PWNDeed contract", function() {
 			const lastBlockNumber = await ethers.provider.getBlockNumber();
 			const lastBlock = await ethers.provider.getBlock(lastBlockNumber);
 			const expiration = lastBlock.timestamp + parseInt(time.duration.days(7));
-			await deed.mint(addr2.address, 0, 1, 100, expiration, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			const tokenId = await deed.id();
 			await deed.changeStatus(0, tokenId);
 
@@ -330,7 +337,7 @@ describe("PWNDeed contract", function() {
 			const lastBlockNumber = await ethers.provider.getBlockNumber();
 			const lastBlock = await ethers.provider.getBlock(lastBlockNumber);
 			const expiration = lastBlock.timestamp + parseInt(time.duration.days(7));
-			await deed.mint(addr2.address, 0, 1, 100, expiration, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			const tokenId = await deed.id();
 			await deed.changeStatus(1, tokenId);
 
@@ -343,7 +350,7 @@ describe("PWNDeed contract", function() {
 			const lastBlockNumber = await ethers.provider.getBlockNumber();
 			const lastBlock = await ethers.provider.getBlock(lastBlockNumber);
 			const expiration = lastBlock.timestamp + parseInt(time.duration.days(7));
-			await deed.mint(addr2.address, 0, 1, 100, expiration, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			const tokenId = await deed.id();
 			await deed.changeStatus(2, tokenId);
 
@@ -356,7 +363,7 @@ describe("PWNDeed contract", function() {
 			const lastBlockNumber = await ethers.provider.getBlockNumber();
 			const lastBlock = await ethers.provider.getBlock(lastBlockNumber);
 			const expiration = lastBlock.timestamp + parseInt(time.duration.days(7));
-			await deed.mint(addr2.address, 0, 1, 100, expiration, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			const tokenId = await deed.id();
 			await deed.changeStatus(3, tokenId);
 
@@ -366,7 +373,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should return paid back state when expired", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 			await deed.changeStatus(3, tokenId);
 
@@ -376,7 +383,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should return expired state", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 			await deed.changeStatus(2, tokenId);
 
@@ -388,7 +395,7 @@ describe("PWNDeed contract", function() {
 
 	describe("Get expiration", function() {
 		it("Should return deed expiration", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
 			const expiration = await deed.getExpiration(tokenId);
@@ -400,7 +407,7 @@ describe("PWNDeed contract", function() {
 	
 	describe("Get borrower", function() {
 		it("Should return borrower address", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
 			const borrower = await deed.getBorrower(tokenId);
@@ -412,7 +419,7 @@ describe("PWNDeed contract", function() {
 	
 	describe("Get deed asset", function() {
 		it("Should return deed asset", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
 			const asset = await deed.getDeedAsset(tokenId);
@@ -433,7 +440,7 @@ describe("PWNDeed contract", function() {
 
 	describe("Get accepted offer", function() {
 		it("Should return deed accepted offer", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
 			const acceptedOffer = await deed.getAcceptedOffer(tokenId);
@@ -447,9 +454,9 @@ describe("PWNDeed contract", function() {
 
 	describe("Get deed ID", function() {
 		it("Should return deed ID", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 			const pendingOffers = await deed.callStatic.getOffers(tokenId);
 			const offerHash = pendingOffers[0];
 
@@ -463,9 +470,9 @@ describe("PWNDeed contract", function() {
 
 	describe("Get offer asset", function() {
 		it("Should return offer asset", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 			const pendingOffers = await deed.callStatic.getOffers(tokenId);
 			const offerHash = pendingOffers[0];
 
@@ -481,9 +488,9 @@ describe("PWNDeed contract", function() {
 
 	describe("To be paid", function() {
 		it("Should return offer to be paid value", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 			const pendingOffers = await deed.callStatic.getOffers(tokenId);
 			const offerHash = pendingOffers[0];
 
@@ -496,9 +503,9 @@ describe("PWNDeed contract", function() {
 
 	describe("Get lender", function() {
 		it("Should return lender address", async function() {
-			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
+			await deed.mint(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
-			await deed.setOffer(addr3.address, 0, 100, addr4.address, tokenId, 70);
+			await deed.setOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, tokenId, 70);
 			const pendingOffers = await deed.callStatic.getOffers(tokenId);
 			const offerHash = pendingOffers[0];
 

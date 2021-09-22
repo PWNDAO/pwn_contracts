@@ -15,6 +15,13 @@ describe("PWNVault contract", async function() {
 	let vaultEventIface;
 	let owner, addr1, addr2, addr3, addr4;
 
+	const CATEGORY = {
+		ERC20: 0,
+		ERC721: 1,
+		ERC1155: 2,
+		unknown: 3,
+	};
+
 	before(async function() {
 		Vault = await ethers.getContractFactory("PWNVault");
 		VaultAdapter = await ethers.getContractFactory("PWNVaultTestAdapter"); // Needed for passing MultiToken.Asset struct as a parameter
@@ -48,7 +55,7 @@ describe("PWNVault contract", async function() {
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
 				tokenAddress: addr2.address,
-				cat: 0,
+				cat: CATEGORY.ERC20,
 				amount: 10,
 				id: 0,
 			};
@@ -70,7 +77,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			await vaultAdapter.push(fakeToken.address, 0, amount, 0, addr1.address);
+			await vaultAdapter.push(fakeToken.address, CATEGORY.ERC20, amount, 0, addr1.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr1.address, vault.address, amount);
@@ -81,7 +88,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const tx = await vaultAdapter.push(fakeToken.address, 0, amount, 0, addr1.address);
+			const tx = await vaultAdapter.push(fakeToken.address, CATEGORY.ERC20, amount, 0, addr1.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -90,7 +97,7 @@ describe("PWNVault contract", async function() {
 			expect(logDescription.args.origin).to.equal(addr1.address);
 			const args = logDescription.args[0];
 			expect(args.tokenAddress).to.equal(fakeToken.address);
-			expect(args.cat).to.equal(0);
+			expect(args.cat).to.equal(CATEGORY.ERC20);
 			expect(args.amount).to.equal(amount);
 			expect(args.id).to.equal(0);
 		});
@@ -99,7 +106,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const success = await vaultAdapter.callStatic.push(fakeToken.address, 0, 84, 0, addr1.address);
+			const success = await vaultAdapter.callStatic.push(fakeToken.address, CATEGORY.ERC20, 84, 0, addr1.address);
 
 			expect(success).to.equal(true);
 		});
@@ -109,7 +116,7 @@ describe("PWNVault contract", async function() {
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
 				tokenAddress: addr2.address,
-				cat: 0,
+				cat: CATEGORY.ERC20,
 				amount: 10,
 				id: 0,
 			};
@@ -131,7 +138,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			await vaultAdapter.pull(fakeToken.address, 0, amount, 0, addr2.address);
+			await vaultAdapter.pull(fakeToken.address, CATEGORY.ERC20, amount, 0, addr2.address);
 
 			expect(fakeToken.transfer).to.have.been.calledOnce;
 			expect(fakeToken.transfer).to.have.been.calledWith(addr2.address, amount);
@@ -142,7 +149,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			const tx = await vaultAdapter.pull(fakeToken.address, 0, amount, 0, addr2.address);
+			const tx = await vaultAdapter.pull(fakeToken.address, CATEGORY.ERC20, amount, 0, addr2.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -151,7 +158,7 @@ describe("PWNVault contract", async function() {
 			expect(logDescription.args.beneficiary).to.equal(addr2.address);
 			const args = logDescription.args[0];
 			expect(args.tokenAddress).to.equal(fakeToken.address);
-			expect(args.cat).to.equal(0);
+			expect(args.cat).to.equal(CATEGORY.ERC20);
 			expect(args.amount).to.equal(amount);
 			expect(args.id).to.equal(0);
 		});
@@ -160,7 +167,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			const success = await vaultAdapter.callStatic.pull(fakeToken.address, 0, 48, 0, addr2.address);
+			const success = await vaultAdapter.callStatic.pull(fakeToken.address, CATEGORY.ERC20, 48, 0, addr2.address);
 
 			expect(success).to.equal(true);
 		});
@@ -170,7 +177,7 @@ describe("PWNVault contract", async function() {
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
 				tokenAddress: addr2.address,
-				cat: 0,
+				cat: CATEGORY.ERC20,
 				amount: 10,
 				id: 0,
 			};
@@ -192,7 +199,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			await vaultAdapter.pullProxy(fakeToken.address, 0, amount, 0, addr2.address, addr3.address);
+			await vaultAdapter.pullProxy(fakeToken.address, CATEGORY.ERC20, amount, 0, addr2.address, addr3.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr2.address, addr3.address, amount);
@@ -203,7 +210,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const tx = await vaultAdapter.pullProxy(fakeToken.address, 0, amount, 0, addr2.address, addr3.address);
+			const tx = await vaultAdapter.pullProxy(fakeToken.address, CATEGORY.ERC20, amount, 0, addr2.address, addr3.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -213,7 +220,7 @@ describe("PWNVault contract", async function() {
 			expect(logDescription.args.beneficiary).to.equal(addr3.address);
 			const args = logDescription.args[0];
 			expect(args.tokenAddress).to.equal(fakeToken.address);
-			expect(args.cat).to.equal(0);
+			expect(args.cat).to.equal(CATEGORY.ERC20);
 			expect(args.amount).to.equal(amount);
 			expect(args.id).to.equal(0);
 		});
@@ -222,7 +229,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const success = await vaultAdapter.callStatic.pullProxy(fakeToken.address, 0, 22, 0, addr2.address, addr3.address);
+			const success = await vaultAdapter.callStatic.pullProxy(fakeToken.address, CATEGORY.ERC20, 22, 0, addr2.address, addr3.address);
 
 			expect(success).to.equal(true);
 		});

@@ -25,6 +25,13 @@ let addrs;
 
 let date = new Date();
 
+const CATEGORY = {
+  ERC20: 0,
+  ERC721: 1,
+  ERC1155: 2,
+  unknown: 3,
+};
+
 // `beforeEach` will run before each test, re-deploying the contract every
 // time. It receives a callback, which can be async.
 
@@ -102,7 +109,7 @@ describe("PWN contract", function () {
   describe("Workflow - New deeds with arbitrary collateral", function () {
     it("Should be possible to create an ERC20 deed", async function () {
       await bDAI.approve(PWNVault.address, 100);
-      await bPWN.newDeed(DAI.address, 0, 0, 100, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(DAI.address, CATEGORY.ERC20, 0, 100, date.setDate(date.getDate() + 1));
 
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
@@ -116,7 +123,7 @@ describe("PWN contract", function () {
 
     it("Should be possible to create an ERC721 deed", async function () {
       await bNFT.approve(PWNVault.address, 42);
-      await bPWN.newDeed(NFT.address, 1, 42, 0, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = events[0].args[5];
@@ -132,7 +139,7 @@ describe("PWN contract", function () {
 
     it("Should be possible to create an ERC1155 deed", async function () {
       await bGAME.setApprovalForAll(PWNVault.address, true);
-      await bPWN.newDeed(GAME.address, 2, 1337, 1, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(GAME.address, CATEGORY.ERC1155, 1337, 1, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = events[0].args[5];
@@ -148,7 +155,7 @@ describe("PWN contract", function () {
   describe("Workflow - New deeds with arbitrary collateral", function () {
     it("Should be possible to revoke an ERC20 deed", async function () {
       await bDAI.approve(PWNVault.address, 100);
-      await bPWN.newDeed(DAI.address, 0, 0, 100, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(DAI.address, CATEGORY.ERC20, 0, 100, date.setDate(date.getDate() + 1));
 
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
@@ -164,7 +171,7 @@ describe("PWN contract", function () {
 
     it("Should be possible to revoke an ERC721 deed", async function () {
       await bNFT.approve(PWNVault.address, 42);
-      await bPWN.newDeed(NFT.address, 1, 42, 0, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = events[0].args[5];
@@ -178,7 +185,7 @@ describe("PWN contract", function () {
 
     it("Should be possible to revoke an ERC1155 deed", async function () {
       await bGAME.setApprovalForAll(PWNVault.address, true);
-      await bPWN.newDeed(GAME.address, 2, 1337, 1, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(GAME.address, CATEGORY.ERC1155, 1337, 1, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = events[0].args[5];
@@ -199,13 +206,13 @@ describe("PWN contract", function () {
       await bPWND.setApprovalForAll(PWNVault.address, true);
 
       await bNFT.approve(PWNVault.address, 42);
-      await bPWN.newDeed(NFT.address, 1, 42, 0, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = (events[0].args[5]).toNumber();
 
       await lDAI.approve(PWNVault.address, 1000);
-      await lPWN.makeOffer(lDAI.address, 0, 1000, DID, 1200);
+      await lPWN.makeOffer(lDAI.address, CATEGORY.ERC20, 1000, DID, 1200);
       const eventFilter2 = PWN.filters.NewOffer();
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
@@ -220,13 +227,13 @@ describe("PWN contract", function () {
       await bPWND.setApprovalForAll(PWNVault.address, true);
 
       await bNFT.approve(PWNVault.address, 42);
-      await bPWN.newDeed(NFT.address, 1, 42, 0, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = (events[0].args[5]).toNumber();
 
       await lDAI.approve(PWNVault.address, 1000);
-      await lPWN.makeOffer(lDAI.address, 0, 1000, DID, 1200);
+      await lPWN.makeOffer(lDAI.address, CATEGORY.ERC20, 1000, DID, 1200);
       const eventFilter2 = PWN.filters.NewOffer();
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
@@ -240,13 +247,13 @@ describe("PWN contract", function () {
       await bPWND.setApprovalForAll(PWNVault.address, true);
 
       await bNFT.approve(PWNVault.address, 42);
-      await bPWN.newDeed(NFT.address, 1, 42, 0, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = (events[0].args[5]).toNumber();
 
       await lDAI.approve(PWNVault.address, 1000);
-      await lPWN.makeOffer(DAI.address, 0, 1000, DID, 1200);
+      await lPWN.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
       const eventFilter2 = PWN.filters.NewOffer();
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
@@ -273,13 +280,13 @@ describe("PWN contract", function () {
       await bPWND.setApprovalForAll(PWNVault.address, true);
 
       await bNFT.approve(PWNVault.address, 42);
-      await bPWN.newDeed(NFT.address, 1, 42, 0, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = (events[0].args[5]).toNumber();
 
       await lDAI.approve(PWNVault.address, 1000);
-      await lPWN.makeOffer(DAI.address, 0, 1000, DID, 1200);
+      await lPWN.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
       const eventFilter2 = PWN.filters.NewOffer();
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
@@ -306,13 +313,13 @@ describe("PWN contract", function () {
       await bPWND.setApprovalForAll(PWNVault.address, true);
 
       await bNFT.approve(PWNVault.address, 42);
-      await bPWN.newDeed(NFT.address, 1, 42, 0, date.setDate(date.getDate() + 1));
+      await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = (events[0].args[5]).toNumber();
 
       await lDAI.approve(PWNVault.address, 1000);
-      await lPWN.makeOffer(DAI.address, 0, 1000, DID, 1200);
+      await lPWN.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
       const eventFilter2 = PWN.filters.NewOffer();
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
@@ -341,13 +348,13 @@ describe("PWN contract", function () {
 
       const expiration = parseInt(Math.floor(Date.now() / 1000)) + parseInt(time.duration.days(7)) + 1000;
       await bNFT.approve(PWNVault.address, 42);
-      await bPWN.newDeed(NFT.address, 1, 42, 0, expiration);
+      await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, expiration);
       const eventFilter = PWN.filters.NewDeed();
       const events = await PWN.queryFilter(eventFilter, "latest");
       const DID = (events[0].args[5]).toNumber();
 
       await lDAI.approve(PWNVault.address, 1000);
-      await lPWN.makeOffer(DAI.address, 0, 1000, DID, 1200);
+      await lPWN.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
       const eventFilter2 = PWN.filters.NewOffer();
       const events2 = await PWN.queryFilter(eventFilter2, "latest");
       const offer = (events2[0].args[6]);
