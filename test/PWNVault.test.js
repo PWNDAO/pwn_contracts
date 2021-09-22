@@ -21,7 +21,7 @@ describe("PWNVault contract", async function() {
 		[owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
 
 		vaultEventIface = new ethers.utils.Interface([
-			"event VaultPush(tuple(uint8 cat, uint256 amount, uint256 id, address tokenAddress))",
+			"event VaultPush(tuple(uint8 cat, uint256 amount, uint256 id, address tokenAddress), address indexed origin)",
 			"event VaultPull(tuple(uint8 cat, uint256 amount, uint256 id, address tokenAddress), address indexed beneficiary)",
 	    	"event VaultProxy(tuple(uint8 cat, uint256 amount, uint256 id, address tokenAddress), address indexed origin, address indexed beneficiary)"
 		]);
@@ -87,6 +87,7 @@ describe("PWNVault contract", async function() {
 			expect(response.logs.length).to.equal(1);
 			const logDescription = vaultEventIface.parseLog(response.logs[0]);
 			expect(logDescription.name).to.equal("VaultPush");
+			expect(logDescription.args.origin).to.equal(addr1.address);
 			const args = logDescription.args[0];
 			expect(args.cat).to.equal(0);
 			expect(args.amount).to.equal(amount);
