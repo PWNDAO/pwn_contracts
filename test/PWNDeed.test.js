@@ -98,7 +98,7 @@ describe("PWNDeed contract", function() {
 				await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
 				const tokenId = await deed.id();
 
-				await deed.connect(addr1)['burn(uint256,address)'](tokenId, addr3.address);
+				await deed.connect(addr1).burn(tokenId, addr3.address);
 				expect().fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert"); // TODO: Add reason?
@@ -109,7 +109,7 @@ describe("PWNDeed contract", function() {
 			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
-			await deed['burn(uint256,address)'](tokenId, addr3.address);
+			await deed.burn(tokenId, addr3.address);
 
 			const balance = await deed.balanceOf(addr3.address, tokenId);
 			expect(balance).to.equal(0);
@@ -119,7 +119,7 @@ describe("PWNDeed contract", function() {
 			await deed.mint(addr2.address, 0, 1, 100, 54, addr3.address);
 			const tokenId = await deed.id();
 
-			await deed['burn(uint256,address)'](tokenId, addr3.address);
+			await deed.burn(tokenId, addr3.address);
 
 			const deedToken = await deed.deeds(tokenId);
 			expect(deedToken.expiration).to.equal(0);

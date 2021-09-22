@@ -243,7 +243,7 @@ describe("PWN contract", function() {
 		it("Should burn deed token", async function() {
 			await pwn.connect(addr1).revokeDeed(did);
 
-			expect(deedFake["burn(uint256,address)"]).to.have.been.calledOnceWith(did, addr1.address);
+			expect(deedFake.burn).to.have.been.calledOnceWith(did, addr1.address);
 		});
 
 		it("Should emit DeedRevoked event", async function() {
@@ -691,7 +691,7 @@ describe("PWN contract", function() {
 		it("Should burn deed token", async function() {
 			await pwn.connect(addr3).claimDeed(did);
 
-			expect(deedFake['burn(uint256,address)']).to.have.been.calledOnceWith(did, addr3.address);
+			expect(deedFake.burn).to.have.been.calledOnceWith(did, addr3.address);
 		});
 
 		it("Should return true if successful", async function() {
