@@ -6,20 +6,20 @@ contract MultiTokenTestAdapter {
 	using MultiToken for MultiToken.Asset;
 
 
-	function transferAsset(uint8 _cat, uint256 _amount, uint256 _id, address _tokenAddress, address _dest) external {
-		MultiToken.Asset(_cat, _amount, _id, _tokenAddress).transferAsset(_dest);
+	function transferAsset(address _tokenAddress, uint8 _cat, uint256 _amount, uint256 _id, address _dest) external {
+		MultiToken.Asset(_tokenAddress, _cat, _amount, _id).transferAsset(_dest);
 	}
 
-	function transferAssetFrom(uint8 _cat, uint256 _amount, uint256 _id, address _tokenAddress, address _source, address  _dest) external {
-		MultiToken.Asset(_cat, _amount, _id, _tokenAddress).transferAssetFrom(_source, _dest);
+	function transferAssetFrom(address _tokenAddress, uint8 _cat, uint256 _amount, uint256 _id, address _source, address  _dest) external {
+		MultiToken.Asset(_tokenAddress, _cat, _amount, _id).transferAssetFrom(_source, _dest);
 	}
 
-	function balanceOf(uint8 _cat, uint256 _amount, uint256 _id, address _tokenAddress, address _target) external view returns (uint256) {
-		return MultiToken.Asset(_cat, _amount, _id, _tokenAddress).balanceOf(_target);
+	function balanceOf(address _tokenAddress, uint8 _cat, uint256 _amount, uint256 _id, address _target) external view returns (uint256) {
+		return MultiToken.Asset(_tokenAddress, _cat, _amount, _id).balanceOf(_target);
 	}
 
-	function approveAsset(uint8 _cat, uint256 _amount, uint256 _id, address _tokenAddress, address _target) external {
-		MultiToken.Asset(_cat, _amount, _id, _tokenAddress).approveAsset(_target);
+	function approveAsset(address _tokenAddress, uint8 _cat, uint256 _amount, uint256 _id, address _target) external {
+		MultiToken.Asset(_tokenAddress, _cat, _amount, _id).approveAsset(_target);
 	}
 
 }

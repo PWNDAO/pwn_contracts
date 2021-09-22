@@ -26,7 +26,7 @@ describe("MultiToken library", function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			await multiTokenAdapter.transferAsset(0, amount, 0, fakeToken.address, addr1.address);
+			await multiTokenAdapter.transferAsset(fakeToken.address, 0, amount, 0, addr1.address);
 
 			expect(fakeToken.transfer).to.have.been.calledOnce;
 			expect(fakeToken.transfer).to.have.been.calledWith(addr1.address, amount);
@@ -36,7 +36,7 @@ describe("MultiToken library", function() {
 			const assetId = 2047;
 			const fakeToken = await smock.fake("Basic721");
 
-			await multiTokenAdapter.transferAsset(1, 1, assetId, fakeToken.address, addr1.address);
+			await multiTokenAdapter.transferAsset(fakeToken.address, 1, 1, assetId, addr1.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(multiTokenAdapter.address, addr1.address, assetId);
@@ -47,7 +47,7 @@ describe("MultiToken library", function() {
 			const assetId = 2047;
 			const fakeToken = await smock.fake("Basic1155");
 
-			await multiTokenAdapter.transferAsset(2, amount, assetId, fakeToken.address, addr1.address);
+			await multiTokenAdapter.transferAsset(fakeToken.address, 2, amount, assetId, addr1.address);
 
 			expect(fakeToken.safeTransferFrom).to.have.been.calledOnce;
 			expect(fakeToken.safeTransferFrom).to.have.been.calledWith(multiTokenAdapter.address, addr1.address, assetId, amount, "0x");
@@ -57,7 +57,7 @@ describe("MultiToken library", function() {
 			const assetId = 2047;
 			const fakeToken = await smock.fake("Basic1155");
 
-			await multiTokenAdapter.transferAsset(2, 0, assetId, fakeToken.address, addr1.address);
+			await multiTokenAdapter.transferAsset(fakeToken.address, 2, 0, assetId, addr1.address);
 
 			expect(fakeToken.safeTransferFrom).to.have.been.calledOnce;
 			expect(fakeToken.safeTransferFrom).to.have.been.calledWith(multiTokenAdapter.address, addr1.address, assetId, 1, "0x");
@@ -65,7 +65,7 @@ describe("MultiToken library", function() {
 
 		it("Should fail when passing unsupported category", async function() {
 			try {
-				await multiTokenAdapter.transferAsset(3, 0, 0, addr4.address, addr1.address);
+				await multiTokenAdapter.transferAsset(addr4.address, 3, 0, 0, addr1.address);
 				expect.fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
@@ -80,7 +80,7 @@ describe("MultiToken library", function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			await multiTokenAdapter.transferAssetFrom(0, amount, 0, fakeToken.address, addr1.address, addr2.address);
+			await multiTokenAdapter.transferAssetFrom(fakeToken.address, 0, amount, 0, addr1.address, addr2.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr1.address, addr2.address, amount);
@@ -90,7 +90,7 @@ describe("MultiToken library", function() {
 			const assetId = 2047;
 			const fakeToken = await smock.fake("Basic721");
 
-			await multiTokenAdapter.transferAssetFrom(1, 1, assetId, fakeToken.address, addr1.address, addr2.address);
+			await multiTokenAdapter.transferAssetFrom(fakeToken.address, 1, 1, assetId, addr1.address, addr2.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr1.address, addr2.address, assetId);
@@ -101,7 +101,7 @@ describe("MultiToken library", function() {
 			const assetId = 2047;
 			const fakeToken = await smock.fake("Basic1155");
 
-			await multiTokenAdapter.transferAssetFrom(2, amount, assetId, fakeToken.address, addr1.address, addr2.address);
+			await multiTokenAdapter.transferAssetFrom(fakeToken.address, 2, amount, assetId, addr1.address, addr2.address);
 
 			expect(fakeToken.safeTransferFrom).to.have.been.calledOnce;
 			expect(fakeToken.safeTransferFrom).to.have.been.calledWith(addr1.address, addr2.address, assetId, amount, "0x");
@@ -111,7 +111,7 @@ describe("MultiToken library", function() {
 			const assetId = 2047;
 			const fakeToken = await smock.fake("Basic1155");
 
-			await multiTokenAdapter.transferAssetFrom(2, 0, assetId, fakeToken.address, addr1.address, addr2.address);
+			await multiTokenAdapter.transferAssetFrom(fakeToken.address, 2, 0, assetId, addr1.address, addr2.address);
 
 			expect(fakeToken.safeTransferFrom).to.have.been.calledOnce;
 			expect(fakeToken.safeTransferFrom).to.have.been.calledWith(addr1.address, addr2.address, assetId, 1, "0x");
@@ -119,7 +119,7 @@ describe("MultiToken library", function() {
 
 		it("Should fail when passing unsupported category", async function() {
 			try {
-				await multiTokenAdapter.transferAssetFrom(3, 0, 0, addr4.address, addr1.address, addr2.address);
+				await multiTokenAdapter.transferAssetFrom(addr4.address, 3, 0, 0, addr1.address, addr2.address);
 				expect.fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
@@ -134,7 +134,7 @@ describe("MultiToken library", function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.balanceOf.returns(amount);
 
-			const balance = await multiTokenAdapter.balanceOf(0, 732, 0, fakeToken.address, addr1.address);
+			const balance = await multiTokenAdapter.balanceOf(fakeToken.address, 0, 732, 0, addr1.address);
 
 			expect(balance).to.equal(amount);
 			expect(fakeToken.balanceOf).to.have.been.calledOnce;
@@ -146,7 +146,7 @@ describe("MultiToken library", function() {
 			const fakeToken = await smock.fake("Basic721");
 			fakeToken.ownerOf.returns(addr1.address);
 
-			const balance = await multiTokenAdapter.balanceOf(1, 1, assetId, fakeToken.address, addr1.address);
+			const balance = await multiTokenAdapter.balanceOf(fakeToken.address, 1, 1, assetId, addr1.address);
 
 			expect(balance).to.equal(1);
 			expect(fakeToken.ownerOf).to.have.been.calledOnce;
@@ -158,7 +158,7 @@ describe("MultiToken library", function() {
 			const fakeToken = await smock.fake("Basic721");
 			fakeToken.ownerOf.returns(addr2.address);
 
-			const balance = await multiTokenAdapter.balanceOf(1, 1, assetId, fakeToken.address, addr1.address);
+			const balance = await multiTokenAdapter.balanceOf(fakeToken.address, 1, 1, assetId, addr1.address);
 
 			expect(balance).to.equal(0);
 			expect(fakeToken.ownerOf).to.have.been.calledOnce;
@@ -171,7 +171,7 @@ describe("MultiToken library", function() {
 			const fakeToken = await smock.fake("Basic1155");
 			fakeToken.balanceOf.returns(amount);
 
-			const balance = await multiTokenAdapter.balanceOf(2, 732, assetId, fakeToken.address, addr1.address);
+			const balance = await multiTokenAdapter.balanceOf(fakeToken.address, 2, 732, assetId, addr1.address);
 
 			expect(balance).to.equal(amount);
 			expect(fakeToken.balanceOf).to.have.been.calledOnce;
@@ -180,7 +180,7 @@ describe("MultiToken library", function() {
 
 		it("Should fail when passing unsupported category", async function() {
 			try {
-				await multiTokenAdapter.balanceOf(3, 1, 0, addr4.address, addr1.address);
+				await multiTokenAdapter.balanceOf(addr4.address, 3, 1, 0, addr1.address);
 				expect.fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
@@ -195,7 +195,7 @@ describe("MultiToken library", function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.approve.returns(true);
 
-			await multiTokenAdapter.approveAsset(0, amount, 0, fakeToken.address, addr1.address);
+			await multiTokenAdapter.approveAsset(fakeToken.address, 0, amount, 0, addr1.address);
 
 			expect(fakeToken.approve).to.have.been.calledOnce;
 			expect(fakeToken.approve).to.have.been.calledWith(addr1.address, amount);
@@ -205,7 +205,7 @@ describe("MultiToken library", function() {
 			const assetId = 657;
 			const fakeToken = await smock.fake("Basic721");
 
-			await multiTokenAdapter.approveAsset(1, 0, assetId, fakeToken.address, addr1.address);
+			await multiTokenAdapter.approveAsset(fakeToken.address, 1, 0, assetId, addr1.address);
 
 			expect(fakeToken.approve).to.have.been.calledOnce;
 			expect(fakeToken.approve).to.have.been.calledWith(addr1.address, assetId);
@@ -214,7 +214,7 @@ describe("MultiToken library", function() {
 		it("Should call set approval for all on ERC1155 token", async function() {
 			const fakeToken = await smock.fake("Basic1155");
 
-			await multiTokenAdapter.approveAsset(2, 0, 657, fakeToken.address, addr1.address);
+			await multiTokenAdapter.approveAsset(fakeToken.address, 2, 0, 657, addr1.address);
 
 			expect(fakeToken.setApprovalForAll).to.have.been.calledOnce;
 			expect(fakeToken.setApprovalForAll).to.have.been.calledWith(addr1.address, true);
@@ -222,7 +222,7 @@ describe("MultiToken library", function() {
 
 		it("Should fail when passing unsupported category", async function() {
 			try {
-				await multiTokenAdapter.approveAsset(3, 1, 0, addr4.address, addr1.address);
+				await multiTokenAdapter.approveAsset(addr4.address, 3, 1, 0, addr1.address);
 				expect.fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");

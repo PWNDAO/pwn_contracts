@@ -27,8 +27,8 @@ describe("PWN contract", function() {
 		[owner, addr1, addr2, addr3, addr4, addr5] = await ethers.getSigners();
 
 		pwnEventIface = new ethers.utils.Interface([
-			"event NewDeed(uint8 cat, uint256 id, uint256 amount, address indexed tokenAddress, uint256 expiration, uint256 indexed did)",
-		    "event NewOffer(uint8 cat, uint256 amount, address tokenAddress, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer)",
+			"event NewDeed(address indexed tokenAddress, uint8 cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did)",
+		    "event NewOffer(address tokenAddress, uint8 cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer)",
 		    "event DeedRevoked(uint256 did)",
 		    "event OfferRevoked(bytes32 offer)",
 		    "event OfferAccepted(uint256 did, bytes32 offer)",
@@ -73,7 +73,7 @@ describe("PWN contract", function() {
 			const fakeToken = await smock.fake("Basic20");
 			const expiration = await getExpiration(110);
 
-			await pwn.newDeed(0, 0, amount, fakeToken.address, expiration);
+			await pwn.newDeed(fakeToken.address, 0, 0, amount, expiration);
 			//TODO: add expected result
 		});
 
@@ -82,7 +82,7 @@ describe("PWN contract", function() {
 			const fakeToken = await smock.fake("Basic721");
 			const expiration = await getExpiration(110);
 
-			await pwn.newDeed(1, tokenId, 1, fakeToken.address, expiration);
+			await pwn.newDeed(fakeToken.address, 1, tokenId, 1, expiration);
 			//TODO: add expected result
 		});
 
@@ -91,13 +91,13 @@ describe("PWN contract", function() {
 			const fakeToken = await smock.fake("Basic1155");
 			const expiration = await getExpiration(110);
 
-			await pwn.newDeed(2, tokenId, 5, fakeToken.address, expiration);
+			await pwn.newDeed(fakeToken.address, 2, tokenId, 5, expiration);
 			//TODO: add expected result
 		});
 
 		it("Should fail for unknown asset category", async function() {
 			try {
-				await pwn.newDeed(3, 0, 10, addr4.address, 1);
+				await pwn.newDeed(addr4.address, 3, 0, 10, 1);
 				expect.fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
@@ -109,7 +109,7 @@ describe("PWN contract", function() {
 			const expiration = getExpiration(90);
 
 			try {
-				await pwn.newDeed(0, 0, 10, addr4.address, expiration);
+				await pwn.newDeed(addr4.address, 0, 0, 10, expiration);
 				expect.fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert"); // TODO: Add reason?
@@ -123,16 +123,16 @@ describe("PWN contract", function() {
 			const fakeDid = 3;
 			deedFake.mint.returns(fakeDid);
 
-			const tx = await pwn.newDeed(0, 0, amount, fakeToken.address, expiration);
+			const tx = await pwn.newDeed(fakeToken.address, 0, 0, amount, expiration);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
 			const logDescription = pwnEventIface.parseLog(response.logs[0]);
 			expect(logDescription.name).to.equal("NewDeed");
+			expect(logDescription.args.tokenAddress).to.equal(fakeToken.address);
 			expect(logDescription.args.cat).to.equal(0);
 			expect(logDescription.args.id).to.equal(0);
 			expect(logDescription.args.amount).to.equal(amount);
-			expect(logDescription.args.tokenAddress).to.equal(fakeToken.address);
 			expect(logDescription.args.expiration).to.equal(expiration);
 			expect(logDescription.args.did).to.equal(fakeDid);
 		});
@@ -143,7 +143,7 @@ describe("PWN contract", function() {
 			const fakeDid = 3;
 			deedFake.mint.returns(fakeDid);
 
-			const did = await pwn.callStatic.newDeed(0, 0, 10, fakeToken.address, expiration);
+			const did = await pwn.callStatic.newDeed(fakeToken.address, 0, 0, 10, expiration);
 
 			expect(did).to.equal(fakeDid);
 		});
@@ -159,7 +159,7 @@ describe("PWN contract", function() {
 				tokenAddress: fakeToken.address,
 			});
 
-			await pwn.connect(addr1).newDeed(0, 0, amount, fakeToken.address, expiration);
+			await pwn.connect(addr1).newDeed(fakeToken.address, 0, 0, amount, expiration);
 
 			expect(vaultFake.push).to.have.been.calledOnce;
 			const args = vaultFake.push.getCall(0).args;
@@ -177,9 +177,9 @@ describe("PWN contract", function() {
 			const fakeDid = 3;
 			deedFake.mint.returns(fakeDid);
 
-			await pwn.connect(addr1).newDeed(0, 0, amount, fakeToken.address, expiration);
+			await pwn.connect(addr1).newDeed(fakeToken.address, 0, 0, amount, expiration);
 
-			expect(deedFake.mint).to.have.been.calledOnceWith(0, 0, amount, fakeToken.address, expiration, addr1.address);
+			expect(deedFake.mint).to.have.been.calledOnceWith(fakeToken.address, 0, 0, amount, expiration, addr1.address);
 			expect(deedFake.changeStatus).to.have.been.calledOnceWith(1, fakeDid);
 		});
 	});
@@ -274,20 +274,20 @@ describe("PWN contract", function() {
 		});
 
 		it("Should be able to make ERC20 offer", async function() {
-			await pwn.makeOffer(0, amount, fakeToken.address, did, toBePaid);
+			await pwn.makeOffer(fakeToken.address, 0, amount, did, toBePaid);
 		});
 
 		it("Should be able to make ERC721 offer", async function() {
-			await pwn.makeOffer(1, 1, fakeToken.address, did, 1);
+			await pwn.makeOffer(fakeToken.address, 1, 1, did, 1);
 		});
 
 		it("Should be able to make ERC1155 offer", async function() {
-			await pwn.makeOffer(2, amount, fakeToken.address, did, toBePaid);
+			await pwn.makeOffer(fakeToken.address, 2, amount, did, toBePaid);
 		});
 
 		it("Should fail for unknown asset category", async function() {
 			try {
-				await pwn.makeOffer(3, 1, fakeToken.address, did, 2);
+				await pwn.makeOffer(fakeToken.address, 3, 1, did, 2);
 				expect.fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
@@ -299,7 +299,7 @@ describe("PWN contract", function() {
 			deedFake.getDeedStatus.whenCalledWith(did).returns(2);
 
 			try {
-				await pwn.makeOffer(0, 1, fakeToken.address, did, 2);
+				await pwn.makeOffer(fakeToken.address, 0, 1, did, 2);
 				expect.fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
@@ -308,22 +308,22 @@ describe("PWN contract", function() {
 		});
 
 		it("Should set new offer to the deed", async function() {
-			await pwn.connect(addr4).makeOffer(0, amount, fakeToken.address, did, toBePaid);
+			await pwn.connect(addr4).makeOffer(fakeToken.address, 0, amount, did, toBePaid);
 
-			expect(deedFake.setOffer).to.have.been.calledOnceWith(0, amount, fakeToken.address, addr4.address, did, toBePaid);
+			expect(deedFake.setOffer).to.have.been.calledOnceWith(fakeToken.address, 0, amount, addr4.address, did, toBePaid);
 		});
 
 		it("Should emit NewOffer event", async function() {
-			const tx = await pwn.connect(addr4).makeOffer(0, amount, fakeToken.address, did, toBePaid);
+			const tx = await pwn.connect(addr4).makeOffer(fakeToken.address, 0, amount, did, toBePaid);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
 			const logDescription = pwnEventIface.parseLog(response.logs[0]);
 			expect(logDescription.name).to.equal("NewOffer");
 			const args = logDescription.args;
+			expect(args.tokenAddress).to.equal(fakeToken.address);
 			expect(args.cat).to.equal(0);
 			expect(args.amount).to.equal(amount);
-			expect(args.tokenAddress).to.equal(fakeToken.address);
 			expect(args.lender).to.equal(addr4.address);
 			expect(args.toBePaid).to.equal(toBePaid);
 			expect(args.did).to.equal(did);
@@ -331,7 +331,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should return new offer hash", async function() {
-			const offer = await pwn.callStatic.makeOffer(0, 9, fakeToken.address, did, 10);
+			const offer = await pwn.callStatic.makeOffer(fakeToken.address, 0, 9, did, 10);
 
 			expect(offer).to.equal(offerHash);
 		});

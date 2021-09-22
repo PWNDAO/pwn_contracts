@@ -8,19 +8,19 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 library MultiToken {
     /**
      * @title Asset
+     * @param tokenAddress Address of the token contract defining the asset
      * @param cat Corresponding asset category:
      *      cat == 0 := ERC20
      *      cat == 1 := ERC721
      *      cat == 2 := ERC1155
      * @param amount Amount of fungible tokens or 0 -> 1
      * @param id TokenID of an NFT or 0
-     * @param tokenAddress Address of the token contract defining the asset
      */
     struct Asset {
+        address tokenAddress;
         uint8 cat;
         uint256 amount;
         uint256 id;
-        address tokenAddress;
     }
 
     /**

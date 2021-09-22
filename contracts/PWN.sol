@@ -23,8 +23,8 @@ contract PWN is Ownable {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event NewDeed(uint8 cat, uint256 id, uint256 amount, address indexed tokenAddress, uint256 expiration, uint256 indexed did);
-    event NewOffer(uint8 cat, uint256 amount, address tokenAddress, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
+    event NewDeed(address indexed tokenAddress, uint8 cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did);
+    event NewOffer(address tokenAddress, uint8 cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
     event DeedRevoked(uint256 did);
     event OfferRevoked(bytes32 offer);
     event OfferAccepted(uint256 did, bytes32 offer);
@@ -58,28 +58,28 @@ contract PWN is Ownable {
      * newDeed - sets & locks collateral
      * @dev for UI integrations is this the function enabling creation of a new Deed token
      * @dev Deed status is set to 1
+     * @param _tokenAddress Address of the asset contract
      * @param _cat Category of the asset - see { MultiToken.sol }
      * @param _id ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
      * @param _amount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
-     * @param _tokenAddress Address of the asset contract
      * @param _expiration Unix time stamp in !! seconds !! (not miliseconds returned by JS)
      * @return a Deed ID of the newly created Deed
      */
     function newDeed(
+        address _tokenAddress,
         uint8 _cat,
         uint256 _id,
         uint256 _amount,
-        address _tokenAddress,
         uint256 _expiration
     ) external returns (uint256) {
         require(_cat < 3, "Unknown asset type");
         require(_expiration > (block.timestamp + minDuration));
 
-        uint256 did = token.mint(_cat, _id, _amount, _tokenAddress, _expiration, msg.sender);
+        uint256 did = token.mint(_tokenAddress, _cat, _id, _amount, _expiration, msg.sender);
         vault.push(token.getDeedAsset(did), msg.sender);
         token.changeStatus(1, did);
 
-        emit NewDeed(_cat, _id, _amount, _tokenAddress, _expiration, did);
+        emit NewDeed(_tokenAddress, _cat, _id, _amount, _expiration, did);
         return did;
     }
 
@@ -104,25 +104,25 @@ contract PWN is Ownable {
      * @dev this is the function used by lenders to cast their offers
      * @dev this function doesn't assume the asset is approved yet for PWNVault
      * @dev this function requires lender to have a sufficient balance
+     * @param _tokenAddress Address of the asset contract
      * @param _cat Category of the asset - see { MultiToken.sol }
      * @param _amount Amount of an ERC20 or ERC1155 token to be offered as credit
-     * @param _tokenAddress Address of the asset contract
      * @param _did ID of the Deed the offer should be bound to
      * @param _toBePaid Amount to be paid back by the borrower
      * @return a hash of the newly created offer
      */
     function makeOffer(
+        address _tokenAddress,
         uint8 _cat,
         uint256 _amount,
-        address _tokenAddress,
         uint256 _did,
         uint256 _toBePaid
     ) external returns (bytes32) {
         require(_cat < 3, "Unknown asset type");
         require(token.getDeedStatus(_did) == 1, "Deed not accepting offers");
 
-        bytes32 offer = token.setOffer(_cat, _amount, _tokenAddress, msg.sender, _did, _toBePaid);
-        emit NewOffer(_cat, _amount, _tokenAddress,  msg.sender, _toBePaid, _did, offer);
+        bytes32 offer = token.setOffer(_tokenAddress, _cat, _amount, msg.sender, _did, _toBePaid);
+        emit NewOffer(_tokenAddress, _cat, _amount,  msg.sender, _toBePaid, _did, offer);
 
         return offer;
     }

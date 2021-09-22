@@ -92,19 +92,19 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     /**
      * mint
      * @dev Creates the PWN Deed token contract - ERC1155 with extra use case specific features
+     * @param _tokenAddress Address of the asset contract
      * @param _cat Category of the asset - see { MultiToken.sol }
      * @param _id ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
      * @param _amount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
-     * @param _tokenAddress Address of the asset contract
      * @param _expiration Unix time stamp in !! seconds !! (not mili-seconds returned by JS)
      * @param _borrower Essentially the tx.origin; the address initiating the new Deed
      * @return Deed ID of the newly minted Deed
      */
     function mint(
+        address _tokenAddress,
         uint8 _cat,
         uint256 _id,
         uint256 _amount,
-        address _tokenAddress,
         uint256 _expiration,
         address _borrower
     )
@@ -115,10 +115,10 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         id++;
         deeds[id].expiration = _expiration;
         deeds[id].borrower = _borrower;
+        deeds[id].asset.tokenAddress = _tokenAddress;
         deeds[id].asset.cat = _cat;
         deeds[id].asset.id = _id;
         deeds[id].asset.amount = _amount;
-        deeds[id].asset.tokenAddress = _tokenAddress;
 
         _mint(_borrower, id, 1, "");
         return id;
@@ -144,18 +144,18 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     /**
      * setOffer
      * @dev saves an offer object that defines credit terms
+     * @param _tokenAddress Address of the asset contract
      * @param _cat Category of the asset - see { MultiToken.sol }
      * @param _amount Amount of an ERC20 or ERC1155 token to be offered as credit
-     * @param _tokenAddress Address of the asset contract
      * @param _lender Address of the asset lender
      * @param _did ID of the Deed the offer should be bound to
      * @param _toBePaid Amount to be paid back by the borrower
      * @return hash of the newly created offer
      */
     function setOffer(
+        address _tokenAddress,
         uint8 _cat,
         uint256 _amount,
-        address _tokenAddress,
         address _lender,
         uint256 _did,
         uint256 _toBePaid
@@ -167,9 +167,9 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         bytes32 hash = keccak256(abi.encodePacked(msg.sender, nonce));
         nonce++;
 
+        offers[hash].asset.tokenAddress = _tokenAddress;
         offers[hash].asset.cat = _cat;
         offers[hash].asset.amount = _amount;
-        offers[hash].asset.tokenAddress = _tokenAddress;
         offers[hash].toBePaid = _toBePaid;
         offers[hash].lender = _lender;
         offers[hash].deedID = _did;

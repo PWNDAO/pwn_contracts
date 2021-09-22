@@ -21,9 +21,9 @@ describe("PWNVault contract", async function() {
 		[owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
 
 		vaultEventIface = new ethers.utils.Interface([
-			"event VaultPush(tuple(uint8 cat, uint256 amount, uint256 id, address tokenAddress), address indexed origin)",
-			"event VaultPull(tuple(uint8 cat, uint256 amount, uint256 id, address tokenAddress), address indexed beneficiary)",
-	    	"event VaultProxy(tuple(uint8 cat, uint256 amount, uint256 id, address tokenAddress), address indexed origin, address indexed beneficiary)"
+			"event VaultPush(tuple(address tokenAddress, uint8 cat, uint256 amount, uint256 id), address indexed origin)",
+			"event VaultPull(tuple(address tokenAddress, uint8 cat, uint256 amount, uint256 id), address indexed beneficiary)",
+	    	"event VaultProxy(tuple(address tokenAddress, uint8 cat, uint256 amount, uint256 id), address indexed origin, address indexed beneficiary)"
 		]);
 	});
 
@@ -47,10 +47,10 @@ describe("PWNVault contract", async function() {
 	describe("Push", function() {
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
+				tokenAddress: addr2.address,
 				cat: 0,
 				amount: 10,
 				id: 0,
-				tokenAddress: addr2.address
 			};
 
 			try {
@@ -70,7 +70,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			await vaultAdapter.push(0, amount, 0, fakeToken.address, addr1.address);
+			await vaultAdapter.push(fakeToken.address, 0, amount, 0, addr1.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr1.address, vault.address, amount);
@@ -81,7 +81,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const tx = await vaultAdapter.push(0, amount, 0, fakeToken.address, addr1.address);
+			const tx = await vaultAdapter.push(fakeToken.address, 0, amount, 0, addr1.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -89,17 +89,17 @@ describe("PWNVault contract", async function() {
 			expect(logDescription.name).to.equal("VaultPush");
 			expect(logDescription.args.origin).to.equal(addr1.address);
 			const args = logDescription.args[0];
+			expect(args.tokenAddress).to.equal(fakeToken.address);
 			expect(args.cat).to.equal(0);
 			expect(args.amount).to.equal(amount);
 			expect(args.id).to.equal(0);
-			expect(args.tokenAddress).to.equal(fakeToken.address);
 		});
 
 		it("Should return true if successful", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const success = await vaultAdapter.callStatic.push(0, 84, 0, fakeToken.address, addr1.address);
+			const success = await vaultAdapter.callStatic.push(fakeToken.address, 0, 84, 0, addr1.address);
 
 			expect(success).to.equal(true);
 		});
@@ -108,10 +108,10 @@ describe("PWNVault contract", async function() {
 	describe("Pull", function() {
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
+				tokenAddress: addr2.address,
 				cat: 0,
 				amount: 10,
 				id: 0,
-				tokenAddress: addr2.address
 			};
 
 			try {
@@ -131,7 +131,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			await vaultAdapter.pull(0, amount, 0, fakeToken.address, addr2.address);
+			await vaultAdapter.pull(fakeToken.address, 0, amount, 0, addr2.address);
 
 			expect(fakeToken.transfer).to.have.been.calledOnce;
 			expect(fakeToken.transfer).to.have.been.calledWith(addr2.address, amount);
@@ -142,7 +142,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			const tx = await vaultAdapter.pull(0, amount, 0, fakeToken.address, addr2.address);
+			const tx = await vaultAdapter.pull(fakeToken.address, 0, amount, 0, addr2.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -150,17 +150,17 @@ describe("PWNVault contract", async function() {
 			expect(logDescription.name).to.equal("VaultPull");
 			expect(logDescription.args.beneficiary).to.equal(addr2.address);
 			const args = logDescription.args[0];
+			expect(args.tokenAddress).to.equal(fakeToken.address);
 			expect(args.cat).to.equal(0);
 			expect(args.amount).to.equal(amount);
 			expect(args.id).to.equal(0);
-			expect(args.tokenAddress).to.equal(fakeToken.address);
 		});
 
 		it("Should return true if successful", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transfer.returns(true);
 
-			const success = await vaultAdapter.callStatic.pull(0, 48, 0, fakeToken.address, addr2.address);
+			const success = await vaultAdapter.callStatic.pull(fakeToken.address, 0, 48, 0, addr2.address);
 
 			expect(success).to.equal(true);
 		});
@@ -169,10 +169,10 @@ describe("PWNVault contract", async function() {
 	describe("PullProxy", function() {
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
+				tokenAddress: addr2.address,
 				cat: 0,
 				amount: 10,
 				id: 0,
-				tokenAddress: addr2.address
 			};
 
 			try {
@@ -192,7 +192,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			await vaultAdapter.pullProxy(0, amount, 0, fakeToken.address, addr2.address, addr3.address);
+			await vaultAdapter.pullProxy(fakeToken.address, 0, amount, 0, addr2.address, addr3.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr2.address, addr3.address, amount);
@@ -203,7 +203,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const tx = await vaultAdapter.pullProxy(0, amount, 0, fakeToken.address, addr2.address, addr3.address);
+			const tx = await vaultAdapter.pullProxy(fakeToken.address, 0, amount, 0, addr2.address, addr3.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -212,17 +212,17 @@ describe("PWNVault contract", async function() {
 			expect(logDescription.args.origin).to.equal(addr2.address);
 			expect(logDescription.args.beneficiary).to.equal(addr3.address);
 			const args = logDescription.args[0];
+			expect(args.tokenAddress).to.equal(fakeToken.address);
 			expect(args.cat).to.equal(0);
 			expect(args.amount).to.equal(amount);
 			expect(args.id).to.equal(0);
-			expect(args.tokenAddress).to.equal(fakeToken.address);
 		});
 
 		it("Should return true if successful", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const success = await vaultAdapter.callStatic.pullProxy(0, 22, 0, fakeToken.address, addr2.address, addr3.address);
+			const success = await vaultAdapter.callStatic.pullProxy(fakeToken.address, 0, 22, 0, addr2.address, addr3.address);
 
 			expect(success).to.equal(true);
 		});
@@ -296,9 +296,9 @@ describe("PWNVault contract", async function() {
 
 		it("Should support PWN Vault interface", async function() {
 			const pwnSelector = functionSelector("PWN()");
-			const pushSelector = functionSelector("push((uint8,uint256,uint256,address),address)");
-			const pullSelector = functionSelector("pull((uint8,uint256,uint256,address),address)");
-			const pullProxySelector = functionSelector("pullProxy((uint8,uint256,uint256,address),address,address)");
+			const pushSelector = functionSelector("push((address,uint8,uint256,uint256),address)");
+			const pullSelector = functionSelector("pull((address,uint8,uint256,uint256),address)");
+			const pullProxySelector = functionSelector("pullProxy((address,uint8,uint256,uint256),address,address)");
 			const setPWNSelector = functionSelector("setPWN(address)");
 			
 			const interfaceId = ethers.BigNumber.from(pwnSelector)
