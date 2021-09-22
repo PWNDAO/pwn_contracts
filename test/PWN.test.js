@@ -159,14 +159,15 @@ describe("PWN contract", function() {
 				tokenAddress: fakeToken.address,
 			});
 
-			await pwn.newDeed(0, 0, amount, fakeToken.address, expiration);
+			await pwn.connect(addr1).newDeed(0, 0, amount, fakeToken.address, expiration);
 
 			expect(vaultFake.push).to.have.been.calledOnce;
-			const asset = vaultFake.push.getCall(0).args._asset;
-			expect(asset.cat).to.equal(0);
-			expect(asset.amount).to.equal(amount);
-			expect(asset.id).to.equal(0);
-			expect(asset.tokenAddress).to.equal(fakeToken.address);
+			const args = vaultFake.push.getCall(0).args;
+			expect(args._asset.cat).to.equal(0);
+			expect(args._asset.amount).to.equal(amount);
+			expect(args._asset.id).to.equal(0);
+			expect(args._asset.tokenAddress).to.equal(fakeToken.address);
+			expect(args._origin).to.equal(addr1.address);
 		});
 
 		it("Should mint new deed in correct state", async function() {
@@ -567,6 +568,7 @@ describe("PWN contract", function() {
 			expect(args._asset.id).to.equal(credit.id);
 			expect(args._asset.amount).to.equal(toBePaid);
 			expect(args._asset.tokenAddress).to.equal(credit.tokenAddress);
+			expect(args._origin).to.equal(addr3.address);
 		});
 
 		it("Should emit PaidBack event", async function() {

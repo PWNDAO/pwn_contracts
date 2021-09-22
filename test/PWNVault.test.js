@@ -54,7 +54,7 @@ describe("PWNVault contract", async function() {
 			};
 
 			try {
-				await vault.connect(addr1).push(dummyAsset);
+				await vault.connect(addr1).push(dummyAsset, addr1.address);
 				expect().fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert"); // TODO: Add reason?
@@ -70,7 +70,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			await vaultAdapter.connect(addr1).push(0, amount, 0, fakeToken.address);
+			await vaultAdapter.push(0, amount, 0, fakeToken.address, addr1.address);
 
 			expect(fakeToken.transferFrom).to.have.been.calledOnce;
 			expect(fakeToken.transferFrom).to.have.been.calledWith(addr1.address, vault.address, amount);
@@ -81,7 +81,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const tx = await vaultAdapter.push(0, amount, 0, fakeToken.address);
+			const tx = await vaultAdapter.push(0, amount, 0, fakeToken.address, addr1.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -98,7 +98,7 @@ describe("PWNVault contract", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			fakeToken.transferFrom.returns(true);
 
-			const success = await vaultAdapter.callStatic.push(0, 84, 0, fakeToken.address);
+			const success = await vaultAdapter.callStatic.push(0, 84, 0, fakeToken.address, addr1.address);
 
 			expect(success).to.equal(true);
 		});
@@ -295,7 +295,7 @@ describe("PWNVault contract", async function() {
 
 		it("Should support PWN Vault interface", async function() {
 			const pwnSelector = functionSelector("PWN()");
-			const pushSelector = functionSelector("push((uint8,uint256,uint256,address))");
+			const pushSelector = functionSelector("push((uint8,uint256,uint256,address),address)");
 			const pullSelector = functionSelector("pull((uint8,uint256,uint256,address),address)");
 			const pullProxySelector = functionSelector("pullProxy((uint8,uint256,uint256,address),address,address)");
 			const setPWNSelector = functionSelector("setPWN(address)");

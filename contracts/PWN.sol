@@ -76,7 +76,7 @@ contract PWN is Ownable {
         require(_expiration > (block.timestamp + minDuration));
 
         uint256 did = token.mint(_cat, _id, _amount, _tokenAddress, _expiration, msg.sender);
-        vault.push(token.getDeedAsset(did));
+        vault.push(token.getDeedAsset(did), msg.sender);
         token.changeStatus(1, did);
 
         emit NewDeed(_cat, _id, _amount, _tokenAddress, _expiration, did);
@@ -191,7 +191,7 @@ contract PWN is Ownable {
         credit.amount = token.toBePaid(offer);               //override the num of credit given
 
         vault.pull(token.getDeedAsset(_did), token.getBorrower(_did));
-        vault.push(credit);
+        vault.push(credit, msg.sender);
 
         emit PaidBack(_did, offer);
         return true;
