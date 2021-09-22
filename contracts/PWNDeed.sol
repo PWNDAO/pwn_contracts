@@ -29,8 +29,8 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
      */
     struct Deed {
         uint8 status;
-        uint256 expiration;
         address borrower;
+        uint256 expiration;
         MultiToken.Asset asset;
         bytes32 acceptedOffer;
         bytes32[] pendingOffers;
