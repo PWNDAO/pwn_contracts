@@ -708,7 +708,32 @@ describe("PWNDeed contract", function() {
 
 	});
 
-	// should we test function beforeTokenTransfer??
+
+	describe("Before token transfer", function() {
+
+		let did;
+		let expiration;
+
+		beforeEach(async function() {
+			expiration = await getExpiration(parseInt(time.duration.days(7)));
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 12, expiration, addr3.address);
+			did = await deed.id();
+		});
+
+
+		it("Should fail when transferring deed in new/open state", async function() {
+			try {
+				await deed.connect(addr3).safeTransferFrom(addr3.address, addr4.address, did, 1, ethers.utils.arrayify("0x"));
+
+				expect.fail();
+			} catch(error) {
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Deed can't be transferred at this stage");
+			}
+		});
+
+	});
+
 
 	describe("View functions", function() {
 
