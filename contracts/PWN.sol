@@ -129,7 +129,6 @@ contract PWN is Ownable {
         deed.cat = MultiToken.Category.ERC1155;
         deed.id = did;
         deed.tokenAddress = address(token);
-
         vault.pullProxy(deed, msg.sender, lender);
 
         return true;

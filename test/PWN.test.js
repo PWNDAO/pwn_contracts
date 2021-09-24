@@ -34,14 +34,7 @@ describe("PWN contract", function() {
 		[owner, addr1, addr2, addr3, addr4, addr5] = await ethers.getSigners();
 
 		pwnEventIface = new ethers.utils.Interface([
-			"event NewDeed(address indexed tokenAddress, uint8 cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did)",
-		    "event NewOffer(address tokenAddress, uint8 cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer)",
-		    "event DeedRevoked(uint256 did)",
-		    "event OfferRevoked(bytes32 offer)",
-		    "event OfferAccepted(uint256 did, bytes32 offer)",
-		    "event PaidBack(uint256 did, bytes32 offer)",
-		    "event DeedClaimed(uint256 did)",
-		    "event MinDurationChange(uint256 minDuration)"
+		    "event MinDurationChange(uint256 minDuration)",
 		]);
 	});
 
@@ -125,32 +118,11 @@ describe("PWN contract", function() {
 			}
 		});
 
-		it("Should emit NewDeed event", async function() {
-			const amount = 10;
-			const fakeToken = await smock.fake("Basic20");
-			const expiration = await getExpiration(110);
-			const fakeDid = 3;
-			deedFake.mint.returns(fakeDid);
-
-			const tx = await pwn.newDeed(fakeToken.address, CATEGORY.ERC20, 0, amount, expiration);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = pwnEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("NewDeed");
-			expect(logDescription.args.tokenAddress).to.equal(fakeToken.address);
-			expect(logDescription.args.cat).to.equal(CATEGORY.ERC20);
-			expect(logDescription.args.id).to.equal(0);
-			expect(logDescription.args.amount).to.equal(amount);
-			expect(logDescription.args.expiration).to.equal(expiration);
-			expect(logDescription.args.did).to.equal(fakeDid);
-		});
-
 		it("Should return newly created deed ID", async function() {
 			const fakeToken = await smock.fake("Basic20");
 			const expiration = await getExpiration(110);
 			const fakeDid = 3;
-			deedFake.mint.returns(fakeDid);
+			deedFake.create.returns(fakeDid);
 
 			const did = await pwn.callStatic.newDeed(fakeToken.address, CATEGORY.ERC20, 0, 10, expiration);
 
@@ -178,19 +150,6 @@ describe("PWN contract", function() {
 			expect(args._asset.tokenAddress).to.equal(fakeToken.address);
 			expect(args._origin).to.equal(addr1.address);
 		});
-
-		it("Should mint new deed in correct state", async function() {
-			const amount = 10;
-			const fakeToken = await smock.fake("Basic20");
-			const expiration = await getExpiration(110);
-			const fakeDid = 3;
-			deedFake.mint.returns(fakeDid);
-
-			await pwn.connect(addr1).newDeed(fakeToken.address, CATEGORY.ERC20, 0, amount, expiration);
-
-			expect(deedFake.mint).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC20, 0, amount, expiration, addr1.address);
-			expect(deedFake.changeStatus).to.have.been.calledOnceWith(1, fakeDid);
-		});
 	});
 
 	describe("Revoke deed", function() {
@@ -203,8 +162,6 @@ describe("PWN contract", function() {
 		});
 
 		beforeEach(async function() {
-			deedFake.getBorrower.whenCalledWith(did).returns(addr1.address);
-			deedFake.getDeedStatus.whenCalledWith(did).returns(1);
 			deedFake.getDeedAsset.whenCalledWith(did).returns({
 				cat: CATEGORY.ERC20,
 				id: 0,
@@ -214,32 +171,17 @@ describe("PWN contract", function() {
 			vaultFake.pull.returns(true);
 		});
 
-		it("Should fail when sender is not borrower", async function() {
-			try {
-				await pwn.connect(addr2).revokeDeed(did);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("The deed doesn't belong to the caller");
-			}
-		});
+		it("Should update deed to revoked state", async function() {
+			await pwn.connect(addr1).revokeDeed(did);
 
-		it("Should fail when deed is not in new/open state", async function() {
-			deedFake.getDeedStatus.whenCalledWith(did).returns(2);
-
-			try {
-				await pwn.connect(addr1).revokeDeed(did);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Deed can't be revoked at this stage");
-			}
+			expect(deedFake.revoke).to.have.been.calledOnceWith(did, addr1.address);
 		});
 
 		it("Should send deed collateral to borrower from vault", async function() {
 			await pwn.connect(addr1).revokeDeed(did);
 
 			expect(vaultFake.pull).to.have.been.calledOnce;
+			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.revoke);
 			const asset = vaultFake.pull.getCall(0).args._asset;
 			expect(asset.cat).to.equal(CATEGORY.ERC20);
 			expect(asset.amount).to.equal(amount);
@@ -253,16 +195,8 @@ describe("PWN contract", function() {
 			await pwn.connect(addr1).revokeDeed(did);
 
 			expect(deedFake.burn).to.have.been.calledOnceWith(did, addr1.address);
-		});
-
-		it("Should emit DeedRevoked event", async function() {
-			const tx = await pwn.connect(addr1).revokeDeed(did);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = pwnEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("DeedRevoked");
-			expect(logDescription.args.did).to.equal(did);
+			expect(deedFake.burn).to.have.been.calledAfter(vaultFake.pull);
+			expect(deedFake.burn).to.have.been.calledAfter(deedFake.revoke);
 		});
 	});
 
@@ -278,20 +212,25 @@ describe("PWN contract", function() {
 		});
 
 		beforeEach(async function() {
-			deedFake.getDeedStatus.whenCalledWith(did).returns(1);
-			deedFake.setOffer.returns(offerHash);
+			deedFake.makeOffer.returns(offerHash);
 		});
 
 		it("Should be able to make ERC20 offer", async function() {
-			await pwn.makeOffer(fakeToken.address, CATEGORY.ERC20, amount, did, toBePaid);
+			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC20, amount, did, toBePaid);
+
+			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC20, amount, addr2.address, did, toBePaid);
 		});
 
 		it("Should be able to make ERC721 offer", async function() {
-			await pwn.makeOffer(fakeToken.address, CATEGORY.ERC721, 1, did, 1);
+			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC721, 1, did, 1);
+
+			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC721, 1, addr2.address, did, 1);
 		});
 
 		it("Should be able to make ERC1155 offer", async function() {
-			await pwn.makeOffer(fakeToken.address, CATEGORY.ERC1155, amount, did, toBePaid);
+			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC1155, amount, did, toBePaid);
+
+			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC1155, amount, addr2.address, did, toBePaid);
 		});
 
 		it("Should fail for unknown asset category", async function() {
@@ -306,41 +245,6 @@ describe("PWN contract", function() {
 			expect(failed).to.equal(true);
 		});
 
-		it("Should fail when deed is not in new/open state", async function() {
-			deedFake.getDeedStatus.whenCalledWith(did).returns(2);
-
-			try {
-				await pwn.makeOffer(fakeToken.address, CATEGORY.ERC20, 1, did, 2);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Deed not accepting offers");
-			}
-		});
-
-		it("Should set new offer to the deed", async function() {
-			await pwn.connect(addr4).makeOffer(fakeToken.address, CATEGORY.ERC20, amount, did, toBePaid);
-
-			expect(deedFake.setOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC20, amount, addr4.address, did, toBePaid);
-		});
-
-		it("Should emit NewOffer event", async function() {
-			const tx = await pwn.connect(addr4).makeOffer(fakeToken.address, CATEGORY.ERC20, amount, did, toBePaid);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = pwnEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("NewOffer");
-			const args = logDescription.args;
-			expect(args.tokenAddress).to.equal(fakeToken.address);
-			expect(args.cat).to.equal(CATEGORY.ERC20);
-			expect(args.amount).to.equal(amount);
-			expect(args.lender).to.equal(addr4.address);
-			expect(args.toBePaid).to.equal(toBePaid);
-			expect(args.did).to.equal(did);
-			expect(args.offer).to.equal(offerHash);
-		});
-
 		it("Should return new offer hash", async function() {
 			const offer = await pwn.callStatic.makeOffer(fakeToken.address, CATEGORY.ERC20, 9, did, 10);
 
@@ -349,52 +253,12 @@ describe("PWN contract", function() {
 	});
 
 	describe("Revoke offer", function() {
-		const did = 333;
 		const offerHash = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a";
 
-		beforeEach(async function() {
-			deedFake.getLender.whenCalledWith(offerHash).returns(addr4.address);
-			deedFake.getDeedID.whenCalledWith(offerHash).returns(did);
-			deedFake.getDeedStatus.whenCalledWith(did).returns(1);
-		});
+		it("Should revoke offer on deed", async function() {
+			await pwn.connect(addr3).revokeOffer(offerHash);
 
-		it("Should fail when sender is not the offer maker", async function() {
-			try {
-				await pwn.connect(addr2).revokeOffer(offerHash);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("This address didn't create the offer");
-			}
-		});
-
-		it("Should fail when deed of the offer is not in new/open state", async function() {
-			deedFake.getDeedStatus.whenCalledWith(did).returns(2);
-
-			try {
-				await pwn.connect(addr4).revokeOffer(offerHash);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Can only remove offers from open Deeds");
-			}
-		});
-
-		it("Should remove offer from deed", async function() {
-			await pwn.connect(addr4).revokeOffer(offerHash);
-
-			expect(deedFake.deleteOffer).to.have.been.calledOnceWith(offerHash);
-		});
-
-		it("Should emit OfferRevoked event", async function() {
-			const tx = await pwn.connect(addr4).revokeOffer(offerHash);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = pwnEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("OfferRevoked");
-			const args = logDescription.args;
-			expect(args.offer).to.equal(offerHash);
+			expect(deedFake.revokeOffer).to.have.been.calledOnceWith(offerHash, addr3.address);
 		});
 	});
 
@@ -410,8 +274,6 @@ describe("PWN contract", function() {
 
 		beforeEach(async function() {
 			deedFake.getDeedID.whenCalledWith(offerHash).returns(did);
-			deedFake.getBorrower.whenCalledWith(did).returns(addr3.address);
-			deedFake.getDeedStatus.whenCalledWith(did).returns(1);
 			deedFake.getLender.whenCalledWith(offerHash).returns(addr4.address);
 			deedFake.getOfferAsset.whenCalledWith(offerHash).returns({
 				cat: CATEGORY.ERC20,
@@ -422,38 +284,10 @@ describe("PWN contract", function() {
 			vaultFake.pullProxy.returns(true);
 		});
 
-		it("Should fail when sender is not the borrower", async function() {
-			try {
-				await pwn.connect(addr1).acceptOffer(offerHash);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("The deed doesn't belong to the caller");
-			}
-		});
-
-		it("Should fail when deed is not in new/open state", async function() {
-			deedFake.getDeedStatus.whenCalledWith(did).returns(2);
-
-			try {
-				await pwn.connect(addr3).acceptOffer(offerHash);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Deed can't accept more offers");
-			}
-		});
-
-		it("Should set offer as accepted in deed", async function() {
+		it("Should update deed to accepted offer state", async function() {
 			await pwn.connect(addr3).acceptOffer(offerHash);
 
-			expect(deedFake.setCredit).to.have.been.calledOnceWith(did, offerHash);
-		});
-
-		it("Should update deed to running state", async function() {
-			await pwn.connect(addr3).acceptOffer(offerHash);
-
-			expect(deedFake.changeStatus).to.have.been.calledOnceWith(2, did);
+			expect(deedFake.acceptOffer).to.have.been.calledOnceWith(did, offerHash, addr3.address);
 		});
 
 		it("Should send lender asset to borrower", async function() {
@@ -466,6 +300,7 @@ describe("PWN contract", function() {
 			expect(args._asset.tokenAddress).to.equal(fakeToken.address);
 			expect(args._origin).to.equal(addr4.address);
 			expect(args._beneficiary).to.equal(addr3.address);
+			expect(vaultFake.pullProxy).to.have.been.calledAfter(deedFake.acceptOffer);
 		});
 
 		it("Should send deed token to lender", async function() {
@@ -478,18 +313,7 @@ describe("PWN contract", function() {
 			expect(args._asset.tokenAddress).to.equal(deedFake.address);
 			expect(args._origin).to.equal(addr3.address);
 			expect(args._beneficiary).to.equal(addr4.address);
-		});
-
-		it("Should emit OfferAccepted event", async function() {
-			const tx = await pwn.connect(addr3).acceptOffer(offerHash);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = pwnEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("OfferAccepted");
-			const args = logDescription.args;
-			expect(args.did).to.equal(did);
-			expect(args.offer).to.equal(offerHash);
+			expect(vaultFake.pullProxy).to.have.been.calledAfter(deedFake.acceptOffer);
 		});
 
 		it("Should return true if successful", async function() {
@@ -527,7 +351,6 @@ describe("PWN contract", function() {
 		});
 
 		beforeEach(async function() {
-			deedFake.getDeedStatus.whenCalledWith(did).returns(2);
 			deedFake.getAcceptedOffer.whenCalledWith(did).returns(offerHash);
 			deedFake.toBePaid.whenCalledWith(offerHash).returns(toBePaid);
 			deedFake.getOfferAsset.whenCalledWith(offerHash).returns(credit);
@@ -537,30 +360,13 @@ describe("PWN contract", function() {
 			vaultFake.push.returns(true);
 		});
 
-		it("Should accept when sender is not the borrower", async function() {
-			await pwn.connect(addr2).payBack(did);
-		});
-
-		it("Should fail when deed is not in running state", async function() {
-			deedFake.getDeedStatus.whenCalledWith(did).returns(1);
-
-			try {
-				await pwn.connect(addr3).payBack(did);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				// This message could be confusing if the deed is in another state than new/open (e.g. expired)
-				expect(error.message).to.contain("Deed doesn't have an accepted offer to be paid back");
-			}
-		});
-
 		it("Should update deed to paid back state", async function() {
 			await pwn.connect(addr3).payBack(did);
 
-			expect(deedFake.changeStatus).to.have.been.calledOnceWith(3, did);
+			expect(deedFake.payBack).to.have.been.calledOnceWith(did);
 		});
 
-		it("Should send deed collateral to borrower from vault", async function() {
+		it("Should send deed collateral from vault to borrower", async function() {
 			await pwn.connect(addr3).payBack(did);
 
 			const args = vaultFake.pull.getCall(0).args;
@@ -569,9 +375,10 @@ describe("PWN contract", function() {
 			expect(args._asset.amount).to.equal(collateral.amount);
 			expect(args._asset.tokenAddress).to.equal(collateral.tokenAddress);
 			expect(args._beneficiary).to.equal(addr3.address);
+			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.payBack);
 		});
 
-		it("Should send paid back amount to vault", async function() {
+		it("Should send paid back amount from borrower to vault", async function() {
 			await pwn.connect(addr3).payBack(did);
 
 			const args = vaultFake.push.getCall(0).args;
@@ -580,18 +387,7 @@ describe("PWN contract", function() {
 			expect(args._asset.amount).to.equal(toBePaid);
 			expect(args._asset.tokenAddress).to.equal(credit.tokenAddress);
 			expect(args._origin).to.equal(addr3.address);
-		});
-
-		it("Should emit PaidBack event", async function() {
-			const tx = await pwn.connect(addr3).payBack(did);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = pwnEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("PaidBack");
-			const args = logDescription.args;
-			expect(args.did).to.equal(did);
-			expect(args.offer).to.equal(offerHash);
+			expect(vaultFake.push).to.have.been.calledAfter(deedFake.payBack);
 		});
 
 		it("Should return true if successful", async function() {
@@ -634,31 +430,13 @@ describe("PWN contract", function() {
 			deedFake.toBePaid.whenCalledWith(offerHash).returns(toBePaid);
 			deedFake.getOfferAsset.whenCalledWith(offerHash).returns(credit);
 			deedFake.getDeedAsset.returns(collateral);
-			deedFake.getBorrower.whenCalledWith(did).returns(addr3.address);
-			deedFake.balanceOf.whenCalledWith(addr3.address, did).returns(1);
 			vaultFake.pull.returns(true);
 		});
 
-		it("Should fail when sender is not deed owner", async function() {
-			try {
-				await pwn.connect(addr1).claimDeed(did);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the deed owner");
-			}
-		});
+		it("Should update deed to claimed state", async function() {
+			await pwn.connect(addr3).claimDeed(did);
 
-		it("Should fail when deed is not in paid back nor expired state", async function() {
-			deedFake.getDeedStatus.whenCalledWith(did).returns(2);
-
-			try {
-				await pwn.connect(addr3).claimDeed(did);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Deed can't be claimed yet");
-			}
+			expect(deedFake.claim).to.have.been.calledOnceWith(did, addr3.address);
 		});
 
 		it("Should send collateral from vault to lender when deed is expired", async function() {
@@ -667,6 +445,7 @@ describe("PWN contract", function() {
 			await pwn.connect(addr3).claimDeed(did);
 
 			expect(vaultFake.pull).to.have.been.calledOnce;
+			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.claim);
 			const args = vaultFake.pull.getCall(0).args;
 			expect(args._asset.cat).to.equal(collateral.cat);
 			expect(args._asset.id).to.equal(collateral.id);
@@ -681,6 +460,7 @@ describe("PWN contract", function() {
 			await pwn.connect(addr3).claimDeed(did);
 
 			expect(vaultFake.pull).to.have.been.calledOnce;
+			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.claim);
 			const args = vaultFake.pull.getCall(0).args;
 			expect(args._asset.cat).to.equal(credit.cat);
 			expect(args._asset.id).to.equal(credit.id);
@@ -688,21 +468,11 @@ describe("PWN contract", function() {
 			expect(args._asset.tokenAddress).to.equal(credit.tokenAddress);
 		});
 
-		it("Should emit DeedClaimed event", async function() {
-			const tx = await pwn.connect(addr3).claimDeed(did);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = pwnEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("DeedClaimed");
-			const args = logDescription.args;
-			expect(args.did).to.equal(did);
-		});
-
 		it("Should burn deed token", async function() {
 			await pwn.connect(addr3).claimDeed(did);
 
 			expect(deedFake.burn).to.have.been.calledOnceWith(did, addr3.address);
+			expect(deedFake.burn).to.have.been.calledAfter(vaultFake.pull);
 		});
 
 		it("Should return true if successful", async function() {
