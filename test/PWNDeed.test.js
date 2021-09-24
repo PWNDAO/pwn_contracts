@@ -146,9 +146,11 @@ describe("PWNDeed contract", function() {
 	describe("Revoke", function() {
 
 		let did;
+		let expiration;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
+			expiration = await getExpiration(54);
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 		});
 
@@ -210,13 +212,15 @@ describe("PWNDeed contract", function() {
 	describe("Make offer", function() { // -> PWN is trusted source so we believe that it would not send invalid data
 
 		let did;
+		let expiration;
 
 		const makeOfferHash = function(address, nonce) {
 			return ethers.utils.solidityKeccak256(["address", "uint256"], [address, nonce]);
 		};
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
+			expiration = await getExpiration(54);
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 		});
 
@@ -318,9 +322,11 @@ describe("PWNDeed contract", function() {
 
 		let did;
 		let offerHash;
+		let expiration;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
+			expiration = await getExpiration(54);
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
 			offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
@@ -394,9 +400,11 @@ describe("PWNDeed contract", function() {
 
 		let did;
 		let offerHash;
+		let expiration;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
+			expiration = await getExpiration(54);
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
 			offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
@@ -478,9 +486,11 @@ describe("PWNDeed contract", function() {
 
 		let did;
 		let offerHash;
+		let expiration;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
+			expiration = await getExpiration(54);
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
 			offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
@@ -501,7 +511,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should fail when deed is not in running state", async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
 			try {
@@ -727,10 +737,6 @@ describe("PWNDeed contract", function() {
 		describe("Get deed status", function() {
 
 			it("Should return none/dead state", async function() {
-				const expiration = await getExpiration(parseInt(time.duration.days(7)));
-				await deed.create(addr2.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
-				const did = await deed.id();
-
 				await deed.revoke(did, addr3.address);
 
 
@@ -739,44 +745,44 @@ describe("PWNDeed contract", function() {
 				expect(status).to.equal(0);
 			});
 
-			it("Should return new/open state", async function() {
-				const expiration = await getExpiration(parseInt(time.duration.days(7)));
-				await deed.create(addr2.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
-				const did = await deed.id();
-
+			it("Should return new/open state when not expired", async function() {
 				const status = await deed.getDeedStatus(did);
 
 				expect(status).to.equal(1);
 			});
 
-			it("Should return running state", async function() {
-				const expiration = await getExpiration(parseInt(time.duration.days(7)));
-				await deed.create(addr2.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
-				const did = await deed.id();
+			it("Should return expired state when in new/open state", async function() {
+				await ethers.provider.send("evm_increaseTime", [parseInt(time.duration.days(7)) + 10]);
+      			await ethers.provider.send("evm_mine");
 
-				offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-				await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
+				const status = await deed.getDeedStatus(did);
 
+				expect(status).to.equal(4);
+			});
+
+			it("Should return running state when not expired", async function() {
 				await deed.acceptOffer(did, offerHash, addr3.address);
-
 
 				const status = await deed.getDeedStatus(did);
 
 				expect(status).to.equal(2);
 			});
 
-			it("Should return paid back state when not expired", async function() {
-				const expiration = await getExpiration(parseInt(time.duration.days(7)));
-				await deed.create(addr2.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
-				const did = await deed.id();
-
-				offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-				await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-
+			it("Should return expired state when in running state", async function() {
 				await deed.acceptOffer(did, offerHash, addr3.address);
 
-				await deed.payBack(did);
+				await ethers.provider.send("evm_increaseTime", [parseInt(time.duration.days(7)) + 10]);
+      			await ethers.provider.send("evm_mine");
 
+
+				const status = await deed.getDeedStatus(did);
+
+				expect(status).to.equal(4);
+			});
+
+			it("Should return paid back state when not expired", async function() {
+				await deed.acceptOffer(did, offerHash, addr3.address);
+				await deed.payBack(did);
 
 				const status = await deed.getDeedStatus(did);
 
@@ -784,33 +790,17 @@ describe("PWNDeed contract", function() {
 			});
 
 			it("Should return paid back state when expired", async function() {
-				await deed.create(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
-				const did = await deed.id();
-
-				offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-				await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-
 				await deed.acceptOffer(did, offerHash, addr3.address);
 
 				await deed.payBack(did);
+
+				await ethers.provider.send("evm_increaseTime", [parseInt(time.duration.days(7)) + 10]);
+      			await ethers.provider.send("evm_mine");
 
 
 				const status = await deed.getDeedStatus(did);
 
 				expect(status).to.equal(3);
-			});
-
-			it("Should return expired state", async function() {
-				await deed.create(addr2.address, CATEGORY.ERC20, 1, 100, 54, addr3.address);
-				const did = await deed.id();
-
-				offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-				await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-
-
-				const status = await deed.getDeedStatus(did);
-
-				expect(status).to.equal(4);
 			});
 
 		});

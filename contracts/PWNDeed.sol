@@ -138,7 +138,7 @@ contract PWNDeed is ERC1155, Ownable  {
         address _owner
     ) external onlyPWN {
         require(balanceOf(_owner, _did) == 1, "The deed doesn't belong to the caller");
-        require(deeds[_did].status == 1, "Deed can't be revoked at this stage");
+        require(getDeedStatus(_did) == 1, "Deed can't be revoked at this stage");
 
         deeds[_did].status = 0;
 
@@ -164,7 +164,7 @@ contract PWNDeed is ERC1155, Ownable  {
         uint256 _did,
         uint256 _toBePaid
     ) external onlyPWN returns (bytes32) {
-        require(deeds[_did].status == 1, "Deed not accepting offers");
+        require(getDeedStatus(_did) == 1, "Deed not accepting offers");
 
         // In this case the only variable here is nonce.
         // Should be used _lender instead of msg.sender (which is always PWN contract)?
@@ -201,7 +201,7 @@ contract PWNDeed is ERC1155, Ownable  {
         address _lender
     ) external onlyPWN {
         require(offers[_offer].lender == _lender, "This address didn't create the offer");
-        require(deeds[offers[_offer].deedID].status == 1, "Can only remove offers from open Deeds");
+        require(getDeedStatus(offers[_offer].deedID) == 1, "Can only remove offers from open Deeds");
 
         delete offers[_offer];
 
@@ -221,7 +221,7 @@ contract PWNDeed is ERC1155, Ownable  {
         address _owner
     ) external onlyPWN {
         require(balanceOf(_owner, _did) == 1, "The deed doesn't belong to the caller");
-        require(deeds[_did].status == 1, "Deed can't accept more offers");
+        require(getDeedStatus(_did) == 1, "Deed can't accept more offers");
 
         Deed storage deed = deeds[_did];
         deed.acceptedOffer = _offer;
@@ -237,7 +237,7 @@ contract PWNDeed is ERC1155, Ownable  {
      * @param _did ID of the Deed which is paid back
      */
     function payBack(uint256 _did) external onlyPWN {
-        require(deeds[_did].status == 2, "Deed doesn't have an accepted offer to be paid back");
+        require(getDeedStatus(_did) == 2, "Deed doesn't have an accepted offer to be paid back");
 
         deeds[_did].status = 3;
 
