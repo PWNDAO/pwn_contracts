@@ -18,14 +18,14 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     uint256 public id;                  // simple DeedID counter
     uint256 private nonce;              // server for offer hash generation
 
-    /*
+    /**
      * Construct defining a Deed
-     * @param status - 0 == none/dead || 1 == new/open || 2 == running/accepted offer || 3 == paid back || 4 == expired
-     * @param expiration - unix timestamp (in seconds) setting up the default deadline
-     * @param borrower - address of the issuer / borrower - stays the same for entire lifespan of the token
-     * @param asset - consisting of another an `Asset` struct defined in the MultiToken library
-     * @param acceptedOffer - hash of the offer which will be bound to the deed
-     * @param pendingOffers - list of offers made to the Deed
+     * @param status 0 == none/dead || 1 == new/open || 2 == running/accepted offer || 3 == paid back || 4 == expired
+     * @param expiration Unix timestamp (in seconds) setting up the default deadline
+     * @param borrower Address of the issuer / borrower - stays the same for entire lifespan of the token
+     * @param asset Consisting of another an `Asset` struct defined in the MultiToken library
+     * @param acceptedOffer Hash of the offer which will be bound to the deed
+     * @param pendingOffers List of offers made to the Deed
      */
     struct Deed {
         uint8 status;
@@ -36,12 +36,12 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         bytes32[] pendingOffers;
     }
 
-    /*
+    /**
      * Construct defining an offer
-     * @param deedID - Deed ID the offer is bound to
-     * @param toBePaid - an amount to be paid back (borrowed + interest)
-     * @param lender - address of the lender to be the credit will be withdrawn from
-     * @param asset - consisting of another an `Asset` struct defined in the MultiToken library
+     * @param deedID Deed ID the offer is bound to
+     * @param toBePaid Nn amount to be paid back (borrowed + interest)
+     * @param lender Address of the lender to be the credit will be withdrawn from
+     * @param asset Consisting of another an `Asset` struct defined in the MultiToken library
      */
     struct Offer {
         uint256 deedID;
@@ -56,7 +56,7 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
-    // NONE -> all events are handled at the PWN level or ERC1155 leve
+    // NONE -> all events are handled at the PWN level or ERC1155 level
 
     /*----------------------------------------------------------*|
     |*  # MODIFIERS                                             *|
@@ -72,11 +72,10 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     |*----------------------------------------------------------*/
 
     /*
-     *  Constructor
-     *  @title PWN Deed
+     *  PWN Deed constructor
      *  @dev Creates the PWN Deed token contract - ERC1155 with extra use case specific features
      *  @dev Once the PWN contract is set, you'll have to call `this.setPWN(PWN.address)` for this contract to work
-     *  @param _uri - uri to be used for finding the token metadata (https://api.pwn.finance/deed/...)
+     *  @param _uri Uri to be used for finding the token metadata (https://api.pwn.finance/deed/...)
      */
     constructor(
         string memory _uri
@@ -90,16 +89,16 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
      *   All contracts of this section can only be called by the PWN contract itself - once set via `setPWN(PWN.address)`
      */
 
-    /*
-     *  mint
-     *  @dev Creates the PWN Deed token contract - ERC1155 with extra use case specific features
-     *  @param _cat - category of the asset - see { MultiToken.sol }
-     *  @param _id - ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
-     *  @param _amount - amount of an ERC20 or ERC1155 token || 0 in case of NFTs
-     *  @param _tokenAddress - address of the asset contract
-     *  @param _expiration - unix time stamp in !! seconds !! (not mili-seconds returned by JS)
-     *  @param _borrower - essentially the tx.origin; the address initiating the new Deed
-     *  @returns Deed ID of the newly minted Deed
+    /**
+     * mint
+     * @dev Creates the PWN Deed token contract - ERC1155 with extra use case specific features
+     * @param _cat Category of the asset - see { MultiToken.sol }
+     * @param _id ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
+     * @param _amount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
+     * @param _tokenAddress Address of the asset contract
+     * @param _expiration Unix time stamp in !! seconds !! (not mili-seconds returned by JS)
+     * @param _borrower Essentially the tx.origin; the address initiating the new Deed
+     * @return Deed ID of the newly minted Deed
      */
     function mint(
         uint8 _cat,
@@ -125,11 +124,11 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         return id;
     }
 
-    /*
-     *  burn
-     *  @dev Burns a deed token
-     *  @param _did Deed ID of the token to be burned
-     *  @param _owner address of the borrower who issued the Deed
+    /**
+     * burn
+     * @dev Burns a deed token
+     * @param _did Deed ID of the token to be burned
+     * @param _owner Address of the borrower who issued the Deed
      */
     function burn(
         uint256 _did,
@@ -142,15 +141,16 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         _burn(_owner, _did, 1);
     }
 
-    /*
-     *  setOffer
-     *  @dev saves an offer object that defines credit terms
-     *  @param _cat - category of the asset - see { MultiToken.sol }
-     *  @param _amount - amount of an ERC20 or ERC1155 token to be offered as credit
-     *  @param _tokenAddress - address of the asset contract
-     *  @param _did - ID of the Deed the offer should be bound to
-     *  @param _toBePaid - amount to be paid back by the borrower
-     *  @returns hash of the newly created offer
+    /**
+     * setOffer
+     * @dev saves an offer object that defines credit terms
+     * @param _cat Category of the asset - see { MultiToken.sol }
+     * @param _amount Amount of an ERC20 or ERC1155 token to be offered as credit
+     * @param _tokenAddress Address of the asset contract
+     * @param _lender Address of the asset lender
+     * @param _did ID of the Deed the offer should be bound to
+     * @param _toBePaid Amount to be paid back by the borrower
+     * @return hash of the newly created offer
      */
     function setOffer(
         uint8 _cat,
@@ -164,7 +164,7 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     onlyPWN
     returns (bytes32)
     {
-        bytes32 hash = keccak256(abi.encodePacked(msg.sender,nonce));
+        bytes32 hash = keccak256(abi.encodePacked(msg.sender, nonce));
         nonce++;
 
         offers[hash].asset.cat = _cat;
@@ -178,14 +178,14 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         return hash;
     }
 
-    /*
-     *  deleteOffer
-     *  @dev utility function to remove a pending offer
-     *  @dev This only removes the offer representation but it doesn't remove the offer from a list of pending offers.
-     *          The offers associated with a deed has to be filtered on the front end to only list the valid ones.
-     *          No longer existent offers will simply return 0 if prompted about their DID.
-     *  @param _hash - hash identifying a offer
-     *  @dev TODO: consider ways to remove the offer from the pending offers array / maybe replace for a mapping
+    /**
+     * deleteOffer
+     * @dev utility function to remove a pending offer
+     * @dev This only removes the offer representation but it doesn't remove the offer from a list of pending offers.
+     *         The offers associated with a deed has to be filtered on the front end to only list the valid ones.
+     *         No longer existent offers will simply return 0 if prompted about their DID.
+     * @param _hash Hash identifying a offer
+     * @dev TODO: consider ways to remove the offer from the pending offers array / maybe replace for a mapping
      */
     function deleteOffer(
         bytes32 _hash
@@ -196,6 +196,12 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         delete offers[_hash];
     }
 
+    /**
+     * setCredit
+     * @dev utility function to set accepted offer
+     * @param _id ID of the Deed the offer should be bound to
+     * @param _offer Hash identifying an offer
+     */
     function setCredit(
         uint256 _id,
         bytes32 _offer
@@ -207,16 +213,16 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         delete deeds[_id].pendingOffers;
     }
 
-    /*
-     *  changeStatus
-     *  @dev utility function that changes a deed state from 1 -> 3
-     *  @param _status - corresponds to the current stage of the Deed, as follows:
-     *          status = 0 := Deed doesn't exist. If the DID <= highest known DID this means the Deed once existed.
-     *          status = 1 := Deed is created (has locked collateral) and is accepting offers.
-     *          status = 2 := Active deed /w an accepted offer.
-     *          status = 3 := Fully paid deed.
-     *          status = 4 := Expired deed.
-     *  @param _did - Deed ID selecting the particular Deed
+    /**
+     * changeStatus
+     * @dev utility function that changes a deed state from 1 -> 3
+     * @param _status Corresponds to the current stage of the Deed, as follows:
+     *         status = 0 := Deed doesn't exist. If the DID <= highest known DID this means the Deed once existed.
+     *         status = 1 := Deed is created (has locked collateral) and is accepting offers.
+     *         status = 2 := Active deed /w an accepted offer.
+     *         status = 3 := Fully paid deed.
+     *         status = 4 := Expired deed.
+     * @param _did Deed ID selecting the particular Deed
      */
     function changeStatus(
         uint8 _status,
@@ -230,9 +236,9 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
 
 
     /*
-     *  override of the check happening before Deed transfers
-     *  @dev forbids for the Deed token to be transferred at the setup stage
-     *  @dev for context see { ERC1155.sol }
+     * override of the check happening before Deed transfers
+     * @dev forbids for the Deed token to be transferred at the setup stage
+     * @dev for context see { ERC1155.sol }
      */
     function _beforeTokenTransfer(
         address operator,
@@ -258,11 +264,11 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     |*  ## VIEW FUNCTIONS - DEEDS     *|
     |*--------------------------------*/
 
-    /*
-     *  getDeedStatus
-     *  @dev used in contract calls & status checks and also in UI for elementary deed status categorization
-     *  @param _did - Deed ID checked for status
-     *  @returns a status number
+    /**
+     * getDeedStatus
+     * @dev used in contract calls & status checks and also in UI for elementary deed status categorization
+     * @param _did Deed ID checked for status
+     * @return a status number
      */
     function getDeedStatus(uint256 _did) public view returns (uint8) {
         if (deeds[_did].expiration < block.timestamp && deeds[_did].status != 3) {
@@ -272,53 +278,53 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         }
     }
 
-    /*
-     *  getExpiration
-     *  @dev utility function to find out exact expiration time of a particular Deed
-     *  @dev for simple status check use `this.getDeedStatus(did)` if `status == 4` then Deed has expired
-     *  @param _did - Deed ID to be checked
-     *  @returns unix time stamp in seconds
+    /**
+     * getExpiration
+     * @dev utility function to find out exact expiration time of a particular Deed
+     * @dev for simple status check use `this.getDeedStatus(did)` if `status == 4` then Deed has expired
+     * @param _did Deed ID to be checked
+     * @return unix time stamp in seconds
      */
     function getExpiration(uint256 _did) public view returns (uint256) {
         return deeds[_did].expiration;
     }
 
-    /*
-     *  getBorrower
-     *  @dev utility function to find out a borrower address of a particular Deed
-     *  @param _did - Deed ID to be checked
-     *  @returns address of the borrower
+    /**
+     * getBorrower
+     * @dev utility function to find out a borrower address of a particular Deed
+     * @param _did Deed ID to be checked
+     * @return address of the borrower
      */
     function getBorrower(uint256 _did) public view returns (address) {
         return deeds[_did].borrower;
     }
 
-    /*
-     *  getDeedAsset
-     *  @dev utility function to find out collateral asset of a particular Deed
-     *  @param _did - Deed ID to be checked
-     *  @returns Asset construct - for definition see { MultiToken.sol }
+    /**
+     * getDeedAsset
+     * @dev utility function to find out collateral asset of a particular Deed
+     * @param _did Deed ID to be checked
+     * @return Asset construct - for definition see { MultiToken.sol }
      */
     function getDeedAsset(uint256 _did) public view returns (MultiToken.Asset memory) {
         return deeds[_did].asset;
     }
 
-    /*
-     *  getOffers
-     *  @dev utility function to get a list of all pending offers of a Deed
-     *  @param _did - Deed ID to be checked
-     *  @returns a list of offer hashes
+    /**
+     * getOffers
+     * @dev utility function to get a list of all pending offers of a Deed
+     * @param _did Deed ID to be checked
+     * @return a list of offer hashes
      */
     function getOffers(uint256 _did) public view returns (bytes32[] memory) {
         return deeds[_did].pendingOffers;
     }
 
-    /*
-     *  getAcceptedOffer
-     *  @dev used to get a list of made offers to be queried in the UI - needs additional check for re-validating each offer
-     *  @dev revalidation requires checking if the lender has sufficient balance and approved the asset
-     *  @param _did - Deed ID being queried for offers
-     *  @returns a hash of the accepted offer
+    /**
+     * getAcceptedOffer
+     * @dev used to get a list of made offers to be queried in the UI - needs additional check for re-validating each offer
+     * @dev revalidation requires checking if the lender has sufficient balance and approved the asset
+     * @param _did Deed ID being queried for offers
+     * @return Hash of the accepted offer
      */
     function getAcceptedOffer(uint256 _did) public view returns (bytes32) {
         return deeds[_did].acceptedOffer;
@@ -328,41 +334,41 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     |*  ## VIEW FUNCTIONS - OFFERS    *|
     |*--------------------------------*/
 
-    /*
-     *  getDeedID
-     *  @dev utility function to find out which Deed is an offer associated with
-     *  @param _offer - Offer hash of an offer to be prompted
-     *  @returns a Deed ID
+    /**
+     * getDeedID
+     * @dev utility function to find out which Deed is an offer associated with
+     * @param _offer Offer hash of an offer to be prompted
+     * @return Deed ID
      */
     function getDeedID(bytes32 _offer) public view returns (uint256) {
         return offers[_offer].deedID;
     }
 
-    /*
-     *  getOfferAsset
-     *  @dev utility function that returns the credit asset of a particular offer
-     *  @param _offer - Offer hash of an offer to be prompted
-     *  @returns Asset construct - for definition see { MultiToken.sol }
+    /**
+     * getOfferAsset
+     * @dev utility function that returns the credit asset of a particular offer
+     * @param _offer Offer hash of an offer to be prompted
+     * @return Asset construct - for definition see { MultiToken.sol }
      */
     function getOfferAsset(bytes32 _offer) public view returns (MultiToken.Asset memory) {
         return offers[_offer].asset;
     }
 
-    /*
-     *  toBePaid
-     *  @dev quick query of the total amount to be paid to an offer
-     *  @param _offer - Offer hash of an offer to be prompted
-     *  @returns amount to be paid back
+    /**
+     * toBePaid
+     * @dev quick query of the total amount to be paid to an offer
+     * @param _offer Offer hash of an offer to be prompted
+     * @return Amount to be paid back
      */
     function toBePaid(bytes32 _offer) public view returns (uint256) {
         return offers[_offer].toBePaid;
     }
 
-    /*
-     *  getLender
-     *  @dev utility function to find out a lender address of a particular offer
-     *  @param _offer - Offer hash of an offer to be prompted
-     *  @returns address of the lender
+    /**
+     * getLender
+     * @dev utility function to find out a lender address of a particular offer
+     * @param _offer Offer hash of an offer to be prompted
+     * @return Address of the lender
      */
     function getLender(bytes32 _offer) public view returns (address) {
         return offers[_offer].lender;
@@ -372,10 +378,10 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     |*  ## SETUP FUNCTIONS            *|
     |*--------------------------------*/
 
-    /*
-     *  setPWN
-     *  @dev An essential setup function. Has to be called once PWN contract was deployed
-     *  @param _address identifying the PWN contract
+    /**
+     * setPWN
+     * @dev An essential setup function. Has to be called once PWN contract was deployed
+     * @param _address Identifying the PWN contract
      */
     function setPWN(address _address) external onlyOwner {
         PWN = _address;

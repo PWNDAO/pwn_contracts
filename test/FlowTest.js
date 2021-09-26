@@ -114,7 +114,7 @@ describe("PWN contract", function () {
       expect(balance.toNumber()).to.equal(1);
     });
 
-    it("Should be possible to create an NFT deed", async function () {
+    it("Should be possible to create an ERC721 deed", async function () {
       await bNFT.approve(PWNVault.address, 42);
       await bPWN.newDeed(1, 42, 0, NFT.address, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
@@ -130,7 +130,7 @@ describe("PWN contract", function () {
       expect(balance).to.equal(1);
     });
 
-    it("Should be possible to create an 1155 deed", async function () {
+    it("Should be possible to create an ERC1155 deed", async function () {
       await bGAME.setApprovalForAll(PWNVault.address, true);
       await bPWN.newDeed(2, 1337, 1, GAME.address, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
@@ -162,7 +162,7 @@ describe("PWN contract", function () {
       expect(balance.toNumber()).to.equal(0);
     });
 
-    it("Should be possible to revoke an NFT deed", async function () {
+    it("Should be possible to revoke an ERC721 deed", async function () {
       await bNFT.approve(PWNVault.address, 42);
       await bPWN.newDeed(1, 42, 0, NFT.address, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
@@ -176,7 +176,7 @@ describe("PWN contract", function () {
       expect(balance).to.equal(0);
     });
 
-    it("Should be possible to revoke an 1155 deed", async function () {
+    it("Should be possible to revoke an ERC1155 deed", async function () {
       await bGAME.setApprovalForAll(PWNVault.address, true);
       await bPWN.newDeed(2, 1337, 1, GAME.address, date.setDate(date.getDate() + 1));
       const eventFilter = PWN.filters.NewDeed();
