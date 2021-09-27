@@ -77,27 +77,45 @@ describe("PWN contract", function() {
 			const amount = 10;
 			const fakeToken = await smock.fake("ERC20");
 			const expiration = await timestampFromNow(110);
+			let failed = false;
 
-			await pwn.newDeed(fakeToken.address, CATEGORY.ERC20, 0, amount, expiration);
-			//TODO: add expected result
+			try {
+				await pwn.newDeed(fakeToken.address, CATEGORY.ERC20, 0, amount, expiration);
+			} catch {
+				failed = true;
+			}
+
+			expect(failed).to.equal(false);
 		});
 
 		it("Should be able to create ERC721 deed", async function() {
 			const tokenId = 10;
 			const fakeToken = await smock.fake("ERC721");
 			const expiration = await timestampFromNow(110);
+			let failed = false;
 
-			await pwn.newDeed(fakeToken.address, CATEGORY.ERC721, tokenId, 1, expiration);
-			//TODO: add expected result
+			try {
+				await pwn.newDeed(fakeToken.address, CATEGORY.ERC721, tokenId, 1, expiration);
+			} catch {
+				failed = true;
+			}
+
+			expect(failed).to.equal(false);
 		});
 
 		it("Should be able to create ERC1155 deed", async function() {
 			const tokenId = 10;
 			const fakeToken = await smock.fake("ERC1155");
 			const expiration = await timestampFromNow(110);
+			let failed = false;
 
-			await pwn.newDeed(fakeToken.address, CATEGORY.ERC1155, tokenId, 5, expiration);
-			//TODO: add expected result
+			try {
+				await pwn.newDeed(fakeToken.address, CATEGORY.ERC1155, tokenId, 5, expiration);
+			} catch {
+				failed = true;
+			}
+
+			expect(failed).to.equal(false);
 		});
 
 		it("Should fail for unknown asset category", async function() {
