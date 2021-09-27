@@ -27,7 +27,9 @@ describe("MultiToken library", function() {
 		multiTokenAdapter = await MultiTokenAdapter.deploy();
 	});
 
+
 	describe("Transfer", function() {
+
 		it("Should call transfer on ERC20 token", async function () {
 			const amount = 732;
 			const fakeToken = await smock.fake("Basic20");
@@ -81,9 +83,12 @@ describe("MultiToken library", function() {
 
 			expect(failed).to.equal(true);
 		});
+
 	});
 
+
 	describe("TransferFrom", function() {
+
 		it("Should call transfer from on ERC20 token", async function() {
 			const amount = 732;
 			const fakeToken = await smock.fake("Basic20");
@@ -137,9 +142,12 @@ describe("MultiToken library", function() {
 
 			expect(failed).to.equal(true);
 		});
+
 	});
 
+
 	describe("BalanceOf", function() {
+
 		it("Should return balance of ERC20 token", async function() {
 			const amount = 888;
 			const fakeToken = await smock.fake("Basic20");
@@ -200,9 +208,12 @@ describe("MultiToken library", function() {
 
 			expect(failed).to.equal(true);
 		});
+
 	});
 
+
 	describe("ApproveAsset", function() {
+
 		it("Should call approve on ERC20 token", async function() {
 			const amount = 657;
 			const fakeToken = await smock.fake("Basic20");
@@ -244,6 +255,7 @@ describe("MultiToken library", function() {
 
 			expect(failed).to.equal(true);
 		});
+
 	});
 
 });

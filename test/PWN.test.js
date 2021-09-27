@@ -16,7 +16,7 @@ describe("PWN contract", function() {
 	let pwnEventIface;
 	let owner, addr1, addr2, addr3, addr4, addr5;
 
-	const getExpiration = async function(delta) {
+	async function timestampFromNow(delta) {
 		const lastBlockNumber = await ethers.provider.getBlockNumber();
 		const lastBlock = await ethers.provider.getBlock(lastBlockNumber);
 		return lastBlock.timestamp + delta;
@@ -45,7 +45,9 @@ describe("PWN contract", function() {
 		await pwn.changeMinDuration(100);
 	});
 
+
 	describe("Constructor", function() {
+
 		it("Should set correct owner", async function() {
 			const factory = await ethers.getContractFactory("PWN");
 
@@ -65,13 +67,16 @@ describe("PWN contract", function() {
 			expect(vaultAddress).to.equal(vaultFake.address);
 			expect(deedAddress).to.equal(deedFake.address);
 		});
+
 	});
 
+
 	describe("New deed", function() {
+
 		it("Should be able to create ERC20 deed", async function() {
 			const amount = 10;
 			const fakeToken = await smock.fake("Basic20");
-			const expiration = await getExpiration(110);
+			const expiration = await timestampFromNow(110);
 
 			await pwn.newDeed(fakeToken.address, CATEGORY.ERC20, 0, amount, expiration);
 			//TODO: add expected result
@@ -80,7 +85,7 @@ describe("PWN contract", function() {
 		it("Should be able to create ERC721 deed", async function() {
 			const tokenId = 10;
 			const fakeToken = await smock.fake("Basic721");
-			const expiration = await getExpiration(110);
+			const expiration = await timestampFromNow(110);
 
 			await pwn.newDeed(fakeToken.address, CATEGORY.ERC721, tokenId, 1, expiration);
 			//TODO: add expected result
@@ -89,7 +94,7 @@ describe("PWN contract", function() {
 		it("Should be able to create ERC1155 deed", async function() {
 			const tokenId = 10;
 			const fakeToken = await smock.fake("Basic1155");
-			const expiration = await getExpiration(110);
+			const expiration = await timestampFromNow(110);
 
 			await pwn.newDeed(fakeToken.address, CATEGORY.ERC1155, tokenId, 5, expiration);
 			//TODO: add expected result
@@ -108,7 +113,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should fail for expiration duration smaller than min duration", async function() {
-			const expiration = getExpiration(90);
+			const expiration = timestampFromNow(90);
 
 			try {
 				await pwn.newDeed(addr4.address, CATEGORY.ERC20, 0, 10, expiration);
@@ -120,7 +125,7 @@ describe("PWN contract", function() {
 
 		it("Should return newly created deed ID", async function() {
 			const fakeToken = await smock.fake("Basic20");
-			const expiration = await getExpiration(110);
+			const expiration = await timestampFromNow(110);
 			const fakeDid = 3;
 			deedFake.create.returns(fakeDid);
 
@@ -132,7 +137,7 @@ describe("PWN contract", function() {
 		it("Should send borrower collateral to vault", async function() {
 			const amount = 10;
 			const fakeToken = await smock.fake("Basic20");
-			const expiration = await getExpiration(110);
+			const expiration = await timestampFromNow(110);
 			deedFake.getDeedAsset.returns({
 				cat: 0,
 				id: 0,
@@ -150,9 +155,12 @@ describe("PWN contract", function() {
 			expect(args._asset.tokenAddress).to.equal(fakeToken.address);
 			expect(args._origin).to.equal(addr1.address);
 		});
+
 	});
 
+
 	describe("Revoke deed", function() {
+
 		const did = 17;
 		const amount = 120;
 		let fakeToken;
@@ -170,6 +178,7 @@ describe("PWN contract", function() {
 			});
 			vaultFake.pull.returns(true);
 		});
+
 
 		it("Should update deed to revoked state", async function() {
 			await pwn.connect(addr1).revokeDeed(did);
@@ -198,9 +207,12 @@ describe("PWN contract", function() {
 			expect(deedFake.burn).to.have.been.calledAfter(vaultFake.pull);
 			expect(deedFake.burn).to.have.been.calledAfter(deedFake.revoke);
 		});
+
 	});
 
+
 	describe("Make offer", function() {
+
 		const did = 367;
 		const amount = 8;
 		const toBePaid = 12;
@@ -214,6 +226,7 @@ describe("PWN contract", function() {
 		beforeEach(async function() {
 			deedFake.makeOffer.returns(offerHash);
 		});
+
 
 		it("Should be able to make ERC20 offer", async function() {
 			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC20, amount, did, toBePaid);
@@ -250,9 +263,12 @@ describe("PWN contract", function() {
 
 			expect(offer).to.equal(offerHash);
 		});
+
 	});
 
+
 	describe("Revoke offer", function() {
+
 		const offerHash = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a";
 
 		it("Should revoke offer on deed", async function() {
@@ -260,9 +276,12 @@ describe("PWN contract", function() {
 
 			expect(deedFake.revokeOffer).to.have.been.calledOnceWith(offerHash, addr3.address);
 		});
+
 	});
 
+
 	describe("Accept offer", function() {
+
 		const did = 3456789;
 		const amount = 1000;
 		const offerHash = "0xaaa7654321098765abcde98765432109876543210987eff32109f76543a100cc";
@@ -283,6 +302,7 @@ describe("PWN contract", function() {
 			});
 			vaultFake.pullProxy.returns(true);
 		});
+
 
 		it("Should update deed to accepted offer state", async function() {
 			await pwn.connect(addr3).acceptOffer(offerHash);
@@ -321,9 +341,11 @@ describe("PWN contract", function() {
 
 			expect(success).to.equal(true);
 		});
+
 	});
 
 	describe("Pay back", function() {
+
 		const did = 536;
 		const amount = 1000;
 		const toBePaid = 1200;
@@ -360,6 +382,7 @@ describe("PWN contract", function() {
 			vaultFake.push.returns(true);
 		});
 
+
 		it("Should update deed to paid back state", async function() {
 			await pwn.connect(addr3).payBack(did);
 
@@ -395,9 +418,12 @@ describe("PWN contract", function() {
 
 			expect(success).to.equal(true);
 		});
+
 	});
 
+
 	describe("Claim deed", function() {
+
 		const did = 987;
 		const amount = 1234;
 		const toBePaid = 4321;
@@ -432,6 +458,7 @@ describe("PWN contract", function() {
 			deedFake.getDeedAsset.returns(collateral);
 			vaultFake.pull.returns(true);
 		});
+
 
 		it("Should update deed to claimed state", async function() {
 			await pwn.connect(addr3).claimDeed(did);
@@ -480,9 +507,12 @@ describe("PWN contract", function() {
 
 			expect(success).to.equal(true);
 		});
+
 	});
 
+
 	describe("Change min duration", function() {
+
 		it("Should fail when sender is not owner", async function() {
 			try {
 				await pwn.connect(addr1).changeMinDuration(1);
@@ -514,6 +544,7 @@ describe("PWN contract", function() {
 			const args = logDescription.args;
 			expect(args.minDuration).to.equal(minDuration);
 		});
+
 	});
 
 });

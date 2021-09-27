@@ -14,7 +14,7 @@ describe("PWNDeed contract", function() {
 	let deedEventIface
 	let pwn, addr1, addr2, addr3, addr4, addr5;
 
-	const getExpiration = async function(delta) {
+	async function timestampFromNow(delta) {
 		const lastBlockNumber = await ethers.provider.getBlockNumber();
 		const lastBlock = await ethers.provider.getBlock(lastBlockNumber);
 		return lastBlock.timestamp + delta;
@@ -149,7 +149,7 @@ describe("PWNDeed contract", function() {
 		let expiration;
 
 		beforeEach(async function() {
-			expiration = await getExpiration(54);
+			expiration = await timestampFromNow(54);
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 		});
@@ -219,7 +219,7 @@ describe("PWNDeed contract", function() {
 		};
 
 		beforeEach(async function() {
-			expiration = await getExpiration(54);
+			expiration = await timestampFromNow(54);
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 		});
@@ -325,7 +325,7 @@ describe("PWNDeed contract", function() {
 		let expiration;
 
 		beforeEach(async function() {
-			expiration = await getExpiration(54);
+			expiration = await timestampFromNow(54);
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
@@ -403,7 +403,7 @@ describe("PWNDeed contract", function() {
 		let expiration;
 
 		beforeEach(async function() {
-			expiration = await getExpiration(54);
+			expiration = await timestampFromNow(54);
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
@@ -489,7 +489,7 @@ describe("PWNDeed contract", function() {
 		let expiration;
 
 		beforeEach(async function() {
-			expiration = await getExpiration(54);
+			expiration = await timestampFromNow(54);
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
@@ -553,7 +553,7 @@ describe("PWNDeed contract", function() {
 		let offerHash;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, getExpiration(duration), addr3.address);
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, timestampFromNow(duration), addr3.address);
 			did = await deed.id();
 
 			offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
@@ -585,7 +585,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should fail when deed is not in paid back nor expired state", async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, getExpiration(duration), addr3.address);
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, timestampFromNow(duration), addr3.address);
 			did = await deed.id();
 
 			try {
@@ -646,7 +646,7 @@ describe("PWNDeed contract", function() {
 		let did;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, getExpiration(duration), addr3.address);
+			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, timestampFromNow(duration), addr3.address);
 			did = await deed.id();
 		});
 
@@ -715,7 +715,7 @@ describe("PWNDeed contract", function() {
 		let expiration;
 
 		beforeEach(async function() {
-			expiration = await getExpiration(parseInt(time.duration.days(7)));
+			expiration = await timestampFromNow(parseInt(time.duration.days(7)));
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 12, expiration, addr3.address);
 			did = await deed.id();
 		});
@@ -748,7 +748,7 @@ describe("PWNDeed contract", function() {
 		let expiration;
 
 		beforeEach(async function() {
-			expiration = await getExpiration(parseInt(time.duration.days(7)));
+			expiration = await timestampFromNow(parseInt(time.duration.days(7)));
 
 			await deed.create(addr1.address, CATEGORY.ERC20, cTokenId, cAmount, expiration, addr3.address);
 			did = await deed.id();

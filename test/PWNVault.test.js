@@ -40,7 +40,9 @@ describe("PWNVault contract", async function() {
 		await vault.setPWN(vaultAdapter.address);
 	});
 
+
 	describe("Constructor", function() {
+
 		it("Should set correct owner", async function() {
 			const factory = await ethers.getContractFactory("PWNVault", addr1);
 
@@ -49,9 +51,12 @@ describe("PWNVault contract", async function() {
 			const owner = await vault.owner();
 			expect(addr1.address).to.equal(owner, "vault owner should be the vault deployer");
 		});
+
 	});
 
+
 	describe("Push", function() {
+
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
 				tokenAddress: addr2.address,
@@ -110,9 +115,12 @@ describe("PWNVault contract", async function() {
 
 			expect(success).to.equal(true);
 		});
+
 	});
 
+
 	describe("Pull", function() {
+
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
 				tokenAddress: addr2.address,
@@ -171,9 +179,12 @@ describe("PWNVault contract", async function() {
 
 			expect(success).to.equal(true);
 		});
+
 	});
 
+
 	describe("PullProxy", function() {
+
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
 				tokenAddress: addr2.address,
@@ -233,25 +244,34 @@ describe("PWNVault contract", async function() {
 
 			expect(success).to.equal(true);
 		});
+
 	});
 
+
 	describe("On ERC1155 received", function() {
+
 		it("Should return correct bytes", async function() {
 			const bytes = await vault.callStatic.onERC1155Received(addr1.address, addr2.address, 1, 2, 0x321);
 
 			expect(ethers.utils.hexValue(bytes)).to.equal(ethers.utils.hexValue(0xf23a6e61));
 		});
+
 	});
 
+
 	describe("On ERC1155 batch received", function() {
+
 		it("Should return correct bytes", async function() {
 			const bytes = await vault.callStatic.onERC1155BatchReceived(addr1.address, addr2.address, [3], [4], 0x312);
 
 			expect(ethers.utils.hexValue(bytes)).to.equal(ethers.utils.hexValue(0xbc197c81));
 		});
+
 	});
 
+
 	describe("Set PWN", function() {
+
 		it("Should fail when sender is not owner", async function() {
 			try {
 				await vault.connect(addr1).setPWN(addr2.address);
@@ -270,11 +290,13 @@ describe("PWNVault contract", async function() {
 			expect(formerPWN).to.not.equal(latterPWN);
 			expect(latterPWN).to.equal(addr1.address);
 		});
+
 	});
+
 
 	describe("Supports interface", function() {
 
-		const functionSelector = function(signature) {
+		function functionSelector(signature) {
 			const bytes = ethers.utils.toUtf8Bytes(signature)
 			const hash = ethers.utils.keccak256(bytes);
 			return ethers.utils.hexDataSlice(hash, 0, 4);
@@ -329,6 +351,7 @@ describe("PWNVault contract", async function() {
 
 			expect(supportsERC1155Receiver).to.equal(true);
 		});
+
 	});
 
 });
