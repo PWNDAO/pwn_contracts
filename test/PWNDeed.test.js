@@ -122,7 +122,7 @@ describe("PWNDeed contract", function() {
 
 		it("Should emit NewDeed event", async function() {
 			const amount = 10;
-			const fakeToken = await smock.fake("Basic20");
+			const fakeToken = await smock.fake("ERC20");
 			const expiration = 110;
 
 			const did = await deed.callStatic.create(addr2.address, CATEGORY.ERC20, 1, amount, expiration, addr3.address);

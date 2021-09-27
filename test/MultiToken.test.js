@@ -32,7 +32,7 @@ describe("MultiToken library", function() {
 
 		it("Should call transfer on ERC20 token", async function () {
 			const amount = 732;
-			const fakeToken = await smock.fake("Basic20");
+			const fakeToken = await smock.fake("ERC20");
 			fakeToken.transfer.returns(true);
 
 			await multiTokenAdapter.transferAsset(fakeToken.address, CATEGORY.ERC20, amount, 0, addr1.address);
@@ -43,7 +43,7 @@ describe("MultiToken library", function() {
 
 		it("Should call transfer from current address on ERC721 token", async function() {
 			const assetId = 2047;
-			const fakeToken = await smock.fake("Basic721");
+			const fakeToken = await smock.fake("ERC721");
 
 			await multiTokenAdapter.transferAsset(fakeToken.address, CATEGORY.ERC721, 1, assetId, addr1.address);
 
@@ -54,7 +54,7 @@ describe("MultiToken library", function() {
 		it("Should call safe transfer from current address on ERC1155 token", async function() {
 			const amount = 20;
 			const assetId = 2047;
-			const fakeToken = await smock.fake("Basic1155");
+			const fakeToken = await smock.fake("ERC1155");
 
 			await multiTokenAdapter.transferAsset(fakeToken.address, CATEGORY.ERC1155, amount, assetId, addr1.address);
 
@@ -64,7 +64,7 @@ describe("MultiToken library", function() {
 
 		it("Should pass at least amount 1 on ERC1155 token transfer", async function() {
 			const assetId = 2047;
-			const fakeToken = await smock.fake("Basic1155");
+			const fakeToken = await smock.fake("ERC1155");
 
 			await multiTokenAdapter.transferAsset(fakeToken.address, CATEGORY.ERC1155, 0, assetId, addr1.address);
 
@@ -91,7 +91,7 @@ describe("MultiToken library", function() {
 
 		it("Should call transfer from on ERC20 token", async function() {
 			const amount = 732;
-			const fakeToken = await smock.fake("Basic20");
+			const fakeToken = await smock.fake("ERC20");
 			fakeToken.transferFrom.returns(true);
 
 			await multiTokenAdapter.transferAssetFrom(fakeToken.address, CATEGORY.ERC20, amount, 0, addr1.address, addr2.address);
@@ -102,7 +102,7 @@ describe("MultiToken library", function() {
 
 		it("Should call transfer from on ERC721 token", async function() {
 			const assetId = 2047;
-			const fakeToken = await smock.fake("Basic721");
+			const fakeToken = await smock.fake("ERC721");
 
 			await multiTokenAdapter.transferAssetFrom(fakeToken.address, CATEGORY.ERC721, 1, assetId, addr1.address, addr2.address);
 
@@ -113,7 +113,7 @@ describe("MultiToken library", function() {
 		it("Should call safe transfer from on ERC1155 token", async function() {
 			const amount = 20;
 			const assetId = 2047;
-			const fakeToken = await smock.fake("Basic1155");
+			const fakeToken = await smock.fake("ERC1155");
 
 			await multiTokenAdapter.transferAssetFrom(fakeToken.address, CATEGORY.ERC1155, amount, assetId, addr1.address, addr2.address);
 
@@ -123,7 +123,7 @@ describe("MultiToken library", function() {
 
 		it("Should pass at least amount 1 on ERC1155 token transfer", async function() {
 			const assetId = 2047;
-			const fakeToken = await smock.fake("Basic1155");
+			const fakeToken = await smock.fake("ERC1155");
 
 			await multiTokenAdapter.transferAssetFrom(fakeToken.address, CATEGORY.ERC1155, 0, assetId, addr1.address, addr2.address);
 
@@ -150,7 +150,7 @@ describe("MultiToken library", function() {
 
 		it("Should return balance of ERC20 token", async function() {
 			const amount = 888;
-			const fakeToken = await smock.fake("Basic20");
+			const fakeToken = await smock.fake("ERC20");
 			fakeToken.balanceOf.returns(amount);
 
 			const balance = await multiTokenAdapter.balanceOf(fakeToken.address, CATEGORY.ERC20, 732, 0, addr1.address);
@@ -162,7 +162,7 @@ describe("MultiToken library", function() {
 
 		it("Should return balance of 1 if target address is ERC721 token owner", async function() {
 			const assetId = 123;
-			const fakeToken = await smock.fake("Basic721");
+			const fakeToken = await smock.fake("ERC721");
 			fakeToken.ownerOf.returns(addr1.address);
 
 			const balance = await multiTokenAdapter.balanceOf(fakeToken.address, CATEGORY.ERC721, 1, assetId, addr1.address);
@@ -174,7 +174,7 @@ describe("MultiToken library", function() {
 
 		it("Should return balance of 0 if target address is not ERC721 token owner", async function() {
 			const assetId = 123;
-			const fakeToken = await smock.fake("Basic721");
+			const fakeToken = await smock.fake("ERC721");
 			fakeToken.ownerOf.returns(addr2.address);
 
 			const balance = await multiTokenAdapter.balanceOf(fakeToken.address, CATEGORY.ERC721, 1, assetId, addr1.address);
@@ -187,7 +187,7 @@ describe("MultiToken library", function() {
 		it("Should return balance of ERC1155 token", async function() {
 			const assetId = 123;
 			const amount = 24;
-			const fakeToken = await smock.fake("Basic1155");
+			const fakeToken = await smock.fake("ERC1155");
 			fakeToken.balanceOf.returns(amount);
 
 			const balance = await multiTokenAdapter.balanceOf(fakeToken.address, CATEGORY.ERC1155, 732, assetId, addr1.address);
@@ -216,7 +216,7 @@ describe("MultiToken library", function() {
 
 		it("Should call approve on ERC20 token", async function() {
 			const amount = 657;
-			const fakeToken = await smock.fake("Basic20");
+			const fakeToken = await smock.fake("ERC20");
 			fakeToken.approve.returns(true);
 
 			await multiTokenAdapter.approveAsset(fakeToken.address, CATEGORY.ERC20, amount, 0, addr1.address);
@@ -227,7 +227,7 @@ describe("MultiToken library", function() {
 
 		it("Should call approve on ERC721 token", async function() {
 			const assetId = 657;
-			const fakeToken = await smock.fake("Basic721");
+			const fakeToken = await smock.fake("ERC721");
 
 			await multiTokenAdapter.approveAsset(fakeToken.address, CATEGORY.ERC721, 0, assetId, addr1.address);
 
@@ -236,7 +236,7 @@ describe("MultiToken library", function() {
 		});
 
 		it("Should call set approval for all on ERC1155 token", async function() {
-			const fakeToken = await smock.fake("Basic1155");
+			const fakeToken = await smock.fake("ERC1155");
 
 			await multiTokenAdapter.approveAsset(fakeToken.address, CATEGORY.ERC1155, 0, 657, addr1.address);
 

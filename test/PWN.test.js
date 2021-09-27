@@ -75,7 +75,7 @@ describe("PWN contract", function() {
 
 		it("Should be able to create ERC20 deed", async function() {
 			const amount = 10;
-			const fakeToken = await smock.fake("Basic20");
+			const fakeToken = await smock.fake("ERC20");
 			const expiration = await timestampFromNow(110);
 
 			await pwn.newDeed(fakeToken.address, CATEGORY.ERC20, 0, amount, expiration);
@@ -84,7 +84,7 @@ describe("PWN contract", function() {
 
 		it("Should be able to create ERC721 deed", async function() {
 			const tokenId = 10;
-			const fakeToken = await smock.fake("Basic721");
+			const fakeToken = await smock.fake("ERC721");
 			const expiration = await timestampFromNow(110);
 
 			await pwn.newDeed(fakeToken.address, CATEGORY.ERC721, tokenId, 1, expiration);
@@ -93,7 +93,7 @@ describe("PWN contract", function() {
 
 		it("Should be able to create ERC1155 deed", async function() {
 			const tokenId = 10;
-			const fakeToken = await smock.fake("Basic1155");
+			const fakeToken = await smock.fake("ERC1155");
 			const expiration = await timestampFromNow(110);
 
 			await pwn.newDeed(fakeToken.address, CATEGORY.ERC1155, tokenId, 5, expiration);
@@ -124,7 +124,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should return newly created deed ID", async function() {
-			const fakeToken = await smock.fake("Basic20");
+			const fakeToken = await smock.fake("ERC20");
 			const expiration = await timestampFromNow(110);
 			const fakeDid = 3;
 			deedFake.create.returns(fakeDid);
@@ -136,7 +136,7 @@ describe("PWN contract", function() {
 
 		it("Should send borrower collateral to vault", async function() {
 			const amount = 10;
-			const fakeToken = await smock.fake("Basic20");
+			const fakeToken = await smock.fake("ERC20");
 			const expiration = await timestampFromNow(110);
 			deedFake.getDeedAsset.returns({
 				cat: 0,
@@ -166,7 +166,7 @@ describe("PWN contract", function() {
 		let fakeToken;
 
 		before(async function() {
-			fakeToken = await smock.fake("Basic20");
+			fakeToken = await smock.fake("ERC20");
 		});
 
 		beforeEach(async function() {
@@ -220,7 +220,7 @@ describe("PWN contract", function() {
 		let fakeToken;
 
 		before(async function() {
-			fakeToken = await smock.fake("Basic20");
+			fakeToken = await smock.fake("ERC20");
 		});
 
 		beforeEach(async function() {
@@ -288,7 +288,7 @@ describe("PWN contract", function() {
 		let fakeToken;
 
 		before(async function() {
-			fakeToken = await smock.fake("Basic20");
+			fakeToken = await smock.fake("ERC20");
 		});
 
 		beforeEach(async function() {
@@ -356,8 +356,8 @@ describe("PWN contract", function() {
 		let collateral;
 
 		before(async function() {
-			fakeCreditToken = await smock.fake("Basic20");
-			fakeCollateralToken = await smock.fake("Basic721");
+			fakeCreditToken = await smock.fake("ERC20");
+			fakeCollateralToken = await smock.fake("ERC721");
 			credit = {
 				cat: CATEGORY.ERC20,
 				id: 0,
@@ -434,8 +434,8 @@ describe("PWN contract", function() {
 		let collateral;
 
 		before(async function() {
-			fakeCreditToken = await smock.fake("Basic20");
-			fakeCollateralToken = await smock.fake("Basic721");
+			fakeCreditToken = await smock.fake("ERC20");
+			fakeCollateralToken = await smock.fake("ERC721");
 			credit = {
 				cat: CATEGORY.ERC20,
 				id: 0,
