@@ -69,6 +69,18 @@ describe("MultiToken library", function() {
 			expect(fakeToken.safeTransferFrom).to.have.been.calledOnce;
 			expect(fakeToken.safeTransferFrom).to.have.been.calledWith(multiTokenAdapter.address, addr1.address, assetId, 1, "0x");
 		});
+
+		it("Should fail when calling with unknown asset category", async function() {
+			let failed = false;
+
+			try {
+				await multiTokenAdapter.transferAsset(fakeToken.address, CATEGORY.unknown, 1, assetId, addr1.address);
+			} catch {
+				failed = true;
+			}
+
+			expect(failed).to.equal(true);
+		});
 	});
 
 	describe("TransferFrom", function() {
@@ -112,6 +124,18 @@ describe("MultiToken library", function() {
 
 			expect(fakeToken.safeTransferFrom).to.have.been.calledOnce;
 			expect(fakeToken.safeTransferFrom).to.have.been.calledWith(addr1.address, addr2.address, assetId, 1, "0x");
+		});
+
+		it("Should fail when calling with unknown asset category", async function() {
+			let failed = false;
+
+			try {
+				await multiTokenAdapter.transferAssetFrom(fakeToken.address, CATEGORY.unknown, 1, assetId, addr1.address, addr2.address);
+			} catch {
+				failed = true;
+			}
+
+			expect(failed).to.equal(true);
 		});
 	});
 
@@ -164,6 +188,18 @@ describe("MultiToken library", function() {
 			expect(fakeToken.balanceOf).to.have.been.calledOnce;
 			expect(fakeToken.balanceOf).to.have.been.calledWith(addr1.address, assetId);
 		});
+
+		it("Should fail when calling with unknown asset category", async function() {
+			let failed = false;
+
+			try {
+				await multiTokenAdapter.balanceOf(fakeToken.address, CATEGORY.unknown, 732, assetId, addr1.address);
+			} catch {
+				failed = true;
+			}
+
+			expect(failed).to.equal(true);
+		});
 	});
 
 	describe("ApproveAsset", function() {
@@ -195,6 +231,18 @@ describe("MultiToken library", function() {
 
 			expect(fakeToken.setApprovalForAll).to.have.been.calledOnce;
 			expect(fakeToken.setApprovalForAll).to.have.been.calledWith(addr1.address, true);
+		});
+
+		it("Should fail when calling with unknown asset category", async function() {
+			let failed = false;
+
+			try {
+				await multiTokenAdapter.approveAsset(fakeToken.address, CATEGORY.unknown, 0, 657, addr1.address);
+			} catch {
+				failed = true;
+			}
+
+			expect(failed).to.equal(true);
 		});
 	});
 
