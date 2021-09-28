@@ -1,13 +1,10 @@
-pragma abicoder v2;
 pragma solidity ^0.8.0;
 
 import "./MultiToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Pausable.sol";
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 
-contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
+contract PWNDeed is ERC1155, Ownable  {
     using MultiToken for MultiToken.Asset;
 
     /*----------------------------------------------------------*|
@@ -29,8 +26,8 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
      */
     struct Deed {
         uint8 status;
-        uint256 expiration;
         address borrower;
+        uint256 expiration;
         MultiToken.Asset asset;
         bytes32 acceptedOffer;
         bytes32[] pendingOffers;
@@ -51,12 +48,19 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
     }
 
     mapping (uint256 => Deed) public deeds;             // mapping of all Deed data
-    mapping (bytes32 => Offer) public offers;           // mapping of all offer data
+    mapping (bytes32 => Offer) public offers;           // mapping of all Offer data
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
-    // NONE -> all events are handled at the PWN level or ERC1155 level
+
+    event NewDeed(address indexed tokenAddress, MultiToken.Category cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did);
+    event NewOffer(address tokenAddress, MultiToken.Category cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
+    event DeedRevoked(uint256 did);
+    event OfferRevoked(bytes32 offer);
+    event OfferAccepted(uint256 did, bytes32 offer);
+    event PaidBack(uint256 did, bytes32 offer);
+    event DeedClaimed(uint256 did);
 
     /*----------------------------------------------------------*|
     |*  # MODIFIERS                                             *|
@@ -77,12 +81,8 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
      *  @dev Once the PWN contract is set, you'll have to call `this.setPWN(PWN.address)` for this contract to work
      *  @param _uri Uri to be used for finding the token metadata (https://api.pwn.finance/deed/...)
      */
-    constructor(
-        string memory _uri
-    )
-    ERC1155(_uri)
-    Ownable()
-    {
+    constructor(string memory _uri) ERC1155(_uri) Ownable() {
+
     }
 
     /*
@@ -90,150 +90,194 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
      */
 
     /**
-     * mint
+     * create
      * @dev Creates the PWN Deed token contract - ERC1155 with extra use case specific features
+     * @param _tokenAddress Address of the asset contract
      * @param _cat Category of the asset - see { MultiToken.sol }
      * @param _id ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
      * @param _amount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
-     * @param _tokenAddress Address of the asset contract
      * @param _expiration Unix time stamp in !! seconds !! (not mili-seconds returned by JS)
-     * @param _borrower Essentially the tx.origin; the address initiating the new Deed
+     * @param _borrower Address initiating the new Deed
      * @return Deed ID of the newly minted Deed
      */
-    function mint(
-        uint8 _cat,
+    function create(
+        address _tokenAddress,
+        MultiToken.Category _cat,
         uint256 _id,
         uint256 _amount,
-        address _tokenAddress,
         uint256 _expiration,
         address _borrower
-    )
-    external
-    onlyPWN
-    returns (uint256)
-    {
+    ) external onlyPWN returns (uint256) {
         id++;
-        deeds[id].expiration = _expiration;
-        deeds[id].borrower = _borrower;
-        deeds[id].asset.cat = _cat;
-        deeds[id].asset.id = _id;
-        deeds[id].asset.amount = _amount;
-        deeds[id].asset.tokenAddress = _tokenAddress;
+
+        Deed storage deed = deeds[id];
+        deed.expiration = _expiration;
+        deed.borrower = _borrower;
+        deed.asset.tokenAddress = _tokenAddress;
+        deed.asset.cat = _cat;
+        deed.asset.id = _id;
+        deed.asset.amount = _amount;
 
         _mint(_borrower, id, 1, "");
+
+        deed.status = 1;
+
+        emit NewDeed(_tokenAddress, _cat, _id, _amount, _expiration, id);
+
         return id;
     }
 
     /**
-     * burn
+     * revoke
      * @dev Burns a deed token
      * @param _did Deed ID of the token to be burned
      * @param _owner Address of the borrower who issued the Deed
      */
-    function burn(
+    function revoke(
         uint256 _did,
         address _owner
-    )
-    external
-    onlyPWN
-    {
-        delete deeds[_did];
-        _burn(_owner, _did, 1);
+    ) external onlyPWN {
+        require(balanceOf(_owner, _did) == 1, "The deed doesn't belong to the caller");
+        require(getDeedStatus(_did) == 1, "Deed can't be revoked at this stage");
+
+        deeds[_did].status = 0;
+
+        emit DeedRevoked(_did);
     }
 
     /**
-     * setOffer
+     * makeOffer
      * @dev saves an offer object that defines credit terms
+     * @param _tokenAddress Address of the asset contract
      * @param _cat Category of the asset - see { MultiToken.sol }
      * @param _amount Amount of an ERC20 or ERC1155 token to be offered as credit
-     * @param _tokenAddress Address of the asset contract
      * @param _lender Address of the asset lender
      * @param _did ID of the Deed the offer should be bound to
      * @param _toBePaid Amount to be paid back by the borrower
      * @return hash of the newly created offer
      */
-    function setOffer(
-        uint8 _cat,
-        uint256 _amount,
+    function makeOffer(
         address _tokenAddress,
+        MultiToken.Category _cat,
+        uint256 _amount,
         address _lender,
         uint256 _did,
         uint256 _toBePaid
-    )
-    external
-    onlyPWN
-    returns (bytes32)
-    {
+    ) external onlyPWN returns (bytes32) {
+        require(getDeedStatus(_did) == 1, "Deed not accepting offers");
+
+        // In this case the only variable here is nonce.
+        // Should be used _lender instead of msg.sender (which is always PWN contract)?
         bytes32 hash = keccak256(abi.encodePacked(msg.sender, nonce));
         nonce++;
 
-        offers[hash].asset.cat = _cat;
-        offers[hash].asset.amount = _amount;
-        offers[hash].asset.tokenAddress = _tokenAddress;
-        offers[hash].toBePaid = _toBePaid;
-        offers[hash].lender = _lender;
-        offers[hash].deedID = _did;
+        Offer storage offer = offers[hash];
+        offer.asset.tokenAddress = _tokenAddress;
+        offer.asset.cat = _cat;
+        offer.asset.amount = _amount;
+        offer.toBePaid = _toBePaid;
+        offer.lender = _lender;
+        offer.deedID = _did;
 
         deeds[_did].pendingOffers.push(hash);
+
+        emit NewOffer(_tokenAddress, _cat, _amount,  _lender, _toBePaid, _did, hash);
+
         return hash;
     }
 
     /**
-     * deleteOffer
-     * @dev utility function to remove a pending offer
+     * revokeOffer
+     * @dev function to remove a pending offer
      * @dev This only removes the offer representation but it doesn't remove the offer from a list of pending offers.
      *         The offers associated with a deed has to be filtered on the front end to only list the valid ones.
      *         No longer existent offers will simply return 0 if prompted about their DID.
-     * @param _hash Hash identifying a offer
+     * @param _offer Hash identifying an offer
+     * @param _lender Address of the lender who made the offer
      * @dev TODO: consider ways to remove the offer from the pending offers array / maybe replace for a mapping
      */
-    function deleteOffer(
-        bytes32 _hash
-    )
-    external
-    onlyPWN
-    {
-        delete offers[_hash];
+    function revokeOffer(
+        bytes32 _offer,
+        address _lender
+    ) external onlyPWN {
+        require(offers[_offer].lender == _lender, "This address didn't create the offer");
+        require(getDeedStatus(offers[_offer].deedID) == 1, "Can only remove offers from open Deeds");
+
+        delete offers[_offer];
+
+        emit OfferRevoked(_offer);
     }
 
     /**
-     * setCredit
-     * @dev utility function to set accepted offer
-     * @param _id ID of the Deed the offer should be bound to
+     * acceptOffer
+     * @dev function to set accepted offer
+     * @param _did ID of the Deed the offer should be bound to
      * @param _offer Hash identifying an offer
+     * @param _owner Address of the borrower who issued the Deed
      */
-    function setCredit(
-        uint256 _id,
-        bytes32 _offer
-    )
-    external
-    onlyPWN
-    {
-        deeds[_id].acceptedOffer = _offer;
-        delete deeds[_id].pendingOffers;
+    function acceptOffer(
+        uint256 _did,
+        bytes32 _offer,
+        address _owner
+    ) external onlyPWN {
+        require(balanceOf(_owner, _did) == 1, "The deed doesn't belong to the caller");
+        require(getDeedStatus(_did) == 1, "Deed can't accept more offers");
+
+        Deed storage deed = deeds[_did];
+        deed.acceptedOffer = _offer;
+        delete deed.pendingOffers;
+        deed.status = 2;
+
+        emit OfferAccepted(_did, _offer);
     }
 
     /**
-     * changeStatus
-     * @dev utility function that changes a deed state from 1 -> 3
-     * @param _status Corresponds to the current stage of the Deed, as follows:
-     *         status = 0 := Deed doesn't exist. If the DID <= highest known DID this means the Deed once existed.
-     *         status = 1 := Deed is created (has locked collateral) and is accepting offers.
-     *         status = 2 := Active deed /w an accepted offer.
-     *         status = 3 := Fully paid deed.
-     *         status = 4 := Expired deed.
-     * @param _did Deed ID selecting the particular Deed
+     * payBack
+     * @dev function to make proper state transition
+     * @param _did ID of the Deed which is paid back
      */
-    function changeStatus(
-        uint8 _status,
-        uint256 _did
-    )
-    external
-    onlyPWN
-    {
-        deeds[_did].status = _status;
+    function payBack(uint256 _did) external onlyPWN {
+        require(getDeedStatus(_did) == 2, "Deed doesn't have an accepted offer to be paid back");
+
+        deeds[_did].status = 3;
+
+        emit PaidBack(_did, deeds[_did].acceptedOffer);
     }
 
+    /**
+     * claim
+     * @dev function that would burn the deed token if the token is in paidBack or expired state
+     * @param _did ID of the Deed which is claimed
+     * @param _owner Address of the deed token owner
+     */
+    function claim(
+        uint256 _did,
+        address _owner
+    ) external onlyPWN {
+        require(balanceOf(_owner, _did) == 1, "Caller is not the deed owner");
+        require(getDeedStatus(_did) >= 3, "Deed can't be claimed yet");
+
+        deeds[_did].status = 0;
+
+        emit DeedClaimed(_did);
+    }
+
+    /**
+     * burn
+     * @dev function that would burn the deed token if the token is in dead state
+     * @param _did ID of the Deed which is burned
+     * @param _owner Address of the deed token owner
+     */
+    function burn(
+        uint256 _did,
+        address _owner
+    ) external onlyPWN {
+        require(balanceOf(_owner, _did) == 1, "Caller is not the deed owner");
+        require(deeds[_did].status == 0, "Deed can't be burned at this stage");
+
+        delete deeds[_did];
+        _burn(_owner, _did, 1);
+    }
 
     /*
      * override of the check happening before Deed transfers
@@ -247,10 +291,7 @@ contract PWNDeed is ERC1155, ERC1155Burnable, Ownable  {
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    )
-    internal
-    virtual override
-    {
+    ) internal virtual override {
         for (uint i = 0; i < ids.length; i++) {
             require(this.getDeedStatus(ids[i]) != 1, "Deed can't be transferred at this stage");
         }

@@ -1,4 +1,3 @@
-pragma abicoder v2;
 pragma solidity ^0.8.0;
 
 import "./MultiToken.sol";
@@ -29,7 +28,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event VaultPush(MultiToken.Asset asset);
+    event VaultPush(MultiToken.Asset asset, address indexed origin);
     event VaultPull(MultiToken.Asset asset, address indexed beneficiary);
     event VaultProxy(MultiToken.Asset asset, address indexed origin, address indexed beneficiary);
 
@@ -56,9 +55,9 @@ contract PWNVault is Ownable, IERC1155Receiver {
      * @param _asset An asset construct - for definition see { MultiToken.sol }
      * @return true if successful
      */
-    function push(MultiToken.Asset memory _asset) external onlyPWN returns (bool) {
-        _asset.transferAssetFrom(tx.origin, address(this)); // Will not work for multi-sign
-        emit VaultPush(_asset);
+    function push(MultiToken.Asset memory _asset, address _origin) external onlyPWN returns (bool) {
+        _asset.transferAssetFrom(_origin, address(this));
+        emit VaultPush(_asset, _origin);
         return true;
     }
 
