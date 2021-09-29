@@ -137,7 +137,8 @@ describe("PWN contract", function() {
 
 				expect.fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Cannot create expired deed");
 			}
 		});
 

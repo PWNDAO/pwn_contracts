@@ -20,7 +20,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
     |*----------------------------------------------------------*/
 
     modifier onlyPWN() {
-        require(msg.sender == PWN);
+        require(msg.sender == PWN, "Caller is not the PWN");
         _;
     }
 

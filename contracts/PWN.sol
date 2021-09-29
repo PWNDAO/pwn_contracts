@@ -58,7 +58,7 @@ contract PWN is Ownable {
         uint256 _amount,
         uint256 _expiration
     ) external returns (uint256) {
-        require(_expiration > block.timestamp);
+        require(_expiration > block.timestamp, "Cannot create expired deed");
 
         uint256 did = token.create(_tokenAddress, _cat, _id, _amount, _expiration, msg.sender);
         vault.push(token.getDeedAsset(did), msg.sender);

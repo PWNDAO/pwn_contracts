@@ -67,7 +67,7 @@ contract PWNDeed is ERC1155, Ownable  {
     |*----------------------------------------------------------*/
 
     modifier onlyPWN() {
-        require(msg.sender == PWN);
+        require(msg.sender == PWN, "Caller is not the PWN");
         _;
     }
 

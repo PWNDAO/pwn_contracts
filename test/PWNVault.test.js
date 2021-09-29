@@ -69,7 +69,8 @@ describe("PWNVault contract", async function() {
 				await vault.connect(addr1).push(dummyAsset, addr1.address);
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -133,7 +134,8 @@ describe("PWNVault contract", async function() {
 				await vault.connect(addr1).pull(dummyAsset, addr3.address);
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -197,7 +199,8 @@ describe("PWNVault contract", async function() {
 				await vault.connect(addr1).pullProxy(dummyAsset, addr3.address, addr4.address);
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -278,6 +281,7 @@ describe("PWNVault contract", async function() {
 				expect().fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Ownable: caller is not the owner");
 			}
 		});
 

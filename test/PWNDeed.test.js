@@ -78,7 +78,8 @@ describe("PWNDeed contract", function() {
 				await deed.connect(addr1).create(addr2.address, CATEGORY.ERC20, 0, 0, 0, addr3.address);
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -161,7 +162,8 @@ describe("PWNDeed contract", function() {
 
 				expect.fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -231,7 +233,8 @@ describe("PWNDeed contract", function() {
 
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -340,7 +343,8 @@ describe("PWNDeed contract", function() {
 
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -418,7 +422,8 @@ describe("PWNDeed contract", function() {
 
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -506,7 +511,8 @@ describe("PWNDeed contract", function() {
 
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -569,7 +575,8 @@ describe("PWNDeed contract", function() {
 
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -657,7 +664,8 @@ describe("PWNDeed contract", function() {
 
 				expect().fail();
 			} catch(error) {
-				expect(error.message).to.contain("revert"); // TODO: Add reason?
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Caller is not the PWN");
 			}
 		});
 
@@ -950,6 +958,7 @@ describe("PWNDeed contract", function() {
 				expect().fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Ownable: caller is not the owner");
 			}
 		});
 
