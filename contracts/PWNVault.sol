@@ -110,6 +110,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
     )
         override
         external
+        pure
         returns(bytes4)
     {
         return 0xf23a6e61;
@@ -137,6 +138,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
     )
         override
         external
+        pure
         returns(bytes4)
     {
         return 0xbc197c81;
@@ -159,7 +161,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
      *
      * This function call must use less than 30 000 gas.
      */
-    function supportsInterface(bytes4 interfaceId) external view override returns (bool) {
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return
             interfaceId == this.supportsInterface.selector || // ERC165
             interfaceId == this.owner.selector
