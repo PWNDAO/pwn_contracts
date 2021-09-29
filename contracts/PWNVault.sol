@@ -163,16 +163,14 @@ contract PWNVault is Ownable, IERC1155Receiver {
      */
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return
-            interfaceId == this.supportsInterface.selector || // ERC165
-            interfaceId == this.owner.selector
-                            ^ this.renounceOwnership.selector
-                            ^ this.transferOwnership.selector || // Ownable
+            interfaceId == type(IERC165).interfaceId || // ERC165
+            interfaceId == type(Ownable).interfaceId || // Ownable
+            interfaceId == type(IERC1155Receiver).interfaceId || // ERC1155Receiver
             interfaceId == this.PWN.selector
                             ^ this.push.selector
                             ^ this.pull.selector
                             ^ this.pullProxy.selector
-                            ^ this.setPWN.selector || // PWN Vault
-            interfaceId == this.onERC1155Received.selector
-                            ^ this.onERC1155BatchReceived.selector; // ERC1155Receiver
+                            ^ this.setPWN.selector; // PWN Vault
+
     }
 }
