@@ -13,7 +13,7 @@ describe("PWNVault contract", async function() {
 	let Vault;
 	let VaultAdapter;
 	let vaultEventIface;
-	let owner, addr1, addr2, addr3, addr4;
+	let owner, asset1, addr1, addr2, addr3, addr4;
 
 	const CATEGORY = {
 		ERC20: 0,
@@ -25,12 +25,12 @@ describe("PWNVault contract", async function() {
 	before(async function() {
 		Vault = await ethers.getContractFactory("PWNVault");
 		VaultAdapter = await ethers.getContractFactory("PWNVaultTestAdapter"); // Needed for passing MultiToken.Asset struct as a parameter
-		[owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
+		[owner, asset1, addr1, addr2, addr3, addr4] = await ethers.getSigners();
 
 		vaultEventIface = new ethers.utils.Interface([
-			"event VaultPush(tuple(address tokenAddress, uint8 cat, uint256 amount, uint256 id), address indexed origin)",
-			"event VaultPull(tuple(address tokenAddress, uint8 cat, uint256 amount, uint256 id), address indexed beneficiary)",
-	    	"event VaultProxy(tuple(address tokenAddress, uint8 cat, uint256 amount, uint256 id), address indexed origin, address indexed beneficiary)"
+			"event VaultPush(tuple(address assetAddress, uint8 category, uint256 amount, uint256 id), address indexed origin)",
+			"event VaultPull(tuple(address assetAddress, uint8 category, uint256 amount, uint256 id), address indexed beneficiary)",
+	    	"event VaultProxy(tuple(address assetAddress, uint8 category, uint256 amount, uint256 id), address indexed origin, address indexed beneficiary)"
 		]);
 	});
 
@@ -57,10 +57,18 @@ describe("PWNVault contract", async function() {
 
 	describe("Push", function() {
 
+		let fakeToken;
+
+		beforeEach(async function() {
+			fakeToken = await smock.fake("ERC20");
+			fakeToken.transferFrom.returns(true);
+		});
+
+
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
-				tokenAddress: addr2.address,
-				cat: CATEGORY.ERC20,
+				assetAddress: asset1.address,
+				category: CATEGORY.ERC20,
 				amount: 10,
 				id: 0,
 			};
@@ -80,8 +88,6 @@ describe("PWNVault contract", async function() {
 			// MultiToken lib is tested separately.
 			// Because of that we can test just ERC20 type and assume that others would work too.
 			const amount = 123;
-			const fakeToken = await smock.fake("ERC20");
-			fakeToken.transferFrom.returns(true);
 
 			await vaultAdapter.push(fakeToken.address, CATEGORY.ERC20, amount, 0, addr1.address);
 
@@ -91,8 +97,6 @@ describe("PWNVault contract", async function() {
 
 		it("Should emit VaultPush event", async function() {
 			const amount = 37;
-			const fakeToken = await smock.fake("ERC20");
-			fakeToken.transferFrom.returns(true);
 
 			const tx = await vaultAdapter.push(fakeToken.address, CATEGORY.ERC20, amount, 0, addr1.address);
 			const response = await tx.wait();
@@ -102,16 +106,13 @@ describe("PWNVault contract", async function() {
 			expect(logDescription.name).to.equal("VaultPush");
 			expect(logDescription.args.origin).to.equal(addr1.address);
 			const args = logDescription.args[0];
-			expect(args.tokenAddress).to.equal(fakeToken.address);
-			expect(args.cat).to.equal(CATEGORY.ERC20);
+			expect(args.assetAddress).to.equal(fakeToken.address);
+			expect(args.category).to.equal(CATEGORY.ERC20);
 			expect(args.amount).to.equal(amount);
 			expect(args.id).to.equal(0);
 		});
 
 		it("Should return true if successful", async function() {
-			const fakeToken = await smock.fake("ERC20");
-			fakeToken.transferFrom.returns(true);
-
 			const success = await vaultAdapter.callStatic.push(fakeToken.address, CATEGORY.ERC20, 84, 0, addr1.address);
 
 			expect(success).to.equal(true);
@@ -122,10 +123,18 @@ describe("PWNVault contract", async function() {
 
 	describe("Pull", function() {
 
+		let fakeToken;
+
+		beforeEach(async function() {
+			fakeToken = await smock.fake("ERC20");
+			fakeToken.transfer.returns(true);
+		});
+
+
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
-				tokenAddress: addr2.address,
-				cat: CATEGORY.ERC20,
+				assetAddress: addr2.address,
+				category: CATEGORY.ERC20,
 				amount: 10,
 				id: 0,
 			};
@@ -145,8 +154,6 @@ describe("PWNVault contract", async function() {
 			// MultiToken lib is tested separately.
 			// Because of that we can test just ERC20 type and assume that others would work too.
 			const amount = 28;
-			const fakeToken = await smock.fake("ERC20");
-			fakeToken.transfer.returns(true);
 
 			await vaultAdapter.pull(fakeToken.address, CATEGORY.ERC20, amount, 0, addr2.address);
 
@@ -156,8 +163,6 @@ describe("PWNVault contract", async function() {
 
 		it("Should emit VaultPull event", async function() {
 			const amount = 73;
-			const fakeToken = await smock.fake("ERC20");
-			fakeToken.transfer.returns(true);
 
 			const tx = await vaultAdapter.pull(fakeToken.address, CATEGORY.ERC20, amount, 0, addr2.address);
 			const response = await tx.wait();
@@ -167,16 +172,13 @@ describe("PWNVault contract", async function() {
 			expect(logDescription.name).to.equal("VaultPull");
 			expect(logDescription.args.beneficiary).to.equal(addr2.address);
 			const args = logDescription.args[0];
-			expect(args.tokenAddress).to.equal(fakeToken.address);
-			expect(args.cat).to.equal(CATEGORY.ERC20);
+			expect(args.assetAddress).to.equal(fakeToken.address);
+			expect(args.category).to.equal(CATEGORY.ERC20);
 			expect(args.amount).to.equal(amount);
 			expect(args.id).to.equal(0);
 		});
 
 		it("Should return true if successful", async function() {
-			const fakeToken = await smock.fake("ERC20");
-			fakeToken.transfer.returns(true);
-
 			const success = await vaultAdapter.callStatic.pull(fakeToken.address, CATEGORY.ERC20, 48, 0, addr2.address);
 
 			expect(success).to.equal(true);
@@ -187,16 +189,25 @@ describe("PWNVault contract", async function() {
 
 	describe("PullProxy", function() {
 
+		let fakeToken;
+
+		beforeEach(async function() {
+			fakeToken = await smock.fake("ERC20");
+			fakeToken.transferFrom.returns(true);
+		});
+
+
 		it("Should fail when sender is not PWN", async function() {
 			const dummyAsset = {
-				tokenAddress: addr2.address,
-				cat: CATEGORY.ERC20,
+				assetAddress: addr2.address,
+				category: CATEGORY.ERC20,
 				amount: 10,
 				id: 0,
 			};
 
 			try {
 				await vault.connect(addr1).pullProxy(dummyAsset, addr3.address, addr4.address);
+
 				expect().fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
@@ -210,8 +221,6 @@ describe("PWNVault contract", async function() {
 			// MultiToken lib is tested separately.
 			// Because of that we can test just ERC20 type and assume that others would work too.
 			const amount = 432;
-			const fakeToken = await smock.fake("ERC20");
-			fakeToken.transferFrom.returns(true);
 
 			await vaultAdapter.pullProxy(fakeToken.address, CATEGORY.ERC20, amount, 0, addr2.address, addr3.address);
 
@@ -221,8 +230,6 @@ describe("PWNVault contract", async function() {
 
 		it("Should emit VaultProxy event", async function() {
 			const amount = 7;
-			const fakeToken = await smock.fake("ERC20");
-			fakeToken.transferFrom.returns(true);
 
 			const tx = await vaultAdapter.pullProxy(fakeToken.address, CATEGORY.ERC20, amount, 0, addr2.address, addr3.address);
 			const response = await tx.wait();
@@ -233,16 +240,13 @@ describe("PWNVault contract", async function() {
 			expect(logDescription.args.origin).to.equal(addr2.address);
 			expect(logDescription.args.beneficiary).to.equal(addr3.address);
 			const args = logDescription.args[0];
-			expect(args.tokenAddress).to.equal(fakeToken.address);
-			expect(args.cat).to.equal(CATEGORY.ERC20);
+			expect(args.assetAddress).to.equal(fakeToken.address);
+			expect(args.category).to.equal(CATEGORY.ERC20);
 			expect(args.amount).to.equal(amount);
 			expect(args.id).to.equal(0);
 		});
 
 		it("Should return true if successful", async function() {
-			const fakeToken = await smock.fake("ERC20");
-			fakeToken.transferFrom.returns(true);
-
 			const success = await vaultAdapter.callStatic.pullProxy(fakeToken.address, CATEGORY.ERC20, 22, 0, addr2.address, addr3.address);
 
 			expect(success).to.equal(true);

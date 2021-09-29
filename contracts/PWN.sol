@@ -11,7 +11,7 @@ contract PWN is Ownable {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    PWNDeed public token;
+    PWNDeed public deed;
     PWNVault public vault;
 
     /*----------------------------------------------------------*|
@@ -35,7 +35,7 @@ contract PWN is Ownable {
         address _PWND,
         address _PWNV
     ) Ownable() {
-        token = PWNDeed(_PWND);
+        deed = PWNDeed(_PWND);
         vault = PWNVault(_PWNV);
     }
 
@@ -43,24 +43,24 @@ contract PWN is Ownable {
      * newDeed - sets & locks collateral
      * @dev for UI integrations is this the function enabling creation of a new Deed token
      * @dev Deed status is set to 1
-     * @param _tokenAddress Address of the asset contract
-     * @param _cat Category of the asset - see { MultiToken.sol }
-     * @param _id ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
-     * @param _amount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
+     * @param _assetAddress Address of the asset contract
+     * @param _assetCategory Category of the asset - see { MultiToken.sol }
+     * @param _assetId ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
+     * @param _assetAmount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
      * @param _expiration Unix time stamp in !! seconds !! (not miliseconds returned by JS)
      * @return a Deed ID of the newly created Deed
      */
     function newDeed(
-        address _tokenAddress,
-        MultiToken.Category _cat,
-        uint256 _id,
-        uint256 _amount,
+        address _assetAddress,
+        MultiToken.Category _assetCategory,
+        uint256 _assetId,
+        uint256 _assetAmount,
         uint256 _expiration
     ) external returns (uint256) {
         require(_expiration > block.timestamp, "Cannot create expired deed");
 
-        uint256 did = token.create(_tokenAddress, _cat, _id, _amount, _expiration, msg.sender);
-        vault.push(token.getDeedAsset(did), msg.sender);
+        uint256 did = deed.create(_assetAddress, _assetCategory, _assetId, _assetAmount, _expiration, msg.sender);
+        vault.push(deed.getDeedCollateral(did), msg.sender);
 
         return did;
     }
@@ -71,10 +71,10 @@ contract PWN is Ownable {
      * @param _did Deed ID specifying the concrete Deed
      */
     function revokeDeed(uint256 _did) external {
-        token.revoke(_did, msg.sender);
-        vault.pull(token.getDeedAsset(_did), msg.sender);
+        deed.revoke(_did, msg.sender);
+        vault.pull(deed.getDeedCollateral(_did), msg.sender);
 
-        token.burn(_did, msg.sender);
+        deed.burn(_did, msg.sender);
     }
 
     /**
@@ -82,21 +82,21 @@ contract PWN is Ownable {
      * @dev this is the function used by lenders to cast their offers
      * @dev this function doesn't assume the asset is approved yet for PWNVault
      * @dev this function requires lender to have a sufficient balance
-     * @param _tokenAddress Address of the asset contract
-     * @param _cat Category of the asset - see { MultiToken.sol }
-     * @param _amount Amount of an ERC20 or ERC1155 token to be offered as credit
+     * @param _assetAddress Address of the asset contract
+     * @param _assetCategory Category of the asset - see { MultiToken.sol }
+     * @param _assetAmount Amount of an ERC20 or ERC1155 token to be offered as credit
      * @param _did ID of the Deed the offer should be bound to
      * @param _toBePaid Amount to be paid back by the borrower
      * @return a hash of the newly created offer
      */
     function makeOffer(
-        address _tokenAddress,
-        MultiToken.Category _cat,
-        uint256 _amount,
+        address _assetAddress,
+        MultiToken.Category _assetCategory,
+        uint256 _assetAmount,
         uint256 _did,
         uint256 _toBePaid
     ) external returns (bytes32) {
-        return token.makeOffer(_tokenAddress, _cat, _amount, msg.sender, _did, _toBePaid);
+        return deed.makeOffer(_assetAddress, _assetCategory, _assetAmount, msg.sender, _did, _toBePaid);
     }
 
     /**
@@ -105,7 +105,7 @@ contract PWN is Ownable {
      * @param _offer Identifier of the offer to be revoked
      */
     function revokeOffer(bytes32 _offer) external {
-        token.revokeOffer(_offer, msg.sender);
+        deed.revokeOffer(_offer, msg.sender);
     }
 
     /**
@@ -116,17 +116,17 @@ contract PWN is Ownable {
      * @return true if successful
      */
     function acceptOffer(bytes32 _offer) external returns (bool) {
-        uint256 did = token.getDeedID(_offer);
-        token.acceptOffer(did, _offer, msg.sender);
+        uint256 did = deed.getDeedID(_offer);
+        deed.acceptOffer(did, _offer, msg.sender);
 
-        address lender = token.getLender(_offer);
-        vault.pullProxy(token.getOfferAsset(_offer), lender, msg.sender);
+        address lender = deed.getLender(_offer);
+        vault.pullProxy(deed.getOfferCredit(_offer), lender, msg.sender);
 
-        MultiToken.Asset memory deed;
-        deed.cat = MultiToken.Category.ERC1155;
-        deed.id = did;
-        deed.tokenAddress = address(token);
-        vault.pullProxy(deed, msg.sender, lender);
+        MultiToken.Asset memory collateral;
+        collateral.category = MultiToken.Category.ERC1155;
+        collateral.id = did;
+        collateral.assetAddress = address(deed);
+        vault.pullProxy(collateral, msg.sender, lender);
 
         return true;
     }
@@ -140,13 +140,13 @@ contract PWN is Ownable {
      * @return true if successful
      */
     function payBack(uint256 _did) external returns (bool) {
-        token.payBack(_did);
+        deed.payBack(_did);
 
-        bytes32 offer = token.getAcceptedOffer(_did);
-        MultiToken.Asset memory credit = token.getOfferAsset(offer);
-        credit.amount = token.toBePaid(offer);  //override the num of credit given
+        bytes32 offer = deed.getAcceptedOffer(_did);
+        MultiToken.Asset memory credit = deed.getOfferCredit(offer);
+        credit.amount = deed.toBePaid(offer);  //override the num of credit given
 
-        vault.pull(token.getDeedAsset(_did), token.getBorrower(_did));
+        vault.pull(deed.getDeedCollateral(_did), deed.getBorrower(_did));
         vault.push(credit, msg.sender);
 
         return true;
@@ -159,22 +159,22 @@ contract PWN is Ownable {
      * @return true if successful
      */
     function claimDeed(uint256 _did) external returns (bool) {
-        uint8 status = token.getDeedStatus(_did);
+        uint8 status = deed.getDeedStatus(_did);
 
-        token.claim(_did, msg.sender);
+        deed.claim(_did, msg.sender);
 
         if (status == 3) {
-            bytes32 offer = token.getAcceptedOffer(_did);
-            MultiToken.Asset memory credit = token.getOfferAsset(offer);
-            credit.amount = token.toBePaid(offer);
+            bytes32 offer = deed.getAcceptedOffer(_did);
+            MultiToken.Asset memory credit = deed.getOfferCredit(offer);
+            credit.amount = deed.toBePaid(offer);
 
             vault.pull(credit, msg.sender);
 
         } else if (status == 4) {
-            vault.pull(token.getDeedAsset(_did), msg.sender);
+            vault.pull(deed.getDeedCollateral(_did), msg.sender);
         }
 
-        token.burn(_did, msg.sender);
+        deed.burn(_did, msg.sender);
 
         return true;
     }

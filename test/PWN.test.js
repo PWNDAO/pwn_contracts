@@ -14,7 +14,7 @@ describe("PWN contract", function() {
 
 	let PWN;
 	let pwnEventIface;
-	let owner, addr1, addr2, addr3, addr4, addr5;
+	let owner, lender, borrower, asset1, asset2, addr1;
 
 	async function timestampFromNow(delta) {
 		const lastBlockNumber = await ethers.provider.getBlockNumber();
@@ -31,11 +31,7 @@ describe("PWN contract", function() {
 
 	before(async function() {
 		PWN = await ethers.getContractFactory("PWN");
-		[owner, addr1, addr2, addr3, addr4, addr5] = await ethers.getSigners();
-
-		pwnEventIface = new ethers.utils.Interface([
-		    "event MinDurationChange(uint256 minDuration)",
-		]);
+		[owner, lender, borrower, asset1, asset2, addr1] = await ethers.getSigners();
 	});
 
 	beforeEach(async function() {
@@ -62,7 +58,7 @@ describe("PWN contract", function() {
 			pwn = await factory.deploy(deedFake.address, vaultFake.address);
 
 			const vaultAddress = await pwn.vault();
-			const deedAddress = await pwn.token();
+			const deedAddress = await pwn.deed();
 			expect(vaultAddress).to.equal(vaultFake.address);
 			expect(deedAddress).to.equal(deedFake.address);
 		});
@@ -73,13 +69,11 @@ describe("PWN contract", function() {
 	describe("New deed", function() {
 
 		it("Should be able to create ERC20 deed", async function() {
-			const amount = 10;
-			const fakeToken = await smock.fake("ERC20");
 			const expiration = await timestampFromNow(110);
 			let failed = false;
 
 			try {
-				await pwn.newDeed(fakeToken.address, CATEGORY.ERC20, 0, amount, expiration);
+				await pwn.newDeed(asset1.address, CATEGORY.ERC20, 0, 10, expiration);
 			} catch {
 				failed = true;
 			}
@@ -88,13 +82,11 @@ describe("PWN contract", function() {
 		});
 
 		it("Should be able to create ERC721 deed", async function() {
-			const tokenId = 10;
-			const fakeToken = await smock.fake("ERC721");
 			const expiration = await timestampFromNow(110);
 			let failed = false;
 
 			try {
-				await pwn.newDeed(fakeToken.address, CATEGORY.ERC721, tokenId, 1, expiration);
+				await pwn.newDeed(asset1.address, CATEGORY.ERC721, 10, 1, expiration);
 			} catch {
 				failed = true;
 			}
@@ -103,13 +95,11 @@ describe("PWN contract", function() {
 		});
 
 		it("Should be able to create ERC1155 deed", async function() {
-			const tokenId = 10;
-			const fakeToken = await smock.fake("ERC1155");
 			const expiration = await timestampFromNow(110);
 			let failed = false;
 
 			try {
-				await pwn.newDeed(fakeToken.address, CATEGORY.ERC1155, tokenId, 5, expiration);
+				await pwn.newDeed(asset1.address, CATEGORY.ERC1155, 10, 5, expiration);
 			} catch {
 				failed = true;
 			}
@@ -121,7 +111,7 @@ describe("PWN contract", function() {
 			let failed;
 
 			try {
-				await pwn.newDeed(addr4.address, CATEGORY.unknown, 0, 10, 1);
+				await pwn.newDeed(asset1.address, CATEGORY.unknown, 0, 10, 1);
 			} catch {
 				failed = true;
 			}
@@ -133,7 +123,7 @@ describe("PWN contract", function() {
 			const expiration = timestampFromNow(-1);
 
 			try {
-				await pwn.newDeed(addr4.address, CATEGORY.ERC20, 0, 10, expiration);
+				await pwn.newDeed(asset1.address, CATEGORY.ERC20, 0, 10, expiration);
 
 				expect.fail();
 			} catch(error) {
@@ -143,36 +133,34 @@ describe("PWN contract", function() {
 		});
 
 		it("Should return newly created deed ID", async function() {
-			const fakeToken = await smock.fake("ERC20");
 			const expiration = await timestampFromNow(110);
 			const fakeDid = 3;
 			deedFake.create.returns(fakeDid);
 
-			const did = await pwn.callStatic.newDeed(fakeToken.address, CATEGORY.ERC20, 0, 10, expiration);
+			const did = await pwn.callStatic.newDeed(asset1.address, CATEGORY.ERC20, 0, 10, expiration);
 
 			expect(did).to.equal(fakeDid);
 		});
 
 		it("Should send borrower collateral to vault", async function() {
-			const amount = 10;
-			const fakeToken = await smock.fake("ERC20");
 			const expiration = await timestampFromNow(110);
-			deedFake.getDeedAsset.returns({
-				cat: 0,
-				id: 0,
-				amount: amount,
-				tokenAddress: fakeToken.address,
-			});
+			const collateral = {
+				assetAddress: asset1.address,
+				category: CATEGORY.ERC20,
+				id: 1,
+				amount: 10,
+			};
+			deedFake.getDeedCollateral.returns(collateral);
 
-			await pwn.connect(addr1).newDeed(fakeToken.address, CATEGORY.ERC20, 0, amount, expiration);
+			await pwn.connect(borrower).newDeed(collateral.assetAddress, collateral.category, collateral.id, collateral.amount, expiration);
 
 			expect(vaultFake.push).to.have.been.calledOnce;
 			const args = vaultFake.push.getCall(0).args;
-			expect(args._asset.cat).to.equal(CATEGORY.ERC20);
-			expect(args._asset.amount).to.equal(amount);
-			expect(args._asset.id).to.equal(0);
-			expect(args._asset.tokenAddress).to.equal(fakeToken.address);
-			expect(args._origin).to.equal(addr1.address);
+			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
+			expect(args._asset.category).to.equal(collateral.category);
+			expect(args._asset.id).to.equal(collateral.id);
+			expect(args._asset.amount).to.equal(collateral.amount);
+			expect(args._origin).to.equal(borrower.address);
 		});
 
 	});
@@ -182,47 +170,45 @@ describe("PWN contract", function() {
 
 		const did = 17;
 		const amount = 120;
-		let fakeToken;
-
-		before(async function() {
-			fakeToken = await smock.fake("ERC20");
-		});
+		const assetId = 8;
 
 		beforeEach(async function() {
-			deedFake.getDeedAsset.whenCalledWith(did).returns({
-				cat: CATEGORY.ERC20,
-				id: 0,
-				amount: amount,
-				tokenAddress: fakeToken.address,
-			});
 			vaultFake.pull.returns(true);
 		});
 
 
 		it("Should update deed to revoked state", async function() {
-			await pwn.connect(addr1).revokeDeed(did);
+			await pwn.connect(borrower).revokeDeed(did);
 
-			expect(deedFake.revoke).to.have.been.calledOnceWith(did, addr1.address);
+			expect(deedFake.revoke).to.have.been.calledOnceWith(did, borrower.address);
 		});
 
 		it("Should send deed collateral to borrower from vault", async function() {
-			await pwn.connect(addr1).revokeDeed(did);
+			const collateral = {
+				assetAddress: asset1.address,
+				category: CATEGORY.ERC20,
+				id: assetId,
+				amount: amount,
+			};
+			deedFake.getDeedCollateral.whenCalledWith(did).returns(collateral);
+
+			await pwn.connect(borrower).revokeDeed(did);
 
 			expect(vaultFake.pull).to.have.been.calledOnce;
 			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.revoke);
 			const asset = vaultFake.pull.getCall(0).args._asset;
-			expect(asset.cat).to.equal(CATEGORY.ERC20);
-			expect(asset.amount).to.equal(amount);
-			expect(asset.id).to.equal(0);
-			expect(asset.tokenAddress).to.equal(fakeToken.address);
+			expect(asset.assetAddress).to.equal(collateral.assetAddress);
+			expect(asset.category).to.equal(collateral.category);
+			expect(asset.id).to.equal(collateral.id);
+			expect(asset.amount).to.equal(collateral.amount);
 			const beneficiary = vaultFake.pull.getCall(0).args._beneficiary;
-			expect(beneficiary).to.equal(addr1.address);
+			expect(beneficiary).to.equal(borrower.address);
 		});
 
 		it("Should burn deed token", async function() {
-			await pwn.connect(addr1).revokeDeed(did);
+			await pwn.connect(borrower).revokeDeed(did);
 
-			expect(deedFake.burn).to.have.been.calledOnceWith(did, addr1.address);
+			expect(deedFake.burn).to.have.been.calledOnceWith(did, borrower.address);
 			expect(deedFake.burn).to.have.been.calledAfter(vaultFake.pull);
 			expect(deedFake.burn).to.have.been.calledAfter(deedFake.revoke);
 		});
@@ -236,11 +222,6 @@ describe("PWN contract", function() {
 		const amount = 8;
 		const toBePaid = 12;
 		const offerHash = "0x0987654321098765432109876543210987654321098765432109876543210000";
-		let fakeToken;
-
-		before(async function() {
-			fakeToken = await smock.fake("ERC20");
-		});
 
 		beforeEach(async function() {
 			deedFake.makeOffer.returns(offerHash);
@@ -248,28 +229,28 @@ describe("PWN contract", function() {
 
 
 		it("Should be able to make ERC20 offer", async function() {
-			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC20, amount, did, toBePaid);
+			await pwn.connect(lender).makeOffer(asset1.address, CATEGORY.ERC20, amount, did, toBePaid);
 
-			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC20, amount, addr2.address, did, toBePaid);
+			expect(deedFake.makeOffer).to.have.been.calledOnceWith(asset1.address, CATEGORY.ERC20, amount, lender.address, did, toBePaid);
 		});
 
 		it("Should be able to make ERC721 offer", async function() {
-			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC721, 1, did, 1);
+			await pwn.connect(lender).makeOffer(asset1.address, CATEGORY.ERC721, 1, did, 1);
 
-			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC721, 1, addr2.address, did, 1);
+			expect(deedFake.makeOffer).to.have.been.calledOnceWith(asset1.address, CATEGORY.ERC721, 1, lender.address, did, 1);
 		});
 
 		it("Should be able to make ERC1155 offer", async function() {
-			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC1155, amount, did, toBePaid);
+			await pwn.connect(lender).makeOffer(asset1.address, CATEGORY.ERC1155, amount, did, toBePaid);
 
-			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC1155, amount, addr2.address, did, toBePaid);
+			expect(deedFake.makeOffer).to.have.been.calledOnceWith(asset1.address, CATEGORY.ERC1155, amount, lender.address, did, toBePaid);
 		});
 
 		it("Should fail for unknown asset category", async function() {
 			let failed;
 
 			try {
-				await pwn.makeOffer(fakeToken.address, CATEGORY.unknown, 1, did, 2);
+				await pwn.connect(lender).makeOffer(asset1.address, CATEGORY.unknown, 1, did, 2);
 			} catch {
 				failed = true;
 			}
@@ -278,7 +259,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should return new offer hash", async function() {
-			const offer = await pwn.callStatic.makeOffer(fakeToken.address, CATEGORY.ERC20, 9, did, 10);
+			const offer = await pwn.callStatic.makeOffer(asset1.address, CATEGORY.ERC20, 9, did, 10);
 
 			expect(offer).to.equal(offerHash);
 		});
@@ -291,9 +272,9 @@ describe("PWN contract", function() {
 		const offerHash = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a";
 
 		it("Should revoke offer on deed", async function() {
-			await pwn.connect(addr3).revokeOffer(offerHash);
+			await pwn.connect(lender).revokeOffer(offerHash);
 
-			expect(deedFake.revokeOffer).to.have.been.calledOnceWith(offerHash, addr3.address);
+			expect(deedFake.revokeOffer).to.have.been.calledOnceWith(offerHash, lender.address);
 		});
 
 	});
@@ -303,60 +284,56 @@ describe("PWN contract", function() {
 
 		const did = 3456789;
 		const amount = 1000;
+		const assetId = 32;
 		const offerHash = "0xaaa7654321098765abcde98765432109876543210987eff32109f76543a100cc";
-		let fakeToken;
-
-		before(async function() {
-			fakeToken = await smock.fake("ERC20");
-		});
 
 		beforeEach(async function() {
 			deedFake.getDeedID.whenCalledWith(offerHash).returns(did);
-			deedFake.getLender.whenCalledWith(offerHash).returns(addr4.address);
-			deedFake.getOfferAsset.whenCalledWith(offerHash).returns({
-				cat: CATEGORY.ERC20,
-				id: 0,
+			deedFake.getLender.whenCalledWith(offerHash).returns(lender.address);
+			deedFake.getOfferCredit.whenCalledWith(offerHash).returns({
+				assetAddress: asset1.address,
+				category: CATEGORY.ERC20,
+				id: assetId,
 				amount: amount,
-				tokenAddress: fakeToken.address,
 			});
 			vaultFake.pullProxy.returns(true);
 		});
 
 
 		it("Should update deed to accepted offer state", async function() {
-			await pwn.connect(addr3).acceptOffer(offerHash);
+			await pwn.connect(borrower).acceptOffer(offerHash);
 
-			expect(deedFake.acceptOffer).to.have.been.calledOnceWith(did, offerHash, addr3.address);
+			expect(deedFake.acceptOffer).to.have.been.calledOnceWith(did, offerHash, borrower.address);
 		});
 
 		it("Should send lender asset to borrower", async function() {
-			await pwn.connect(addr3).acceptOffer(offerHash);
+			await pwn.connect(borrower).acceptOffer(offerHash);
 
 			const args = vaultFake.pullProxy.getCall(0).args;
-			expect(args._asset.cat).to.equal(CATEGORY.ERC20);
-			expect(args._asset.id).to.equal(0);
+			expect(args._asset.assetAddress).to.equal(asset1.address);
+			expect(args._asset.category).to.equal(CATEGORY.ERC20);
+			expect(args._asset.id).to.equal(assetId);
 			expect(args._asset.amount).to.equal(amount);
-			expect(args._asset.tokenAddress).to.equal(fakeToken.address);
-			expect(args._origin).to.equal(addr4.address);
-			expect(args._beneficiary).to.equal(addr3.address);
+			expect(args._origin).to.equal(lender.address);
+			expect(args._beneficiary).to.equal(borrower.address);
 			expect(vaultFake.pullProxy).to.have.been.calledAfter(deedFake.acceptOffer);
 		});
 
 		it("Should send deed token to lender", async function() {
-			await pwn.connect(addr3).acceptOffer(offerHash);
+			await pwn.connect(borrower).acceptOffer(offerHash);
 
 			const args = vaultFake.pullProxy.getCall(1).args;
-			expect(args._asset.cat).to.equal(CATEGORY.ERC1155);
+			expect(args._asset.assetAddress).to.equal(deedFake.address);
+			expect(args._asset.category).to.equal(CATEGORY.ERC1155);
 			expect(args._asset.id).to.equal(did);
 			expect(args._asset.amount).to.equal(0);
-			expect(args._asset.tokenAddress).to.equal(deedFake.address);
-			expect(args._origin).to.equal(addr3.address);
-			expect(args._beneficiary).to.equal(addr4.address);
+			expect(args._origin).to.equal(borrower.address);
+			expect(args._beneficiary).to.equal(lender.address);
 			expect(vaultFake.pullProxy).to.have.been.calledAfter(deedFake.acceptOffer);
 		});
 
 		it("Should return true if successful", async function() {
-			const success = await pwn.connect(addr3).callStatic.acceptOffer(offerHash);
+			const success = await pwn.connect(borrower).callStatic.acceptOffer(offerHash);
 
 			expect(success).to.equal(true);
 		});
@@ -369,71 +346,67 @@ describe("PWN contract", function() {
 		const amount = 1000;
 		const toBePaid = 1200;
 		const offerHash = "0xaaa7654321098765abcdeabababababababababa0987eff32109f76543a1aacc";
-		let fakeCreditToken;
-		let fakeCollateralToken;
 		let credit;
 		let collateral;
 
-		before(async function() {
-			fakeCreditToken = await smock.fake("ERC20");
-			fakeCollateralToken = await smock.fake("ERC721");
+		before(function() {
 			credit = {
-				cat: CATEGORY.ERC20,
+				assetAddress: asset1.address,
+				category: CATEGORY.ERC20,
 				id: 0,
 				amount: amount,
-				tokenAddress: fakeCreditToken.address,
 			};
 			collateral = {
-				cat: CATEGORY.ERC721,
+				assetAddress: asset2.address,
+				category: CATEGORY.ERC721,
 				id: 123,
 				amount: 1,
-				tokenAddress: fakeCollateralToken.address,
 			};
 		});
 
 		beforeEach(async function() {
 			deedFake.getAcceptedOffer.whenCalledWith(did).returns(offerHash);
 			deedFake.toBePaid.whenCalledWith(offerHash).returns(toBePaid);
-			deedFake.getOfferAsset.whenCalledWith(offerHash).returns(credit);
-			deedFake.getDeedAsset.returns(collateral);
-			deedFake.getBorrower.whenCalledWith(did).returns(addr3.address);
+			deedFake.getOfferCredit.whenCalledWith(offerHash).returns(credit);
+			deedFake.getDeedCollateral.whenCalledWith(did).returns(collateral);
+			deedFake.getBorrower.whenCalledWith(did).returns(borrower.address);
 			vaultFake.pull.returns(true);
 			vaultFake.push.returns(true);
 		});
 
 
 		it("Should update deed to paid back state", async function() {
-			await pwn.connect(addr3).payBack(did);
+			await pwn.connect(borrower).payBack(did);
 
 			expect(deedFake.payBack).to.have.been.calledOnceWith(did);
 		});
 
 		it("Should send deed collateral from vault to borrower", async function() {
-			await pwn.connect(addr3).payBack(did);
+			await pwn.connect(borrower).payBack(did);
 
 			const args = vaultFake.pull.getCall(0).args;
-			expect(args._asset.cat).to.equal(collateral.cat);
+			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
+			expect(args._asset.category).to.equal(collateral.category);
 			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._asset.amount).to.equal(collateral.amount);
-			expect(args._asset.tokenAddress).to.equal(collateral.tokenAddress);
-			expect(args._beneficiary).to.equal(addr3.address);
+			expect(args._beneficiary).to.equal(borrower.address);
 			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.payBack);
 		});
 
 		it("Should send paid back amount from borrower to vault", async function() {
-			await pwn.connect(addr3).payBack(did);
+			await pwn.connect(borrower).payBack(did);
 
 			const args = vaultFake.push.getCall(0).args;
-			expect(args._asset.cat).to.equal(credit.cat);
+			expect(args._asset.assetAddress).to.equal(credit.assetAddress);
+			expect(args._asset.category).to.equal(credit.category);
 			expect(args._asset.id).to.equal(credit.id);
 			expect(args._asset.amount).to.equal(toBePaid);
-			expect(args._asset.tokenAddress).to.equal(credit.tokenAddress);
-			expect(args._origin).to.equal(addr3.address);
+			expect(args._origin).to.equal(borrower.address);
 			expect(vaultFake.push).to.have.been.calledAfter(deedFake.payBack);
 		});
 
 		it("Should return true if successful", async function() {
-			const success = await pwn.connect(addr3).callStatic.payBack(did);
+			const success = await pwn.connect(borrower).callStatic.payBack(did);
 
 			expect(success).to.equal(true);
 		});
@@ -447,82 +420,79 @@ describe("PWN contract", function() {
 		const amount = 1234;
 		const toBePaid = 4321;
 		const offerHash = "0xaaa7654321098765abcdeabababababababababa0987eff32109f76543a1aacc";
-		let fakeCreditToken;
-		let fakeCollateralToken;
 		let credit;
 		let collateral;
 
-		before(async function() {
-			fakeCreditToken = await smock.fake("ERC20");
-			fakeCollateralToken = await smock.fake("ERC721");
+		before(function() {
 			credit = {
-				cat: CATEGORY.ERC20,
+				assetAddress: asset1.address,
+				category: CATEGORY.ERC20,
 				id: 0,
 				amount: amount,
-				tokenAddress: fakeCreditToken.address,
 			};
 			collateral = {
-				cat: CATEGORY.ERC721,
+				assetAddress: asset2.address,
+				category: CATEGORY.ERC721,
 				id: 123,
 				amount: 1,
-				tokenAddress: fakeCollateralToken.address,
 			};
 		});
+
 
 		beforeEach(async function() {
 			deedFake.getDeedStatus.whenCalledWith(did).returns(3);
 			deedFake.getAcceptedOffer.whenCalledWith(did).returns(offerHash);
 			deedFake.toBePaid.whenCalledWith(offerHash).returns(toBePaid);
-			deedFake.getOfferAsset.whenCalledWith(offerHash).returns(credit);
-			deedFake.getDeedAsset.returns(collateral);
+			deedFake.getOfferCredit.whenCalledWith(offerHash).returns(credit);
+			deedFake.getDeedCollateral.whenCalledWith(did).returns(collateral);
 			vaultFake.pull.returns(true);
 		});
 
 
 		it("Should update deed to claimed state", async function() {
-			await pwn.connect(addr3).claimDeed(did);
+			await pwn.connect(lender).claimDeed(did);
 
-			expect(deedFake.claim).to.have.been.calledOnceWith(did, addr3.address);
+			expect(deedFake.claim).to.have.been.calledOnceWith(did, lender.address);
 		});
 
 		it("Should send collateral from vault to lender when deed is expired", async function() {
 			deedFake.getDeedStatus.whenCalledWith(did).returns(4);
 
-			await pwn.connect(addr3).claimDeed(did);
+			await pwn.connect(lender).claimDeed(did);
 
 			expect(vaultFake.pull).to.have.been.calledOnce;
 			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.claim);
 			const args = vaultFake.pull.getCall(0).args;
-			expect(args._asset.cat).to.equal(collateral.cat);
+			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
+			expect(args._asset.category).to.equal(collateral.category);
 			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._asset.amount).to.equal(collateral.amount);
-			expect(args._asset.tokenAddress).to.equal(collateral.tokenAddress);
-			expect(args._beneficiary).to.equal(addr3.address);
+			expect(args._beneficiary).to.equal(lender.address);
 		});
 
 		it("Should send paid back amount from vault to lender when deed is paid back", async function() {
 			deedFake.getDeedStatus.whenCalledWith(did).returns(3);
 
-			await pwn.connect(addr3).claimDeed(did);
+			await pwn.connect(lender).claimDeed(did);
 
 			expect(vaultFake.pull).to.have.been.calledOnce;
 			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.claim);
 			const args = vaultFake.pull.getCall(0).args;
-			expect(args._asset.cat).to.equal(credit.cat);
+			expect(args._asset.assetAddress).to.equal(credit.assetAddress);
+			expect(args._asset.category).to.equal(credit.category);
 			expect(args._asset.id).to.equal(credit.id);
 			expect(args._asset.amount).to.equal(toBePaid);
-			expect(args._asset.tokenAddress).to.equal(credit.tokenAddress);
 		});
 
 		it("Should burn deed token", async function() {
-			await pwn.connect(addr3).claimDeed(did);
+			await pwn.connect(lender).claimDeed(did);
 
-			expect(deedFake.burn).to.have.been.calledOnceWith(did, addr3.address);
+			expect(deedFake.burn).to.have.been.calledOnceWith(did, lender.address);
 			expect(deedFake.burn).to.have.been.calledAfter(vaultFake.pull);
 		});
 
 		it("Should return true if successful", async function() {
-			const success = await pwn.connect(addr3).callStatic.claimDeed(did);
+			const success = await pwn.connect(lender).callStatic.claimDeed(did);
 
 			expect(success).to.equal(true);
 		});
