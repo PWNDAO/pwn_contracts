@@ -42,7 +42,6 @@ describe("PWN contract", function() {
 		vaultFake = await smock.fake("PWNVault");
 		deedFake = await smock.fake("PWNDeed");
 		pwn = await PWN.deploy(deedFake.address, vaultFake.address);
-		await pwn.changeMinDuration(100);
 	});
 
 
@@ -130,11 +129,12 @@ describe("PWN contract", function() {
 			expect(failed).to.equal(true);
 		});
 
-		it("Should fail for expiration duration smaller than min duration", async function() {
-			const expiration = timestampFromNow(90);
+		it("Should fail for expiration timestamp smaller than current timestamp", async function() {
+			const expiration = timestampFromNow(-1);
 
 			try {
 				await pwn.newDeed(addr4.address, CATEGORY.ERC20, 0, 10, expiration);
+
 				expect.fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert"); // TODO: Add reason?
@@ -524,43 +524,6 @@ describe("PWN contract", function() {
 			const success = await pwn.connect(addr3).callStatic.claimDeed(did);
 
 			expect(success).to.equal(true);
-		});
-
-	});
-
-
-	describe("Change min duration", function() {
-
-		it("Should fail when sender is not owner", async function() {
-			try {
-				await pwn.connect(addr1).changeMinDuration(1);
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Ownable: caller is not the owner");
-			}
-		});
-
-		it("Should set new min duration", async function() {
-			const newMinDuration = 76543;
-
-			await pwn.connect(owner).changeMinDuration(newMinDuration);
-
-			const minDuration = await pwn.minDuration();
-			expect(minDuration).to.equal(newMinDuration);
-		});
-
-		it("Should emit MinDurationChange event", async function() {
-			const minDuration = 76543;
-
-			const tx = await pwn.connect(owner).changeMinDuration(minDuration);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = pwnEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("MinDurationChange");
-			const args = logDescription.args;
-			expect(args.minDuration).to.equal(minDuration);
 		});
 
 	});
