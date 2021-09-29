@@ -293,7 +293,7 @@ contract PWNDeed is ERC1155, Ownable  {
         bytes memory data
     ) internal virtual override {
         for (uint i = 0; i < ids.length; i++) {
-            require(this.getDeedStatus(ids[i]) != 1, "Deed can't be transferred at this stage");
+            require(getDeedStatus(ids[i]) != 1, "Deed can't be transferred at this stage");
         }
     }
 
