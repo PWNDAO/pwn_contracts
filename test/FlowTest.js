@@ -88,7 +88,7 @@ describe("PWN contract", function () {
   // You can nest describe calls to create subsections.
   describe("Deployment", function () {
     it("Should deploy PWN with links to Deed & Vault", async function () {
-      expect(await PWN.token()).to.equal(await PWNDeed.address);
+      expect(await PWN.deed()).to.equal(await PWNDeed.address);
       expect(await PWN.vault()).to.equal(await PWNVault.address);
     });
 
