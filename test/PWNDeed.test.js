@@ -33,12 +33,12 @@ describe("PWNDeed contract", function() {
 
 		deedEventIface = new ethers.utils.Interface([
 			"event DeedCreated(address indexed tokenAddress, uint8 cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did)",
-		    "event OfferMade(address tokenAddress, uint8 cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer)",
-		    "event DeedRevoked(uint256 did)",
-		    "event OfferRevoked(bytes32 offer)",
-		    "event OfferAccepted(uint256 did, bytes32 offer)",
-		    "event PaidBack(uint256 did, bytes32 offer)",
-		    "event DeedClaimed(uint256 did)",
+			"event OfferMade(address tokenAddress, uint8 cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer)",
+			"event DeedRevoked(uint256 did)",
+			"event OfferRevoked(bytes32 offer)",
+			"event OfferAccepted(uint256 did, bytes32 offer)",
+			"event PaidBack(uint256 did, bytes32 offer)",
+			"event DeedClaimed(uint256 did)",
 		]);
 	});
 
