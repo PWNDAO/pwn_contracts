@@ -6,7 +6,6 @@ import "./PWNDeed.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract PWN is Ownable {
-    using MultiToken for MultiToken.Asset;
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
