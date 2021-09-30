@@ -6,7 +6,6 @@ import "./PWNDeed.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract PWN is Ownable {
-    using MultiToken for MultiToken.Asset;
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -14,14 +13,12 @@ contract PWN is Ownable {
 
     PWNDeed public token;
     PWNVault public vault;
-    uint256 public minDuration = 0;
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event MinDurationChange(uint256 minDuration);
-
+    // No events nor error defined
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR & FUNCTIONS                               *|
@@ -60,7 +57,7 @@ contract PWN is Ownable {
         uint256 _amount,
         uint256 _expiration
     ) external returns (uint256) {
-        require(_expiration > (block.timestamp + minDuration));
+        require(_expiration > block.timestamp, "Cannot create expired deed");
 
         uint256 did = token.create(_tokenAddress, _cat, _id, _amount, _expiration, msg.sender);
         vault.push(token.getDeedAsset(did), msg.sender);
@@ -182,18 +179,4 @@ contract PWN is Ownable {
         return true;
     }
 
-    /*----------------------------------------------------------*|
-    |*  ## SETUP FUNCTIONS                                      *|
-    |*----------------------------------------------------------*/
-
-    /**
-     * changeMinDuration
-     * @dev this function sets a minimal time buffer requirement to the expiration time
-     * @param _newMinDuration New min expiration duration
-     */
-    function changeMinDuration(uint256 _newMinDuration) external onlyOwner {
-        minDuration = _newMinDuration;
-
-        emit MinDurationChange(_newMinDuration);
-    }
 }

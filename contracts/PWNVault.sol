@@ -1,8 +1,6 @@
 pragma solidity ^0.8.0;
 
 import "./MultiToken.sol";
-import "./PWN.sol";
-import "./PWNDeed.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
@@ -20,7 +18,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
     |*----------------------------------------------------------*/
 
     modifier onlyPWN() {
-        require(msg.sender == PWN);
+        require(msg.sender == PWN, "Caller is not the PWN");
         _;
     }
 
@@ -112,6 +110,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
     )
         override
         external
+        pure
         returns(bytes4)
     {
         return 0xf23a6e61;
@@ -139,6 +138,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
     )
         override
         external
+        pure
         returns(bytes4)
     {
         return 0xbc197c81;
@@ -161,18 +161,16 @@ contract PWNVault is Ownable, IERC1155Receiver {
      *
      * This function call must use less than 30 000 gas.
      */
-    function supportsInterface(bytes4 interfaceId) external view override returns (bool) {
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return
-            interfaceId == this.supportsInterface.selector || // ERC165
-            interfaceId == this.owner.selector
-                            ^ this.renounceOwnership.selector
-                            ^ this.transferOwnership.selector || // Ownable
+            interfaceId == type(IERC165).interfaceId || // ERC165
+            interfaceId == type(Ownable).interfaceId || // Ownable
+            interfaceId == type(IERC1155Receiver).interfaceId || // ERC1155Receiver
             interfaceId == this.PWN.selector
                             ^ this.push.selector
                             ^ this.pull.selector
                             ^ this.pullProxy.selector
-                            ^ this.setPWN.selector || // PWN Vault
-            interfaceId == this.onERC1155Received.selector
-                            ^ this.onERC1155BatchReceived.selector; // ERC1155Receiver
+                            ^ this.setPWN.selector; // PWN Vault
+
     }
 }

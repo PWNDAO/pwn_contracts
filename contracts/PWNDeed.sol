@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 contract PWNDeed is ERC1155, Ownable  {
-    using MultiToken for MultiToken.Asset;
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -54,8 +53,8 @@ contract PWNDeed is ERC1155, Ownable  {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event NewDeed(address indexed tokenAddress, MultiToken.Category cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did);
-    event NewOffer(address tokenAddress, MultiToken.Category cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
+    event DeedCreated(address indexed tokenAddress, MultiToken.Category cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did);
+    event OfferMade(address tokenAddress, MultiToken.Category cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
     event DeedRevoked(uint256 did);
     event OfferRevoked(bytes32 offer);
     event OfferAccepted(uint256 did, bytes32 offer);
@@ -67,7 +66,7 @@ contract PWNDeed is ERC1155, Ownable  {
     |*----------------------------------------------------------*/
 
     modifier onlyPWN() {
-        require(msg.sender == PWN);
+        require(msg.sender == PWN, "Caller is not the PWN");
         _;
     }
 
@@ -122,7 +121,7 @@ contract PWNDeed is ERC1155, Ownable  {
 
         deed.status = 1;
 
-        emit NewDeed(_tokenAddress, _cat, _id, _amount, _expiration, id);
+        emit DeedCreated(_tokenAddress, _cat, _id, _amount, _expiration, id);
 
         return id;
     }
@@ -181,7 +180,7 @@ contract PWNDeed is ERC1155, Ownable  {
 
         deeds[_did].pendingOffers.push(hash);
 
-        emit NewOffer(_tokenAddress, _cat, _amount,  _lender, _toBePaid, _did, hash);
+        emit OfferMade(_tokenAddress, _cat, _amount,  _lender, _toBePaid, _did, hash);
 
         return hash;
     }
@@ -293,7 +292,7 @@ contract PWNDeed is ERC1155, Ownable  {
         bytes memory data
     ) internal virtual override {
         for (uint i = 0; i < ids.length; i++) {
-            require(this.getDeedStatus(ids[i]) != 1, "Deed can't be transferred at this stage");
+            require(getDeedStatus(ids[i]) != 1, "Deed can't be transferred at this stage");
         }
     }
 
