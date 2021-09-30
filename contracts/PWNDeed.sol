@@ -17,8 +17,9 @@ contract PWNDeed is ERC1155, Ownable  {
     /**
      * Construct defining a Deed
      * @param status 0 == none/dead || 1 == new/open || 2 == running/accepted offer || 3 == paid back || 4 == expired
-     * @param expiration Unix timestamp (in seconds) setting up the default deadline
      * @param borrower Address of the issuer / borrower - stays the same for entire lifespan of the token
+     * @param duration Loan duration in seconds
+     * @param expiration Unix timestamp (in seconds) setting up the default deadline
      * @param asset Consisting of another an `Asset` struct defined in the MultiToken library
      * @param acceptedOffer Hash of the offer which will be bound to the deed
      * @param pendingOffers List of offers made to the Deed
@@ -26,7 +27,8 @@ contract PWNDeed is ERC1155, Ownable  {
     struct Deed {
         uint8 status;
         address borrower;
-        uint256 expiration;
+        uint32 duration;
+        uint40 expiration;
         MultiToken.Asset asset;
         bytes32 acceptedOffer;
         bytes32[] pendingOffers;
@@ -53,8 +55,8 @@ contract PWNDeed is ERC1155, Ownable  {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event DeedCreated(address indexed tokenAddress, MultiToken.Category cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did);
-    event OfferMade(address tokenAddress, MultiToken.Category cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
+    event DeedCreated(address indexed tokenAddress, MultiToken.Category cat, uint256 id, uint256 amount, uint32 duration, uint256 indexed did);
+    event OfferMade(address tokenAddress, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
     event DeedRevoked(uint256 did);
     event OfferRevoked(bytes32 offer);
     event OfferAccepted(uint256 did, bytes32 offer);
@@ -93,24 +95,24 @@ contract PWNDeed is ERC1155, Ownable  {
      * @dev Creates the PWN Deed token contract - ERC1155 with extra use case specific features
      * @param _tokenAddress Address of the asset contract
      * @param _cat Category of the asset - see { MultiToken.sol }
+     * @param _duration Loan duration in seconds
      * @param _id ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
      * @param _amount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
-     * @param _expiration Unix time stamp in !! seconds !! (not mili-seconds returned by JS)
      * @param _borrower Address initiating the new Deed
      * @return Deed ID of the newly minted Deed
      */
     function create(
         address _tokenAddress,
         MultiToken.Category _cat,
+        uint32 _duration,
         uint256 _id,
         uint256 _amount,
-        uint256 _expiration,
         address _borrower
     ) external onlyPWN returns (uint256) {
         id++;
 
         Deed storage deed = deeds[id];
-        deed.expiration = _expiration;
+        deed.duration = _duration;
         deed.borrower = _borrower;
         deed.asset.tokenAddress = _tokenAddress;
         deed.asset.cat = _cat;
@@ -121,7 +123,7 @@ contract PWNDeed is ERC1155, Ownable  {
 
         deed.status = 1;
 
-        emit DeedCreated(_tokenAddress, _cat, _id, _amount, _expiration, id);
+        emit DeedCreated(_tokenAddress, _cat, _id, _amount, _duration, id);
 
         return id;
     }
@@ -148,7 +150,6 @@ contract PWNDeed is ERC1155, Ownable  {
      * makeOffer
      * @dev saves an offer object that defines credit terms
      * @param _tokenAddress Address of the asset contract
-     * @param _cat Category of the asset - see { MultiToken.sol }
      * @param _amount Amount of an ERC20 or ERC1155 token to be offered as credit
      * @param _lender Address of the asset lender
      * @param _did ID of the Deed the offer should be bound to
@@ -157,7 +158,6 @@ contract PWNDeed is ERC1155, Ownable  {
      */
     function makeOffer(
         address _tokenAddress,
-        MultiToken.Category _cat,
         uint256 _amount,
         address _lender,
         uint256 _did,
@@ -172,7 +172,6 @@ contract PWNDeed is ERC1155, Ownable  {
 
         Offer storage offer = offers[hash];
         offer.asset.tokenAddress = _tokenAddress;
-        offer.asset.cat = _cat;
         offer.asset.amount = _amount;
         offer.toBePaid = _toBePaid;
         offer.lender = _lender;
@@ -180,7 +179,7 @@ contract PWNDeed is ERC1155, Ownable  {
 
         deeds[_did].pendingOffers.push(hash);
 
-        emit OfferMade(_tokenAddress, _cat, _amount,  _lender, _toBePaid, _did, hash);
+        emit OfferMade(_tokenAddress, _amount,  _lender, _toBePaid, _did, hash);
 
         return hash;
     }
@@ -223,6 +222,7 @@ contract PWNDeed is ERC1155, Ownable  {
         require(getDeedStatus(_did) == 1, "Deed can't accept more offers");
 
         Deed storage deed = deeds[_did];
+        deed.expiration = uint40(block.timestamp) + deed.duration;
         deed.acceptedOffer = _offer;
         delete deed.pendingOffers;
         deed.status = 2;
@@ -311,7 +311,7 @@ contract PWNDeed is ERC1155, Ownable  {
      * @return a status number
      */
     function getDeedStatus(uint256 _did) public view returns (uint8) {
-        if (deeds[_did].expiration < block.timestamp && deeds[_did].status != 3) {
+        if (deeds[_did].expiration > 0 && deeds[_did].expiration < block.timestamp && deeds[_did].status != 3) {
             return 4;
         } else {
             return deeds[_did].status;
@@ -325,8 +325,18 @@ contract PWNDeed is ERC1155, Ownable  {
      * @param _did Deed ID to be checked
      * @return unix time stamp in seconds
      */
-    function getExpiration(uint256 _did) public view returns (uint256) {
+    function getExpiration(uint256 _did) public view returns (uint40) {
         return deeds[_did].expiration;
+    }
+
+    /**
+     * getDuration
+     * @dev utility function to find out loan duration period of a particular Deed
+     * @param _did Deed ID to be checked
+     * @return loan duration period in seconds
+     */
+    function getDuration(uint256 _did) public view returns (uint32) {
+        return deeds[_did].duration;
     }
 
     /**
