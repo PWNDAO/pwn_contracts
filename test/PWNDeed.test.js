@@ -33,7 +33,7 @@ describe("PWNDeed contract", function() {
 
 		deedEventIface = new ethers.utils.Interface([
 			"event DeedCreated(address indexed tokenAddress, uint8 cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did)",
-			"event OfferMade(address tokenAddress, uint8 cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer)",
+			"event OfferMade(address tokenAddress, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer)",
 			"event DeedRevoked(uint256 did)",
 			"event OfferRevoked(bytes32 offer)",
 			"event OfferAccepted(uint256 did, bytes32 offer)",
@@ -121,7 +121,7 @@ describe("PWNDeed contract", function() {
 			expect(tokenId2).to.equal(tokenId1.add(1));
 		});
 
-		it("Should emit NewDeed event", async function() {
+		it("Should emit DeedCreated event", async function() {
 			const amount = 10;
 			const fakeToken = await smock.fake("ERC20");
 			const expiration = 110;
@@ -229,7 +229,7 @@ describe("PWNDeed contract", function() {
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 70);
+				await deed.connect(addr1).makeOffer(addr3.address, 100, addr4.address, did, 70);
 
 				expect().fail();
 			} catch(error) {
@@ -242,7 +242,7 @@ describe("PWNDeed contract", function() {
 			await deed.revoke(did, addr3.address);
 
 			try {
-				await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 70);
+				await deed.makeOffer(addr3.address, 100, addr4.address, did, 70);
 
 				expect.fail();
 			} catch(error) {
@@ -255,7 +255,7 @@ describe("PWNDeed contract", function() {
 			const amount = 100;
 			const toBePaid = 70;
 
-			await deed.makeOffer(addr3.address, CATEGORY.ERC20, amount, addr4.address, did, toBePaid);
+			await deed.makeOffer(addr3.address, amount, addr4.address, did, toBePaid);
 
 			const pendingOffers = await deed.getOffers(did);
 			const offerHash = pendingOffers[0];
@@ -269,7 +269,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should set offer to deed", async function() {
-			await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 70);
+			await deed.makeOffer(addr3.address, 100, addr4.address, did, 70);
 
 			// Cannot get pendingOffers from deed.pendingOffers because `solc` generates incorrect ABI for implicit property getters with dynamic array
 			// GH issue: https://github.com/ethereum/solidity/issues/4244
@@ -278,7 +278,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should return offer hash as bytes", async function() {
-			const offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 70);
+			const offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 70);
 
 			const expectedOfferHash = makeOfferHash(pwn.address, 0);
 			expect(ethers.utils.isBytesLike(offerHash)).to.equal(true);
@@ -286,8 +286,8 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should increase global nonce", async function() {
-			await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 70);
-			await deed.makeOffer(addr3.address, CATEGORY.ERC20, 101, addr4.address, did, 70);
+			await deed.makeOffer(addr3.address, 100, addr4.address, did, 70);
+			await deed.makeOffer(addr3.address, 101, addr4.address, did, 70);
 
 			const expectedFirstOfferHash = makeOfferHash(pwn.address, 0);
 			const expectedSecondOfferHash = makeOfferHash(pwn.address, 1);
@@ -297,12 +297,12 @@ describe("PWNDeed contract", function() {
 			expect(pendingOffers[1]).to.equal(expectedSecondOfferHash);
 		});
 
-		it("Should emit NewOffer event", async function() {
+		it("Should emit OfferMade event", async function() {
 			const amount = 100;
 			const toBePaid = 70;
 
-			const offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, amount, addr4.address, did, toBePaid);
-			const tx = await deed.makeOffer(addr3.address, CATEGORY.ERC20, amount, addr4.address, did, toBePaid);
+			const offerHash = await deed.callStatic.makeOffer(addr3.address, amount, addr4.address, did, toBePaid);
+			const tx = await deed.makeOffer(addr3.address, amount, addr4.address, did, toBePaid);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -310,7 +310,6 @@ describe("PWNDeed contract", function() {
 			expect(logDescription.name).to.equal("OfferMade");
 			const args = logDescription.args;
 			expect(args.tokenAddress).to.equal(addr3.address);
-			expect(args.cat).to.equal(CATEGORY.ERC20);
 			expect(args.amount).to.equal(amount);
 			expect(args.lender).to.equal(addr4.address);
 			expect(args.toBePaid).to.equal(toBePaid);
@@ -332,8 +331,8 @@ describe("PWNDeed contract", function() {
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-			await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
+			offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 101);
+			await deed.makeOffer(addr3.address, 100, addr4.address, did, 101);
 		});
 
 
@@ -411,8 +410,8 @@ describe("PWNDeed contract", function() {
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-			await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
+			offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 101);
+			await deed.makeOffer(addr3.address, 100, addr4.address, did, 101);
 		});
 
 
@@ -498,8 +497,8 @@ describe("PWNDeed contract", function() {
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, expiration, addr3.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-			await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
+			offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 101);
+			await deed.makeOffer(addr3.address, 100, addr4.address, did, 101);
 
 			await deed.acceptOffer(did, offerHash, addr3.address);
 		});
@@ -562,8 +561,8 @@ describe("PWNDeed contract", function() {
 			await deed.create(addr1.address, CATEGORY.ERC20, 1, 100, timestampFromNow(duration), addr3.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
-			await deed.makeOffer(addr3.address, CATEGORY.ERC20, 100, addr4.address, did, 101);
+			offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 101);
+			await deed.makeOffer(addr3.address, 100, addr4.address, did, 101);
 
 			await deed.acceptOffer(did, offerHash, addr3.address);
 		});
@@ -761,8 +760,8 @@ describe("PWNDeed contract", function() {
 			await deed.create(addr1.address, CATEGORY.ERC20, cTokenId, cAmount, expiration, addr3.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr2.address, CATEGORY.ERC20, lAmount, addr4.address, did, lToBePaid);
-			await deed.makeOffer(addr2.address, CATEGORY.ERC20, lAmount, addr4.address, did, lToBePaid);
+			offerHash = await deed.callStatic.makeOffer(addr2.address, lAmount, addr4.address, did, lToBePaid);
+			await deed.makeOffer(addr2.address, lAmount, addr4.address, did, lToBePaid);
 		});
 
 		// VIEW FUNCTIONS - DEEDS

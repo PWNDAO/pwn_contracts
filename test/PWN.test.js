@@ -242,38 +242,14 @@ describe("PWN contract", function() {
 		});
 
 
-		it("Should be able to make ERC20 offer", async function() {
-			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC20, amount, did, toBePaid);
+		it("Should be able to make offer", async function() {
+			await pwn.connect(addr2).makeOffer(fakeToken.address, amount, did, toBePaid);
 
-			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC20, amount, addr2.address, did, toBePaid);
-		});
-
-		it("Should be able to make ERC721 offer", async function() {
-			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC721, 1, did, 1);
-
-			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC721, 1, addr2.address, did, 1);
-		});
-
-		it("Should be able to make ERC1155 offer", async function() {
-			await pwn.connect(addr2).makeOffer(fakeToken.address, CATEGORY.ERC1155, amount, did, toBePaid);
-
-			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, CATEGORY.ERC1155, amount, addr2.address, did, toBePaid);
-		});
-
-		it("Should fail for unknown asset category", async function() {
-			let failed;
-
-			try {
-				await pwn.makeOffer(fakeToken.address, CATEGORY.unknown, 1, did, 2);
-			} catch {
-				failed = true;
-			}
-
-			expect(failed).to.equal(true);
+			expect(deedFake.makeOffer).to.have.been.calledOnceWith(fakeToken.address, amount, addr2.address, did, toBePaid);
 		});
 
 		it("Should return new offer hash", async function() {
-			const offer = await pwn.callStatic.makeOffer(fakeToken.address, CATEGORY.ERC20, 9, did, 10);
+			const offer = await pwn.callStatic.makeOffer(fakeToken.address, 9, did, 10);
 
 			expect(offer).to.equal(offerHash);
 		});

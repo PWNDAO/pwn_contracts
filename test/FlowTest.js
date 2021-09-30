@@ -194,8 +194,8 @@ describe("PWN contract", function () {
       await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
       await lDAI.approve(PWNVault.address, 1000);
 
-      const offer = await lPWN.callStatic.makeOffer(lDAI.address, CATEGORY.ERC20, 1000, DID, 1200);
-      await lPWN.makeOffer(lDAI.address, CATEGORY.ERC20, 1000, DID, 1200);
+      const offer = await lPWN.callStatic.makeOffer(lDAI.address, 1000, DID, 1200);
+      await lPWN.makeOffer(lDAI.address, 1000, DID, 1200);
 
       const offers = await PWNDeed.getOffers(DID);
       expect(offers[0]).is.equal(offer);
@@ -209,8 +209,8 @@ describe("PWN contract", function () {
       await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
 
       await lDAI.approve(PWNVault.address, 1000);
-      const offer = await lPWN.callStatic.makeOffer(lDAI.address, CATEGORY.ERC20, 1000, DID, 1200);
-      await lPWN.makeOffer(lDAI.address, CATEGORY.ERC20, 1000, DID, 1200);
+      const offer = await lPWN.callStatic.makeOffer(lDAI.address, 1000, DID, 1200);
+      await lPWN.makeOffer(lDAI.address, 1000, DID, 1200);
 
       await lPWN.revokeOffer(offer);
 
@@ -225,8 +225,8 @@ describe("PWN contract", function () {
       await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
 
       await lDAI.approve(PWNVault.address, 1000);
-      const offer = await lPWN.callStatic.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
-      await lPWN.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
+      const offer = await lPWN.callStatic.makeOffer(DAI.address, 1000, DID, 1200);
+      await lPWN.makeOffer(DAI.address, 1000, DID, 1200);
 
       await bPWN.acceptOffer(offer);
 
@@ -251,8 +251,8 @@ describe("PWN contract", function () {
       await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
 
       await lDAI.approve(PWNVault.address, 1000);
-      const offer = await lPWN.callStatic.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
-      await lPWN.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
+      const offer = await lPWN.callStatic.makeOffer(DAI.address, 1000, DID, 1200);
+      await lPWN.makeOffer(DAI.address, 1000, DID, 1200);
 
       await bPWN.acceptOffer(offer);
       await bDAI.approve(PWNVault.address,1200);
@@ -277,8 +277,8 @@ describe("PWN contract", function () {
       await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, date.setDate(date.getDate() + 1));
 
       await lDAI.approve(PWNVault.address, 1000);
-      const offer = await lPWN.callStatic.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
-      await lPWN.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
+      const offer = await lPWN.callStatic.makeOffer(DAI.address, 1000, DID, 1200);
+      await lPWN.makeOffer(DAI.address, 1000, DID, 1200);
 
       await bPWN.acceptOffer(offer);
       await bDAI.approve(PWNVault.address,1200);
@@ -305,8 +305,8 @@ describe("PWN contract", function () {
       await bPWN.newDeed(NFT.address, CATEGORY.ERC721, 42, 0, expiration);
 
       await lDAI.approve(PWNVault.address, 1000);
-      const offer = await lPWN.callStatic.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
-      await lPWN.makeOffer(DAI.address, CATEGORY.ERC20, 1000, DID, 1200);
+      const offer = await lPWN.callStatic.makeOffer(DAI.address, 1000, DID, 1200);
+      await lPWN.makeOffer(DAI.address, 1000, DID, 1200);
 
       await bPWN.acceptOffer(offer);
 

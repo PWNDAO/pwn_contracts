@@ -83,7 +83,6 @@ contract PWN is Ownable {
      * @dev this function doesn't assume the asset is approved yet for PWNVault
      * @dev this function requires lender to have a sufficient balance
      * @param _tokenAddress Address of the asset contract
-     * @param _cat Category of the asset - see { MultiToken.sol }
      * @param _amount Amount of an ERC20 or ERC1155 token to be offered as credit
      * @param _did ID of the Deed the offer should be bound to
      * @param _toBePaid Amount to be paid back by the borrower
@@ -91,12 +90,11 @@ contract PWN is Ownable {
      */
     function makeOffer(
         address _tokenAddress,
-        MultiToken.Category _cat,
         uint256 _amount,
         uint256 _did,
         uint256 _toBePaid
     ) external returns (bytes32) {
-        return token.makeOffer(_tokenAddress, _cat, _amount, msg.sender, _did, _toBePaid);
+        return token.makeOffer(_tokenAddress, _amount, msg.sender, _did, _toBePaid);
     }
 
     /**

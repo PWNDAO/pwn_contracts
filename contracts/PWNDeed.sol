@@ -54,7 +54,7 @@ contract PWNDeed is ERC1155, Ownable  {
     |*----------------------------------------------------------*/
 
     event DeedCreated(address indexed tokenAddress, MultiToken.Category cat, uint256 id, uint256 amount, uint256 expiration, uint256 indexed did);
-    event OfferMade(address tokenAddress, MultiToken.Category cat, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
+    event OfferMade(address tokenAddress, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
     event DeedRevoked(uint256 did);
     event OfferRevoked(bytes32 offer);
     event OfferAccepted(uint256 did, bytes32 offer);
@@ -148,7 +148,6 @@ contract PWNDeed is ERC1155, Ownable  {
      * makeOffer
      * @dev saves an offer object that defines credit terms
      * @param _tokenAddress Address of the asset contract
-     * @param _cat Category of the asset - see { MultiToken.sol }
      * @param _amount Amount of an ERC20 or ERC1155 token to be offered as credit
      * @param _lender Address of the asset lender
      * @param _did ID of the Deed the offer should be bound to
@@ -157,7 +156,6 @@ contract PWNDeed is ERC1155, Ownable  {
      */
     function makeOffer(
         address _tokenAddress,
-        MultiToken.Category _cat,
         uint256 _amount,
         address _lender,
         uint256 _did,
@@ -172,7 +170,6 @@ contract PWNDeed is ERC1155, Ownable  {
 
         Offer storage offer = offers[hash];
         offer.asset.tokenAddress = _tokenAddress;
-        offer.asset.cat = _cat;
         offer.asset.amount = _amount;
         offer.toBePaid = _toBePaid;
         offer.lender = _lender;
@@ -180,7 +177,7 @@ contract PWNDeed is ERC1155, Ownable  {
 
         deeds[_did].pendingOffers.push(hash);
 
-        emit OfferMade(_tokenAddress, _cat, _amount,  _lender, _toBePaid, _did, hash);
+        emit OfferMade(_tokenAddress, _amount,  _lender, _toBePaid, _did, hash);
 
         return hash;
     }
