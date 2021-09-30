@@ -453,7 +453,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should set correct expiration timestamp", async function() {
-			await deed.acceptOffer(did, offerHash, addr3.address);
+			await deed.acceptOffer(did, offerHash, borrower.address);
 
 			const deedExpiration = (await deed.deeds(did)).expiration;
 			const expectedExpiration = await timestampFromNow(duration);
@@ -840,7 +840,7 @@ describe("PWNDeed contract", function() {
 		describe("Get expiration", function() {
 
 			it("Should return deed expiration", async function() {
-				await deed.acceptOffer(did, offerHash, addr3.address);
+				await deed.acceptOffer(did, offerHash, borrower.address);
 
 				const getterExpiration = await deed.getExpiration(did);
 
