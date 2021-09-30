@@ -13,7 +13,6 @@ describe("PWN contract", function() {
 	let deedFake;
 
 	let PWN;
-	let pwnEventIface;
 	let owner, addr1, addr2, addr3, addr4, addr5;
 
 	async function timestampFromNow(delta) {
@@ -32,10 +31,6 @@ describe("PWN contract", function() {
 	before(async function() {
 		PWN = await ethers.getContractFactory("PWN");
 		[owner, addr1, addr2, addr3, addr4, addr5] = await ethers.getSigners();
-
-		pwnEventIface = new ethers.utils.Interface([
-		    "event MinDurationChange(uint256 minDuration)",
-		]);
 	});
 
 	beforeEach(async function() {
