@@ -45,21 +45,19 @@ contract PWN is Ownable {
      * @dev Deed status is set to 1
      * @param _tokenAddress Address of the asset contract
      * @param _cat Category of the asset - see { MultiToken.sol }
+     * @param _duration Loan duration in seconds
      * @param _id ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
      * @param _amount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
-     * @param _expiration Unix time stamp in !! seconds !! (not miliseconds returned by JS)
      * @return a Deed ID of the newly created Deed
      */
     function newDeed(
         address _tokenAddress,
         MultiToken.Category _cat,
+        uint32 _duration,
         uint256 _id,
-        uint256 _amount,
-        uint256 _expiration
+        uint256 _amount
     ) external returns (uint256) {
-        require(_expiration > block.timestamp, "Cannot create expired deed");
-
-        uint256 did = token.create(_tokenAddress, _cat, _id, _amount, _expiration, msg.sender);
+        uint256 did = token.create(_tokenAddress, _cat, _duration, _id, _amount, msg.sender);
         vault.push(token.getDeedAsset(did), msg.sender);
 
         return did;
