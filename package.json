@@ -1,27 +1,24 @@
 {
-  "name": "PWN Finance",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@defi-wonderland/smock": "^2.0.1",
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "^4.1.0",
-    "@openzeppelin/hardhat-upgrades": "^1.6.0",
-    "@openzeppelin/test-helpers": "^0.5.10",
-    "chai": "^4.3.4",
-    "ethereum-waffle": "^3.3.0",
-    "ethers": "^5.0.32",
-    "hardhat": "^2.2.1"
-  },
-  "dependencies": {
-    "@openzeppelin/contracts-upgradeable": "^4.1.0-rc.0"
-  }
+    "name": "PWN Finance",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "npx hardhat test"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@defi-wonderland/smock": "^2.0.1",
+        "@nomiclabs/hardhat-ethers": "^2.0.2",
+        "@nomiclabs/hardhat-waffle": "^2.0.1",
+        "@openzeppelin/contracts": "^4.1.0",
+        "@openzeppelin/hardhat-upgrades": "^1.6.0",
+        "@openzeppelin/test-helpers": "^0.5.10",
+        "chai": "^4.3.4",
+        "ethereum-waffle": "^3.3.0",
+        "ethers": "^5.0.32",
+        "hardhat": "^2.2.1"
+    }
 }
