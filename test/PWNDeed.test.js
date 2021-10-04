@@ -12,7 +12,7 @@ describe("PWNDeed contract", function() {
 
 	let Deed;
 	let deedEventIface
-	let pwn, addr1, addr2, addr3, addr4, addr5;
+	let pwn, lender, borrower, asset1, asset2, addr1, addr2, addr3, addr4, addr5;
 
 	async function timestampFromNow(delta) {
 		const lastBlockNumber = await ethers.provider.getBlockNumber();
@@ -29,11 +29,11 @@ describe("PWNDeed contract", function() {
 
 	before(async function() {
 		Deed = await ethers.getContractFactory("PWNDeed");
-		[pwn, addr1, addr2, addr3, addr4, addr5] = await ethers.getSigners();
+		[pwn, lender, borrower, asset1, asset2, addr1, addr2, addr3, addr4, addr5] = await ethers.getSigners();
 
 		deedEventIface = new ethers.utils.Interface([
-			"event DeedCreated(address indexed tokenAddress, uint8 cat, uint256 id, uint256 amount, uint32 duration, uint256 indexed did)",
-			"event OfferMade(address tokenAddress, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer)",
+			"event DeedCreated(address indexed assetAddress, uint8 category, uint256 id, uint256 amount, uint32 duration, uint256 indexed did)",
+			"event OfferMade(address assetAddress, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer)",
 			"event DeedRevoked(uint256 did)",
 			"event OfferRevoked(bytes32 offer)",
 			"event OfferAccepted(uint256 did, bytes32 offer)",
@@ -75,7 +75,8 @@ describe("PWNDeed contract", function() {
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).create(addr2.address, CATEGORY.ERC20, 0, 0, 0, addr3.address);
+				await deed.connect(addr1).create(asset1.address, CATEGORY.ERC20, 0, 0, 0, borrower.address);
+
 				expect().fail();
 			} catch(error) {
 				expect(error.message).to.contain("revert");
@@ -84,61 +85,63 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should mint deed ERC1155 token", async function () {
-			await deed.create(addr2.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
-			const tokenId = await deed.id();
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
+			const did = await deed.id();
 
-			const balance = await deed.balanceOf(addr3.address, tokenId);
+			const balance = await deed.balanceOf(borrower.address, did);
 			expect(balance).to.equal(1);
 		});
 
 		it("Should save deed data", async function () {
+			const assetId = 1;
+			const amount = 100;
 			const duration = 3600;
 
-			await deed.create(addr2.address, CATEGORY.ERC20, duration, 1, 100, addr3.address);
-			const tokenId = await deed.id();
+			await deed.create(asset1.address, CATEGORY.ERC20, duration, assetId, amount, borrower.address);
+			const did = await deed.id();
 
-			const deedToken = await deed.deeds(tokenId);
+			const deedToken = await deed.deeds(did);
 			expect(deedToken.status).to.equal(1);
 			expect(deedToken.duration).to.equal(duration);
 			expect(deedToken.expiration).to.equal(0);
-			expect(deedToken.borrower).to.equal(addr3.address);
-			expect(deedToken.asset.cat).to.equal(CATEGORY.ERC20);
-			expect(deedToken.asset.id).to.equal(1);
-			expect(deedToken.asset.amount).to.equal(100);
-			expect(deedToken.asset.tokenAddress).to.equal(addr2.address);
+			expect(deedToken.borrower).to.equal(borrower.address);
+			expect(deedToken.collateral.assetAddress).to.equal(asset1.address);
+			expect(deedToken.collateral.category).to.equal(CATEGORY.ERC20);
+			expect(deedToken.collateral.id).to.equal(assetId);
+			expect(deedToken.collateral.amount).to.equal(amount);
 		});
 
 		it("Should return minted deed ID", async function() {
-			const tokenId = await deed.callStatic.create(addr2.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
+			const did = await deed.callStatic.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
 
-			expect(ethers.BigNumber.isBigNumber(tokenId)).to.equal(true);
+			expect(ethers.BigNumber.isBigNumber(did)).to.equal(true);
 		});
 
 		it("Should increase global deed ID", async function() {
-			await deed.create(addr2.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
-			const tokenId1 = await deed.id();
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
+			const did1 = await deed.id();
 
-			await deed.create(addr2.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
-			const tokenId2 = await deed.id();
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
+			const did2 = await deed.id();
 
-			expect(tokenId2).to.equal(tokenId1.add(1));
+			expect(did2).to.equal(did1.add(1));
 		});
 
 		it("Should emit DeedCreated event", async function() {
+			const assetId = 1;
 			const amount = 10;
-			const fakeToken = await smock.fake("ERC20");
 			const duration = 3600;
 
-			const did = await deed.callStatic.create(addr2.address, CATEGORY.ERC20, duration, 1, amount, addr3.address);
-			const tx = await deed.create(addr2.address, CATEGORY.ERC20, duration, 1, amount, addr3.address);
+			const did = await deed.callStatic.create(asset1.address, CATEGORY.ERC20, duration, 1, amount, borrower.address);
+			const tx = await deed.create(asset1.address, CATEGORY.ERC20, duration, 1, amount, borrower.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(2);
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			expect(logDescription.name).to.equal("DeedCreated");
-			expect(logDescription.args.tokenAddress).to.equal(addr2.address);
-			expect(logDescription.args.cat).to.equal(CATEGORY.ERC20);
-			expect(logDescription.args.id).to.equal(1);
+			expect(logDescription.args.assetAddress).to.equal(asset1.address);
+			expect(logDescription.args.category).to.equal(CATEGORY.ERC20);
+			expect(logDescription.args.id).to.equal(assetId);
 			expect(logDescription.args.amount).to.equal(amount);
 			expect(logDescription.args.duration).to.equal(duration);
 			expect(logDescription.args.did).to.equal(did);
@@ -152,14 +155,14 @@ describe("PWNDeed contract", function() {
 		let did;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
 			did = await deed.id();
 		});
 
 
 		it("Shuold fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).revoke(did, addr3.address);
+				await deed.connect(addr1).revoke(did, borrower.address);
 
 				expect.fail();
 			} catch(error) {
@@ -180,10 +183,11 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should fail when deed is not in new/open state", async function() {
-			await deed.revoke(did, addr3.address);
+			// TODO: Would be nice to create smock and set variable directly.
+			await deed.revoke(did, borrower.address);
 
 			try {
-				await deed.revoke(did, addr3.address);
+				await deed.revoke(did, borrower.address);
 
 				expect.fail();
 			} catch(error) {
@@ -193,14 +197,14 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should update deed to dead state", async function() {
-			await deed.revoke(did, addr3.address);
+			await deed.revoke(did, borrower.address);
 
 			const status = (await deed.deeds(did)).status
 			expect(status).to.equal(0);
 		});
 
 		it("Should emit DeedRevoked event", async function() {
-			const tx = await deed.revoke(did, addr3.address);
+			const tx = await deed.revoke(did, borrower.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -221,14 +225,14 @@ describe("PWNDeed contract", function() {
 		};
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
 			did = await deed.id();
 		});
 
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).makeOffer(addr3.address, 100, addr4.address, did, 70);
+				await deed.connect(addr1).makeOffer(asset2.address, 100, lender.address, did, 70);
 
 				expect().fail();
 			} catch(error) {
@@ -238,10 +242,10 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should fail when deed is not in new/open state", async function() {
-			await deed.revoke(did, addr3.address);
+			await deed.revoke(did, borrower.address);
 
 			try {
-				await deed.makeOffer(addr3.address, 100, addr4.address, did, 70);
+				await deed.makeOffer(asset2.address, 100, lender.address, did, 70);
 
 				expect.fail();
 			} catch(error) {
@@ -254,21 +258,21 @@ describe("PWNDeed contract", function() {
 			const amount = 100;
 			const toBePaid = 70;
 
-			await deed.makeOffer(addr3.address, amount, addr4.address, did, toBePaid);
+			await deed.makeOffer(asset2.address, amount, lender.address, did, toBePaid);
 
 			const pendingOffers = await deed.getOffers(did);
 			const offerHash = pendingOffers[0];
 			const offer = await deed.offers(offerHash);
-			expect(offer.asset.cat).to.equal(CATEGORY.ERC20);
-			expect(offer.asset.amount).to.equal(amount);
-			expect(offer.asset.tokenAddress).to.equal(addr3.address);
-			expect(offer.lender).to.equal(addr4.address);
-			expect(offer.deedID).to.equal(did);
+			expect(offer.credit.assetAddress).to.equal(asset2.address);
+			expect(offer.credit.category).to.equal(CATEGORY.ERC20);
+			expect(offer.credit.amount).to.equal(amount);
+			expect(offer.lender).to.equal(lender.address);
+			expect(offer.did).to.equal(did);
 			expect(offer.toBePaid).to.equal(toBePaid);
 		});
 
 		it("Should set offer to deed", async function() {
-			await deed.makeOffer(addr3.address, 100, addr4.address, did, 70);
+			await deed.makeOffer(asset2.address, 100, lender.address, did, 70);
 
 			// Cannot get pendingOffers from deed.pendingOffers because `solc` generates incorrect ABI for implicit property getters with dynamic array
 			// GH issue: https://github.com/ethereum/solidity/issues/4244
@@ -277,7 +281,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should return offer hash as bytes", async function() {
-			const offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 70);
+			const offerHash = await deed.callStatic.makeOffer(asset2.address, 100, lender.address, did, 70);
 
 			const expectedOfferHash = makeOfferHash(pwn.address, 0);
 			expect(ethers.utils.isBytesLike(offerHash)).to.equal(true);
@@ -285,8 +289,8 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should increase global nonce", async function() {
-			await deed.makeOffer(addr3.address, 100, addr4.address, did, 70);
-			await deed.makeOffer(addr3.address, 101, addr4.address, did, 70);
+			await deed.makeOffer(asset2.address, 100, lender.address, did, 70);
+			await deed.makeOffer(asset2.address, 101, lender.address, did, 70);
 
 			const expectedFirstOfferHash = makeOfferHash(pwn.address, 0);
 			const expectedSecondOfferHash = makeOfferHash(pwn.address, 1);
@@ -300,17 +304,17 @@ describe("PWNDeed contract", function() {
 			const amount = 100;
 			const toBePaid = 70;
 
-			const offerHash = await deed.callStatic.makeOffer(addr3.address, amount, addr4.address, did, toBePaid);
-			const tx = await deed.makeOffer(addr3.address, amount, addr4.address, did, toBePaid);
+			const offerHash = await deed.callStatic.makeOffer(asset2.address, amount, lender.address, did, toBePaid);
+			const tx = await deed.makeOffer(asset2.address, amount, lender.address, did, toBePaid);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
 			const logDescription = deedEventIface.parseLog(response.logs[0]);
 			expect(logDescription.name).to.equal("OfferMade");
 			const args = logDescription.args;
-			expect(args.tokenAddress).to.equal(addr3.address);
+			expect(args.assetAddress).to.equal(asset2.address);
 			expect(args.amount).to.equal(amount);
-			expect(args.lender).to.equal(addr4.address);
+			expect(args.lender).to.equal(lender.address);
 			expect(args.toBePaid).to.equal(toBePaid);
 			expect(args.did).to.equal(did);
 			expect(args.offer).to.equal(offerHash);
@@ -325,17 +329,17 @@ describe("PWNDeed contract", function() {
 		let offerHash;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 101);
-			await deed.makeOffer(addr3.address, 100, addr4.address, did, 101);
+			offerHash = await deed.callStatic.makeOffer(asset2.address, 100, lender.address, did, 101);
+			await deed.makeOffer(asset2.address, 100, lender.address, did, 101);
 		});
 
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).revokeOffer(offerHash, addr4.address);
+				await deed.connect(addr1).revokeOffer(offerHash, lender.address);
 
 				expect().fail();
 			} catch(error) {
@@ -355,11 +359,12 @@ describe("PWNDeed contract", function() {
 			}
 		});
 
+		// TODO: Would be nice to create smock and set variable directly.
 		it("Should fail when deed of the offer is not in new/open state", async function() {
-			await deed.revoke(did, addr3.address);
+			await deed.revoke(did, borrower.address);
 
 			try {
-				await deed.revokeOffer(offerHash, addr4.address);
+				await deed.revokeOffer(offerHash, lender.address);
 
 				expect.fail();
 			} catch(error) {
@@ -369,21 +374,21 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should delete offer", async function() {
-			await deed.revokeOffer(offerHash, addr4.address);
+			await deed.revokeOffer(offerHash, lender.address);
 
 			const offer = await deed.offers(offerHash);
-			expect(offer.asset.cat).to.equal(0);
-			expect(offer.asset.amount).to.equal(0);
-			expect(offer.asset.tokenAddress).to.equal(ethers.constants.AddressZero);
+			expect(offer.credit.assetAddress).to.equal(ethers.constants.AddressZero);
+			expect(offer.credit.category).to.equal(0);
+			expect(offer.credit.amount).to.equal(0);
 			expect(offer.toBePaid).to.equal(0);
 			expect(offer.lender).to.equal(ethers.constants.AddressZero);
-			expect(offer.deedID).to.equal(0);
+			expect(offer.did).to.equal(0);
 		});
 
 		it("Should delete pending offer"); // Not implemented yet
 
 		it("Should emit OfferRevoked event", async function() {
-			const tx = await deed.revokeOffer(offerHash, addr4.address);
+			const tx = await deed.revokeOffer(offerHash, lender.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -403,17 +408,17 @@ describe("PWNDeed contract", function() {
 		const duration = 3600;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, duration, 1, 100, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, duration, 1, 100, borrower.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 101);
-			await deed.makeOffer(addr3.address, 100, addr4.address, did, 101);
+			offerHash = await deed.callStatic.makeOffer(asset2.address, 100, lender.address, did, 101);
+			await deed.makeOffer(asset2.address, 100, lender.address, did, 101);
 		});
 
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).acceptOffer(did, offerHash, addr3.address);
+				await deed.connect(addr1).acceptOffer(did, offerHash, borrower.address);
 
 				expect().fail();
 			} catch(error) {
@@ -433,11 +438,12 @@ describe("PWNDeed contract", function() {
 			}
 		});
 
+		// TODO: Would be nice to create smock and set variable directly.
 		it("Should fail when deed is not in new/open state", async function() {
-			await deed.revoke(did, addr3.address);
+			await deed.revoke(did, borrower.address);
 
 			try {
-				await deed.acceptOffer(did, offerHash, addr3.address);
+				await deed.acceptOffer(did, offerHash, borrower.address);
 
 				expect.fail();
 			} catch(error) {
@@ -447,7 +453,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should set correct expiration timestamp", async function() {
-			await deed.acceptOffer(did, offerHash, addr3.address);
+			await deed.acceptOffer(did, offerHash, borrower.address);
 
 			const deedExpiration = (await deed.deeds(did)).expiration;
 			const expectedExpiration = await timestampFromNow(duration);
@@ -455,28 +461,28 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should set offer as accepted in deed", async function() {
-			await deed.acceptOffer(did, offerHash, addr3.address);
+			await deed.acceptOffer(did, offerHash, borrower.address);
 
 			const acceptedOffer = (await deed.deeds(did)).acceptedOffer;
 			expect(acceptedOffer).to.equal(offerHash);
 		});
 
 		it("Should delete deed pending offers", async function() {
-			await deed.acceptOffer(did, offerHash, addr3.address);
+			await deed.acceptOffer(did, offerHash, borrower.address);
 
 			const pendingOffers = await deed.getOffers(did);
 			expect(pendingOffers.length).to.equal(0);
 		});
 
 		it("Should update deed to running state", async function() {
-			await deed.acceptOffer(did, offerHash, addr3.address);
+			await deed.acceptOffer(did, offerHash, borrower.address);
 
 			const status = (await deed.deeds(did)).status;
 			expect(status).to.equal(2);
 		});
 
 		it("Should emit OfferAccepted event", async function() {
-			const tx = await deed.acceptOffer(did, offerHash, addr3.address);
+			const tx = await deed.acceptOffer(did, offerHash, borrower.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -496,13 +502,13 @@ describe("PWNDeed contract", function() {
 		let offerHash;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 101);
-			await deed.makeOffer(addr3.address, 100, addr4.address, did, 101);
+			offerHash = await deed.callStatic.makeOffer(asset2.address, 100, lender.address, did, 101);
+			await deed.makeOffer(asset2.address, 100, lender.address, did, 101);
 
-			await deed.acceptOffer(did, offerHash, addr3.address);
+			await deed.acceptOffer(did, offerHash, borrower.address);
 		});
 
 
@@ -517,8 +523,9 @@ describe("PWNDeed contract", function() {
 			}
 		});
 
+		// TODO: Would be nice to create smock and set variable directly.
 		it("Should fail when deed is not in running state", async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
 			did = await deed.id();
 
 			try {
@@ -560,19 +567,19 @@ describe("PWNDeed contract", function() {
 		let offerHash;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, duration, 1, 100, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, duration, 1, 100, borrower.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr3.address, 100, addr4.address, did, 101);
-			await deed.makeOffer(addr3.address, 100, addr4.address, did, 101);
+			offerHash = await deed.callStatic.makeOffer(asset2.address, 100, lender.address, did, 101);
+			await deed.makeOffer(asset2.address, 100, lender.address, did, 101);
 
-			await deed.acceptOffer(did, offerHash, addr3.address);
+			await deed.acceptOffer(did, offerHash, borrower.address);
 		});
 
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).claim(did, addr3.address);
+				await deed.connect(addr1).claim(did, lender.address);
 
 				expect().fail();
 			} catch(error) {
@@ -592,12 +599,13 @@ describe("PWNDeed contract", function() {
 			}
 		});
 
+		// TODO: Would be nice to create smock and set variable directly.
 		it("Should fail when deed is not in paid back nor expired state", async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, duration, 1, 100, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, duration, 1, 100, borrower.address);
 			did = await deed.id();
 
 			try {
-				await deed.claim(did, addr3.address);
+				await deed.claim(did, borrower.address);
 
 				expect.fail();
 			} catch(error) {
@@ -606,19 +614,21 @@ describe("PWNDeed contract", function() {
 			}
 		});
 
+		// TODO: Would be nice to create smock and set variable directly.
 		it("Should be possible to claim expired deed", async function() {
 			await ethers.provider.send("evm_increaseTime", [parseInt(time.duration.days(1))]);
       		await ethers.provider.send("evm_mine");
 
-			await deed.claim(did, addr3.address);
+			await deed.claim(did, borrower.address);
 
 			expect(true);
 		});
 
+		// TODO: Would be nice to create smock and set variable directly.
 		it("Should be possible to claim paid back deed", async function() {
 			await deed.payBack(did);
 
-			await deed.claim(did, addr3.address);
+			await deed.claim(did, borrower.address);
 
 			expect(true);
 		});
@@ -626,7 +636,7 @@ describe("PWNDeed contract", function() {
 		it("Should update deed to dead state", async function() {
 			await deed.payBack(did);
 
-			await deed.claim(did, addr3.address);
+			await deed.claim(did, borrower.address);
 
 			const status = (await deed.deeds(did)).status;
 			expect(status).to.equal(0);
@@ -635,7 +645,7 @@ describe("PWNDeed contract", function() {
 		it("Should emit DeedClaimed event", async function() {
 			await deed.payBack(did);
 
-			const tx = await deed.claim(did, addr3.address);
+			const tx = await deed.claim(did, borrower.address);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -653,14 +663,14 @@ describe("PWNDeed contract", function() {
 		let did;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 3600, 1, 100, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 100, borrower.address);
 			did = await deed.id();
 		});
 
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).burn(did, addr3.address);
+				await deed.connect(addr1).burn(did, borrower.address);
 
 				expect().fail();
 			} catch(error) {
@@ -680,9 +690,10 @@ describe("PWNDeed contract", function() {
 			}
 		});
 
+		// TODO: Would be nice to create smock and set variable directly.
 		it("Should fail when deed is not in dead state", async function() {
 			try {
-				await deed.burn(did, addr3.address);
+				await deed.burn(did, borrower.address);
 
 				expect().fail();
 			} catch(error) {
@@ -692,26 +703,26 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should delete deed data", async function() {
-			await deed.revoke(did, addr3.address);
+			await deed.revoke(did, borrower.address);
 
-			await deed.burn(did, addr3.address);
+			await deed.burn(did, borrower.address);
 
 			const deedToken = await deed.deeds(did);
 			expect(deedToken.expiration).to.equal(0);
 			expect(deedToken.duration).to.equal(0);
 			expect(deedToken.borrower).to.equal(ethers.constants.AddressZero);
-			expect(deedToken.asset.cat).to.equal(0);
-			expect(deedToken.asset.id).to.equal(0);
-			expect(deedToken.asset.amount).to.equal(0);
-			expect(deedToken.asset.tokenAddress).to.equal(ethers.constants.AddressZero);
+			expect(deedToken.collateral.assetAddress).to.equal(ethers.constants.AddressZero);
+			expect(deedToken.collateral.category).to.equal(0);
+			expect(deedToken.collateral.id).to.equal(0);
+			expect(deedToken.collateral.amount).to.equal(0);
 		});
 
 		it("Should burn deed ERC1155 token", async function() {
-			await deed.revoke(did, addr3.address);
+			await deed.revoke(did, borrower.address);
 
-			await deed.burn(did, addr3.address);
+			await deed.burn(did, borrower.address);
 
-			const balance = await deed.balanceOf(addr3.address, did);
+			const balance = await deed.balanceOf(borrower.address, did);
 			expect(balance).to.equal(0);
 		});
 
@@ -723,14 +734,14 @@ describe("PWNDeed contract", function() {
 		let did;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, 3600, 1, 12, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 12, borrower.address);
 			did = await deed.id();
 		});
 
 
 		it("Should fail when transferring deed in new/open state", async function() {
 			try {
-				await deed.connect(addr3).safeTransferFrom(addr3.address, addr4.address, did, 1, ethers.utils.arrayify("0x"));
+				await deed.connect(borrower).safeTransferFrom(borrower.address, lender.address, did, 1, ethers.utils.arrayify("0x"));
 
 				expect.fail();
 			} catch(error) {
@@ -744,7 +755,7 @@ describe("PWNDeed contract", function() {
 
 	describe("View functions", function() {
 
-		const cTokenId = 1;
+		const cAssetId = 1;
 		const cAmount = 100;
 
 		const lAmount = 110;
@@ -755,11 +766,11 @@ describe("PWNDeed contract", function() {
 		let offerHash;
 
 		beforeEach(async function() {
-			await deed.create(addr1.address, CATEGORY.ERC20, duration, cTokenId, cAmount, addr3.address);
+			await deed.create(asset1.address, CATEGORY.ERC20, duration, cAssetId, cAmount, borrower.address);
 			did = await deed.id();
 
-			offerHash = await deed.callStatic.makeOffer(addr2.address, lAmount, addr4.address, did, lToBePaid);
-			await deed.makeOffer(addr2.address, lAmount, addr4.address, did, lToBePaid);
+			offerHash = await deed.callStatic.makeOffer(asset2.address, lAmount, lender.address, did, lToBePaid);
+			await deed.makeOffer(asset2.address, lAmount, lender.address, did, lToBePaid);
 		});
 
 		// VIEW FUNCTIONS - DEEDS
@@ -767,7 +778,7 @@ describe("PWNDeed contract", function() {
 		describe("Get deed status", function() {
 
 			it("Should return none/dead state", async function() {
-				await deed.revoke(did, addr3.address);
+				await deed.revoke(did, borrower.address);
 
 				const status = await deed.getDeedStatus(did);
 
@@ -781,7 +792,7 @@ describe("PWNDeed contract", function() {
 			});
 
 			it("Should return running state when not expired", async function() {
-				await deed.acceptOffer(did, offerHash, addr3.address);
+				await deed.acceptOffer(did, offerHash, borrower.address);
 
 				const status = await deed.getDeedStatus(did);
 
@@ -789,7 +800,7 @@ describe("PWNDeed contract", function() {
 			});
 
 			it("Should return expired state when in running state", async function() {
-				await deed.acceptOffer(did, offerHash, addr3.address);
+				await deed.acceptOffer(did, offerHash, borrower.address);
 
 				await ethers.provider.send("evm_increaseTime", [parseInt(time.duration.days(1))]);
       			await ethers.provider.send("evm_mine");
@@ -801,7 +812,7 @@ describe("PWNDeed contract", function() {
 			});
 
 			it("Should return paid back state when not expired", async function() {
-				await deed.acceptOffer(did, offerHash, addr3.address);
+				await deed.acceptOffer(did, offerHash, borrower.address);
 				await deed.payBack(did);
 
 				const status = await deed.getDeedStatus(did);
@@ -810,7 +821,7 @@ describe("PWNDeed contract", function() {
 			});
 
 			it("Should return paid back state when expired", async function() {
-				await deed.acceptOffer(did, offerHash, addr3.address);
+				await deed.acceptOffer(did, offerHash, borrower.address);
 
 				await deed.payBack(did);
 
@@ -829,7 +840,7 @@ describe("PWNDeed contract", function() {
 		describe("Get expiration", function() {
 
 			it("Should return deed expiration", async function() {
-				await deed.acceptOffer(did, offerHash, addr3.address);
+				await deed.acceptOffer(did, offerHash, borrower.address);
 
 				const getterExpiration = await deed.getExpiration(did);
 
@@ -853,23 +864,23 @@ describe("PWNDeed contract", function() {
 		describe("Get borrower", function() {
 
 			it("Should return borrower address", async function() {
-				const borrower = await deed.getBorrower(did);
+				const borrowerAddress = await deed.getBorrower(did);
 
-				expect(borrower).to.equal(addr3.address);
+				expect(borrowerAddress).to.equal(borrower.address);
 			});
 
 		});
 
 
-		describe("Get deed asset", function() {
+		describe("Get deed collateral asset", function() {
 
-			it("Should return deed asset", async function() {
-				const asset = await deed.getDeedAsset(did);
+			it("Should return deed collateral asset", async function() {
+				const collateral = await deed.getDeedCollateral(did);
 
-				expect(asset.cat).to.equal(CATEGORY.ERC20);
-				expect(asset.amount).to.equal(cAmount);
-				expect(asset.id).to.equal(cTokenId);
-				expect(asset.tokenAddress).to.equal(addr1.address);
+				expect(collateral.assetAddress).to.equal(asset1.address);
+				expect(collateral.category).to.equal(CATEGORY.ERC20);
+				expect(collateral.amount).to.equal(cAmount);
+				expect(collateral.id).to.equal(cAssetId);
 			});
 
 		});
@@ -890,7 +901,7 @@ describe("PWNDeed contract", function() {
 		describe("Get accepted offer", function() {
 
 			it("Should return deed accepted offer", async function() {
-				await deed.acceptOffer(did, offerHash, addr3.address);
+				await deed.acceptOffer(did, offerHash, borrower.address);
 
 				const acceptedOffer = await deed.getAcceptedOffer(did);
 
@@ -912,15 +923,15 @@ describe("PWNDeed contract", function() {
 		});
 
 
-		describe("Get offer asset", function() {
+		describe("Get offer credit asset", function() {
 
-			it("Should return offer asset", async function() {
-				const asset = await deed.getOfferAsset(offerHash);
+			it("Should return offer credit asset", async function() {
+				const credit = await deed.getOfferCredit(offerHash);
 
-				expect(asset.cat).to.equal(CATEGORY.ERC20);
-				expect(asset.amount).to.equal(lAmount);
-				expect(asset.id).to.equal(0);
-				expect(asset.tokenAddress).to.equal(addr2.address);
+				expect(credit.assetAddress).to.equal(asset2.address);
+				expect(credit.category).to.equal(CATEGORY.ERC20);
+				expect(credit.amount).to.equal(lAmount);
+				expect(credit.id).to.equal(0);
 			});
 
 		});
@@ -940,9 +951,9 @@ describe("PWNDeed contract", function() {
 		describe("Get lender", function() {
 
 			it("Should return lender address", async function() {
-				const lender = await deed.getLender(offerHash);
+				const lenderAddress = await deed.getLender(offerHash);
 
-				expect(lender).to.equal(addr4.address);
+				expect(lenderAddress).to.equal(lender.address);
 			});
 
 		});

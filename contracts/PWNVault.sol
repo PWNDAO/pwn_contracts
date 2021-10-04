@@ -40,10 +40,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
      * @dev this contract holds balances of all locked collateral & paid back credit prior to their rightful claims
      * @dev in order for the vault to work it has to have an association with the PWN logic via `.setPWN(PWN.address)`
      */
-    constructor()
-    Ownable()
-    IERC1155Receiver()
-    {
+    constructor() Ownable() IERC1155Receiver() {
     }
 
     /**

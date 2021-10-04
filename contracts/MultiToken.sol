@@ -19,14 +19,14 @@ library MultiToken {
 
     /**
      * @title Asset
-     * @param tokenAddress Address of the token contract defining the asset
-     * @param cat Corresponding asset category
+     * @param assetAddress Address of the token contract defining the asset
+     * @param category Corresponding asset category
      * @param amount Amount of fungible tokens or 0 -> 1
      * @param id TokenID of an NFT or 0
      */
     struct Asset {
-        address tokenAddress;
-        Category cat;
+        address assetAddress;
+        Category category;
         uint256 amount;
         uint256 id;
     }
@@ -38,16 +38,16 @@ library MultiToken {
      * @param _dest Destination address
      */
     function transferAsset(Asset memory _asset, address _dest) internal {
-        if (_asset.cat == Category.ERC20) {
-            IERC20 token = IERC20(_asset.tokenAddress);
+        if (_asset.category == Category.ERC20) {
+            IERC20 token = IERC20(_asset.assetAddress);
             token.transfer(_dest, _asset.amount);
 
-        } else if (_asset.cat == Category.ERC721) {
-            IERC721 token = IERC721(_asset.tokenAddress);
+        } else if (_asset.category == Category.ERC721) {
+            IERC721 token = IERC721(_asset.assetAddress);
             token.transferFrom(address(this), _dest, _asset.id);
 
-        } else if (_asset.cat == Category.ERC1155) {
-            IERC1155 token = IERC1155(_asset.tokenAddress);
+        } else if (_asset.category == Category.ERC1155) {
+            IERC1155 token = IERC1155(_asset.assetAddress);
             if (_asset.amount == 0) {
                 _asset.amount = 1;
             }
@@ -63,16 +63,16 @@ library MultiToken {
      * @param _dest Destination address
      */
     function transferAssetFrom(Asset memory _asset, address _source, address _dest) internal {
-        if (_asset.cat == Category.ERC20) {
-            IERC20 token = IERC20(_asset.tokenAddress);
+        if (_asset.category == Category.ERC20) {
+            IERC20 token = IERC20(_asset.assetAddress);
             token.transferFrom(_source, _dest, _asset.amount);
 
-        } else if (_asset.cat == Category.ERC721) {
-            IERC721 token = IERC721(_asset.tokenAddress);
+        } else if (_asset.category == Category.ERC721) {
+            IERC721 token = IERC721(_asset.assetAddress);
             token.transferFrom(_source, _dest, _asset.id);
 
-        } else if (_asset.cat == Category.ERC1155) {
-            IERC1155 token = IERC1155(_asset.tokenAddress);
+        } else if (_asset.category == Category.ERC1155) {
+            IERC1155 token = IERC1155(_asset.assetAddress);
             if (_asset.amount == 0) {
                 _asset.amount = 1;
             }
@@ -87,20 +87,20 @@ library MultiToken {
      * @param _target Target address to be checked
      */
     function balanceOf(Asset memory _asset, address _target) internal view returns (uint256) {
-        if (_asset.cat == Category.ERC20) {
-            IERC20 token = IERC20(_asset.tokenAddress);
+        if (_asset.category == Category.ERC20) {
+            IERC20 token = IERC20(_asset.assetAddress);
             return token.balanceOf(_target);
 
-        } else if (_asset.cat == Category.ERC721) {
-            IERC721 token = IERC721(_asset.tokenAddress);
+        } else if (_asset.category == Category.ERC721) {
+            IERC721 token = IERC721(_asset.assetAddress);
             if (token.ownerOf(_asset.id) == _target) {
                 return 1;
             } else {
                 return 0;
             }
 
-        } else if (_asset.cat == Category.ERC1155) {
-            IERC1155 token = IERC1155(_asset.tokenAddress);
+        } else if (_asset.category == Category.ERC1155) {
+            IERC1155 token = IERC1155(_asset.assetAddress);
             return token.balanceOf(_target, _asset.id);
         }
     }
@@ -112,16 +112,16 @@ library MultiToken {
      * @param _target Target address to be checked
      */
     function approveAsset(Asset memory _asset, address _target) internal {
-        if (_asset.cat == Category.ERC20) {
-            IERC20 token = IERC20(_asset.tokenAddress);
+        if (_asset.category == Category.ERC20) {
+            IERC20 token = IERC20(_asset.assetAddress);
             token.approve(_target, _asset.amount);
 
-        } else if (_asset.cat == Category.ERC721) {
-            IERC721 token = IERC721(_asset.tokenAddress);
+        } else if (_asset.category == Category.ERC721) {
+            IERC721 token = IERC721(_asset.assetAddress);
             token.approve(_target, _asset.id);
 
-        } else if (_asset.cat == Category.ERC1155) {
-            IERC1155 token = IERC1155(_asset.tokenAddress);
+        } else if (_asset.category == Category.ERC1155) {
+            IERC1155 token = IERC1155(_asset.assetAddress);
             token.setApprovalForAll(_target, true);
         }
     }
