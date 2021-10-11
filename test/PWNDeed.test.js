@@ -976,7 +976,7 @@ describe("PWNDeed contract", function() {
 		it("Should set PWN address", async function() {
 			const formerPWN = await deed.PWN();
 
-			deed.connect(pwn).setPWN(addr1.address);
+			await deed.connect(pwn).setPWN(addr1.address);
 
 			const latterPWN = await deed.PWN();
 			expect(formerPWN).to.not.equal(latterPWN);
