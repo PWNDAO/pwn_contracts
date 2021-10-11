@@ -120,7 +120,7 @@ async function main() {
 
   // Pass ownership of PWN & Faucet
   await Pwn.connect(sign).transferOwnership(Tester1);
-  await Faucet.connect(sign).tranferOwnership(Tester1);
+  // await Faucet.connect(sign).tranferOwnership(Tester1);
 
 
 }
