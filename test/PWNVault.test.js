@@ -292,7 +292,7 @@ describe("PWNVault contract", async function() {
 		it("Should set PWN address", async function() {
 			const formerPWN = await vault.PWN();
 
-			vault.connect(owner).setPWN(addr1.address);
+			await vault.connect(owner).setPWN(addr1.address);
 
 			const latterPWN = await vault.PWN();
 			expect(formerPWN).to.not.equal(latterPWN);
