@@ -104,7 +104,6 @@ describe("PWNDeed contract", function() {
 			expect(deedToken.status).to.equal(1);
 			expect(deedToken.duration).to.equal(duration);
 			expect(deedToken.expiration).to.equal(0);
-			expect(deedToken.borrower).to.equal(borrower.address);
 			expect(deedToken.collateral.assetAddress).to.equal(asset1.address);
 			expect(deedToken.collateral.category).to.equal(CATEGORY.ERC20);
 			expect(deedToken.collateral.id).to.equal(assetId);
@@ -452,6 +451,13 @@ describe("PWNDeed contract", function() {
 			}
 		});
 
+		it("Should set correct borrower", async function() {
+			await deed.acceptOffer(did, offerHash, borrower.address);
+
+			const deedBorrower = (await deed.deeds(did)).borrower;
+			expect(deedBorrower).to.equal(borrower.address);
+		});
+
 		it("Should set correct expiration timestamp", async function() {
 			await deed.acceptOffer(did, offerHash, borrower.address);
 
@@ -729,30 +735,6 @@ describe("PWNDeed contract", function() {
 	});
 
 
-	describe("Before token transfer", function() {
-
-		let did;
-
-		beforeEach(async function() {
-			await deed.create(asset1.address, CATEGORY.ERC20, 3600, 1, 12, borrower.address);
-			did = await deed.id();
-		});
-
-
-		it("Should fail when transferring deed in new/open state", async function() {
-			try {
-				await deed.connect(borrower).safeTransferFrom(borrower.address, lender.address, did, 1, ethers.utils.arrayify("0x"));
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Deed can't be transferred at this stage");
-			}
-		});
-
-	});
-
-
 	describe("View functions", function() {
 
 		const cAssetId = 1;
@@ -863,7 +845,15 @@ describe("PWNDeed contract", function() {
 
 		describe("Get borrower", function() {
 
-			it("Should return borrower address", async function() {
+			it("Should return zero address for deed withou accepted offer", async function() {
+				const borrowerAddress = await deed.getBorrower(did);
+
+				expect(borrowerAddress).to.equal(ethers.constants.AddressZero);
+			});
+
+			it("Should return borrower address for deed with accepted offer", async function() {
+				await deed.acceptOffer(did, offerHash, borrower.address);
+
 				const borrowerAddress = await deed.getBorrower(did);
 
 				expect(borrowerAddress).to.equal(borrower.address);

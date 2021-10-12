@@ -98,7 +98,7 @@ contract PWNDeed is ERC1155, Ownable {
      * @param _duration Loan duration in seconds
      * @param _assetId ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
      * @param _assetAmount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
-     * @param _borrower Address initiating the new Deed
+     * @param _owner Address initiating the new Deed
      * @return Deed ID of the newly minted Deed
      */
     function create(
@@ -107,19 +107,18 @@ contract PWNDeed is ERC1155, Ownable {
         uint32 _duration,
         uint256 _assetId,
         uint256 _assetAmount,
-        address _borrower
+        address _owner
     ) external onlyPWN returns (uint256) {
         id++;
 
         Deed storage deed = deeds[id];
         deed.duration = _duration;
-        deed.borrower = _borrower;
         deed.collateral.assetAddress = _assetAddress;
         deed.collateral.category = _assetCategory;
         deed.collateral.id = _assetId;
         deed.collateral.amount = _assetAmount;
 
-        _mint(_borrower, id, 1, "");
+        _mint(_owner, id, 1, "");
 
         deed.status = 1;
 
@@ -223,6 +222,7 @@ contract PWNDeed is ERC1155, Ownable {
         require(getDeedStatus(_did) == 1, "Deed can't accept more offers");
 
         Deed storage deed = deeds[_did];
+        deed.borrower = _owner;
         deed.expiration = uint40(block.timestamp) + deed.duration;
         deed.acceptedOffer = _offer;
         delete deed.pendingOffers;
@@ -277,24 +277,6 @@ contract PWNDeed is ERC1155, Ownable {
 
         delete deeds[_did];
         _burn(_owner, _did, 1);
-    }
-
-    /*
-     * override of the check happening before Deed transfers
-     * @dev forbids for the Deed token to be transferred at the setup stage
-     * @dev for context see { ERC1155.sol }
-     */
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override {
-        for (uint i = 0; i < ids.length; i++) {
-            require(getDeedStatus(ids[i]) != 1, "Deed can't be transferred at this stage");
-        }
     }
 
     /*----------------------------------------------------------*|
