@@ -165,9 +165,7 @@ contract PWNDeed is ERC1155, Ownable {
     ) external onlyPWN returns (bytes32) {
         require(getDeedStatus(_did) == 1, "Deed not accepting offers");
 
-        // In this case the only variable here is nonce.
-        // Should be used _lender instead of msg.sender (which is always PWN contract)?
-        bytes32 hash = keccak256(abi.encodePacked(msg.sender, nonce));
+        bytes32 hash = keccak256(abi.encodePacked(_lender, nonce));
         nonce++;
 
         Offer storage offer = offers[hash];

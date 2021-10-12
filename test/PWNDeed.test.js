@@ -282,7 +282,7 @@ describe("PWNDeed contract", function() {
 		it("Should return offer hash as bytes", async function() {
 			const offerHash = await deed.callStatic.makeOffer(asset2.address, 100, lender.address, did, 70);
 
-			const expectedOfferHash = makeOfferHash(pwn.address, 0);
+			const expectedOfferHash = makeOfferHash(lender.address, 0);
 			expect(ethers.utils.isBytesLike(offerHash)).to.equal(true);
 			expect(offerHash).to.equal(expectedOfferHash);
 		});
@@ -291,8 +291,8 @@ describe("PWNDeed contract", function() {
 			await deed.makeOffer(asset2.address, 100, lender.address, did, 70);
 			await deed.makeOffer(asset2.address, 101, lender.address, did, 70);
 
-			const expectedFirstOfferHash = makeOfferHash(pwn.address, 0);
-			const expectedSecondOfferHash = makeOfferHash(pwn.address, 1);
+			const expectedFirstOfferHash = makeOfferHash(lender.address, 0);
+			const expectedSecondOfferHash = makeOfferHash(lender.address, 1);
 			const pendingOffers = await deed.getOffers(did);
 			expect(pendingOffers.length).to.equal(2);
 			expect(pendingOffers[0]).to.equal(expectedFirstOfferHash);
