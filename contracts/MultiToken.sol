@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+
 pragma solidity 0.8.4;
 
 // @dev importing contract interfaces - for supported contracts; nothing more than the interface is needed!
