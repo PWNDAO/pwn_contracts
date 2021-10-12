@@ -3,6 +3,7 @@ node_modules
 .vscode
 
 contracts/.deps
+/.deps/
 #Hardhat files
 cache
 artifacts
