@@ -30,3 +30,22 @@ It wraps transfer, allowance & balance check calls of the following token standa
 - ERC1155
 
 Unifying the function calls used within the PWN context (not having to worry about handling those individually).
+
+### High level contract architecture
+![PWN contracts interaction](.github/img/contracts_interaction.png "PWN contracts interaction")
+
+## PWN Deed
+PWN Deed token is a tokenized representation of a loan which can aquire different states:
+- Dead/None - Deed is not created or have been claimed and can be burned.
+- Open - Deed is created and is accepting offers.
+- Running - Deed has an accepted offer and expiration date, which is set at the time of acceptance.
+- Paid back - Deed had been fully paid back before expiration date. Deed owner is able to claim lended credit + interest.
+- Expired - Deed had not been fully paid back before expiration date. Deed owner is able to claim collateral.
+
+### State diagram
+![Deed state diagram](.github/img/deed_state.png "Deed state diagram")
+
+## Basic user flow
+Following diagram shows a basic flow, in which user have not revoked deed nor offer and paid back in time.
+
+![Basic user flow](.github/img/user_flow.png "Basic user flow")
