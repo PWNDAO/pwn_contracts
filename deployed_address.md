@@ -1,0 +1,7 @@
+## Mainnet
+TBD
+
+## Rinkeby testnet
+- PWN deployed at: _0xf01a72E94DBF73e43Ed0fF93Dd18a74d0A8B6494_
+- PWNDeed deployed at: _0xBa0Eb920C7A108b8Cd02a582968e92833F268548_
+- PWNVault deployed at: _0x396b858D0123e6eB025eFF9C895DA14907c1E9AC_
