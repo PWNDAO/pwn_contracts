@@ -42,7 +42,7 @@ contract PWN is Ownable {
     }
 
     /**
-     * newDeed - sets & locks collateral
+     * createDeed - sets & locks collateral
      * @dev for UI integrations is this the function enabling creation of a new Deed token
      * @param _assetAddress Address of the asset contract
      * @param _assetCategory Category of the asset - see { MultiToken.sol }
@@ -51,7 +51,7 @@ contract PWN is Ownable {
      * @param _assetAmount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
      * @return a Deed ID of the newly created Deed
      */
-    function newDeed(
+    function createDeed(
         address _assetAddress,
         MultiToken.Category _assetCategory,
         uint32 _duration,
@@ -129,15 +129,15 @@ contract PWN is Ownable {
     }
 
     /**
-     * payBack
+     * repayLoan
      * @dev the borrower can pay back the funds through this function
      * @dev the function assumes the asset (and amount to be paid back) to be returned is approved for PWNVault
      * @dev the function assumes the borrower has the full amount to be paid back in their account
      * @param _did Deed ID of the deed being paid back
      * @return true if successful
      */
-    function payBack(uint256 _did) external returns (bool) {
-        deed.payBack(_did);
+    function repayLoan(uint256 _did) external returns (bool) {
+        deed.repayLoan(_did);
 
         bytes32 offer = deed.getAcceptedOffer(_did);
         MultiToken.Asset memory credit = deed.getOfferCredit(offer);

@@ -65,13 +65,13 @@ describe("PWN contract", function() {
 	});
 
 
-	describe("New deed", function() {
+	describe("Create deed", function() {
 
 		it("Should be able to create ERC20 deed", async function() {
 			let failed = false;
 
 			try {
-				await pwn.newDeed(asset1.address, CATEGORY.ERC20, 3600, 0, 10);
+				await pwn.createDeed(asset1.address, CATEGORY.ERC20, 3600, 0, 10);
 			} catch {
 				failed = true;
 			}
@@ -83,7 +83,7 @@ describe("PWN contract", function() {
 			let failed = false;
 
 			try {
-				await pwn.newDeed(asset1.address, CATEGORY.ERC721, 3600, 10, 1);
+				await pwn.createDeed(asset1.address, CATEGORY.ERC721, 3600, 10, 1);
 			} catch {
 				failed = true;
 			}
@@ -95,7 +95,7 @@ describe("PWN contract", function() {
 			let failed = false;
 
 			try {
-				await pwn.newDeed(asset1.address, CATEGORY.ERC1155, 3600, 10, 5);
+				await pwn.createDeed(asset1.address, CATEGORY.ERC1155, 3600, 10, 5);
 			} catch {
 				failed = true;
 			}
@@ -107,7 +107,7 @@ describe("PWN contract", function() {
 			let failed;
 
 			try {
-				await pwn.newDeed(asset1.address, CATEGORY.unknown, 3600, 0, 10);
+				await pwn.createDeed(asset1.address, CATEGORY.unknown, 3600, 0, 10);
 			} catch {
 				failed = true;
 			}
@@ -120,7 +120,7 @@ describe("PWN contract", function() {
 			const fakeDid = 3;
 			deedFake.create.returns(fakeDid);
 
-			await pwn.connect(borrower).newDeed(asset1.address, CATEGORY.ERC20, 3600, 0, 10);
+			await pwn.connect(borrower).createDeed(asset1.address, CATEGORY.ERC20, 3600, 0, 10);
 
 			expect(deedFake.create).to.have.been.calledOnceWith(asset1.address, CATEGORY.ERC20, 3600, 0, 10, borrower.address);
 		});
@@ -129,7 +129,7 @@ describe("PWN contract", function() {
 			const fakeDid = 3;
 			deedFake.create.returns(fakeDid);
 
-			const did = await pwn.callStatic.newDeed(asset1.address, CATEGORY.ERC20, 3600, 0, 10);
+			const did = await pwn.callStatic.createDeed(asset1.address, CATEGORY.ERC20, 3600, 0, 10);
 
 			expect(did).to.equal(fakeDid);
 		});
@@ -144,7 +144,7 @@ describe("PWN contract", function() {
 			};
 			deedFake.getDeedCollateral.returns(collateral);
 
-			await pwn.connect(borrower).newDeed(collateral.assetAddress, CATEGORY.ERC20, 3600, 0, amount);
+			await pwn.connect(borrower).createDeed(collateral.assetAddress, CATEGORY.ERC20, 3600, 0, amount);
 
 			expect(vaultFake.push).to.have.been.calledOnce;
 			const args = vaultFake.push.getCall(0).args;
@@ -308,7 +308,7 @@ describe("PWN contract", function() {
 
 	});
 
-	describe("Pay back", function() {
+	describe("Repay loan", function() {
 
 		const did = 536;
 		const amount = 1000;
@@ -344,13 +344,13 @@ describe("PWN contract", function() {
 
 
 		it("Should update deed to paid back state", async function() {
-			await pwn.connect(borrower).payBack(did);
+			await pwn.connect(borrower).repayLoan(did);
 
-			expect(deedFake.payBack).to.have.been.calledOnceWith(did);
+			expect(deedFake.repayLoan).to.have.been.calledOnceWith(did);
 		});
 
 		it("Should send deed collateral from vault to borrower", async function() {
-			await pwn.connect(borrower).payBack(did);
+			await pwn.connect(borrower).repayLoan(did);
 
 			const args = vaultFake.pull.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
@@ -358,11 +358,11 @@ describe("PWN contract", function() {
 			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._asset.amount).to.equal(collateral.amount);
 			expect(args._beneficiary).to.equal(borrower.address);
-			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.payBack);
+			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.repayLoan);
 		});
 
 		it("Should send paid back amount from borrower to vault", async function() {
-			await pwn.connect(borrower).payBack(did);
+			await pwn.connect(borrower).repayLoan(did);
 
 			const args = vaultFake.push.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(credit.assetAddress);
@@ -370,11 +370,11 @@ describe("PWN contract", function() {
 			expect(args._asset.id).to.equal(credit.id);
 			expect(args._asset.amount).to.equal(toBePaid);
 			expect(args._origin).to.equal(borrower.address);
-			expect(vaultFake.push).to.have.been.calledAfter(deedFake.payBack);
+			expect(vaultFake.push).to.have.been.calledAfter(deedFake.repayLoan);
 		});
 
 		it("Should return true if successful", async function() {
-			const success = await pwn.connect(borrower).callStatic.payBack(did);
+			const success = await pwn.connect(borrower).callStatic.repayLoan(did);
 
 			expect(success).to.equal(true);
 		});

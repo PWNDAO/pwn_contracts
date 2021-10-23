@@ -232,11 +232,11 @@ contract PWNDeed is ERC1155, Ownable {
     }
 
     /**
-     * payBack
+     * repayLoan
      * @dev function to make proper state transition
      * @param _did ID of the Deed which is paid back
      */
-    function payBack(uint256 _did) external onlyPWN {
+    function repayLoan(uint256 _did) external onlyPWN {
         require(getDeedStatus(_did) == 2, "Deed doesn't have an accepted offer to be paid back");
 
         deeds[_did].status = 3;

@@ -520,7 +520,7 @@ describe("PWNDeed contract", function() {
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).payBack(did);
+				await deed.connect(addr1).repayLoan(did);
 
 				expect().fail();
 			} catch(error) {
@@ -535,7 +535,7 @@ describe("PWNDeed contract", function() {
 			did = await deed.id();
 
 			try {
-				await deed.payBack(did);
+				await deed.repayLoan(did);
 
 				expect.fail();
 			} catch(error) {
@@ -545,14 +545,14 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should update deed to paid back state", async function() {
-			await deed.payBack(did);
+			await deed.repayLoan(did);
 
 			const status = (await deed.deeds(did)).status;
 			expect(status).to.equal(3);
 		});
 
 		it("Should emit PaidBack event", async function() {
-			const tx = await deed.payBack(did);
+			const tx = await deed.repayLoan(did);
 			const response = await tx.wait();
 
 			expect(response.logs.length).to.equal(1);
@@ -632,7 +632,7 @@ describe("PWNDeed contract", function() {
 
 		// TODO: Would be nice to create smock and set variable directly.
 		it("Should be possible to claim paid back deed", async function() {
-			await deed.payBack(did);
+			await deed.repayLoan(did);
 
 			await deed.claim(did, borrower.address);
 
@@ -640,7 +640,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should update deed to dead state", async function() {
-			await deed.payBack(did);
+			await deed.repayLoan(did);
 
 			await deed.claim(did, borrower.address);
 
@@ -649,7 +649,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should emit DeedClaimed event", async function() {
-			await deed.payBack(did);
+			await deed.repayLoan(did);
 
 			const tx = await deed.claim(did, borrower.address);
 			const response = await tx.wait();
@@ -795,7 +795,7 @@ describe("PWNDeed contract", function() {
 
 			it("Should return paid back state when not expired", async function() {
 				await deed.acceptOffer(did, offerHash, borrower.address);
-				await deed.payBack(did);
+				await deed.repayLoan(did);
 
 				const status = await deed.getDeedStatus(did);
 
@@ -805,7 +805,7 @@ describe("PWNDeed contract", function() {
 			it("Should return paid back state when expired", async function() {
 				await deed.acceptOffer(did, offerHash, borrower.address);
 
-				await deed.payBack(did);
+				await deed.repayLoan(did);
 
 				await ethers.provider.send("evm_increaseTime", [parseInt(time.duration.days(1))]);
       			await ethers.provider.send("evm_mine");
