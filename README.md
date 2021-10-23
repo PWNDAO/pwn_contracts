@@ -45,7 +45,7 @@ PWN Deed token is a tokenized representation of a loan which can aquire differen
 ### State diagram
 ![Deed state diagram](.github/img/deed_state.png "Deed state diagram")
 
-## Basic user flow
+## User flow
 Following diagram shows deed lifecycle with borrower, lender and pwn protocol interactions.
 
 ![Basic user flow](.github/img/user_flow.png "Basic user flow")
