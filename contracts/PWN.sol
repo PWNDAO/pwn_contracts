@@ -82,7 +82,7 @@ contract PWN is Ownable {
      * @dev this function doesn't assume the asset is approved yet for PWNVault
      * @dev this function requires lender to have a sufficient balance
      * @param _assetAddress Address of the asset contract
-     * @param _assetAmount Amount of an ERC20 or ERC1155 token to be offered as credit
+     * @param _assetAmount Amount of an ERC20 token to be offered as loan
      * @param _did ID of the Deed the offer should be bound to
      * @param _toBePaid Amount to be paid back by the borrower
      * @return a hash of the newly created offer
@@ -117,7 +117,7 @@ contract PWN is Ownable {
         deed.acceptOffer(did, _offer, msg.sender);
 
         address lender = deed.getLender(_offer);
-        vault.pullProxy(deed.getOfferCredit(_offer), lender, msg.sender);
+        vault.pullProxy(deed.getOfferLoan(_offer), lender, msg.sender);
 
         MultiToken.Asset memory collateral;
         collateral.category = MultiToken.Category.ERC1155;
@@ -140,11 +140,11 @@ contract PWN is Ownable {
         deed.repayLoan(_did);
 
         bytes32 offer = deed.getAcceptedOffer(_did);
-        MultiToken.Asset memory credit = deed.getOfferCredit(offer);
-        credit.amount = deed.toBePaid(offer);  //override the num of credit given
+        MultiToken.Asset memory loan = deed.getOfferLoan(offer);
+        loan.amount = deed.toBePaid(offer);  //override the num of loan given
 
         vault.pull(deed.getDeedCollateral(_did), deed.getBorrower(_did));
-        vault.push(credit, msg.sender);
+        vault.push(loan, msg.sender);
 
         return true;
     }
@@ -162,10 +162,10 @@ contract PWN is Ownable {
 
         if (status == 3) {
             bytes32 offer = deed.getAcceptedOffer(_did);
-            MultiToken.Asset memory credit = deed.getOfferCredit(offer);
-            credit.amount = deed.toBePaid(offer);
+            MultiToken.Asset memory loan = deed.getOfferLoan(offer);
+            loan.amount = deed.toBePaid(offer);
 
-            vault.pull(credit, msg.sender);
+            vault.pull(loan, msg.sender);
 
         } else if (status == 4) {
             vault.pull(deed.getDeedCollateral(_did), msg.sender);
