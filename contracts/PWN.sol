@@ -42,7 +42,7 @@ contract PWN is Ownable {
     }
 
     /**
-     * newDeed - sets & locks collateral
+     * createDeed - sets & locks collateral
      * @dev for UI integrations is this the function enabling creation of a new Deed token
      * @param _assetAddress Address of the asset contract
      * @param _assetCategory Category of the asset - see { MultiToken.sol }
@@ -51,7 +51,7 @@ contract PWN is Ownable {
      * @param _assetAmount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
      * @return a Deed ID of the newly created Deed
      */
-    function newDeed(
+    function createDeed(
         address _assetAddress,
         MultiToken.Category _assetCategory,
         uint32 _duration,
@@ -82,7 +82,7 @@ contract PWN is Ownable {
      * @dev this function doesn't assume the asset is approved yet for PWNVault
      * @dev this function requires lender to have a sufficient balance
      * @param _assetAddress Address of the asset contract
-     * @param _assetAmount Amount of an ERC20 or ERC1155 token to be offered as credit
+     * @param _assetAmount Amount of an ERC20 token to be offered as loan
      * @param _did ID of the Deed the offer should be bound to
      * @param _toBePaid Amount to be paid back by the borrower
      * @return a hash of the newly created offer
@@ -117,7 +117,7 @@ contract PWN is Ownable {
         deed.acceptOffer(did, _offer, msg.sender);
 
         address lender = deed.getLender(_offer);
-        vault.pullProxy(deed.getOfferCredit(_offer), lender, msg.sender);
+        vault.pullProxy(deed.getOfferLoan(_offer), lender, msg.sender);
 
         MultiToken.Asset memory collateral;
         collateral.category = MultiToken.Category.ERC1155;
@@ -129,22 +129,22 @@ contract PWN is Ownable {
     }
 
     /**
-     * payBack
+     * repayLoan
      * @dev the borrower can pay back the funds through this function
      * @dev the function assumes the asset (and amount to be paid back) to be returned is approved for PWNVault
      * @dev the function assumes the borrower has the full amount to be paid back in their account
      * @param _did Deed ID of the deed being paid back
      * @return true if successful
      */
-    function payBack(uint256 _did) external returns (bool) {
-        deed.payBack(_did);
+    function repayLoan(uint256 _did) external returns (bool) {
+        deed.repayLoan(_did);
 
         bytes32 offer = deed.getAcceptedOffer(_did);
-        MultiToken.Asset memory credit = deed.getOfferCredit(offer);
-        credit.amount = deed.toBePaid(offer);  //override the num of credit given
+        MultiToken.Asset memory loan = deed.getOfferLoan(offer);
+        loan.amount = deed.toBePaid(offer);  //override the num of loan given
 
         vault.pull(deed.getDeedCollateral(_did), deed.getBorrower(_did));
-        vault.push(credit, msg.sender);
+        vault.push(loan, msg.sender);
 
         return true;
     }
@@ -162,10 +162,10 @@ contract PWN is Ownable {
 
         if (status == 3) {
             bytes32 offer = deed.getAcceptedOffer(_did);
-            MultiToken.Asset memory credit = deed.getOfferCredit(offer);
-            credit.amount = deed.toBePaid(offer);
+            MultiToken.Asset memory loan = deed.getOfferLoan(offer);
+            loan.amount = deed.toBePaid(offer);
 
-            vault.pull(credit, msg.sender);
+            vault.pull(loan, msg.sender);
 
         } else if (status == 4) {
             vault.pull(deed.getDeedCollateral(_did), msg.sender);

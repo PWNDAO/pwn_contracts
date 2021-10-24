@@ -40,14 +40,14 @@ contract PWNDeed is ERC1155, Ownable {
      * Construct defining an offer
      * @param did Deed ID the offer is bound to
      * @param toBePaid Nn amount to be paid back (borrowed + interest)
-     * @param lender Address of the lender to be the credit will be withdrawn from
-     * @param credit Consisting of another an `Asset` struct defined in the MultiToken library
+     * @param lender Address of the lender to be the loan withdrawn from
+     * @param loan Consisting of another an `Asset` struct defined in the MultiToken library
      */
     struct Offer {
         uint256 did;
         uint256 toBePaid;
         address lender;
-        MultiToken.Asset credit;
+        MultiToken.Asset loan;
     }
 
     mapping (uint256 => Deed) public deeds;             // mapping of all Deed data
@@ -149,10 +149,10 @@ contract PWNDeed is ERC1155, Ownable {
 
     /**
      * makeOffer
-     * @dev saves an offer object that defines credit terms
-     * @dev only ERC20 tokens can be offered as credit
+     * @dev saves an offer object that defines loan terms
+     * @dev only ERC20 tokens can be offered as loan
      * @param _assetAddress Address of the asset contract
-     * @param _assetAmount Amount of an ERC20 token to be offered as credit
+     * @param _assetAmount Amount of an ERC20 token to be offered as loan
      * @param _lender Address of the asset lender
      * @param _did ID of the Deed the offer should be bound to
      * @param _toBePaid Amount to be paid back by the borrower
@@ -171,8 +171,8 @@ contract PWNDeed is ERC1155, Ownable {
         nonce++;
 
         Offer storage offer = offers[hash];
-        offer.credit.assetAddress = _assetAddress;
-        offer.credit.amount = _assetAmount;
+        offer.loan.assetAddress = _assetAddress;
+        offer.loan.amount = _assetAmount;
         offer.toBePaid = _toBePaid;
         offer.lender = _lender;
         offer.did = _did;
@@ -232,11 +232,11 @@ contract PWNDeed is ERC1155, Ownable {
     }
 
     /**
-     * payBack
+     * repayLoan
      * @dev function to make proper state transition
      * @param _did ID of the Deed which is paid back
      */
-    function payBack(uint256 _did) external onlyPWN {
+    function repayLoan(uint256 _did) external onlyPWN {
         require(getDeedStatus(_did) == 2, "Deed doesn't have an accepted offer to be paid back");
 
         deeds[_did].status = 3;
@@ -378,13 +378,13 @@ contract PWNDeed is ERC1155, Ownable {
     }
 
     /**
-     * getOfferCredit
-     * @dev utility function that returns the credit asset of a particular offer
+     * getOfferLoan
+     * @dev utility function that returns the loan asset of a particular offer
      * @param _offer Offer hash of an offer to be prompted
      * @return Asset construct - for definition see { MultiToken.sol }
      */
-    function getOfferCredit(bytes32 _offer) public view returns (MultiToken.Asset memory) {
-        return offers[_offer].credit;
+    function getOfferLoan(bytes32 _offer) public view returns (MultiToken.Asset memory) {
+        return offers[_offer].loan;
     }
 
     /**

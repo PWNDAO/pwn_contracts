@@ -39,7 +39,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
 
     /**
      * PWN Vault constructor
-     * @dev this contract holds balances of all locked collateral & paid back credit prior to their rightful claims
+     * @dev this contract holds balances of all locked collateral & paid back loan prior to their rightful claims
      * @dev in order for the vault to work it has to have an association with the PWN logic via `.setPWN(PWN.address)`
      */
     constructor() Ownable() IERC1155Receiver() {
@@ -61,7 +61,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
     /**
      * pull
      * @dev function pulling an asset FROM the vault, sending to a defined recipient
-     * @dev this is used for unlocking the collateral on revocations & claims or when claiming a paidback credit
+     * @dev this is used for unlocking the collateral on revocations & claims or when claiming a paidback loan
      * @param _asset An asset construct - for definition see { MultiToken.sol }
      * @param _beneficiary An address of the recipient of the asset - is set in the PWN logic contract
      * @return true if successful
@@ -77,7 +77,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
      * @dev function pulling an asset FROM a lender, sending to a borrower
      * @dev this function assumes prior approval for the asset to be spend by the borrower address
      * @param _asset An asset construct - for definition see { MultiToken.sol }
-     * @param _origin An address of the lender who is providing the credit asset
+     * @param _origin An address of the lender who is providing the loan asset
      * @param _beneficiary An address of the recipient of the asset - is set in the PWN logic contract
      * @return true if successful
      */
