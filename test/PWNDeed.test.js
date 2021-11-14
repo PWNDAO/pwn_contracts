@@ -11,7 +11,7 @@ describe("PWNDeed contract", function() {
 	let deed;
 
 	let Deed;
-	let deedEventIface
+	let deedEventIface;
 	let pwn, lender, borrower, asset1, asset2, addr1, addr2, addr3, addr4, addr5;
 
 	async function timestampFromNow(delta) {

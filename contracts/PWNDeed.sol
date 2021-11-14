@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.4;
 
-import "./MultiToken.sol";
+import "@pwnfinance/multitoken/contracts/MultiToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
