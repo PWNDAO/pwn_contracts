@@ -419,4 +419,13 @@ contract PWNDeed is ERC1155, Ownable {
     function setPWN(address _address) external onlyOwner {
         PWN = _address;
     }
+
+    /**
+     * setUri
+     * @dev An non-essential setup function. Can be called to adjust the Deed token metadata URI
+     * @param _newUri setting the new origin of Deed metadata
+     */
+    function setUri(string memory _newUri) external onlyOwner {
+        _setURI(_newUri);
+    }
 }

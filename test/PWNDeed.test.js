@@ -975,4 +975,27 @@ describe("PWNDeed contract", function() {
 
 	});
 
+	describe("Set new URI", function() {
+
+		it("Should fail when sender is not owner", async function() {
+			try {
+				await deed.connect(addr1).setUri("https://new.uri.com/deed/{id}");
+				expect().fail();
+			} catch(error) {
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Ownable: caller is not the owner");
+			}
+		});
+
+		it("Should set a new URI", async function() {
+			const formerURI = await deed.uri(1);
+
+			await deed.connect(pwn).setUri("https://new.uri.com/deed/{id}");
+
+			const latterURI = await deed.uri(1);
+			expect(formerURI).to.not.equal(latterURI);
+			expect(latterURI).to.equal("https://new.uri.com/deed/{id}");
+		});
+
+	});
 });
