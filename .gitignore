@@ -1,10 +1,10 @@
 node_modules
 .idea
 .vscode
-.env
 
 contracts/.deps
 /.deps/
+config/local.json
 
 #Hardhat files
 cache
