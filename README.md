@@ -50,11 +50,14 @@ Following diagram shows deed lifecycle with borrower, lender and pwn protocol in
 
 ![Basic user flow](.github/img/user_flow.png "Basic user flow")
 
-## Deployed addresses
-## Mainnet
+## Deployment
+To deploy contracts, firstly rename `.env.example` file to `.env` and fill it with appropriate data. Secondly install dependencies via `npm install`. After that you can run deployment script in terminal `npx hardhat run scripts/deploy-PWN-only.js --network <%network%>`, where network would be `mainnet`, `rinkeby` or `development`.
+
+### Deployed addresses
+#### Mainnet
 TBD
 
-## Rinkeby testnet
+#### Rinkeby testnet
 - PWN deployed at: _0xdB41a9D0Ae5cBEE58b3e2D00DA6Bd1eB323B92e8_
 - PWNDeed deployed at: _0x4704A3492F3c839B88fB3920ddAff8b3a6F4f7bC_
 - PWNVault deployed at: _0xA1ECA77e64a348B28E1aadf2Bf56D1Eb68Ca518e_

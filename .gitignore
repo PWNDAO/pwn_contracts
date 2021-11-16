@@ -1,9 +1,11 @@
 node_modules
 .idea
 .vscode
+.env
 
 contracts/.deps
 /.deps/
+
 #Hardhat files
 cache
 artifacts
