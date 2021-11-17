@@ -1,63 +1,183 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional 
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// When running the script with `hardhat run <script>` you'll find the Hardhat
-// Runtime Environment's members available in the global scope.
-const hre = require("hardhat");
+const hardhat = require("hardhat");
+const readline = require("readline");
+require("@nomiclabs/hardhat-etherscan");
 
-async function main() {
-  // Hardhat always runs the compile task when running scripts with its command
-  // line interface.
-  //
-  // If this script is run directly using `node` you may want to call compile 
-  // manually to make sure everything is compiled
-  // await hre.run('compile');
-  const Tester1 = "0x2c4480C87430CB81fBd1c970b185116C067059AB"; //J
-
-  console.log("Starts here! ")
-  // Get signer
-  let sign, addrs;
-
-  [sign, ...addrs] = await ethers.getSigners();
-
-  const PWN = await hre.ethers.getContractFactory("PWN");
-  const PWNDEED = await hre.ethers.getContractFactory("PWNDeed");
-  const PWNVAULT = await hre.ethers.getContractFactory("PWNVault");
-
-  // Deploy PWN
-  const PwnVault = await PWNVAULT.deploy();
-  const PwnDeed = await PWNDEED.deploy("https://api.pwn.finance/deed/")
-
-  await PwnVault.deployed();
-  await PwnDeed.deployed();
-
-  console.log("PWN D & V deployed!");
-  const Pwn = await PWN.deploy(PwnDeed.address, PwnVault.address);
-  await Pwn.deployed();
-
-  console.log("PWN deployed!");
-
-  // Dump to log
-  console.log("PWN deployed at: `" + Pwn.address + "`");
-  console.log("PWNDeed deployed at: `" + PwnDeed.address + "`");
-  console.log("PWNVault deployed at: `" + PwnVault.address + "`");
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
 
-  await PwnDeed.connect(sign).setPWN(Pwn.address);
-  await PwnVault.connect(sign).setPWN(Pwn.address);
+const highlighted = "\x1b[32m";
+const basic = "\x1b[36m";
+const reset = "\x1b[0m";
 
-  // Pass ownership of PWN & Faucet
-  await Pwn.connect(sign).transferOwnership(Tester1);
-
+function log(text, style = basic) {
+    process.stdout.clearLine();
+    console.log(style, text, reset);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main()
-  .then(() => {
+function moveToLine(line) {
+    process.stdout.moveCursor(0, line);
+}
 
-    process.exit(0)})
-  .catch(error => {
-    console.error(error);
-    process.exit(1);
-  });
+
+function main() {
+    const Owner = "0x2c4480C87430CB81fBd1c970b185116C067059AB"; //J
+    const metadataUri = "https://api.pwn.finance/deed/{id}.json";
+
+    log("\n ===============================", highlighted);
+    log("PWN contracts deployment script", highlighted);
+    log("===============================\n", highlighted);
+
+
+    let question = "\x1b[36mMetadataUri:\t" + metadataUri + "\n";
+    question += "Owner:\t\t" + Owner + "\n\n";
+    question += "\x1b[0mDo you want to continue? (y/n): ";
+
+    rl.question(question, async function(answer) {
+        if (answer.toLowerCase() == "y" || answer.toLowerCase() == "yes") {
+            deploy(Owner, metadataUri)
+                .then(() => {
+                    process.exit(0);
+                })
+                .catch(error => {
+                    console.error(error);
+                    process.exit(1);
+                });
+        } else {
+            rl.close();
+        }
+    });
+
+    rl.on("close", function() {
+        process.exit(0);
+    });
+}
+
+async function deploy(Owner, metadataUri) {
+    // Get signer
+    let sign, addrs;
+    [sign, ...addrs] = await ethers.getSigners();
+
+    const PWN = await hardhat.ethers.getContractFactory("PWN");
+    const PWNDEED = await hardhat.ethers.getContractFactory("PWNDeed");
+    const PWNVAULT = await hardhat.ethers.getContractFactory("PWNVault");
+
+
+    // Deploy contracts
+    log("\n Deploying PWN contracts...\n", highlighted);
+
+    const PwnVault = await PWNVAULT.deploy();
+    log(" ⛏  Deploying PWNVault...   (tx: " + PwnVault.deployTransaction.hash + ")");
+    const vaultPromise = PwnVault.deployed();
+
+    const PwnDeed = await PWNDEED.deploy(metadataUri);
+    log(" ⛏  Deploying PWNDeed...   (tx: " + PwnDeed.deployTransaction.hash) + ")";
+    const deedPromise = PwnDeed.deployed();
+
+    await Promise.all([vaultPromise, deedPromise]);
+    moveToLine(-2);
+    log(" PWNVault deployed at: `" + PwnVault.address + "`");
+    log(" PWNDeed deployed at: `" + PwnDeed.address + "`");
+
+    const Pwn = await PWN.deploy(PwnDeed.address, PwnVault.address);
+    log(" ⛏  Deploying PWN...   (tx: " + Pwn.deployTransaction.hash + ")");
+    await Pwn.deployed();
+    moveToLine(-1);
+    log(" PWN deployed at: `" + Pwn.address + "`");
+
+    log("\n 🎉 PWN contracts deployed 🎉\n", highlighted);
+
+
+    // Set PWN contract
+    const pwnToDeed = await PwnDeed.connect(sign).setPWN(Pwn.address);
+    log(" ⛏  Setting PWN address to PWNDeed...   (tx: " + pwnToDeed.hash + ")");
+    const pwnToDeedPromise = pwnToDeed.wait();
+
+    const pwnToVault = await PwnVault.connect(sign).setPWN(Pwn.address);
+    log(" ⛏  Setting PWN address to PWNVault...   (tx: " + pwnToVault.hash + ")");
+    const pwnToVaultPromise = pwnToVault.wait();
+
+    await Promise.all([pwnToDeedPromise, pwnToVaultPromise]);
+    moveToLine(-2);
+    log(" PWNDeed PWN address set");
+    log(" PWNVault PWN address set");
+
+
+    // Pass ownership of PWN contracts to Owner
+    log("\n Transfer PWN ownership to " + Owner + "\n", highlighted);
+
+    const ownershipPwn = await Pwn.connect(sign).transferOwnership(Owner);
+    log(" ⛏  Transferring PWN ownership...   (tx: " + ownershipPwn.hash + ")");
+    const ownershipPwnPromise = ownershipPwn.wait();
+
+    const ownershipDeed = await PwnDeed.connect(sign).transferOwnership(Owner);
+    log(" ⛏  Transferring PWNDeed ownership...   (tx: " + ownershipDeed.hash + ")");
+    const ownershipDeedPromise = ownershipDeed.wait();
+
+    const ownershipVault = await PwnVault.connect(sign).transferOwnership(Owner);
+    log(" ⛏  Transferring PWNVault ownership...   (tx: " + ownershipVault.hash + ")");
+    const ownershipVaultPromise = ownershipVault.wait();
+
+    await Promise.all([ownershipPwnPromise, ownershipDeedPromise, ownershipVaultPromise]);
+    moveToLine(-3);
+    log(" PWN ownership transferred");
+    log(" PWNDeed ownership transferred");
+    log(" PWNVault ownership transferred");
+
+
+    // Verify contract code on Etherscan
+    if (hardhat.network.name == "mainnet" || hardhat.network.name == "rinkeby") {
+        log("\n Verify contracts on Etherscan", highlighted);
+
+        log(" 🗄  Verifying PWN contract on Etherscan...");
+        try {
+            await hardhat.run("verify:verify", {
+                address: Pwn.address,
+                constructorArguments: [PwnDeed.address, PwnVault.address]
+            });
+        } catch(error) {
+            if (error.message != "Already Verified" && error.message != "Contract source code already verified") {
+                throw error;
+            }
+        }
+        log(" Verified PWN contract on Etherscan");
+
+        log(" 🗄  Verifying PWNDeed contract on Etherscan...");
+        try {
+            await hardhat.run("verify:verify", {
+                address: PwnDeed.address,
+                constructorArguments: [metadataUri]
+            });
+        } catch(error) {
+            if (error.message != "Already Verified" && error.message != "Contract source code already verified") {
+                throw error;
+            }
+        }
+        log(" Verified PWNDeed contract on Etherscan");
+
+        log(" 🗄  Verifying PWNVault contract on Etherscan...");
+        try {
+            await hardhat.run("verify:verify", {
+                address: PwnVault.address,
+                constructorArguments: []
+            });
+        } catch(error) {
+            if (error.message != "Already Verified" && error.message != "Contract source code already verified") {
+                throw error;
+            }
+        }
+        log(" Verified PWNVault contract on Etherscan");
+
+    } else if (hardhat.network.name == "localhost") {
+        log("\n Skiping verifying contracts on Etherscan for localhost", highlighted);
+    } else {
+        log("\n Skiping verifying contracts on Etherscan for unknown network", highlighted);
+    }
+
+
+    log("\n 🎉🎉🎉 PWN contracts deployment script successfully finished 🎉🎉🎉\n", highlighted);
+}
+
+main();

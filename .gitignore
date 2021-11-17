@@ -4,6 +4,8 @@ node_modules
 
 contracts/.deps
 /.deps/
+config/local.json
+
 #Hardhat files
 cache
 artifacts
