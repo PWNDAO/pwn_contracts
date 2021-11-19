@@ -6,6 +6,7 @@ import "./PWNVault.sol";
 import "./PWNDeed.sol";
 import "@pwnfinance/multitoken/contracts/MultiToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract PWN is Ownable {
 
@@ -15,6 +16,9 @@ contract PWN is Ownable {
 
     PWNDeed public deed;
     PWNVault public vault;
+
+    mapping (uint256 => uint256) public claimableWrappedTokenBalance;
+    mapping (address => uint256) public wrappedTokenSupply;
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
@@ -143,6 +147,11 @@ contract PWN is Ownable {
         MultiToken.Asset memory loan = deed.getOfferLoan(offer);
         loan.amount = deed.toBePaid(offer);  //override the num of loan given
 
+        uint256 wrappedTokenAmount = _wrappedTokenAmount(_did, loan);
+
+        wrappedTokenSupply[loan.assetAddress] += wrappedTokenAmount;
+        claimableWrappedTokenBalance[_did] = wrappedTokenAmount;
+
         vault.pull(deed.getDeedCollateral(_did), deed.getBorrower(_did));
         vault.push(loan, msg.sender);
 
@@ -163,7 +172,12 @@ contract PWN is Ownable {
         if (status == 3) {
             bytes32 offer = deed.getAcceptedOffer(_did);
             MultiToken.Asset memory loan = deed.getOfferLoan(offer);
-            loan.amount = deed.toBePaid(offer);
+
+            uint256 unwrappedTokenAmount = _unwrappedTokenAmount(_did, loan);
+            loan.amount = unwrappedTokenAmount;
+
+            wrappedTokenSupply[loan.assetAddress] -= claimableWrappedTokenBalance[_did];
+            claimableWrappedTokenBalance[_did] = 0;
 
             vault.pull(loan, msg.sender);
 
@@ -174,6 +188,28 @@ contract PWN is Ownable {
         deed.burn(_did, msg.sender);
 
         return true;
+    }
+
+
+    function _wrappedTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
+        uint256 ratio = _wrappedTokenRatio(_loan.assetAddress, true);
+        return _loan.amount * ratio;
+    }
+
+    function _unwrappedTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
+        uint256 ratio = _wrappedTokenRatio(_loan.assetAddress, false);
+        return claimableWrappedTokenBalance[_did] * ratio;
+    }
+
+    function _wrappedTokenRatio(address _loanAssetAddress, bool _wrapping) private returns (uint256) {
+        uint256 vaultBalance = IERC20(_loanAssetAddress).balanceOf(address(vault));
+        if (vaultBalance == 0 || wrappedTokenSupply[_loanAssetAddress] == 0) {
+            return 1;
+        } else if (_wrapping) {
+            return wrappedTokenSupply[_loanAssetAddress] / vaultBalance; // Investigate division rounding
+        } else {
+            return vaultBalance / wrappedTokenSupply[_loanAssetAddress]; // Investigate division rounding
+        }
     }
 
 }

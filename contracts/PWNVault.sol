@@ -43,6 +43,7 @@ contract PWNVault is Ownable, IERC1155Receiver {
      * @dev in order for the vault to work it has to have an association with the PWN logic via `.setPWN(PWN.address)`
      */
     constructor() Ownable() IERC1155Receiver() {
+
     }
 
     /**
