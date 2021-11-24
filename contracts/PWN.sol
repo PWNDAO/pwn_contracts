@@ -193,22 +193,22 @@ contract PWN is Ownable {
 
     function _wrappedTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
         uint256 ratio = _wrappedTokenRatio(_loan.assetAddress, true);
-        return _loan.amount * ratio;
+        return _loan.amount * ratio / (10 ** 18);
     }
 
     function _unwrappedTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
         uint256 ratio = _wrappedTokenRatio(_loan.assetAddress, false);
-        return claimableWrappedTokenBalance[_did] * ratio;
+        return claimableWrappedTokenBalance[_did] * ratio / (10 ** 18);
     }
 
     function _wrappedTokenRatio(address _loanAssetAddress, bool _wrapping) private returns (uint256) {
         uint256 vaultBalance = IERC20(_loanAssetAddress).balanceOf(address(vault));
         if (vaultBalance == 0 || wrappedTokenSupply[_loanAssetAddress] == 0) {
-            return 1;
+            return 1 * (10 ** 18);
         } else if (_wrapping) {
-            return wrappedTokenSupply[_loanAssetAddress] / vaultBalance; // Investigate division rounding
+            return wrappedTokenSupply[_loanAssetAddress] * (10 ** 18) / vaultBalance; // Investigate division rounding
         } else {
-            return vaultBalance / wrappedTokenSupply[_loanAssetAddress]; // Investigate division rounding
+            return vaultBalance * (10 ** 18) / wrappedTokenSupply[_loanAssetAddress]; // Investigate division rounding
         }
     }
 
