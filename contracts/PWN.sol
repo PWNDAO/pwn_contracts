@@ -17,8 +17,18 @@ contract PWN is Ownable {
     PWNDeed public deed;
     PWNVault public vault;
 
-    mapping (uint256 => uint256) public claimableWrappedTokenBalance;
-    mapping (address => uint256) public wrappedTokenSupply;
+    /**
+     * @dev Mapping deed id to amount of relative repay value by the deed
+     * @dev Absolute value of claimable loan asset is determined from relative repay value at the time of claim
+     * @dev Working with relative repay values enables support of rebasing tokens in general
+     */
+    mapping (uint256 => uint256) public relativeRepayValue;
+
+    /**
+     * @dev Mapping loan asset address to total relative repay value
+     * @dev This value is needed to determine proper value of claimable loan asset
+     */
+    mapping (address => uint256) public totalRelativeRepayValue;
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
@@ -147,10 +157,10 @@ contract PWN is Ownable {
         MultiToken.Asset memory loan = deed.getOfferLoan(offer);
         loan.amount = deed.toBePaid(offer);  //override the num of loan given
 
-        uint256 wrappedTokenAmount = _wrappedTokenAmount(_did, loan);
+        uint256 _relativeRepayValue = _repayTokenAmount(_did, loan);
 
-        wrappedTokenSupply[loan.assetAddress] += wrappedTokenAmount;
-        claimableWrappedTokenBalance[_did] = wrappedTokenAmount;
+        totalRelativeRepayValue[loan.assetAddress] += _relativeRepayValue;
+        relativeRepayValue[_did] = _relativeRepayValue;
 
         vault.pull(deed.getDeedCollateral(_did), deed.getBorrower(_did));
         vault.push(loan, msg.sender);
@@ -159,7 +169,7 @@ contract PWN is Ownable {
     }
 
     /**
-     * claim Deed
+     * claimDeed
      * @dev The current Deed owner can call this function if the Deed is expired or payed back
      * @param _did Deed ID of the deed to be claimed
      * @return true if successful
@@ -173,11 +183,10 @@ contract PWN is Ownable {
             bytes32 offer = deed.getAcceptedOffer(_did);
             MultiToken.Asset memory loan = deed.getOfferLoan(offer);
 
-            uint256 unwrappedTokenAmount = _unwrappedTokenAmount(_did, loan);
-            loan.amount = unwrappedTokenAmount;
+        	loan.amount = _claimTokenAmount(_did, loan);
 
-            wrappedTokenSupply[loan.assetAddress] -= claimableWrappedTokenBalance[_did];
-            claimableWrappedTokenBalance[_did] = 0;
+            totalRelativeRepayValue[loan.assetAddress] -= relativeRepayValue[_did];
+            relativeRepayValue[_did] = 0;
 
             vault.pull(loan, msg.sender);
 
@@ -191,25 +200,20 @@ contract PWN is Ownable {
     }
 
 
-    function _wrappedTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
-        uint256 ratio = _wrappedTokenRatio(_loan.assetAddress, true);
-        return _loan.amount * ratio / (10 ** 18);
-    }
-
-    function _unwrappedTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
-        uint256 ratio = _wrappedTokenRatio(_loan.assetAddress, false);
-        return claimableWrappedTokenBalance[_did] * ratio / (10 ** 18);
-    }
-
-    function _wrappedTokenRatio(address _loanAssetAddress, bool _wrapping) private returns (uint256) {
-        uint256 vaultBalance = IERC20(_loanAssetAddress).balanceOf(address(vault));
-        if (vaultBalance == 0 || wrappedTokenSupply[_loanAssetAddress] == 0) {
-            return 1 * (10 ** 18);
-        } else if (_wrapping) {
-            return wrappedTokenSupply[_loanAssetAddress] * (10 ** 18) / vaultBalance; // Investigate division rounding
-        } else {
-            return vaultBalance * (10 ** 18) / wrappedTokenSupply[_loanAssetAddress]; // Investigate division rounding
+    function _repayTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
+        uint256 vaultBalance = IERC20(_loan.assetAddress).balanceOf(address(vault));
+        if (vaultBalance == 0 || totalRelativeRepayValue[_loan.assetAddress] == 0) {
+            return _loan.amount;
         }
+        return _loan.amount * totalRelativeRepayValue[_loan.assetAddress] / vaultBalance;
+    }
+
+    function _claimTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
+        uint256 vaultBalance = IERC20(_loan.assetAddress).balanceOf(address(vault));
+        if (vaultBalance == 0 || totalRelativeRepayValue[_loan.assetAddress] == 0) {
+            return relativeRepayValue[_did];
+        }
+        return relativeRepayValue[_did] * vaultBalance / totalRelativeRepayValue[_loan.assetAddress];
     }
 
 }
