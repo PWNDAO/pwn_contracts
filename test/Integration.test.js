@@ -6,6 +6,7 @@ const delay = ms => new Promise(res => setTimeout(res, ms));
 let ERC20;
 let ERC721;
 let ERC1155;
+let Rebasing20;
 
 let NFT, WETH, DAI, GAME;
 
@@ -38,17 +39,19 @@ beforeEach(async function () {
 	ERC20 = await ethers.getContractFactory("Basic20");
 	ERC721 = await ethers.getContractFactory("Basic721");
 	ERC1155 = await ethers.getContractFactory("Basic1155");
+	Rebasing20 = await ethers.getContractFactory("Rebasing20");
 
 	PWN = await ethers.getContractFactory("PWN");
 	PWNDeed = await ethers.getContractFactory("PWNDeed");
 	PWNVault = await ethers.getContractFactory("PWNVault");
 
-	[borrower, lender1, lender2, addr1, addr2, ...addrs] = await ethers.getSigners();
+	[borrower, lender1, lender2, lender3, addr1, addr2, ...addrs] = await ethers.getSigners();
 
 	WETH = await ERC20.deploy("Fake wETH", "WETH");
 	DAI = await ERC20.deploy("Fake Dai", "DAI");
 	NFT = await ERC721.deploy("Real NFT", "NFT");
 	GAME = await ERC1155.deploy("https://pwn.finance/game/")
+	REBASE = await Rebasing20.deploy();
 
 	PWNDeed = await PWNDeed.deploy("https://pwn.finance/");
 	PWNVault = await PWNVault.deploy();
@@ -64,9 +67,9 @@ beforeEach(async function () {
 	await PWNDeed.setPWN(PWN.address);
 	await PWNVault.setPWN(PWN.address);
 
-	await DAI.mint(await lender1.getAddress(),1000);
-	await DAI.mint(await borrower.getAddress(),200);
-	await NFT.mint(await borrower.getAddress(),42);
+	await DAI.mint(await lender1.getAddress(), 1000);
+	await DAI.mint(await borrower.getAddress(), 200);
+	await NFT.mint(await borrower.getAddress(), 42);
 	await GAME.mint(await borrower.getAddress(), 1337, 1, 0);
 
 	bDAI = DAI.connect(borrower);
@@ -83,7 +86,6 @@ beforeEach(async function () {
 
 describe("PWN contract", function () {
 
-	// You can nest describe calls to create subsections.
 	describe("Deployment", function () {
 
 		it("Should deploy PWN with links to Deed & Vault", async function () {
@@ -265,8 +267,8 @@ describe("PWN contract", function () {
 			await lPWN.makeOffer(DAI.address, 1000, DID, 1200);
 
 			await bPWN.acceptOffer(offer);
-			await bDAI.approve(PWNVault.address,1200);
 
+			await bDAI.approve(PWNVault.address, 1200);
 			await bPWN.repayLoan(DID);
 
 			expect(await DAI.balanceOf(await borrower.getAddress())).is.equal(0);
@@ -291,7 +293,8 @@ describe("PWN contract", function () {
 			await lPWN.makeOffer(DAI.address, 1000, DID, 1200);
 
 			await bPWN.acceptOffer(offer);
-			await bDAI.approve(PWNVault.address,1200);
+
+			await bDAI.approve(PWNVault.address, 1200);
 			await bPWN.repayLoan(DID);
 
 			await lPWN.claimDeed(DID);
@@ -332,6 +335,133 @@ describe("PWN contract", function () {
 			expect(BBalance.toNumber()).to.equal(0);
 			LBalance = await PWNDeed.balanceOf(lender1.getAddress(), DID);
 			expect(LBalance.toNumber()).to.equal(0);
+		});
+
+
+		describe("Should support rebasing tokens", function() {
+
+			const ORIGINAL_REBASE_RATIO = 10_000;
+			const DENOMINATOR = ethers.BigNumber.from(10).pow(18);
+
+			function countRebasedAmount(amount, originalRatio, newRatio) {
+				return amount.mul(originalRatio).div(newRatio);
+			}
+
+			async function createAndRepayDeed(config) {
+				const lender = config.lender || lender1;
+				const loanAmount = ethers.BigNumber.from(10);
+				await REBASE.mint(lender.address, loanAmount);
+				await REBASE.mint(borrower.address, config.loanRepayAmount.sub(loanAmount));
+				await NFT.mint(borrower.address, config.nftId);
+
+				await bPWND.setApprovalForAll(PWNVault.address, true);
+
+				await bNFT.approve(PWNVault.address, config.nftId);
+				const DID = await bPWN.callStatic.createDeed(NFT.address, CATEGORY.ERC721, 3600, config.nftId, 0);
+				await bPWN.createDeed(NFT.address, CATEGORY.ERC721, 3600, config.nftId, 0);
+
+				await REBASE.connect(lender).approve(PWNVault.address, loanAmount);
+				const offer = await PWN.connect(lender).callStatic.makeOffer(REBASE.address, loanAmount, DID, config.loanRepayAmount);
+				await PWN.connect(lender).makeOffer(REBASE.address, loanAmount, DID, config.loanRepayAmount);
+
+				await bPWN.acceptOffer(offer);
+
+				await REBASE.connect(borrower).approve(PWNVault.address, config.loanRepayAmount);
+				await bPWN.repayLoan(DID);
+
+				return DID;
+			}
+
+
+			it("when don't rebase", async function() {
+				const did1 = await createAndRepayDeed({
+					nftId: 1,
+					loanRepayAmount: ethers.BigNumber.from(1400).mul(DENOMINATOR),
+				});
+
+				const did2 = await createAndRepayDeed({
+					nftId: 2,
+					loanRepayAmount: ethers.BigNumber.from(1200).mul(DENOMINATOR),
+				});
+
+				const did3 = await createAndRepayDeed({
+					nftId: 3,
+					loanRepayAmount: ethers.BigNumber.from(2000).mul(DENOMINATOR),
+				});
+
+				await lPWN.claimDeed(did1);
+				await lPWN.claimDeed(did2);
+				await lPWN.claimDeed(did3);
+
+				expect((await REBASE.balanceOf(PWNVault.address)).toString()).is.equal("0");
+				expect((await REBASE.balanceOf(lender1.address)).toString()).is.equal(ethers.BigNumber.from(4600).mul(DENOMINATOR).toString());
+			});
+
+
+			it("when rebase positively", async function() {
+				const did1 = await createAndRepayDeed({
+					nftId: 1,
+					loanRepayAmount: ethers.BigNumber.from(1400).mul(DENOMINATOR),
+				});
+
+				const did2 = await createAndRepayDeed({
+					nftId: 2,
+					loanRepayAmount: ethers.BigNumber.from(1200).mul(DENOMINATOR),
+				});
+
+				const did3 = await createAndRepayDeed({
+					nftId: 3,
+					loanRepayAmount: ethers.BigNumber.from(2000).mul(DENOMINATOR),
+				});
+
+				let totalRepayAmount = ethers.BigNumber.from(4600).mul(DENOMINATOR);
+
+				const newRebaseRatio = 7_000;
+				await REBASE.rebase(newRebaseRatio);
+
+				totalRepayAmount = countRebasedAmount(totalRepayAmount, ORIGINAL_REBASE_RATIO, newRebaseRatio);
+				expect((await REBASE.balanceOf(PWNVault.address)).toString()).is.equal(totalRepayAmount.toString());
+
+				await lPWN.claimDeed(did1);
+				await lPWN.claimDeed(did2);
+				await lPWN.claimDeed(did3);
+
+				expect((await REBASE.balanceOf(PWNVault.address)).toString()).is.equal("0");
+				expect((await REBASE.balanceOf(lender1.address)).toString()).is.equal(totalRepayAmount.toString());
+			});
+
+			it("when rebase negatively", async function() {
+				const did1 = await createAndRepayDeed({
+					nftId: 1,
+					loanRepayAmount: ethers.BigNumber.from(1400).mul(DENOMINATOR),
+				});
+
+				const did2 = await createAndRepayDeed({
+					nftId: 2,
+					loanRepayAmount: ethers.BigNumber.from(1200).mul(DENOMINATOR),
+				});
+
+				const did3 = await createAndRepayDeed({
+					nftId: 3,
+					loanRepayAmount: ethers.BigNumber.from(2000).mul(DENOMINATOR),
+				});
+
+				let totalRepayAmount = ethers.BigNumber.from(4600).mul(DENOMINATOR);
+
+				const newRebaseRatio = 12_000;
+				await REBASE.rebase(newRebaseRatio);
+
+				totalRepayAmount = countRebasedAmount(totalRepayAmount, ORIGINAL_REBASE_RATIO, newRebaseRatio);
+				expect((await REBASE.balanceOf(PWNVault.address)).toString()).is.equal(totalRepayAmount.toString());
+
+				await lPWN.claimDeed(did1);
+				await lPWN.claimDeed(did2);
+				await lPWN.claimDeed(did3);
+
+				expect((await REBASE.balanceOf(PWNVault.address)).toString()).is.equal("0");
+				expect((await REBASE.balanceOf(lender1.address)).toString()).is.equal(totalRepayAmount.toString());
+			});
+
 		});
 
 	});
