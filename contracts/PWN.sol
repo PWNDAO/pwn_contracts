@@ -157,7 +157,7 @@ contract PWN is Ownable {
         MultiToken.Asset memory loan = deed.getOfferLoan(offer);
         loan.amount = deed.toBePaid(offer);  //override the num of loan given
 
-        uint256 _relativeRepayValue = _repayTokenAmount(_did, loan);
+        uint256 _relativeRepayValue = _repayTokenAmount(loan);
 
         totalRelativeRepayValue[loan.assetAddress] += _relativeRepayValue;
         relativeRepayValue[_did] = _relativeRepayValue;
@@ -183,7 +183,7 @@ contract PWN is Ownable {
             bytes32 offer = deed.getAcceptedOffer(_did);
             MultiToken.Asset memory loan = deed.getOfferLoan(offer);
 
-        	loan.amount = _claimTokenAmount(_did, loan);
+            loan.amount = _claimTokenAmount(_did, loan);
 
             totalRelativeRepayValue[loan.assetAddress] -= relativeRepayValue[_did];
             relativeRepayValue[_did] = 0;
@@ -200,7 +200,7 @@ contract PWN is Ownable {
     }
 
 
-    function _repayTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
+    function _repayTokenAmount(MultiToken.Asset memory _loan) private view returns (uint256) {
         uint256 vaultBalance = IERC20(_loan.assetAddress).balanceOf(address(vault));
         if (vaultBalance == 0 || totalRelativeRepayValue[_loan.assetAddress] == 0) {
             return _loan.amount;
@@ -208,7 +208,7 @@ contract PWN is Ownable {
         return _loan.amount * totalRelativeRepayValue[_loan.assetAddress] / vaultBalance;
     }
 
-    function _claimTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private returns (uint256) {
+    function _claimTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private view returns (uint256) {
         uint256 vaultBalance = IERC20(_loan.assetAddress).balanceOf(address(vault));
         if (vaultBalance == 0 || totalRelativeRepayValue[_loan.assetAddress] == 0) {
             return relativeRepayValue[_did];
