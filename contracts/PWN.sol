@@ -199,6 +199,12 @@ contract PWN is Ownable {
         return true;
     }
 
+    function claimableAmount(uint256 _did) external view returns (uint256) {
+        bytes32 offer = deed.getAcceptedOffer(_did);
+        MultiToken.Asset memory loan = deed.getOfferLoan(offer);
+        return _claimTokenAmount(_did, loan);
+    }
+
 
     function _repayTokenAmount(MultiToken.Asset memory _loan) private view returns (uint256) {
         uint256 vaultBalance = IERC20(_loan.assetAddress).balanceOf(address(vault));
