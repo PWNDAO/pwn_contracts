@@ -199,6 +199,12 @@ contract PWN is Ownable {
         return true;
     }
 
+    /**
+     * claimableAmount
+     * @dev Claimable amount can vary from repaid amount for rebasing tokens
+     * @param _did Deed ID of the deed to be claimed
+     * @return amount of tokens that could be claimed
+     */
     function claimableAmount(uint256 _did) external view returns (uint256) {
         bytes32 offer = deed.getAcceptedOffer(_did);
         MultiToken.Asset memory loan = deed.getOfferLoan(offer);
@@ -206,6 +212,12 @@ contract PWN is Ownable {
     }
 
 
+    /**
+     * _repayTokenAmount
+     * @dev Utility function to "wrap" repaid tokens
+     * @param _loan MultiToken asset representing deed loan
+     * @return Amount of wrapped tokens for given loan
+     */
     function _repayTokenAmount(MultiToken.Asset memory _loan) private view returns (uint256) {
         uint256 vaultBalance = IERC20(_loan.assetAddress).balanceOf(address(vault));
         if (vaultBalance == 0 || totalRelativeRepayValue[_loan.assetAddress] == 0) {
@@ -214,6 +226,13 @@ contract PWN is Ownable {
         return _loan.amount * totalRelativeRepayValue[_loan.assetAddress] / vaultBalance;
     }
 
+    /**
+     * _claimTokenAmount
+     * @dev Utility function to "unwrap" repaid tokens
+     * @param _did Deed ID of the deed to be claimed
+     * @param _loan MultiToken asset representing deed loan
+     * @return Amount of unwrapped tokens to be claimed
+     */
     function _claimTokenAmount(uint256 _did, MultiToken.Asset memory _loan) private view returns (uint256) {
         uint256 vaultBalance = IERC20(_loan.assetAddress).balanceOf(address(vault));
         if (vaultBalance == 0 || totalRelativeRepayValue[_loan.assetAddress] == 0) {
