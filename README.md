@@ -50,12 +50,7 @@ Following diagram shows deed lifecycle with borrower, lender and pwn protocol in
 
 ![Basic user flow](.github/img/user_flow.png "Basic user flow")
 
-## Deployment
-1. install dependencies via `npm install`
-2. copy `config/default.json`, rename it to `config/local.json` and fill it with deployment data
-3. run deployment script `npx hardhat run scripts/deploy-PWN-only.js --network <%network%>`
-
-### Deployed addresses
+## Deployed addresses
 #### Mainnet
 - PWN deployed at: _0x09c20b357dce2656253e91342a459a2253f69c29_
 - PWNDeed deployed at: _0x9Eb96D50a6D2Af5771883547dae092996828BE73_
