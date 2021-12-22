@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ../PWNDeed.sol | e5aaeefd193186cad11a83d9fca5d29c4d990732 |
+| ../PWNDeed.sol | fcfbc0cd5122bca19feb7b24a6ff24c1d138d8f3 |
 
 
 ### Contracts Description Table
@@ -15,26 +15,29 @@
 |:----------:|:-------------------:|:----------------:|:----------------:|:---------------:|
 |     └      |  **Function Name**  |  **Visibility**  |  **Mutability**  |  **Modifiers**  |
 ||||||
-| **PWNDeed** | Implementation | ERC1155, ERC1155Burnable, Ownable |||
+| **PWNDeed** | Implementation | ERC1155, Ownable |||
 | └ | <Constructor> | Public ❗️ | 🛑  | ERC1155 Ownable |
-| └ | mint | External ❗️ | 🛑  | onlyPWN |
+| └ | create | External ❗️ | 🛑  | onlyPWN |
+| └ | revoke | External ❗️ | 🛑  | onlyPWN |
+| └ | makeOffer | External ❗️ | 🛑  | onlyPWN |
+| └ | revokeOffer | External ❗️ | 🛑  | onlyPWN |
+| └ | acceptOffer | External ❗️ | 🛑  | onlyPWN |
+| └ | repayLoan | External ❗️ | 🛑  | onlyPWN |
+| └ | claim | External ❗️ | 🛑  | onlyPWN |
 | └ | burn | External ❗️ | 🛑  | onlyPWN |
-| └ | setOffer | External ❗️ | 🛑  | onlyPWN |
-| └ | deleteOffer | External ❗️ | 🛑  | onlyPWN |
-| └ | setCredit | External ❗️ | 🛑  | onlyPWN |
-| └ | changeStatus | External ❗️ | 🛑  | onlyPWN |
-| └ | _beforeTokenTransfer | Internal 🔒 |   | |
 | └ | getDeedStatus | Public ❗️ |   |NO❗️ |
 | └ | getExpiration | Public ❗️ |   |NO❗️ |
+| └ | getDuration | Public ❗️ |   |NO❗️ |
 | └ | getBorrower | Public ❗️ |   |NO❗️ |
-| └ | getDeedAsset | Public ❗️ |   |NO❗️ |
+| └ | getDeedCollateral | Public ❗️ |   |NO❗️ |
 | └ | getOffers | Public ❗️ |   |NO❗️ |
 | └ | getAcceptedOffer | Public ❗️ |   |NO❗️ |
 | └ | getDeedID | Public ❗️ |   |NO❗️ |
-| └ | getOfferAsset | Public ❗️ |   |NO❗️ |
+| └ | getOfferLoan | Public ❗️ |   |NO❗️ |
 | └ | toBePaid | Public ❗️ |   |NO❗️ |
 | └ | getLender | Public ❗️ |   |NO❗️ |
 | └ | setPWN | External ❗️ | 🛑  | onlyOwner |
+| └ | setUri | External ❗️ | 🛑  | onlyOwner |
 
 
 ### Legend

@@ -2,7 +2,6 @@
 Smart contracts enabling p2p loans using arbitrary collateral (supporting ERC20, ERC721, ERC1155 standards).
 
 ## Architecture
-
 ### PWN (logic)
 PWN is the core interface users are expected to use (also the only interactive contract allowing for premissionless external calls). 
 The contract defines the workflow functionality and handles the market making. Allowing to:
@@ -50,18 +49,20 @@ Following diagram shows deed lifecycle with borrower, lender and pwn protocol in
 
 ![Basic user flow](.github/img/user_flow.png "Basic user flow")
 
-## Deployment
-1. install dependencies via `npm install`
-2. copy `config/default.json`, rename it to `config/local.json` and fill it with deployment data
-3. run deployment script `npx hardhat run scripts/deploy-PWN-only.js --network <%network%>`
-
-### Deployed addresses
-#### Mainnet
+## Deployed addresses
+### Mainnet
 - PWN deployed at: _0x09c20b357dce2656253e91342a459a2253f69c29_
 - PWNDeed deployed at: _0x9Eb96D50a6D2Af5771883547dae092996828BE73_
 - PWNVault deployed at: _0x45DB28b2d4878Ad124c037d4558AcF5Db3bBa6A5_
 
-#### Rinkeby testnet
+### Rinkeby testnet
 - PWN deployed at: _0xdB41a9D0Ae5cBEE58b3e2D00DA6Bd1eB323B92e8_
 - PWNDeed deployed at: _0x4704A3492F3c839B88fB3920ddAff8b3a6F4f7bC_
 - PWNVault deployed at: _0xA1ECA77e64a348B28E1aadf2Bf56D1Eb68Ca518e_
+
+### OpenSea shortcuts
+- PWN Deeds Listings: https://opensea.io/collection/pwn-deed
+- Collateral Collection: https://opensea.io/0x45db28b2d4878ad124c037d4558acf5db3bba6a5
+
+# PWN is hiring!
+https://www.notion.so/PWN-is-hiring-f5a49899369045e39f41fc7e4c7b5633
