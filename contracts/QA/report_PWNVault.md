@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ../PWNVault.sol | 84142a4d7284a180d88fb7bb0886fe5f7b98defd |
+| ../PWNVault.sol | c18f87f7469bc8799c277447b1ab10c74d326224 |
 
 
 ### Contracts Description Table
@@ -20,8 +20,8 @@
 | └ | push | External ❗️ | 🛑  | onlyPWN |
 | └ | pull | External ❗️ | 🛑  | onlyPWN |
 | └ | pullProxy | External ❗️ | 🛑  | onlyPWN |
-| └ | onERC1155Received | External ❗️ | 🛑  |NO❗️ |
-| └ | onERC1155BatchReceived | External ❗️ | 🛑  |NO❗️ |
+| └ | onERC1155Received | External ❗️ |   |NO❗️ |
+| └ | onERC1155BatchReceived | External ❗️ |   |NO❗️ |
 | └ | setPWN | External ❗️ | 🛑  | onlyOwner |
 | └ | supportsInterface | External ❗️ |   |NO❗️ |
 

@@ -5,7 +5,7 @@
 
 |  File Name  |  SHA-1 Hash  |
 |-------------|--------------|
-| ../PWN.sol | 7ae2955f39d4741fa8799e597a3c54154a9dda14 |
+| ../PWN.sol | c52439ca5e98dfaaeb5c5784c0a04c2f85eb08f1 |
 
 
 ### Contracts Description Table
@@ -17,14 +17,13 @@
 ||||||
 | **PWN** | Implementation | Ownable |||
 | └ | <Constructor> | Public ❗️ | 🛑  | Ownable |
-| └ | newDeed | External ❗️ | 🛑  |NO❗️ |
+| └ | createDeed | External ❗️ | 🛑  |NO❗️ |
 | └ | revokeDeed | External ❗️ | 🛑  |NO❗️ |
 | └ | makeOffer | External ❗️ | 🛑  |NO❗️ |
 | └ | revokeOffer | External ❗️ | 🛑  |NO❗️ |
 | └ | acceptOffer | External ❗️ | 🛑  |NO❗️ |
-| └ | payBack | External ❗️ | 🛑  |NO❗️ |
+| └ | repayLoan | External ❗️ | 🛑  |NO❗️ |
 | └ | claimDeed | External ❗️ | 🛑  |NO❗️ |
-| └ | changeMinDuration | External ❗️ | 🛑  | onlyOwner |
 
 
 ### Legend

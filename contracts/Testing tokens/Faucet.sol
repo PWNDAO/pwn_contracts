@@ -17,7 +17,7 @@ contract Faucet is Ownable{
     Basic1155 public ERC1155a;
     Basic1155 public ERC1155b;
 
-    constructor(address a, address b, address c, address d, address e, address f, address g, address h)
+    constructor(address a, address b, address c, address d, address e, address f, address g, address h, uint256 n)
     Ownable()
     {
         ERC20a = Basic20(a);
@@ -28,6 +28,7 @@ contract Faucet is Ownable{
         ERC721c = Basic721(f);
         ERC1155a = Basic1155(g);
         ERC1155b = Basic1155(h);
+        nonce = n;
     }
 
     function gimme(address _address) external {
