@@ -107,7 +107,7 @@ describe("PWN contract", function() {
 	});
 
 
-	describe("Accept offer", function() {
+	describe("Create deed", function() {
 
 		beforeEach(async function() {
 			vaultFake.push.returns(true);
@@ -120,7 +120,7 @@ describe("PWN contract", function() {
 			offer[1] = CATEGORY.unknown;
 
 			try {
-				await pwn.connect(borrower).acceptOffer(...offer);
+				await pwn.connect(borrower).createDeed(...offer);
 			} catch {
 				failed = true;
 			}
@@ -129,7 +129,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should mint deed token for offer signer", async function() {
-			await pwn.connect(borrower).acceptOffer(...offer);
+			await pwn.connect(borrower).createDeed(...offer);
 
 			expect(deedFake.create).to.have.been.calledOnce;
 			const args = deedFake.create.getCall(0).args;
@@ -151,7 +151,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should send borrower collateral to vault", async function() {
-			await pwn.connect(borrower).acceptOffer(...offer);
+			await pwn.connect(borrower).createDeed(...offer);
 
 			expect(vaultFake.push).to.have.been.calledOnce;
 			const args = vaultFake.push.getCall(0).args;
@@ -164,7 +164,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should send lender asset to borrower", async function() {
-			await pwn.connect(borrower).acceptOffer(...offer);
+			await pwn.connect(borrower).createDeed(...offer);
 
 			expect(vaultFake.pullProxy).to.have.been.calledOnce;
 			const args = vaultFake.pullProxy.getCall(0).args;
@@ -178,7 +178,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should return true if successful", async function() {
-			const success = await pwn.connect(borrower).callStatic.acceptOffer(...offer);
+			const success = await pwn.connect(borrower).callStatic.createDeed(...offer);
 
 			expect(success).to.equal(true);
 		});

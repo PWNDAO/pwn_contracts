@@ -59,7 +59,7 @@ contract PWN is Ownable {
     }
 
     /**
-     * acceptOffer
+     * createDeed
      * @notice Borrower can accept existing signed off-chain offer
      * @dev A UI should do an off-chain balance check on the lender side to make sure the call won't throw
      * @param _collateralAssetAddress Address of an asset used as a collateral
@@ -72,11 +72,11 @@ contract PWN is Ownable {
      * @param _duration Loan duration in seconds
      * @param _offerExpiration Offer expiration timestamp in seconds
      * @param _lender Address of an offer signer
-     * @param _nonce Incremental nonce to help distinguish between otherwise identical offers
+     * @param _nonce Nonce to help distinguish between otherwise identical offers
      * @param _signature Offer signature signed by lender
      * @return True if successful
      */
-    function acceptOffer(
+    function createDeed(
         address _collateralAssetAddress,
         MultiToken.Category _collateralCategory,
         uint256 _collateralAssetAmount,

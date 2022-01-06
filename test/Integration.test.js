@@ -132,7 +132,7 @@ describe("PWN contract", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bWETH.approve(PWNVault.address, 200);
-			const tx = await bPWN.acceptOffer(...offer, signature);
+			const tx = await bPWN.createDeed(...offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -155,7 +155,7 @@ describe("PWN contract", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.acceptOffer(...offer, signature);
+			const tx = await bPWN.createDeed(...offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -178,7 +178,7 @@ describe("PWN contract", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bGAME.setApprovalForAll(PWNVault.address, true);
-			const tx = await bPWN.acceptOffer(...offer, signature);
+			const tx = await bPWN.createDeed(...offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -207,7 +207,7 @@ describe("PWN contract", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.acceptOffer(...offer, signature);
+			const tx = await bPWN.createDeed(...offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -234,7 +234,7 @@ describe("PWN contract", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.acceptOffer(...offer, signature);
+			const tx = await bPWN.createDeed(...offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -264,7 +264,7 @@ describe("PWN contract", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.acceptOffer(...offer, signature);
+			const tx = await bPWN.createDeed(...offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
