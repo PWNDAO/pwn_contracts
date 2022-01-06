@@ -145,7 +145,7 @@ contract PWNDeed is ERC1155, Ownable {
         bytes memory _signature,
         address _sender
     ) external onlyPWN {
-        bytes32 offerHash = getOfferHash(_offer);
+        bytes32 offerHash = keccak256(abi.encode(_offer));
         bytes32 offerEthSignedMessageHash = ECDSA.toEthSignedMessageHash(offerHash);
         address signer = ECDSA.recover(offerEthSignedMessageHash, _signature);
 
@@ -217,35 +217,6 @@ contract PWNDeed is ERC1155, Ownable {
 
         delete deeds[_did];
         _burn(_owner, _did, 1);
-    }
-
-    /*----------------------------------------------------------*|
-    |*  ## UTILITY FUNCTIONS                                    *|
-    |*----------------------------------------------------------*/
-
-    /**
-     * getOfferHash
-     * @notice Encode and hash given offer
-     * @param _offer Offer to hash
-     * @return Offer hash
-     */
-    function getOfferHash(Offer memory _offer) private pure returns (bytes32) {
-        bytes memory encodedOffer = abi.encodePacked(
-            _offer.collateral.assetAddress,
-            _offer.collateral.category,
-            _offer.collateral.amount,
-            _offer.collateral.id,
-            _offer.loan.assetAddress,
-            _offer.loan.amount,
-            _offer.loanRepayAmount,
-            _offer.duration,
-            _offer.expiration,
-            _offer.lender,
-            _offer.nonce,
-            _offer.chainId
-        );
-
-        return keccak256(encodedOffer);
     }
 
     /*----------------------------------------------------------*|

@@ -14,15 +14,11 @@ async function timestampFromNow(delta) {
 }
 
 function getOfferHashBytes(offer) {
-	const offerHash = ethers.utils.solidityKeccak256(
-		["address", "uint8", "uint256", "uint256", "address", "uint256", "uint256", "uint32", "uint40", "address", "uint256", "uint256"],
-		[
-			offer[0][0], offer[0][1], offer[0][2], offer[0][3],
-			offer[1][0], offer[1][2],
-			offer[2], offer[3], offer[4], offer[5], offer[6], offer[7],
-		]
+	const encodedOffer = ethers.utils.defaultAbiCoder.encode(
+		[ "tuple(tuple(address, uint8, uint256, uint256), tuple(address, uint8, uint256, uint256), uint256, uint32, uint40, address, uint256, uint256)" ],
+		[ offer ]
 	);
-
+	const offerHash = ethers.utils.keccak256(encodedOffer);
 	return ethers.utils.arrayify(offerHash);
 }
 
@@ -47,7 +43,7 @@ function getOfferStruct(
 		offerExpiration,
 		lender,
 		nonce,
-		31337,
+		31337, // Default hardhat network chain id
 	];
 }
 
