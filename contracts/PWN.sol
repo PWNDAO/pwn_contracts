@@ -51,7 +51,7 @@ contract PWN is Ownable {
      */
     function revokeOffer(
         bytes32 _offerHash,
-        bytes memory _signature
+        bytes calldata _signature
     ) external returns (bool) {
         deed.revokeOffer(_offerHash, _signature, msg.sender);
 

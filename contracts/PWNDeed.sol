@@ -121,7 +121,7 @@ contract PWNDeed is ERC1155, Ownable {
      */
     function revokeOffer(
         bytes32 _offerHash,
-        bytes memory _signature,
+        bytes calldata _signature,
         address _sender
     ) external onlyPWN {
         bytes32 offerEthSignedMessageHash = ECDSA.toEthSignedMessageHash(_offerHash);
