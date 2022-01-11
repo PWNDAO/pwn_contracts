@@ -61,7 +61,7 @@ contract PWNDeed is ERC1155, Ownable {
         uint32 duration;
         uint40 expiration;
         address lender;
-        uint256 nonce;
+        bytes32 nonce;
         uint256 chainId;
     }
 

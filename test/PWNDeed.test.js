@@ -17,7 +17,7 @@ describe("PWNDeed contract", function() {
 	const duration = 31323;
 	const loanRepayAmount = 2222;
 	const offerExpiration = 0;
-	const nonce = 1;
+	const nonce = ethers.utils.solidityKeccak256([ "string" ], [ "nonce" ]);
 
 	before(async function() {
 		Deed = await ethers.getContractFactory("PWNDeed");
@@ -282,7 +282,7 @@ describe("PWNDeed contract", function() {
 			await deed.create(offer, signature, borrower.address);
 			const did1 = await deed.id();
 
-			offer[6] = 2;
+			offer[6] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
 			offerHash = getOfferHashBytes(offer);
 			signature = await lender.signMessage(offerHash);
 

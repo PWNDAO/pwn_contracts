@@ -62,6 +62,7 @@ contract PWN is Ownable {
      * createDeed
      * @notice Borrower can accept existing signed off-chain offer
      * @dev A UI should do an off-chain balance check on the lender side to make sure the call won't throw
+     * @dev Loan asset has to be an ERC20 token, otherwise will transaction fail
      * @param _collateralAssetAddress Address of an asset used as a collateral
      * @param _collateralCategory Category of an asset used as a collateral (ERC20, ERC721, ERC1155)
      * @param _collateralAssetId Id of a ERC721 or ERC1155 asset
@@ -87,7 +88,7 @@ contract PWN is Ownable {
         uint32 _duration,
         uint40 _offerExpiration,
         address _lender,
-        uint256 _nonce,
+        bytes32 _nonce,
         bytes memory _signature
     ) external returns (bool) {
         MultiToken.Asset memory collateral = MultiToken.Asset(

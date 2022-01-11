@@ -19,7 +19,7 @@ describe("PWN contract", function() {
 	const duration = 31323;
 	const loanRepayAmount = 2222;
 	const offerExpiration = 33333333;
-	const nonce = 1;
+	const nonce = ethers.utils.solidityKeccak256([ "string" ], [ "nonce" ]);
 	const signature = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a6732801029378ddf837210000397c68129387fd887839708320980942102910a00";
 
 	before(async function() {

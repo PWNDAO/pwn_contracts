@@ -18,6 +18,7 @@ describe("PWN contract", function () {
 	const lInitialDAI = 1000;
 	const bInitialDAI = 200;
 	const bInitialWETH = 100;
+	const nonce = ethers.utils.solidityKeccak256([ "string" ], [ "nonce" ]);
 
 	beforeEach(async function () {
 		ERC20 = await ethers.getContractFactory("Basic20");
@@ -103,7 +104,7 @@ describe("PWN contract", function () {
 				getOfferStruct(
 					NFT.address, CATEGORY.ERC721, 0, 42,
 					DAI.address, 1000,
-					1200, 3600, 0, lender.address, 1, 31337,
+					1200, 3600, 0, lender.address, nonce, 31337,
 				)
 			);
 			const signature = await lender.signMessage(offerHash);
@@ -123,7 +124,7 @@ describe("PWN contract", function () {
 			const offer = [
 				WETH.address, CATEGORY.ERC20, 100, 0,
 				DAI.address, 1000,
-				1200, 3600, 0, lender.address, 1,
+				1200, 3600, 0, lender.address, nonce,
 			];
 			const offerHash = getOfferHashBytes(
 				getOfferStruct(...offer)
@@ -146,7 +147,7 @@ describe("PWN contract", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
 				DAI.address, 1000,
-				1200, 3600, 0, lender.address, 1,
+				1200, 3600, 0, lender.address, nonce,
 			];
 			const offerHash = getOfferHashBytes(
 				getOfferStruct(...offer)
@@ -169,7 +170,7 @@ describe("PWN contract", function () {
 			const offer = [
 				GAME.address, CATEGORY.ERC1155, 1, 1337,
 				DAI.address, 1000,
-				1200, 3600, 0, lender.address, 1,
+				1200, 3600, 0, lender.address, nonce,
 			];
 			const offerHash = getOfferHashBytes(
 				getOfferStruct(...offer)
@@ -198,7 +199,7 @@ describe("PWN contract", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
 				DAI.address, 1000,
-				1200, 3600, 0, lender.address, 1,
+				1200, 3600, 0, lender.address, nonce,
 			];
 			const offerHash = getOfferHashBytes(
 				getOfferStruct(...offer)
@@ -225,7 +226,7 @@ describe("PWN contract", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
 				DAI.address, 1000,
-				1200, 3600, 0, lender.address, 1,
+				1200, 3600, 0, lender.address, nonce,
 			];
 			const offerHash = getOfferHashBytes(
 				getOfferStruct(...offer)
@@ -255,7 +256,7 @@ describe("PWN contract", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
 				DAI.address, 1000,
-				1200, 3600, 0, lender.address, 1,
+				1200, 3600, 0, lender.address, nonce,
 			];
 			const offerHash = getOfferHashBytes(
 				getOfferStruct(...offer)
