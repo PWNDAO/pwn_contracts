@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { time } = require('@openzeppelin/test-helpers');
-const { CATEGORY, getOfferHashBytes, getOfferStruct } = require("./test-helpers");
+const { CATEGORY, getOfferHashBytes, signOffer } = require("./test-helpers");
 
 
 describe("PWN contract", function () {
@@ -100,14 +100,13 @@ describe("PWN contract", function () {
 	describe("Workflow - Offers handling", function () {
 
 		it("Should be possible to revoke an offer", async function () {
-			const offerHash = getOfferHashBytes(
-				getOfferStruct(
-					NFT.address, CATEGORY.ERC721, 0, 42,
-					DAI.address, 1000,
-					1200, 3600, 0, lender.address, nonce, 31337,
-				)
-			);
-			const signature = await lender.signMessage(offerHash);
+			const offer = [
+				NFT.address, CATEGORY.ERC721, 0, 42,
+				DAI.address, 1000,
+				1200, 3600, 0, lender.address, nonce,
+			];
+			const offerHash = getOfferHashBytes(offer, PWNDeed.address);
+			const signature = await signOffer(offer, PWNDeed.address, lender);
 
 			lPWN.revokeOffer(offerHash, signature);
 
@@ -126,10 +125,7 @@ describe("PWN contract", function () {
 				DAI.address, 1000,
 				1200, 3600, 0, lender.address, nonce,
 			];
-			const offerHash = getOfferHashBytes(
-				getOfferStruct(...offer)
-			);
-			const signature = await lender.signMessage(offerHash);
+			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bWETH.approve(PWNVault.address, 200);
@@ -149,10 +145,7 @@ describe("PWN contract", function () {
 				DAI.address, 1000,
 				1200, 3600, 0, lender.address, nonce,
 			];
-			const offerHash = getOfferHashBytes(
-				getOfferStruct(...offer)
-			);
-			const signature = await lender.signMessage(offerHash);
+			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
@@ -172,10 +165,7 @@ describe("PWN contract", function () {
 				DAI.address, 1000,
 				1200, 3600, 0, lender.address, nonce,
 			];
-			const offerHash = getOfferHashBytes(
-				getOfferStruct(...offer)
-			);
-			const signature = await lender.signMessage(offerHash);
+			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bGAME.setApprovalForAll(PWNVault.address, true);
@@ -201,10 +191,7 @@ describe("PWN contract", function () {
 				DAI.address, 1000,
 				1200, 3600, 0, lender.address, nonce,
 			];
-			const offerHash = getOfferHashBytes(
-				getOfferStruct(...offer)
-			);
-			const signature = await lender.signMessage(offerHash);
+			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
@@ -228,10 +215,7 @@ describe("PWN contract", function () {
 				DAI.address, 1000,
 				1200, 3600, 0, lender.address, nonce,
 			];
-			const offerHash = getOfferHashBytes(
-				getOfferStruct(...offer)
-			);
-			const signature = await lender.signMessage(offerHash);
+			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
@@ -258,10 +242,7 @@ describe("PWN contract", function () {
 				DAI.address, 1000,
 				1200, 3600, 0, lender.address, nonce,
 			];
-			const offerHash = getOfferHashBytes(
-				getOfferStruct(...offer)
-			);
-			const signature = await lender.signMessage(offerHash);
+			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);

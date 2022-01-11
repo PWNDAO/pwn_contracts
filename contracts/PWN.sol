@@ -112,8 +112,7 @@ contract PWN is Ownable {
             _duration,
             _offerExpiration,
             _lender,
-            _nonce,
-            block.chainid
+            _nonce
         );
 
         deed.create(offer, _signature, msg.sender);

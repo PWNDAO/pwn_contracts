@@ -144,7 +144,6 @@ describe("PWN contract", function() {
 			expect(args._offer.expiration).to.equal(offerExpiration);
 			expect(args._offer.lender).to.equal(lender.address);
 			expect(args._offer.nonce).to.equal(nonce);
-			expect(args._offer.chainId).to.equal(31337); // Default hardhat network chain id
 			expect(args._signature).to.equal(signature);
 			expect(args._sender).to.equal(borrower.address);
 			expect(vaultFake.pullProxy).to.have.been.calledAfter(deedFake.create);

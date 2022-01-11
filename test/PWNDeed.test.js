@@ -2,7 +2,7 @@ const chai = require("chai");
 const { ethers } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const { time } = require('@openzeppelin/test-helpers');
-const { CATEGORY, timestampFromNow, getOfferHashBytes } = require("./test-helpers");
+const { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, getOfferStruct } = require("./test-helpers");
 
 const expect = chai.expect;
 chai.use(smock.matchers);
@@ -50,18 +50,13 @@ describe("PWNDeed contract", function() {
 		await deed.setPWN(pwn.address);
 
 		offer = [
-			[collateral.assetAddress, collateral.category, collateral.amount, collateral.id],
-			[loan.assetAddress, 0, loan.amount, 0],
-			loanRepayAmount,
-			duration,
-			offerExpiration,
-			lender.address,
-			nonce,
-			31337,
+			collateral.assetAddress, collateral.category, collateral.amount, collateral.id,
+			loan.assetAddress, loan.amount,
+			loanRepayAmount, duration, offerExpiration, lender.address, nonce,
 		];
 
-		offerHash = getOfferHashBytes(offer);
-		signature = await lender.signMessage(offerHash);
+		offerHash = getOfferHashBytes(offer, deed.address);
+		signature = await signOffer(offer, deed.address, lender);
 	});
 
 
@@ -163,7 +158,7 @@ describe("PWNDeed contract", function() {
 
 		it("Should fail when sender is not PWN contract", async function() {
 			try {
-				await deed.connect(addr1).create(offer, signature, borrower.address);
+				await deed.connect(addr1).create(getOfferStruct(...offer), signature, borrower.address);
 
 				expect.fail();
 			} catch(error) {
@@ -173,10 +168,10 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should fail when offer lender is not offer signer", async function() {
-			offer[5] = addr1.address;
+			offer[9] = addr1.address;
 
 			try {
-				await deed.create(offer, signature, borrower.address);
+				await deed.create(getOfferStruct(...offer), signature, borrower.address);
 
 				expect.fail();
 			} catch(error) {
@@ -189,7 +184,7 @@ describe("PWNDeed contract", function() {
 			const fakeSignature = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a6732801029378ddf837210000397c68129387fd887839708320980942102910a00";
 
 			try {
-				await deed.create(offer, fakeSignature, borrower.address);
+				await deed.create(getOfferStruct(...offer), fakeSignature, borrower.address);
 
 				expect.fail();
 			} catch(error) {
@@ -199,12 +194,12 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should fail when offer is expired", async function() {
-			offer[4] = 1;
-			offerHash = getOfferHashBytes(offer);
-			signature = await lender.signMessage(offerHash);
+			offer[8] = 1;
+			offerHash = getOfferHashBytes(offer, deed.address);
+			signature = await signOffer(offer, deed.address, lender);
 
 			try {
-				await deed.create(offer, signature, borrower.address);
+				await deed.create(getOfferStruct(...offer), signature, borrower.address);
 
 				expect.fail();
 			} catch(error) {
@@ -215,13 +210,13 @@ describe("PWNDeed contract", function() {
 
 		it("Should pass when offer has expiration but is not expired", async function() {
 			const expiration = await timestampFromNow(100);
-			offer[4] = expiration;
-			offerHash = getOfferHashBytes(offer);
-			signature = await lender.signMessage(offerHash);
+			offer[8] = expiration;
+			offerHash = getOfferHashBytes(offer, deed.address);
+			signature = await signOffer(offer, deed.address, lender);
 			let failed = false;
 
 			try {
-				await deed.create(offer, signature, borrower.address);
+				await deed.create(getOfferStruct(...offer), signature, borrower.address);
 			} catch {
 				failed = true;
 			}
@@ -233,7 +228,7 @@ describe("PWNDeed contract", function() {
 			await deed.revokeOffer(offerHash, signature, lender.address);
 
 			try {
-				await deed.create(offer, signature, borrower.address);
+				await deed.create(getOfferStruct(...offer), signature, borrower.address);
 
 				expect.fail();
 			} catch(error) {
@@ -243,14 +238,14 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should revoke accepted offer", async function() {
-			await deed.create(offer, signature, borrower.address);
+			await deed.create(getOfferStruct(...offer), signature, borrower.address);
 
 			const isRevoked = await deed.revokedOffers(offerHash);
 			expect(isRevoked).to.equal(true);
 		});
 
 		it("Should mint deed ERC1155 token", async function () {
-			await deed.create(offer, signature, borrower.address);
+			await deed.create(getOfferStruct(...offer), signature, borrower.address);
 			const did = await deed.id();
 
 			const balance = await deed.balanceOf(lender.address, did);
@@ -258,7 +253,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should save deed data", async function () {
-			await deed.create(offer, signature, borrower.address);
+			await deed.create(getOfferStruct(...offer), signature, borrower.address);
 			const expiration = await timestampFromNow(duration);
 			const did = await deed.id();
 
@@ -279,21 +274,21 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should increase global deed ID", async function() {
-			await deed.create(offer, signature, borrower.address);
+			await deed.create(getOfferStruct(...offer), signature, borrower.address);
 			const did1 = await deed.id();
 
-			offer[6] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
-			offerHash = getOfferHashBytes(offer);
-			signature = await lender.signMessage(offerHash);
+			offer[10] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
+			offerHash = getOfferHashBytes(offer, deed.address);
+			signature = await signOffer(offer, deed.address, lender);
 
-			await deed.create(offer, signature, borrower.address);
+			await deed.create(getOfferStruct(...offer), signature, borrower.address);
 			const did2 = await deed.id();
 
 			expect(did2).to.equal(did1.add(1));
 		});
 
 		it("Should emit DeedCreated event", async function() {
-			const tx = await deed.create(offer, signature, borrower.address);
+			const tx = await deed.create(getOfferStruct(...offer), signature, borrower.address);
 			const response = await tx.wait();
 			const did = await deed.id();
 
@@ -313,7 +308,7 @@ describe("PWNDeed contract", function() {
 		let did;
 
 		beforeEach(async function() {
-			await deed.create(offer, signature, borrower.address);
+			await deed.create(getOfferStruct(...offer), signature, borrower.address);
 			did = await deed.id();
 		});
 
@@ -383,7 +378,10 @@ describe("PWNDeed contract", function() {
 			deedMock = await deedMockFactory.deploy("https://test.uri");
 			await deedMock.setPWN(pwn.address);
 
-			await deedMock.create(offer, signature, borrower.address);
+			offerHash = getOfferHashBytes(offer, deedMock.address);
+			signature = await signOffer(offer, deedMock.address, lender);
+
+			await deedMock.create(getOfferStruct(...offer), signature, borrower.address);
 			did = await deedMock.id();
 		});
 
@@ -489,7 +487,10 @@ describe("PWNDeed contract", function() {
 			deedMock = await deedMockFactory.deploy("https://test.uri");
 			await deedMock.setPWN(pwn.address);
 
-			await deedMock.create(offer, signature, borrower.address);
+			offerHash = getOfferHashBytes(offer, deedMock.address);
+			signature = await signOffer(offer, deedMock.address, lender);
+
+			await deedMock.create(getOfferStruct(...offer), signature, borrower.address);
 			did = await deedMock.id();
 		});
 

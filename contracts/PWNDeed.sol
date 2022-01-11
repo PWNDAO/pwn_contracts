@@ -24,6 +24,25 @@ contract PWNDeed is ERC1155, Ownable {
     uint256 public id;
 
     /**
+     * EIP-712 offer struct type hash
+     */
+    bytes32 constant OFFER_TYPEHASH = keccak256(
+        "Offer(MultiTokenAsset collateral,MultiTokenAsset loan,uint256 loanRepayAmount,uint32 duration,uint40 expiration,address lender,bytes32 nonce)MultiTokenAsset(address assetAddress,uint8 category,uint256 amount,uint256 id)"
+    );
+
+    /**
+     * EIP-712 multitoken asset struct type hash
+     */
+    bytes32 constant MULTITOKEN_ASSET_TYPEHASH = keccak256(
+        "MultiTokenAsset(address assetAddress,uint8 category,uint256 amount,uint256 id)"
+    );
+
+    /**
+     * EIP-712 domain separator
+     */
+    bytes32 immutable EIP712_DOMAIN_SEPARATOR;
+
+    /**
      * Construct defining a Deed
      * @param status 0 == none/dead || 1 == new/open || 2 == running/accepted offer || 3 == paid back || 4 == expired
      * @param borrower Address of the issuer / borrower - stays the same for entire lifespan of the token
@@ -52,7 +71,6 @@ contract PWNDeed is ERC1155, Ownable {
      * @param expiration Offer expiration timestamp in seconds
      * @param lender Offer owner and provider of a loan asset
      * @param nonce Incremental nonce to help distinguish between otherwise identical offers
-     * @param chainId Id of a chain the loan will take place
      */
     struct Offer {
         MultiToken.Asset collateral;
@@ -62,7 +80,6 @@ contract PWNDeed is ERC1155, Ownable {
         uint40 expiration;
         address lender;
         bytes32 nonce;
-        uint256 chainId;
     }
 
     /**
@@ -104,7 +121,13 @@ contract PWNDeed is ERC1155, Ownable {
      * @param _uri Uri to be used for finding the token metadata (https://api.pwn.finance/deed/...)
      */
     constructor(string memory _uri) ERC1155(_uri) Ownable() {
-
+        EIP712_DOMAIN_SEPARATOR = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256(bytes("PWN")),
+            keccak256(bytes("2")),
+            block.chainid,
+            address(this)
+        ));
     }
 
     /**
@@ -124,8 +147,7 @@ contract PWNDeed is ERC1155, Ownable {
         bytes calldata _signature,
         address _sender
     ) external onlyPWN {
-        bytes32 offerEthSignedMessageHash = ECDSA.toEthSignedMessageHash(_offerHash);
-        require(ECDSA.recover(offerEthSignedMessageHash, _signature) == _sender, "Sender is not an offer signer");
+        require(ECDSA.recover(_offerHash, _signature) == _sender, "Sender is not an offer signer");
         require(revokedOffers[_offerHash] == false, "Offer is already revoked or has been accepted");
 
         revokedOffers[_offerHash] = true;
@@ -145,9 +167,12 @@ contract PWNDeed is ERC1155, Ownable {
         bytes memory _signature,
         address _sender
     ) external onlyPWN {
-        bytes32 offerHash = keccak256(abi.encode(_offer));
-        bytes32 offerEthSignedMessageHash = ECDSA.toEthSignedMessageHash(offerHash);
-        address signer = ECDSA.recover(offerEthSignedMessageHash, _signature);
+        bytes32 offerHash = keccak256(abi.encodePacked(
+            "\x19\x01",
+            EIP712_DOMAIN_SEPARATOR,
+            hash(_offer)
+        ));
+        address signer = ECDSA.recover(offerHash, _signature);
 
         require(signer == _offer.lender, "Lender address didn't sign the offer");
         require(_offer.expiration == 0 || block.timestamp < _offer.expiration, "Offer is expired");
@@ -328,5 +353,44 @@ contract PWNDeed is ERC1155, Ownable {
      */
     function setUri(string memory _newUri) external onlyOwner {
         _setURI(_newUri);
+    }
+
+    /*--------------------------------*|
+    |*  ## PRIVATE FUNCTIONS          *|
+    |*--------------------------------*/
+
+    /**
+     * hash offer
+     * @notice Hash offer struct according to EIP-712
+     * @param _offer Offer struct to be hashed
+     * @return Offer struct hash
+     */
+    function hash(Offer memory _offer) private pure returns (bytes32) {
+        return keccak256(abi.encode(
+            OFFER_TYPEHASH,
+            hash(_offer.collateral),
+            hash(_offer.loan),
+            _offer.loanRepayAmount,
+            _offer.duration,
+            _offer.expiration,
+            _offer.lender,
+            _offer.nonce
+        ));
+    }
+
+    /**
+     * hash multitoken asset
+     * @notice Hash MultiToken asset struct according to EIP-712
+     * @param _asset MultiToken asset struct to be hashed
+     * @return MultiToken asset struct hash
+     */
+    function hash(MultiToken.Asset memory _asset) private pure returns (bytes32) {
+        return keccak256(abi.encode(
+            MULTITOKEN_ASSET_TYPEHASH,
+            _asset.assetAddress,
+            _asset.category,
+            _asset.amount,
+            _asset.id
+        ));
     }
 }
