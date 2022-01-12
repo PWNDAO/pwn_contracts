@@ -19,7 +19,7 @@ contract PWNDeed is ERC1155, Ownable {
     address public PWN;
 
     /**
-     * Simple DeedID counter
+     * Incremental DeedID counter
      */
     uint256 public id;
 
@@ -45,7 +45,7 @@ contract PWNDeed is ERC1155, Ownable {
     /**
      * Construct defining a Deed
      * @param status 0 == none/dead || 1 == new/open || 2 == running/accepted offer || 3 == paid back || 4 == expired
-     * @param borrower Address of the issuer / borrower - stays the same for entire lifespan of the token
+     * @param borrower Address of the borrower - stays the same for entire lifespan of the token
      * @param duration Loan duration in seconds
      * @param expiration Unix timestamp (in seconds) setting up the default deadline
      * @param collateral Asset used as a loan collateral. Consisting of another `Asset` struct defined in the MultiToken library
@@ -63,7 +63,7 @@ contract PWNDeed is ERC1155, Ownable {
     }
 
     /**
-     * Construct defining an offer
+     * Construct defining an Offer
      * @param collateral Asset used as a loan collateral
      * @param loan Asset to be borrowed by lender to borrower
      * @param loanRepayAmount Amount of loan asset to be repaid
@@ -88,7 +88,7 @@ contract PWNDeed is ERC1155, Ownable {
     mapping (uint256 => Deed) public deeds;
 
     /**
-     * Mapping of revoked offers by offer eth signed message hash
+     * Mapping of revoked offers by offer struct typed hash
      */
     mapping (bytes32 => bool) public revokedOffers;
 
@@ -138,8 +138,8 @@ contract PWNDeed is ERC1155, Ownable {
      * revokeOffer
      * @notice Revoke an offer
      * @dev Offer is revoked by lender or when offer is accepted by borrower to prevent accepting it twice
-     * @param _offerHash Hash of an encoded offer
-     * @param _signature Signature of the eth signed message hash
+     * @param _offerHash Offer typed struct hash
+     * @param _signature Offer typed struct signature
      * @param _sender Address of a message sender (lender)
      */
     function revokeOffer(
@@ -159,7 +159,7 @@ contract PWNDeed is ERC1155, Ownable {
      * create
      * @notice Creates the PWN Deed token contract - ERC1155 with extra use case specific features
      * @param _offer Offer struct holding plain offer data
-     * @param _signature Offer signature signed by lender
+     * @param _signature Offer typed struct signature signed by lender
      * @param _sender Address of a message sender (borrower)
      */
     function create(
@@ -326,7 +326,7 @@ contract PWNDeed is ERC1155, Ownable {
     /**
      * isRevoked
      * @dev utility function to find out if offer is revoked
-     * @param _offerHash Hash of an encoded offer
+     * @param _offerHash Offer typed struct hash
      * @return True if offer is revoked
      */
     function isRevoked(bytes32 _offerHash) public view returns (bool) {

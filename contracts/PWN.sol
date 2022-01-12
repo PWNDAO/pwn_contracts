@@ -45,8 +45,8 @@ contract PWN is Ownable {
      * revokeOffer
      * @notice Lender can use this function to revoke their off-chain offers
      * @dev Can be called only from address that signed the offer
-     * @param _offerHash Hash of an encoded offer
-     * @param _signature Signature of the eth signed message hash
+     * @param _offerHash Offer typed struct hash
+     * @param _signature Offer typed struct signature
      * @return True if successful
      */
     function revokeOffer(
@@ -65,8 +65,8 @@ contract PWN is Ownable {
      * @dev Loan asset has to be an ERC20 token, otherwise will transaction fail
      * @param _collateralAssetAddress Address of an asset used as a collateral
      * @param _collateralCategory Category of an asset used as a collateral (ERC20, ERC721, ERC1155)
-     * @param _collateralAssetId Id of a ERC721 or ERC1155 asset
-     * @param _collateralAssetAmount Amount of a ERC20 or ERC1155 asset
+     * @param _collateralAssetId Id of an ERC721 or ERC1155 asset
+     * @param _collateralAssetAmount Amount of an ERC20 or ERC1155 asset
      * @param _loanAssetAddress Address of a loan asset
      * @param _loanAssetAmount Amount of a loan asset (can be only ERC20, so category and id are redundant)
      * @param _loanRepayAmount Amount of a loan asset, which borrower has to repay to get his collateral back
@@ -74,7 +74,7 @@ contract PWN is Ownable {
      * @param _offerExpiration Offer expiration timestamp in seconds
      * @param _lender Address of an offer signer
      * @param _nonce Nonce to help distinguish between otherwise identical offers
-     * @param _signature Offer signature signed by lender
+     * @param _signature Offer typed struct signed by lender
      * @return True if successful
      */
     function createDeed(
@@ -126,7 +126,7 @@ contract PWN is Ownable {
 
     /**
      * repayLoan
-     * @notice The borrower can pay back the funds through this function
+     * @notice The borrower can pay back the loan through this function
      * @dev The function assumes the asset (and amount to be paid back) to be returned is approved for PWNVault
      * @dev The function assumes the borrower has the full amount to be paid back in their account
      * @param _did Deed ID of the deed being paid back
