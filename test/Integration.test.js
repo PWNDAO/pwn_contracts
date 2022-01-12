@@ -7,8 +7,8 @@ describe("PWN contract", function () {
 
 	let ERC20, ERC721, ERC1155;
 	let NFT, WETH, DAI, GAME;
-	let PWN, PWNDeed, PWNVault;
-	let borrower, lender;
+	let PWN, PWNDeed, PWNVault, ContractWallet;
+	let borrower, lender, contractOwner;
 	let addr1, addr2, addrs;
 
 	const deedEventIface = new ethers.utils.Interface([
@@ -28,8 +28,9 @@ describe("PWN contract", function () {
 		PWN = await ethers.getContractFactory("PWN");
 		PWNDeed = await ethers.getContractFactory("PWNDeed");
 		PWNVault = await ethers.getContractFactory("PWNVault");
+		ContractWallet = await ethers.getContractFactory("ContractWallet");
 
-		[borrower, lender, addr1, addr2, ...addrs] = await ethers.getSigners();
+		[borrower, lender, contractOwner, addr1, addr2, ...addrs] = await ethers.getSigners();
 
 		WETH = await ERC20.deploy("Fake wETH", "WETH");
 		DAI = await ERC20.deploy("Fake Dai", "DAI");
@@ -39,6 +40,7 @@ describe("PWN contract", function () {
 		PWNDeed = await PWNDeed.deploy("https://pwn.finance/");
 		PWNVault = await PWNVault.deploy();
 		PWN = await PWN.deploy(PWNDeed.address, PWNVault.address);
+		ContractWallet = await ContractWallet.connect(contractOwner).deploy();
 
 		await NFT.deployed();
 		await DAI.deployed();
@@ -51,6 +53,7 @@ describe("PWN contract", function () {
 		await PWNVault.setPWN(PWN.address);
 
 		await DAI.mint(lender.address, lInitialDAI);
+		await DAI.mint(ContractWallet.address, lInitialDAI);
 		await DAI.mint(borrower.address, bInitialDAI);
 		await WETH.mint(borrower.address, bInitialWETH);
 		await NFT.mint(borrower.address, 42);
@@ -108,9 +111,24 @@ describe("PWN contract", function () {
 			const offerHash = getOfferHashBytes(offer, PWNDeed.address);
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 
-			lPWN.revokeOffer(offerHash, signature);
+			await lPWN.revokeOffer(offerHash, signature);
 
-			const isRevoked = await lPWND.isRevoked(offerHash);
+			const isRevoked = await PWNDeed.isRevoked(offerHash);
+			expect(isRevoked).to.equal(true);
+		});
+
+		it("Should be possible to revoke an offer on behalf of contract wallet", async function() {
+			const offer = [
+				NFT.address, CATEGORY.ERC721, 0, 42,
+				DAI.address, 1000,
+				1200, 3600, 0, ContractWallet.address, nonce,
+			];
+			const offerHash = getOfferHashBytes(offer, PWNDeed.address);
+			const signature = await signOffer(offer, PWNDeed.address, contractOwner);
+
+			await PWN.connect(contractOwner).revokeOffer(offerHash, signature);
+
+			const isRevoked = await PWNDeed.isRevoked(offerHash);
 			expect(isRevoked).to.equal(true);
 		});
 
@@ -177,6 +195,26 @@ describe("PWN contract", function () {
 			expect(await PWNDeed.balanceOf(lender.address, did)).to.equal(1);
 			expect(await GAME.balanceOf(borrower.address, 1337)).to.equal(0);
 			expect(await GAME.balanceOf(PWNVault.address, 1337)).to.equal(1);
+			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 1000);
+		});
+
+		it("Should be possible to create a deed with offer signed on behalf of a contract wallet", async function() {
+			const offer = [
+				NFT.address, CATEGORY.ERC721, 0, 42,
+				DAI.address, 1000,
+				1200, 3600, 0, ContractWallet.address, nonce,
+			];
+			const signature = await signOffer(offer, PWNDeed.address, contractOwner);
+			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);
+
+			await bNFT.approve(PWNVault.address, 42);
+			const tx = await bPWN.createDeed(...offer, signature);
+			const response = await tx.wait();
+			const logDescription = deedEventIface.parseLog(response.logs[1]);
+			const did = logDescription.args.did.toNumber();
+
+			expect(await PWNDeed.balanceOf(ContractWallet.address, did)).to.equal(1);
+			expect(await NFT.ownerOf(42)).to.equal(PWNVault.address);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 1000);
 		});
 

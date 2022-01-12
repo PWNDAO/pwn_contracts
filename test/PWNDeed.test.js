@@ -180,6 +180,42 @@ describe("PWNDeed contract", function() {
 			}
 		});
 
+		it("Should pass when offer is signed on behalf of a contract wallet", async function() {
+			const fakeContractWallet = await smock.fake("ContractWallet");
+			offer[9] = fakeContractWallet.address;
+			offerHash = getOfferHashBytes(offer, deed.address);
+			signature = await signOffer(offer, deed.address, addr1);
+			fakeContractWallet.isValidSignature.whenCalledWith(offerHash, signature).returns("0x1626ba7e");
+			fakeContractWallet.onERC1155Received.returns("0xf23a6e61");
+			let failed = false;
+
+			try {
+				await deed.create(getOfferStruct(...offer), signature, borrower.address);
+			} catch {
+				failed = true;
+			}
+
+			expect(failed).to.equal(false);
+		});
+
+		it("Should fail when contract wallet returns that offer signed on behalf of a contract wallet is invalid", async function() {
+			const fakeContractWallet = await smock.fake("ContractWallet");
+			offer[9] = fakeContractWallet.address;
+			offerHash = getOfferHashBytes(offer, deed.address);
+			signature = await signOffer(offer, deed.address, addr1);
+			fakeContractWallet.isValidSignature.returns("0xffffffff");
+			fakeContractWallet.onERC1155Received.returns("0xf23a6e61");
+
+			try {
+				await deed.create(getOfferStruct(...offer), signature, borrower.address);
+
+				expect.fai();
+			} catch(error) {
+				expect(error.message).to.contain("revert");
+				expect(error.message).to.contain("Signature on behalf of contract is invalid");
+			}
+		});
+
 		it("Should fail when given invalid signature", async function() {
 			const fakeSignature = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a6732801029378ddf837210000397c68129387fd887839708320980942102910a00";
 

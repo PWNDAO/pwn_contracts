@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-
 pragma solidity 0.8.4;
 
 import "@pwnfinance/multitoken/contracts/MultiToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 contract PWNDeed is ERC1155, Ownable {
 
@@ -24,23 +24,28 @@ contract PWNDeed is ERC1155, Ownable {
     uint256 public id;
 
     /**
+     * EIP-1271 valid signature magic value
+     */
+    bytes4 constant internal EIP1271_VALID_SIGNATURE = 0x1626ba7e;
+
+    /**
      * EIP-712 offer struct type hash
      */
-    bytes32 constant OFFER_TYPEHASH = keccak256(
+    bytes32 constant internal OFFER_TYPEHASH = keccak256(
         "Offer(MultiTokenAsset collateral,MultiTokenAsset loan,uint256 loanRepayAmount,uint32 duration,uint40 expiration,address lender,bytes32 nonce)MultiTokenAsset(address assetAddress,uint8 category,uint256 amount,uint256 id)"
     );
 
     /**
      * EIP-712 multitoken asset struct type hash
      */
-    bytes32 constant MULTITOKEN_ASSET_TYPEHASH = keccak256(
+    bytes32 constant internal MULTITOKEN_ASSET_TYPEHASH = keccak256(
         "MultiTokenAsset(address assetAddress,uint8 category,uint256 amount,uint256 id)"
     );
 
     /**
      * EIP-712 domain separator
      */
-    bytes32 immutable EIP712_DOMAIN_SEPARATOR;
+    bytes32 immutable internal EIP712_DOMAIN_SEPARATOR;
 
     /**
      * Construct defining a Deed
@@ -158,6 +163,7 @@ contract PWNDeed is ERC1155, Ownable {
     /**
      * create
      * @notice Creates the PWN Deed token contract - ERC1155 with extra use case specific features
+     * @dev Contract wallets need to implement EIP-1271 to validate signature on the contract behalf
      * @param _offer Offer struct holding plain offer data
      * @param _signature Offer typed struct signature signed by lender
      * @param _sender Address of a message sender (borrower)
@@ -168,13 +174,14 @@ contract PWNDeed is ERC1155, Ownable {
         address _sender
     ) external onlyPWN {
         bytes32 offerHash = keccak256(abi.encodePacked(
-            "\x19\x01",
-            EIP712_DOMAIN_SEPARATOR,
-            hash(_offer)
+            "\x19\x01", EIP712_DOMAIN_SEPARATOR, hash(_offer)
         ));
-        address signer = ECDSA.recover(offerHash, _signature);
 
-        require(signer == _offer.lender, "Lender address didn't sign the offer");
+        if (_offer.lender.code.length > 0) {
+            require(IERC1271(_offer.lender).isValidSignature(offerHash, _signature) == EIP1271_VALID_SIGNATURE, "Signature on behalf of contract is invalid");
+        } else {
+            require(ECDSA.recover(offerHash, _signature) == _offer.lender, "Lender address didn't sign the offer");
+        }
         require(_offer.expiration == 0 || block.timestamp < _offer.expiration, "Offer is expired");
         require(revokedOffers[offerHash] == false, "Offer is revoked or has been accepted");
 
@@ -191,9 +198,9 @@ contract PWNDeed is ERC1155, Ownable {
         deed.loan = _offer.loan;
         deed.loanRepayAmount = _offer.loanRepayAmount;
 
-        _mint(signer, id, 1, "");
+        _mint(_offer.lender, id, 1, "");
 
-        emit DeedCreated(id, signer, offerHash);
+        emit DeedCreated(id, _offer.lender, offerHash);
     }
 
     /**
