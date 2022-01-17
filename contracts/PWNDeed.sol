@@ -5,6 +5,7 @@ pragma solidity 0.8.4;
 import "@pwnfinance/multitoken/contracts/MultiToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract PWNDeed is ERC1155, Ownable {
 
@@ -12,19 +13,44 @@ contract PWNDeed is ERC1155, Ownable {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    address public PWN;                 // necessary msg.sender for all Deed related manipulations
-    uint256 public id;                  // simple DeedID counter
-    uint256 private nonce;              // server for offer hash generation
+    /**
+     * Necessary msg.sender for all Deed related manipulations
+     */
+    address public PWN;
+
+    /**
+     * Incremental DeedID counter
+     */
+    uint256 public id;
+
+    /**
+     * EIP-712 offer struct type hash
+     */
+    bytes32 constant OFFER_TYPEHASH = keccak256(
+        "Offer(MultiTokenAsset collateral,MultiTokenAsset loan,uint256 loanRepayAmount,uint32 duration,uint40 expiration,address lender,bytes32 nonce)MultiTokenAsset(address assetAddress,uint8 category,uint256 amount,uint256 id)"
+    );
+
+    /**
+     * EIP-712 multitoken asset struct type hash
+     */
+    bytes32 constant MULTITOKEN_ASSET_TYPEHASH = keccak256(
+        "MultiTokenAsset(address assetAddress,uint8 category,uint256 amount,uint256 id)"
+    );
+
+    /**
+     * EIP-712 domain separator
+     */
+    bytes32 immutable EIP712_DOMAIN_SEPARATOR;
 
     /**
      * Construct defining a Deed
      * @param status 0 == none/dead || 1 == new/open || 2 == running/accepted offer || 3 == paid back || 4 == expired
-     * @param borrower Address of the issuer / borrower - stays the same for entire lifespan of the token
+     * @param borrower Address of the borrower - stays the same for entire lifespan of the token
      * @param duration Loan duration in seconds
      * @param expiration Unix timestamp (in seconds) setting up the default deadline
-     * @param collateral Consisting of another an `Asset` struct defined in the MultiToken library
-     * @param acceptedOffer Hash of the offer which will be bound to the deed
-     * @param pendingOffers List of offers made to the Deed
+     * @param collateral Asset used as a loan collateral. Consisting of another `Asset` struct defined in the MultiToken library
+     * @param loan Asset to be borrowed by lender to borrower. Consisting of another `Asset` struct defined in the MultiToken library
+     * @param loanRepayAmount Amount of loan asset to be repaid
      */
     struct Deed {
         uint8 status;
@@ -32,37 +58,47 @@ contract PWNDeed is ERC1155, Ownable {
         uint32 duration;
         uint40 expiration;
         MultiToken.Asset collateral;
-        bytes32 acceptedOffer;
-        bytes32[] pendingOffers;
+        MultiToken.Asset loan;
+        uint256 loanRepayAmount;
     }
 
     /**
-     * Construct defining an offer
-     * @param did Deed ID the offer is bound to
-     * @param toBePaid Nn amount to be paid back (borrowed + interest)
-     * @param lender Address of the lender to be the loan withdrawn from
-     * @param loan Consisting of another an `Asset` struct defined in the MultiToken library
+     * Construct defining an Offer
+     * @param collateral Asset used as a loan collateral
+     * @param loan Asset to be borrowed by lender to borrower
+     * @param loanRepayAmount Amount of loan asset to be repaid
+     * @param duration Loan duration in seconds
+     * @param expiration Offer expiration timestamp in seconds
+     * @param lender Offer owner and provider of a loan asset
+     * @param nonce Incremental nonce to help distinguish between otherwise identical offers
      */
     struct Offer {
-        uint256 did;
-        uint256 toBePaid;
-        address lender;
+        MultiToken.Asset collateral;
         MultiToken.Asset loan;
+        uint256 loanRepayAmount;
+        uint32 duration;
+        uint40 expiration;
+        address lender;
+        bytes32 nonce;
     }
 
-    mapping (uint256 => Deed) public deeds;             // mapping of all Deed data
-    mapping (bytes32 => Offer) public offers;           // mapping of all Offer data
+    /**
+     * Mapping of all Deed data by deed id
+     */
+    mapping (uint256 => Deed) public deeds;
+
+    /**
+     * Mapping of revoked offers by offer struct typed hash
+     */
+    mapping (bytes32 => bool) public revokedOffers;
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event DeedCreated(address indexed assetAddress, MultiToken.Category category, uint256 id, uint256 amount, uint32 duration, uint256 indexed did);
-    event OfferMade(address assetAddress, uint256 amount, address indexed lender, uint256 toBePaid, uint256 indexed did, bytes32 offer);
-    event DeedRevoked(uint256 did);
-    event OfferRevoked(bytes32 offer);
-    event OfferAccepted(uint256 did, bytes32 offer);
-    event PaidBack(uint256 did, bytes32 offer);
+    event DeedCreated(uint256 indexed did, address indexed lender, bytes32 indexed offerHash);
+    event OfferRevoked(bytes32 indexed offerHash);
+    event PaidBack(uint256 did);
     event DeedClaimed(uint256 did);
 
     /*----------------------------------------------------------*|
@@ -79,174 +115,103 @@ contract PWNDeed is ERC1155, Ownable {
     |*----------------------------------------------------------*/
 
     /*
-     *  PWN Deed constructor
-     *  @dev Creates the PWN Deed token contract - ERC1155 with extra use case specific features
-     *  @dev Once the PWN contract is set, you'll have to call `this.setPWN(PWN.address)` for this contract to work
-     *  @param _uri Uri to be used for finding the token metadata (https://api.pwn.finance/deed/...)
+     * PWN Deed constructor
+     * @dev Creates the PWN Deed token contract - ERC1155 with extra use case specific features
+     * @dev Once the PWN contract is set, you'll have to call `this.setPWN(PWN.address)` for this contract to work
+     * @param _uri Uri to be used for finding the token metadata (https://api.pwn.finance/deed/...)
      */
     constructor(string memory _uri) ERC1155(_uri) Ownable() {
-
-    }
-
-    /*
-     *   All contracts of this section can only be called by the PWN contract itself - once set via `setPWN(PWN.address)`
-     */
-
-    /**
-     * create
-     * @dev Creates the PWN Deed token contract - ERC1155 with extra use case specific features
-     * @param _assetAddress Address of the asset contract
-     * @param _assetCategory Category of the asset - see { MultiToken.sol }
-     * @param _duration Loan duration in seconds
-     * @param _assetId ID of an ERC721 or ERC1155 token || 0 in case the token doesn't have IDs
-     * @param _assetAmount Amount of an ERC20 or ERC1155 token || 0 in case of NFTs
-     * @param _owner Address initiating the new Deed
-     * @return Deed ID of the newly minted Deed
-     */
-    function create(
-        address _assetAddress,
-        MultiToken.Category _assetCategory,
-        uint32 _duration,
-        uint256 _assetId,
-        uint256 _assetAmount,
-        address _owner
-    ) external onlyPWN returns (uint256) {
-        id++;
-
-        Deed storage deed = deeds[id];
-        deed.duration = _duration;
-        deed.collateral.assetAddress = _assetAddress;
-        deed.collateral.category = _assetCategory;
-        deed.collateral.id = _assetId;
-        deed.collateral.amount = _assetAmount;
-
-        _mint(_owner, id, 1, "");
-
-        deed.status = 1;
-
-        emit DeedCreated(_assetAddress, _assetCategory, _assetId, _assetAmount, _duration, id);
-
-        return id;
+        EIP712_DOMAIN_SEPARATOR = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256(bytes("PWN")),
+            keccak256(bytes("2")),
+            block.chainid,
+            address(this)
+        ));
     }
 
     /**
-     * revoke
-     * @dev Burns a deed token
-     * @param _did Deed ID of the token to be burned
-     * @param _owner Address of the borrower who issued the Deed
+     * All contracts of this section can only be called by the PWN contract itself - once set via `setPWN(PWN.address)`
      */
-    function revoke(
-        uint256 _did,
-        address _owner
-    ) external onlyPWN {
-        require(balanceOf(_owner, _did) == 1, "The deed doesn't belong to the caller");
-        require(getDeedStatus(_did) == 1, "Deed can't be revoked at this stage");
-
-        deeds[_did].status = 0;
-
-        emit DeedRevoked(_did);
-    }
-
-    /**
-     * makeOffer
-     * @dev saves an offer object that defines loan terms
-     * @dev only ERC20 tokens can be offered as loan
-     * @param _assetAddress Address of the asset contract
-     * @param _assetAmount Amount of an ERC20 token to be offered as loan
-     * @param _lender Address of the asset lender
-     * @param _did ID of the Deed the offer should be bound to
-     * @param _toBePaid Amount to be paid back by the borrower
-     * @return hash of the newly created offer
-     */
-    function makeOffer(
-        address _assetAddress,
-        uint256 _assetAmount,
-        address _lender,
-        uint256 _did,
-        uint256 _toBePaid
-    ) external onlyPWN returns (bytes32) {
-        require(getDeedStatus(_did) == 1, "Deed not accepting offers");
-
-        bytes32 hash = keccak256(abi.encodePacked(_lender, nonce));
-        nonce++;
-
-        Offer storage offer = offers[hash];
-        offer.loan.assetAddress = _assetAddress;
-        offer.loan.amount = _assetAmount;
-        offer.toBePaid = _toBePaid;
-        offer.lender = _lender;
-        offer.did = _did;
-
-        deeds[_did].pendingOffers.push(hash);
-
-        emit OfferMade(_assetAddress, _assetAmount, _lender, _toBePaid, _did, hash);
-
-        return hash;
-    }
 
     /**
      * revokeOffer
-     * @dev function to remove a pending offer
-     * @dev This only removes the offer representation but it doesn't remove the offer from a list of pending offers.
-     *         The offers associated with a deed has to be filtered on the front end to only list the valid ones.
-     *         No longer existent offers will simply return 0 if prompted about their DID.
-     * @param _offer Hash identifying an offer
-     * @param _lender Address of the lender who made the offer
-     * @dev TODO: consider ways to remove the offer from the pending offers array / maybe replace for a mapping
+     * @notice Revoke an offer
+     * @dev Offer is revoked by lender or when offer is accepted by borrower to prevent accepting it twice
+     * @param _offerHash Offer typed struct hash
+     * @param _signature Offer typed struct signature
+     * @param _sender Address of a message sender (lender)
      */
     function revokeOffer(
-        bytes32 _offer,
-        address _lender
+        bytes32 _offerHash,
+        bytes calldata _signature,
+        address _sender
     ) external onlyPWN {
-        require(offers[_offer].lender == _lender, "This address didn't create the offer");
-        require(getDeedStatus(offers[_offer].did) == 1, "Can only remove offers from open Deeds");
+        require(ECDSA.recover(_offerHash, _signature) == _sender, "Sender is not an offer signer");
+        require(revokedOffers[_offerHash] == false, "Offer is already revoked or has been accepted");
 
-        delete offers[_offer];
+        revokedOffers[_offerHash] = true;
 
-        emit OfferRevoked(_offer);
+        emit OfferRevoked(_offerHash);
     }
 
     /**
-     * acceptOffer
-     * @dev function to set accepted offer
-     * @param _did ID of the Deed the offer should be bound to
-     * @param _offer Hash identifying an offer
-     * @param _owner Address of the borrower who issued the Deed
+     * create
+     * @notice Creates the PWN Deed token contract - ERC1155 with extra use case specific features
+     * @param _offer Offer struct holding plain offer data
+     * @param _signature Offer typed struct signature signed by lender
+     * @param _sender Address of a message sender (borrower)
      */
-    function acceptOffer(
-        uint256 _did,
-        bytes32 _offer,
-        address _owner
+    function create(
+        Offer memory _offer,
+        bytes memory _signature,
+        address _sender
     ) external onlyPWN {
-        require(balanceOf(_owner, _did) == 1, "The deed doesn't belong to the caller");
-        require(getDeedStatus(_did) == 1, "Deed can't accept more offers");
+        bytes32 offerHash = keccak256(abi.encodePacked(
+            "\x19\x01",
+            EIP712_DOMAIN_SEPARATOR,
+            hash(_offer)
+        ));
+        address signer = ECDSA.recover(offerHash, _signature);
 
-        Deed storage deed = deeds[_did];
-        deed.borrower = _owner;
-        deed.expiration = uint40(block.timestamp) + deed.duration;
-        deed.acceptedOffer = _offer;
-        delete deed.pendingOffers;
+        require(signer == _offer.lender, "Lender address didn't sign the offer");
+        require(_offer.expiration == 0 || block.timestamp < _offer.expiration, "Offer is expired");
+        require(revokedOffers[offerHash] == false, "Offer is revoked or has been accepted");
+
+        revokedOffers[offerHash] = true;
+
+        id++;
+
+        Deed storage deed = deeds[id];
         deed.status = 2;
+        deed.borrower = _sender;
+        deed.duration = _offer.duration;
+        deed.expiration = uint40(block.timestamp) + _offer.duration;
+        deed.collateral = _offer.collateral;
+        deed.loan = _offer.loan;
+        deed.loanRepayAmount = _offer.loanRepayAmount;
 
-        emit OfferAccepted(_did, _offer);
+        _mint(signer, id, 1, "");
+
+        emit DeedCreated(id, signer, offerHash);
     }
 
     /**
      * repayLoan
-     * @dev function to make proper state transition
+     * @notice Function to make proper state transition
      * @param _did ID of the Deed which is paid back
      */
     function repayLoan(uint256 _did) external onlyPWN {
-        require(getDeedStatus(_did) == 2, "Deed doesn't have an accepted offer to be paid back");
+        require(getStatus(_did) == 2, "Deed is not running and cannot be paid back");
 
         deeds[_did].status = 3;
 
-        emit PaidBack(_did, deeds[_did].acceptedOffer);
+        emit PaidBack(_did);
     }
 
     /**
      * claim
-     * @dev function that would burn the deed token if the token is in paidBack or expired state
+     * @notice Function that would set the deed to the dead state if the token is in paidBack or expired state
      * @param _did ID of the Deed which is claimed
      * @param _owner Address of the deed token owner
      */
@@ -255,7 +220,7 @@ contract PWNDeed is ERC1155, Ownable {
         address _owner
     ) external onlyPWN {
         require(balanceOf(_owner, _did) == 1, "Caller is not the deed owner");
-        require(getDeedStatus(_did) >= 3, "Deed can't be claimed yet");
+        require(getStatus(_did) >= 3, "Deed can't be claimed yet");
 
         deeds[_did].status = 0;
 
@@ -264,7 +229,7 @@ contract PWNDeed is ERC1155, Ownable {
 
     /**
      * burn
-     * @dev function that would burn the deed token if the token is in dead state
+     * @notice Function that would burn the deed token if the token is in dead state
      * @param _did ID of the Deed which is burned
      * @param _owner Address of the deed token owner
      */
@@ -283,17 +248,13 @@ contract PWNDeed is ERC1155, Ownable {
     |*  ## VIEW FUNCTIONS                                       *|
     |*----------------------------------------------------------*/
 
-    /*--------------------------------*|
-    |*  ## VIEW FUNCTIONS - DEEDS     *|
-    |*--------------------------------*/
-
     /**
-     * getDeedStatus
+     * getStatus
      * @dev used in contract calls & status checks and also in UI for elementary deed status categorization
      * @param _did Deed ID checked for status
      * @return a status number
      */
-    function getDeedStatus(uint256 _did) public view returns (uint8) {
+    function getStatus(uint256 _did) public view returns (uint8) {
         if (deeds[_did].expiration > 0 && deeds[_did].expiration < block.timestamp && deeds[_did].status != 3) {
             return 4;
         } else {
@@ -304,7 +265,7 @@ contract PWNDeed is ERC1155, Ownable {
     /**
      * getExpiration
      * @dev utility function to find out exact expiration time of a particular Deed
-     * @dev for simple status check use `this.getDeedStatus(did)` if `status == 4` then Deed has expired
+     * @dev for simple status check use `this.getStatus(did)` if `status == 4` then Deed has expired
      * @param _did Deed ID to be checked
      * @return unix time stamp in seconds
      */
@@ -333,78 +294,43 @@ contract PWNDeed is ERC1155, Ownable {
     }
 
     /**
-     * getDeedCollateral
+     * getCollateral
      * @dev utility function to find out collateral asset of a particular Deed
      * @param _did Deed ID to be checked
      * @return Asset construct - for definition see { MultiToken.sol }
      */
-    function getDeedCollateral(uint256 _did) public view returns (MultiToken.Asset memory) {
+    function getCollateral(uint256 _did) public view returns (MultiToken.Asset memory) {
         return deeds[_did].collateral;
     }
 
     /**
-     * getOffers
-     * @dev utility function to get a list of all pending offers of a Deed
+     * getLoan
+     * @dev utility function to find out loan asset of a particular Deed
      * @param _did Deed ID to be checked
-     * @return a list of offer hashes
-     */
-    function getOffers(uint256 _did) public view returns (bytes32[] memory) {
-        return deeds[_did].pendingOffers;
-    }
-
-    /**
-     * getAcceptedOffer
-     * @dev used to get a list of made offers to be queried in the UI - needs additional check for re-validating each offer
-     * @dev revalidation requires checking if the lender has sufficient balance and approved the asset
-     * @param _did Deed ID being queried for offers
-     * @return Hash of the accepted offer
-     */
-    function getAcceptedOffer(uint256 _did) public view returns (bytes32) {
-        return deeds[_did].acceptedOffer;
-    }
-
-    /*--------------------------------*|
-    |*  ## VIEW FUNCTIONS - OFFERS    *|
-    |*--------------------------------*/
-
-    /**
-     * getDeedID
-     * @dev utility function to find out which Deed is an offer associated with
-     * @param _offer Offer hash of an offer to be prompted
-     * @return Deed ID
-     */
-    function getDeedID(bytes32 _offer) public view returns (uint256) {
-        return offers[_offer].did;
-    }
-
-    /**
-     * getOfferLoan
-     * @dev utility function that returns the loan asset of a particular offer
-     * @param _offer Offer hash of an offer to be prompted
      * @return Asset construct - for definition see { MultiToken.sol }
      */
-    function getOfferLoan(bytes32 _offer) public view returns (MultiToken.Asset memory) {
-        return offers[_offer].loan;
+    function getLoan(uint256 _did) public view returns (MultiToken.Asset memory) {
+        return deeds[_did].loan;
     }
 
     /**
-     * toBePaid
-     * @dev quick query of the total amount to be paid to an offer
-     * @param _offer Offer hash of an offer to be prompted
-     * @return Amount to be paid back
+     * getLoan
+     * @dev utility function to find out loan repay amount of a particular Deed
+     * @param _did Deed ID to be checked
+     * @return Amount of loan asset to be repaid
      */
-    function toBePaid(bytes32 _offer) public view returns (uint256) {
-        return offers[_offer].toBePaid;
+    function getLoanRepayAmount(uint256 _did) public view returns (uint256) {
+        return deeds[_did].loanRepayAmount;
     }
 
     /**
-     * getLender
-     * @dev utility function to find out a lender address of a particular offer
-     * @param _offer Offer hash of an offer to be prompted
-     * @return Address of the lender
+     * isRevoked
+     * @dev utility function to find out if offer is revoked
+     * @param _offerHash Offer typed struct hash
+     * @return True if offer is revoked
      */
-    function getLender(bytes32 _offer) public view returns (address) {
-        return offers[_offer].lender;
+    function isRevoked(bytes32 _offerHash) public view returns (bool) {
+        return revokedOffers[_offerHash];
     }
 
     /*--------------------------------*|
@@ -427,5 +353,44 @@ contract PWNDeed is ERC1155, Ownable {
      */
     function setUri(string memory _newUri) external onlyOwner {
         _setURI(_newUri);
+    }
+
+    /*--------------------------------*|
+    |*  ## PRIVATE FUNCTIONS          *|
+    |*--------------------------------*/
+
+    /**
+     * hash offer
+     * @notice Hash offer struct according to EIP-712
+     * @param _offer Offer struct to be hashed
+     * @return Offer struct hash
+     */
+    function hash(Offer memory _offer) private pure returns (bytes32) {
+        return keccak256(abi.encode(
+            OFFER_TYPEHASH,
+            hash(_offer.collateral),
+            hash(_offer.loan),
+            _offer.loanRepayAmount,
+            _offer.duration,
+            _offer.expiration,
+            _offer.lender,
+            _offer.nonce
+        ));
+    }
+
+    /**
+     * hash multitoken asset
+     * @notice Hash MultiToken asset struct according to EIP-712
+     * @param _asset MultiToken asset struct to be hashed
+     * @return MultiToken asset struct hash
+     */
+    function hash(MultiToken.Asset memory _asset) private pure returns (bytes32) {
+        return keccak256(abi.encode(
+            MULTITOKEN_ASSET_TYPEHASH,
+            _asset.assetAddress,
+            _asset.category,
+            _asset.amount,
+            _asset.id
+        ));
     }
 }

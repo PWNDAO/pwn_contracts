@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract Basic20 is ERC20, Ownable {
     
-    constructor(string memory name, string memory symbol) public 
+    constructor(string memory name, string memory symbol)
         ERC20(name, symbol)
         Ownable()
     { }

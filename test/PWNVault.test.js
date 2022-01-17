@@ -5,6 +5,7 @@ const { smock } = require("@defi-wonderland/smock");
 const expect = chai.expect;
 chai.use(smock.matchers);
 
+
 describe("PWNVault contract", async function() {
 
 	let Vault;
