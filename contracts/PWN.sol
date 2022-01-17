@@ -138,8 +138,8 @@ contract PWN is Ownable {
         MultiToken.Asset memory loan = deed.getLoan(_did);
         loan.amount = deed.getLoanRepayAmount(_did);
 
-        vault.pull(deed.getCollateral(_did), deed.getBorrower(_did));
         vault.push(loan, msg.sender);
+        vault.pull(deed.getCollateral(_did), deed.getBorrower(_did));
 
         return true;
     }
