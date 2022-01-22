@@ -105,8 +105,8 @@ describe("PWN contract", function () {
 		it("Should be possible to revoke an offer", async function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
-				DAI.address, 1000,
-				1200, 3600, 0, lender.address, nonce,
+				DAI.address, 1000, 200,
+				3600, 0, lender.address, nonce,
 			];
 			const offerHash = getOfferHashBytes(offer, PWNDeed.address);
 			const signature = await signOffer(offer, PWNDeed.address, lender);
@@ -120,8 +120,8 @@ describe("PWN contract", function () {
 		it("Should be possible to revoke an offer on behalf of contract wallet", async function() {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
-				DAI.address, 1000,
-				1200, 3600, 0, ContractWallet.address, nonce,
+				DAI.address, 1000, 200,
+				3600, 0, lender.address, nonce,
 			];
 			const offerHash = getOfferHashBytes(offer, PWNDeed.address);
 			const signature = await signOffer(offer, PWNDeed.address, contractOwner);
@@ -140,14 +140,14 @@ describe("PWN contract", function () {
 		it("Should be possible to create a deed with ERC20 collateral", async function () {
 			const offer = [
 				WETH.address, CATEGORY.ERC20, 100, 0,
-				DAI.address, 1000,
-				1200, 3600, 0, lender.address, nonce,
+				DAI.address, 1000, 200,
+				3600, 0, lender.address, nonce,
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bWETH.approve(PWNVault.address, 200);
-			const tx = await bPWN.createDeed(...offer, signature);
+			const tx = await bPWN.createDeed(offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -160,14 +160,14 @@ describe("PWN contract", function () {
 		it("Should be possible to create a deed with ERC721 collateral", async function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
-				DAI.address, 1000,
-				1200, 3600, 0, lender.address, nonce,
+				DAI.address, 1000, 200,
+				3600, 0, lender.address, nonce,
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createDeed(...offer, signature);
+			const tx = await bPWN.createDeed(offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -180,14 +180,14 @@ describe("PWN contract", function () {
 		it("Should be possible to create a deed with ERC1155 collateral", async function () {
 			const offer = [
 				GAME.address, CATEGORY.ERC1155, 1, 1337,
-				DAI.address, 1000,
-				1200, 3600, 0, lender.address, nonce,
+				DAI.address, 1000, 200,
+				3600, 0, lender.address, nonce,
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bGAME.setApprovalForAll(PWNVault.address, true);
-			const tx = await bPWN.createDeed(...offer, signature);
+			const tx = await bPWN.createDeed(offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -201,14 +201,14 @@ describe("PWN contract", function () {
 		it("Should be possible to create a deed with offer signed on behalf of a contract wallet", async function() {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
-				DAI.address, 1000,
-				1200, 3600, 0, ContractWallet.address, nonce,
+				DAI.address, 1000, 200,
+				3600, 0, ContractWallet.address, nonce,
 			];
 			const signature = await signOffer(offer, PWNDeed.address, contractOwner);
 			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createDeed(...offer, signature);
+			const tx = await bPWN.createDeed(offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -226,14 +226,14 @@ describe("PWN contract", function () {
 		it("Should be possible to pay back", async function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
-				DAI.address, 1000,
-				1200, 3600, 0, lender.address, nonce,
+				DAI.address, 1000, 200,
+				3600, 0, lender.address, nonce,
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createDeed(...offer, signature);
+			const tx = await bPWN.createDeed(offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -250,14 +250,14 @@ describe("PWN contract", function () {
 		it("Should be possible to claim after deed was paid", async function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
-				DAI.address, 1000,
-				1200, 3600, 0, lender.address, nonce,
+				DAI.address, 1000, 200,
+				3600, 0, lender.address, nonce,
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createDeed(...offer, signature);
+			const tx = await bPWN.createDeed(offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -277,14 +277,14 @@ describe("PWN contract", function () {
 		it("Should be possible to claim if deed wasn't paid", async function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
-				DAI.address, 1000,
-				1200, 3600, 0, lender.address, nonce,
+				DAI.address, 1000, 200,
+				3600, 0, lender.address, nonce,
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createDeed(...offer, signature);
+			const tx = await bPWN.createDeed(offer, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();

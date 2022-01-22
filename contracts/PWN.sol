@@ -57,67 +57,57 @@ contract PWN is Ownable {
         return true;
     }
 
-    /**
-     * createDeed
-     * @notice Borrower can accept existing signed off-chain offer
-     * @dev A UI should do an off-chain balance check on the lender side to make sure the call won't throw
-     * @dev Loan asset has to be an ERC20 token, otherwise will transaction fail
-     * @param _collateralAssetAddress Address of an asset used as a collateral
-     * @param _collateralCategory Category of an asset used as a collateral (ERC20, ERC721, ERC1155)
-     * @param _collateralAssetId Id of an ERC721 or ERC1155 asset
-     * @param _collateralAssetAmount Amount of an ERC20 or ERC1155 asset
-     * @param _loanAssetAddress Address of a loan asset
-     * @param _loanAssetAmount Amount of a loan asset (can be only ERC20, so category and id are redundant)
-     * @param _loanRepayAmount Amount of a loan asset, which borrower has to repay to get his collateral back
-     * @param _duration Loan duration in seconds
-     * @param _offerExpiration Offer expiration timestamp in seconds
-     * @param _lender Address of an offer signer
-     * @param _nonce Nonce to help distinguish between otherwise identical offers
-     * @param _signature Offer typed struct signed by lender
-     * @return True if successful
-     */
+    // TODO: Doc
     function createDeed(
-        address _collateralAssetAddress,
-        MultiToken.Category _collateralCategory,
-        uint256 _collateralAssetAmount,
-        uint256 _collateralAssetId,
-        address _loanAssetAddress,
-        uint256 _loanAssetAmount,
-        uint256 _loanRepayAmount,
-        uint32 _duration,
-        uint40 _offerExpiration,
-        address _lender,
-        bytes32 _nonce,
+        PWNDeed.Offer memory _offer,
         bytes memory _signature
     ) external returns (bool) {
+        deed.create(_offer, _signature, msg.sender);
+
         MultiToken.Asset memory collateral = MultiToken.Asset(
-            _collateralAssetAddress,
-            _collateralCategory,
-            _collateralAssetAmount,
-            _collateralAssetId
+            _offer.collateralAddress,
+            _offer.collateralCategory,
+            _offer.collateralAmount,
+            _offer.collateralId
         );
 
         MultiToken.Asset memory loan = MultiToken.Asset(
-            _loanAssetAddress,
+            _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
-            _loanAssetAmount,
+            _offer.loanAmount,
             0
         );
 
-        PWNDeed.Offer memory offer = PWNDeed.Offer(
-            collateral,
-            loan,
-            _loanRepayAmount,
-            _duration,
-            _offerExpiration,
-            _lender,
-            _nonce
+        vault.push(collateral, msg.sender);
+        vault.pullProxy(loan, _offer.lender, msg.sender);
+
+        return true;
+    }
+
+    // TODO: Doc
+    function createFlexibleDeed(
+        PWNDeed.FlexibleOffer memory _offer,
+        PWNDeed.OfferInstance memory _offerInstance,
+        bytes memory _signature
+    ) external returns (bool) {
+        deed.createFlexible(_offer, _offerInstance, _signature, msg.sender);
+
+        MultiToken.Asset memory collateral = MultiToken.Asset(
+            _offer.collateralAddress,
+            _offer.collateralCategory,
+            _offer.collateralAmount,
+            _offer.collectionOffer ? _offerInstance.collateralId : _offer.collateralId
         );
 
-        deed.create(offer, _signature, msg.sender);
+        MultiToken.Asset memory loan = MultiToken.Asset(
+            _offer.loanAssetAddress,
+            MultiToken.Category.ERC20,
+            _offerInstance.loanAmount,
+            0
+        );
 
-        vault.pull(offer.collateral, msg.sender);
-        vault.pushFrom(offer.loan, offer.lender, msg.sender);
+        vault.pull(collateral, msg.sender);
+        vault.pushFrom(loan, _offer.lender, msg.sender);
 
         return true;
     }
