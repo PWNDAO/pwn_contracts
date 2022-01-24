@@ -85,7 +85,7 @@ contract PWN is Ownable {
     }
 
     // TODO: Doc
-    function createFlexibleDeed(
+    function createDeedFlexible(
         PWNDeed.FlexibleOffer memory _offer,
         PWNDeed.OfferInstance memory _offerInstance,
         bytes memory _signature

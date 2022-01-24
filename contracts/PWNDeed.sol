@@ -266,7 +266,9 @@ contract PWNDeed is ERC1155, Ownable {
             _offer.collateralAddress,
             _offer.collateralCategory,
             _offer.collateralAmount,
-            _offer.collectionOffer ? _offerInstance.collateralId : _offer.collateralId
+            (_offer.collectionOffer && _offer.collateralCategory == MultiToken.Category.ERC721)
+                ? _offerInstance.collateralId
+                : _offer.collateralId
         );
         deed.loan = MultiToken.Asset(
             _offer.loanAssetAddress,
@@ -274,33 +276,16 @@ contract PWNDeed is ERC1155, Ownable {
             _offerInstance.loanAmount,
             0
         );
-        deed.loanRepayAmount = _offerInstance.loanAmount + _offer.loanYieldMax * _offerInstance.duration / _offer.durationMax;
+        deed.loanRepayAmount = getLoanRepayAmount(
+            _offerInstance.loanAmount,
+            _offerInstance.duration,
+            _offer.loanYieldMax,
+            _offer.durationMax
+        );
 
         _mint(_offer.lender, _id, 1, "");
 
         emit DeedCreated(_id, _offer.lender, offerHash);
-    }
-
-    // TODO: Doc
-    function _checkValidSignature(
-        address _lender,
-        bytes32 _offerHash,
-        bytes memory _signature
-    ) private {
-        if (_lender.code.length > 0) {
-            require(IERC1271(_lender).isValidSignature(_offerHash, _signature) == EIP1271_VALID_SIGNATURE, "Signature on behalf of contract is invalid");
-        } else {
-            require(ECDSA.recover(_offerHash, _signature) == _lender, "Lender address didn't sign the offer");
-        }
-    }
-
-    // TODO: Doc
-    function _checkValidOffer(
-        uint40 _expiration,
-        bytes32 _offerHash
-    ) private {
-        require(_expiration == 0 || block.timestamp < _expiration, "Offer is expired");
-        require(revokedOffers[_offerHash] == false, "Offer is revoked or has been accepted");
     }
 
     /**
@@ -349,6 +334,16 @@ contract PWNDeed is ERC1155, Ownable {
 
         delete deeds[_did];
         _burn(_owner, _did, 1);
+    }
+
+    // TODO: Doc
+    function getLoanRepayAmount(
+        uint256 _loanAmount,
+        uint32 _duration,
+        uint256 _loanYieldMax,
+        uint32 _durationMax
+    ) public pure returns (uint256) {
+        return _loanAmount + _loanYieldMax * _duration / _durationMax;
     }
 
     /*----------------------------------------------------------*|
@@ -465,6 +460,28 @@ contract PWNDeed is ERC1155, Ownable {
     /*--------------------------------*|
     |*  ## PRIVATE FUNCTIONS          *|
     |*--------------------------------*/
+
+    // TODO: Doc
+    function _checkValidSignature(
+        address _lender,
+        bytes32 _offerHash,
+        bytes memory _signature
+    ) private {
+        if (_lender.code.length > 0) {
+            require(IERC1271(_lender).isValidSignature(_offerHash, _signature) == EIP1271_VALID_SIGNATURE, "Signature on behalf of contract is invalid");
+        } else {
+            require(ECDSA.recover(_offerHash, _signature) == _lender, "Lender address didn't sign the offer");
+        }
+    }
+
+    // TODO: Doc
+    function _checkValidOffer(
+        uint40 _expiration,
+        bytes32 _offerHash
+    ) private {
+        require(_expiration == 0 || block.timestamp < _expiration, "Offer is expired");
+        require(revokedOffers[_offerHash] == false, "Offer is revoked or has been accepted");
+    }
 
     // TODO: Doc
     function hash(Offer memory _offer) private pure returns (bytes32) {
