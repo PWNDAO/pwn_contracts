@@ -39,7 +39,7 @@ contract PWNDeed is ERC1155, Ownable {
      * EIP-712 flexible offer struct type hash
      */
     bytes32 constant internal FLEXIBLE_OFFER_TYPEHASH = keccak256(
-        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256 collateralId,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,bool collectionOffer,address lender,bytes32 nonce)"
+        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256[] collateralIdsWhitelist,uint256[] collateralIdsBlacklist,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address lender,bytes32 nonce)"
     );
 
     /**
@@ -82,7 +82,8 @@ contract PWNDeed is ERC1155, Ownable {
         address collateralAddress;
         MultiToken.Category collateralCategory;
         uint256 collateralAmount;
-        uint256 collateralId;
+        uint256[] collateralIdsWhitelist;
+        uint256[] collateralIdsBlacklist;
         address loanAssetAddress;
         uint256 loanAmountMax;
         uint256 loanAmountMin;
@@ -90,7 +91,6 @@ contract PWNDeed is ERC1155, Ownable {
         uint32 durationMax;
         uint32 durationMin;
         uint40 expiration;
-        bool collectionOffer;
         address lender;
         bytes32 nonce;
     }
@@ -253,6 +253,19 @@ contract PWNDeed is ERC1155, Ownable {
         require(_offer.loanAmountMin <= _offerInstance.loanAmount && _offerInstance.loanAmount <= _offer.loanAmountMax, "Loan amount is not in offered range");
         require(_offer.durationMin <= _offerInstance.duration && _offerInstance.duration <= _offer.durationMax, "Loan duration is not in offered range");
 
+        if (_offer.collateralIdsWhitelist.length == 1) {
+            // Not flexible collateral id
+            require(_offer.collateralIdsWhitelist[0] == _offerInstance.collateralId, "TBD1");
+        } else if (_offer.collateralIdsWhitelist.length > 1) {
+            // Whitelisted collateral id
+            require(_contains(_offer.collateralIdsWhitelist, _offerInstance.collateralId), "TBD2");
+        } else if (_offer.collateralIdsWhitelist.length == 0 && _offer.collateralIdsBlacklist.length > 0) {
+            // Blacklisted collateral id
+            require(!_contains(_offer.collateralIdsBlacklist, _offerInstance.collateralId), "TBD3");
+        } else if (_offer.collateralIdsWhitelist.length == 0 && _offer.collateralIdsBlacklist.length == 0) {
+            // Any collateral id
+        }
+
         revokedOffers[offerHash] = true;
 
         uint256 _id = ++id;
@@ -266,9 +279,7 @@ contract PWNDeed is ERC1155, Ownable {
             _offer.collateralAddress,
             _offer.collateralCategory,
             _offer.collateralAmount,
-            (_offer.collectionOffer && _offer.collateralCategory == MultiToken.Category.ERC721)
-                ? _offerInstance.collateralId
-                : _offer.collateralId
+            _offerInstance.collateralId
         );
         deed.loan = MultiToken.Asset(
             _offer.loanAssetAddress,
@@ -286,6 +297,16 @@ contract PWNDeed is ERC1155, Ownable {
         _mint(_offer.lender, _id, 1, "");
 
         emit DeedCreated(_id, _offer.lender, offerHash);
+    }
+
+    function _contains(uint256[] memory _list, uint256 _item) private pure returns (bool) {
+        for (uint256 i = 0; i < _list.length; i++) {
+            if (_list[i] == _item) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -466,7 +487,7 @@ contract PWNDeed is ERC1155, Ownable {
         address _lender,
         bytes32 _offerHash,
         bytes memory _signature
-    ) private {
+    ) private view {
         if (_lender.code.length > 0) {
             require(IERC1271(_lender).isValidSignature(_offerHash, _signature) == EIP1271_VALID_SIGNATURE, "Signature on behalf of contract is invalid");
         } else {
@@ -478,7 +499,7 @@ contract PWNDeed is ERC1155, Ownable {
     function _checkValidOffer(
         uint40 _expiration,
         bytes32 _offerHash
-    ) private {
+    ) private view {
         require(_expiration == 0 || block.timestamp < _expiration, "Offer is expired");
         require(revokedOffers[_offerHash] == false, "Offer is revoked or has been accepted");
     }
@@ -514,7 +535,8 @@ contract PWNDeed is ERC1155, Ownable {
             _offer.collateralAddress,
             _offer.collateralCategory,
             _offer.collateralAmount,
-            _offer.collateralId
+            keccak256(abi.encodePacked(_offer.collateralIdsWhitelist)),
+            keccak256(abi.encodePacked(_offer.collateralIdsBlacklist))
         );
 
         bytes memory encodedOfferLoanData = abi.encode(
@@ -528,7 +550,6 @@ contract PWNDeed is ERC1155, Ownable {
             _offer.durationMax,
             _offer.durationMin,
             _offer.expiration,
-            _offer.collectionOffer,
             _offer.lender,
             _offer.nonce
         );

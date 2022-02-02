@@ -96,7 +96,7 @@ contract PWN is Ownable {
             _offer.collateralAddress,
             _offer.collateralCategory,
             _offer.collateralAmount,
-            _offer.collectionOffer ? _offerInstance.collateralId : _offer.collateralId
+            _offerInstance.collateralId
         );
 
         MultiToken.Asset memory loan = MultiToken.Asset(

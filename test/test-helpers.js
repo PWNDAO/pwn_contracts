@@ -43,7 +43,8 @@ const EIP712FlexibleOfferTypes = {
 		{ name: "collateralAddress", type: "address" },
 		{ name: "collateralCategory", type: "uint8" },
 		{ name: "collateralAmount", type: "uint256" },
-		{ name: "collateralId", type: "uint256" },
+		{ name: "collateralIdsWhitelist", type: "uint256[]" },
+		{ name: "collateralIdsBlacklist", type: "uint256[]" },
 		{ name: "loanAssetAddress", type: "address" },
 		{ name: "loanAmountMax", type: "uint256" },
 		{ name: "loanAmountMin", type: "uint256" },
@@ -51,7 +52,6 @@ const EIP712FlexibleOfferTypes = {
 		{ name: "durationMax", type: "uint32" },
 		{ name: "durationMin", type: "uint32" },
 		{ name: "expiration", type: "uint40" },
-		{ name: "collectionOffer", type: "bool" },
 		{ name: "lender", type: "address" },
 		{ name: "nonce", type: "bytes32" },
 	]
@@ -125,7 +125,8 @@ function getFlexibleOfferObject(
 	collateralAddress,
 	collateralCategory,
 	collateralAmount,
-	collateralId,
+	collateralIdsWhitelist,
+	collateralIdsBlacklist,
 	loanAssetAddress,
 	loanAmountMax,
 	loanAmountMin,
@@ -133,7 +134,6 @@ function getFlexibleOfferObject(
 	durationMax,
 	durationMin,
 	expiration,
-	collectionOffer,
 	lender,
 	nonce
 ) {
@@ -141,7 +141,8 @@ function getFlexibleOfferObject(
 		collateralAddress: collateralAddress,
 		collateralCategory: collateralCategory,
 		collateralAmount: collateralAmount,
-		collateralId: collateralId,
+		collateralIdsWhitelist: collateralIdsWhitelist,
+		collateralIdsBlacklist: collateralIdsBlacklist,
 		loanAssetAddress: loanAssetAddress,
 		loanAmountMax: loanAmountMax,
 		loanAmountMin: loanAmountMin,
@@ -149,7 +150,6 @@ function getFlexibleOfferObject(
 		durationMax: durationMax,
 		durationMin: durationMin,
 		expiration: expiration,
-		collectionOffer: collectionOffer,
 		lender: lender,
 		nonce: nonce,
 	}

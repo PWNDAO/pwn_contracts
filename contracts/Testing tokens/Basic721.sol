@@ -32,7 +32,7 @@ contract Basic721 is ERC721, Ownable {
         return baseURI;
     }
 
-    function setBaseURI(string memory _baseURI) public onlyOwner {
-        baseURI = _baseURI;
+    function setBaseURI(string memory _uri) public onlyOwner {
+        baseURI = _uri;
     }
 }

@@ -159,9 +159,9 @@ describe("PWN contract", function () {
 
 		it("Should be possible to create a deed with ERC20 collateral with flexible offer", async function () {
 			const offer = [
-				WETH.address, CATEGORY.ERC20, 100, 0,
+				WETH.address, CATEGORY.ERC20, 100, [], [],
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, false, lender.address, nonce,
+				3600, 3000, 0, lender.address, nonce,
 			];
 			const offerInstance = [
 				0, 900, 3300
@@ -202,12 +202,12 @@ describe("PWN contract", function () {
 
 		it("Should be possible to create a deed with ERC721 collateral with flexible offer", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 42,
+				NFT.address, CATEGORY.ERC721, 0, [42], [],
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, false, lender.address, nonce,
+				3600, 3000, 0, lender.address, nonce,
 			];
 			const offerInstance = [
-				0, 900, 3300
+				42, 900, 3300
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -225,9 +225,9 @@ describe("PWN contract", function () {
 
 		it("Should be possible to create a deed with ERC721 collateral with flexible collection offer", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 0,
+				NFT.address, CATEGORY.ERC721, 0, [], [],
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, true, lender.address, nonce,
+				3600, 3000, 0, lender.address, nonce,
 			];
 			const offerInstance = [
 				42, 900, 3300
@@ -269,12 +269,12 @@ describe("PWN contract", function () {
 
 		it("Should be possible to create a deed with ERC1155 collateral with flexible offer", async function () {
 			const offer = [
-				GAME.address, CATEGORY.ERC1155, 1, 1337,
+				GAME.address, CATEGORY.ERC1155, 1, [1337], [],
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, false, lender.address, nonce,
+				3600, 3000, 0, lender.address, nonce,
 			];
 			const offerInstance = [
-				0, 900, 3300
+				1337, 900, 3300
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -313,12 +313,12 @@ describe("PWN contract", function () {
 
 		it("Should be possible to create a deed with flexible offer signed on behalf of a contract wallet", async function() {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 42,
+				NFT.address, CATEGORY.ERC721, 0, [42], [],
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, false, ContractWallet.address, nonce,
+				3600, 3000, 0, ContractWallet.address, nonce,
 			];
 			const offerInstance = [
-				0, 900, 3300
+				42, 900, 3300
 			];
 			const signature = await signOffer(offer, PWNDeed.address, contractOwner);
 			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);
