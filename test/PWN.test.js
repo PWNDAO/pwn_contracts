@@ -110,8 +110,8 @@ describe("PWN contract", function() {
 	describe("Create deed", function() {
 
 		beforeEach(async function() {
-			vaultFake.push.returns(true);
-			vaultFake.pullProxy.returns(true);
+			vaultFake.pull.returns(true);
+			vaultFake.pushFrom.returns(true);
 		});
 
 
@@ -146,34 +146,34 @@ describe("PWN contract", function() {
 			expect(args._offer.nonce).to.equal(nonce);
 			expect(args._signature).to.equal(signature);
 			expect(args._sender).to.equal(borrower.address);
-			expect(vaultFake.pullProxy).to.have.been.calledAfter(deedFake.create);
+			expect(vaultFake.pushFrom).to.have.been.calledAfter(deedFake.create);
 		});
 
 		it("Should send borrower collateral to vault", async function() {
 			await pwn.connect(borrower).createDeed(...offer);
 
-			expect(vaultFake.push).to.have.been.calledOnce;
-			const args = vaultFake.push.getCall(0).args;
+			expect(vaultFake.pull).to.have.been.calledOnce;
+			const args = vaultFake.pull.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
 			expect(args._asset.category).to.equal(collateral.category);
 			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._asset.amount).to.equal(collateral.amount);
 			expect(args._origin).to.equal(borrower.address);
-			expect(vaultFake.pullProxy).to.have.been.calledAfter(deedFake.create);
+			expect(vaultFake.pushFrom).to.have.been.calledAfter(deedFake.create);
 		});
 
 		it("Should send lender asset to borrower", async function() {
 			await pwn.connect(borrower).createDeed(...offer);
 
-			expect(vaultFake.pullProxy).to.have.been.calledOnce;
-			const args = vaultFake.pullProxy.getCall(0).args;
+			expect(vaultFake.pushFrom).to.have.been.calledOnce;
+			const args = vaultFake.pushFrom.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(loan.assetAddress);
 			expect(args._asset.category).to.equal(loan.category);
 			expect(args._asset.id).to.equal(loan.id);
 			expect(args._asset.amount).to.equal(loan.amount);
 			expect(args._origin).to.equal(lender.address);
 			expect(args._beneficiary).to.equal(borrower.address);
-			expect(vaultFake.pullProxy).to.have.been.calledAfter(deedFake.create);
+			expect(vaultFake.pushFrom).to.have.been.calledAfter(deedFake.create);
 		});
 
 		it("Should return true if successful", async function() {
@@ -193,8 +193,8 @@ describe("PWN contract", function() {
 			deedFake.getLoan.whenCalledWith(did).returns(loan);
 			deedFake.getCollateral.whenCalledWith(did).returns(collateral);
 			deedFake.getBorrower.whenCalledWith(did).returns(borrower.address);
-			vaultFake.pull.returns(true);
 			vaultFake.push.returns(true);
+			vaultFake.pull.returns(true);
 		});
 
 
@@ -207,25 +207,25 @@ describe("PWN contract", function() {
 		it("Should send deed collateral from vault to borrower", async function() {
 			await pwn.connect(borrower).repayLoan(did);
 
-			const args = vaultFake.pull.getCall(0).args;
+			const args = vaultFake.push.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
 			expect(args._asset.category).to.equal(collateral.category);
 			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._asset.amount).to.equal(collateral.amount);
 			expect(args._beneficiary).to.equal(borrower.address);
-			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.repayLoan);
+			expect(vaultFake.push).to.have.been.calledAfter(deedFake.repayLoan);
 		});
 
 		it("Should send paid back amount from borrower to vault", async function() {
 			await pwn.connect(borrower).repayLoan(did);
 
-			const args = vaultFake.push.getCall(0).args;
+			const args = vaultFake.pull.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(loan.assetAddress);
 			expect(args._asset.category).to.equal(loan.category);
 			expect(args._asset.id).to.equal(loan.id);
 			expect(args._asset.amount).to.equal(loanRepayAmount);
 			expect(args._origin).to.equal(borrower.address);
-			expect(vaultFake.push).to.have.been.calledAfter(deedFake.repayLoan);
+			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.repayLoan);
 		});
 
 		it("Should be possible for anybody to repay a loan", async function() {
@@ -252,7 +252,7 @@ describe("PWN contract", function() {
 			deedFake.getLoanRepayAmount.whenCalledWith(did).returns(loanRepayAmount);
 			deedFake.getCollateral.whenCalledWith(did).returns(collateral);
 			deedFake.getLoan.whenCalledWith(did).returns(loan);
-			vaultFake.pull.returns(true);
+			vaultFake.push.returns(true);
 		});
 
 
@@ -267,9 +267,9 @@ describe("PWN contract", function() {
 
 			await pwn.connect(lender).claimDeed(did);
 
-			expect(vaultFake.pull).to.have.been.calledOnce;
-			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.claim);
-			const args = vaultFake.pull.getCall(0).args;
+			expect(vaultFake.push).to.have.been.calledOnce;
+			expect(vaultFake.push).to.have.been.calledAfter(deedFake.claim);
+			const args = vaultFake.push.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
 			expect(args._asset.category).to.equal(collateral.category);
 			expect(args._asset.id).to.equal(collateral.id);
@@ -282,9 +282,9 @@ describe("PWN contract", function() {
 
 			await pwn.connect(lender).claimDeed(did);
 
-			expect(vaultFake.pull).to.have.been.calledOnce;
-			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.claim);
-			const args = vaultFake.pull.getCall(0).args;
+			expect(vaultFake.push).to.have.been.calledOnce;
+			expect(vaultFake.push).to.have.been.calledAfter(deedFake.claim);
+			const args = vaultFake.push.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(loan.assetAddress);
 			expect(args._asset.category).to.equal(loan.category);
 			expect(args._asset.id).to.equal(loan.id);
@@ -295,7 +295,7 @@ describe("PWN contract", function() {
 			await pwn.connect(lender).claimDeed(did);
 
 			expect(deedFake.burn).to.have.been.calledOnceWith(did, lender.address);
-			expect(deedFake.burn).to.have.been.calledAfter(vaultFake.pull);
+			expect(deedFake.burn).to.have.been.calledAfter(vaultFake.push);
 		});
 
 		it("Should return true if successful", async function() {
