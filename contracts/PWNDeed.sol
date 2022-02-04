@@ -182,16 +182,8 @@ contract PWNDeed is ERC1155, Ownable {
         bytes memory _signature,
         address _sender
     ) external onlyPWN {
-        bytes32 eip712DomainSeparator = keccak256(abi.encode(
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes("PWN")),
-            keccak256(bytes("1")),
-            block.chainid,
-            address(this)
-        ));
-
         bytes32 offerHash = keccak256(abi.encodePacked(
-            "\x19\x01", eip712DomainSeparator, hash(_offer)
+            "\x19\x01", _eip712DomainSeparator(), hash(_offer)
         ));
 
         _checkValidSignature(_offer.lender, offerHash, _signature);
@@ -242,7 +234,7 @@ contract PWNDeed is ERC1155, Ownable {
         address _sender
     ) external onlyPWN {
         bytes32 offerHash = keccak256(abi.encodePacked(
-            "\x19\x01", EIP712_DOMAIN_SEPARATOR, hash(_offer)
+            "\x19\x01", _eip712DomainSeparator(), hash(_offer)
         ));
 
         _checkValidSignature(_offer.lender, offerHash, _signature);
@@ -481,6 +473,17 @@ contract PWNDeed is ERC1155, Ownable {
     /*--------------------------------*|
     |*  ## PRIVATE FUNCTIONS          *|
     |*--------------------------------*/
+
+    // TODO: Doc
+    function _eip712DomainSeparator() private view returns (bytes32) {
+        return keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256(bytes("PWN")),
+            keccak256(bytes("1")),
+            block.chainid,
+            address(this)
+        ));
+    }
 
     // TODO: Doc
     function _checkValidSignature(
