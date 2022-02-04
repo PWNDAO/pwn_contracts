@@ -78,8 +78,8 @@ contract PWN is Ownable {
             0
         );
 
-        vault.push(collateral, msg.sender);
-        vault.pullProxy(loan, _offer.lender, msg.sender);
+        vault.pull(collateral, msg.sender);
+        vault.pushFrom(loan, _offer.lender, msg.sender);
 
         return true;
     }
