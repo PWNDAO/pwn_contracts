@@ -43,11 +43,6 @@ contract PWNDeed is ERC1155, Ownable {
     );
 
     /**
-     * EIP-712 domain separator
-     */
-    bytes32 immutable internal EIP712_DOMAIN_SEPARATOR;
-
-    /**
      * Construct defining a Deed
      * @param status 0 == none/dead || 1 == new/open || 2 == running/accepted offer || 3 == paid back || 4 == expired
      * @param borrower Address of the borrower - stays the same for entire lifespan of the token
@@ -126,13 +121,7 @@ contract PWNDeed is ERC1155, Ownable {
      * @param _uri Uri to be used for finding the token metadata (https://api.pwn.finance/deed/...)
      */
     constructor(string memory _uri) ERC1155(_uri) Ownable() {
-        EIP712_DOMAIN_SEPARATOR = keccak256(abi.encode(
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes("PWN")),
-            keccak256(bytes("2")),
-            block.chainid,
-            address(this)
-        ));
+
     }
 
     /**
@@ -173,8 +162,16 @@ contract PWNDeed is ERC1155, Ownable {
         bytes memory _signature,
         address _sender
     ) external onlyPWN {
+        bytes32 eip712DomainSeparator = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256(bytes("PWN")),
+            keccak256(bytes("1")),
+            block.chainid,
+            address(this)
+        ));
+
         bytes32 offerHash = keccak256(abi.encodePacked(
-            "\x19\x01", EIP712_DOMAIN_SEPARATOR, hash(_offer)
+            "\x19\x01", eip712DomainSeparator, hash(_offer)
         ));
 
         if (_offer.lender.code.length > 0) {

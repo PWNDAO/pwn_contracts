@@ -16,7 +16,7 @@ async function timestampFromNow(delta) {
 function getEIP712Domain(address) {
 	return {
 		name: "PWN",
-		version: "2",
+		version: "1",
 		chainId: 31337, // Default hardhat network chain id
 		verifyingContract: address
 	}
