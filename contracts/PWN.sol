@@ -116,8 +116,8 @@ contract PWN is Ownable {
 
         deed.create(offer, _signature, msg.sender);
 
-        vault.push(offer.collateral, msg.sender);
-        vault.pullProxy(offer.loan, offer.lender, msg.sender);
+        vault.pull(offer.collateral, msg.sender);
+        vault.pushFrom(offer.loan, offer.lender, msg.sender);
 
         return true;
     }
@@ -136,8 +136,8 @@ contract PWN is Ownable {
         MultiToken.Asset memory loan = deed.getLoan(_did);
         loan.amount = deed.getLoanRepayAmount(_did);
 
-        vault.push(loan, msg.sender);
-        vault.pull(deed.getCollateral(_did), deed.getBorrower(_did));
+        vault.pull(loan, msg.sender);
+        vault.push(deed.getCollateral(_did), deed.getBorrower(_did));
 
         return true;
     }
@@ -157,9 +157,9 @@ contract PWN is Ownable {
             MultiToken.Asset memory loan = deed.getLoan(_did);
             loan.amount = deed.getLoanRepayAmount(_did);
 
-            vault.pull(loan, msg.sender);
+            vault.push(loan, msg.sender);
         } else if (status == 4) {
-            vault.pull(deed.getCollateral(_did), msg.sender);
+            vault.push(deed.getCollateral(_did), msg.sender);
         }
 
         deed.burn(_did, msg.sender);

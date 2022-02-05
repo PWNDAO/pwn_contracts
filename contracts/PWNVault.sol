@@ -27,9 +27,9 @@ contract PWNVault is Ownable, IERC1155Receiver {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event VaultPush(MultiToken.Asset asset, address indexed origin);
-    event VaultPull(MultiToken.Asset asset, address indexed beneficiary);
-    event VaultProxy(MultiToken.Asset asset, address indexed origin, address indexed beneficiary);
+    event VaultPull(MultiToken.Asset asset, address indexed origin);
+    event VaultPush(MultiToken.Asset asset, address indexed beneficiary);
+    event VaultPushFrom(MultiToken.Asset asset, address indexed origin, address indexed beneficiary);
 
 
     /*----------------------------------------------------------*|
@@ -45,44 +45,44 @@ contract PWNVault is Ownable, IERC1155Receiver {
     }
 
     /**
-     * push
-     * @dev function accessing an asset and pushing it INTO the vault
+     * pull
+     * @dev function accessing an asset and pulling it INTO the vault
      * @dev the function assumes a prior token approval was made with the PWNVault.address to be approved
      * @param _asset An asset construct - for definition see { MultiToken.sol }
      * @return true if successful
      */
-    function push(MultiToken.Asset memory _asset, address _origin) external onlyPWN returns (bool) {
+    function pull(MultiToken.Asset memory _asset, address _origin) external onlyPWN returns (bool) {
         _asset.transferAssetFrom(_origin, address(this));
-        emit VaultPush(_asset, _origin);
+        emit VaultPull(_asset, _origin);
         return true;
     }
 
     /**
-     * pull
-     * @dev function pulling an asset FROM the vault, sending to a defined recipient
-     * @dev this is used for unlocking the collateral on revocations & claims or when claiming a paidback loan
+     * push
+     * @dev function pushing an asset FROM the vault, sending to a defined recipient
+     * @dev this is used for claiming a paidback loan or defaulted collateral
      * @param _asset An asset construct - for definition see { MultiToken.sol }
      * @param _beneficiary An address of the recipient of the asset - is set in the PWN logic contract
      * @return true if successful
      */
-    function pull(MultiToken.Asset memory _asset, address _beneficiary) external onlyPWN returns (bool) {
+    function push(MultiToken.Asset memory _asset, address _beneficiary) external onlyPWN returns (bool) {
         _asset.transferAsset(_beneficiary);
-        emit VaultPull(_asset, _beneficiary);
+        emit VaultPush(_asset, _beneficiary);
         return true;
     }
 
     /**
-     * pullProxy
-     * @dev function pulling an asset FROM a lender, sending to a borrower
+     * pushFrom
+     * @dev function pushing an asset FROM a lender, sending to a borrower
      * @dev this function assumes prior approval for the asset to be spend by the borrower address
      * @param _asset An asset construct - for definition see { MultiToken.sol }
      * @param _origin An address of the lender who is providing the loan asset
      * @param _beneficiary An address of the recipient of the asset - is set in the PWN logic contract
      * @return true if successful
      */
-    function pullProxy(MultiToken.Asset memory _asset, address _origin, address _beneficiary) external onlyPWN returns (bool) {
+    function pushFrom(MultiToken.Asset memory _asset, address _origin, address _beneficiary) external onlyPWN returns (bool) {
         _asset.transferAssetFrom(_origin, _beneficiary);
-        emit VaultProxy(_asset, _origin, _beneficiary);
+        emit VaultPushFrom(_asset, _origin, _beneficiary);
         return true;
     }
     
@@ -165,9 +165,9 @@ contract PWNVault is Ownable, IERC1155Receiver {
             interfaceId == type(Ownable).interfaceId || // Ownable
             interfaceId == type(IERC1155Receiver).interfaceId || // ERC1155Receiver
             interfaceId == this.PWN.selector
-                            ^ this.push.selector
                             ^ this.pull.selector
-                            ^ this.pullProxy.selector
+                            ^ this.push.selector
+                            ^ this.pushFrom.selector
                             ^ this.setPWN.selector; // PWN Vault
 
     }
