@@ -51,40 +51,19 @@ describe("PWN contract", function() {
 		pwn = await PWN.deploy(deedFake.address, vaultFake.address);
 
 		offer = [
-			collateral.assetAddress,
-			collateral.category,
-			collateral.amount,
-			collateral.id,
-			loan.assetAddress,
-			loan.amount,
-			loanYield,
-			duration,
-			offerExpiration,
-			lender.address,
-			nonce,
+			collateral.assetAddress, collateral.category, collateral.amount, collateral.id,
+			loan.assetAddress, loan.amount, loanYield,
+			duration, offerExpiration, lender.address, nonce,
 		];
 
 		flexibleOffer = [
-			collateral.assetAddress,
-			collateral.category,
-			collateral.amount,
-			[1, 2, 3],
-			[4, 5, 6],
-			loan.assetAddress,
-			loanAmountMax,
-			loanAmountMin,
-			loanYield,
-			durationMax,
-			durationMin,
-			offerExpiration,
-			lender.address,
-			nonce,
+			collateral.assetAddress, collateral.category, collateral.amount, [1, 2, 3], [4, 5, 6],
+			loan.assetAddress, loanAmountMax, loanAmountMin, loanYield,
+			durationMax, durationMin, offerExpiration, lender.address, nonce,
 		];
 
 		flexibleOfferInstance = [
-			collateral.id,
-			loan.amount,
-			duration,
+			collateral.id, loan.amount, duration,
 		];
 	});
 

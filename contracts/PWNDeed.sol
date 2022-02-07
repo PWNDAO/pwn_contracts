@@ -276,13 +276,13 @@ contract PWNDeed is ERC1155, Ownable {
         // Flexible collateral id
         if (_offer.collateralIdsWhitelist.length == 1) {
             // Not flexible collateral id
-            require(_offer.collateralIdsWhitelist[0] == _offerInstance.collateralId, "Selected collateral id is not contained in the whitelist");
+            require(_offer.collateralIdsWhitelist[0] == _offerInstance.collateralId, "Selected collateral id is not contained in whitelist");
         } else if (_offer.collateralIdsWhitelist.length > 1) {
             // Whitelisted collateral id
-            require(_contains(_offer.collateralIdsWhitelist, _offerInstance.collateralId), "Selected collateral id is not contained in the whitelist");
+            require(_contains(_offer.collateralIdsWhitelist, _offerInstance.collateralId), "Selected collateral id is not contained in whitelist");
         } else if (_offer.collateralIdsWhitelist.length == 0 && _offer.collateralIdsBlacklist.length > 0) {
             // Blacklisted collateral id
-            require(!_contains(_offer.collateralIdsBlacklist, _offerInstance.collateralId), "Selected collateral id is contained in the blacklist");
+            require(!_contains(_offer.collateralIdsBlacklist, _offerInstance.collateralId), "Selected collateral id is contained in blacklist");
         } else if (_offer.collateralIdsWhitelist.length == 0 && _offer.collateralIdsBlacklist.length == 0) {
             // Any collateral id - collection offer
         }
