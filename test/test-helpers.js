@@ -155,28 +155,4 @@ function getFlexibleOfferObject(
 	}
 }
 
-function getOfferStruct(
-	collateralAssetAddress,
-	collateralCategory,
-	collateralAmount,
-	collateralId,
-	loanAssetAddress,
-	loanAmount,
-	loanRepayAmount,
-	duration,
-	offerExpiration,
-	lender,
-	nonce,
-) {
-	return [
-		[collateralAssetAddress, collateralCategory, collateralAmount, collateralId],
-		[loanAssetAddress, CATEGORY.ERC20, loanAmount, 0],
-		loanRepayAmount,
-		duration,
-		offerExpiration,
-		lender,
-		nonce,
-	];
-}
-
-module.exports = { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, getOfferStruct };
+module.exports = { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer };
