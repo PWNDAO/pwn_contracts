@@ -57,7 +57,15 @@ contract PWN is Ownable {
         return true;
     }
 
-    // TODO: Doc
+    /**
+     * createDeed
+     * @notice Borrower can accept existing signed off-chain offer
+     * @dev A UI should do an off-chain balance check on the lender side to make sure the call won't throw
+     * @dev Loan asset has to be an ERC20 token, otherwise will transaction fail
+     * @param _offer Offer struct with plain offer data. See { PWNDeed.sol }
+     * @param _signature Offer typed struct signed by lender
+     * @return True if successful
+     */
     function createDeed(
         PWNDeed.Offer memory _offer,
         bytes memory _signature
@@ -84,7 +92,16 @@ contract PWN is Ownable {
         return true;
     }
 
-    // TODO: Doc
+    /**
+     * createDeedFlexible
+     * @notice Borrower can accept existing signed off-chain flexible offer
+     * @dev A UI should do an off-chain balance check on the lender side to make sure the call won't throw
+     * @dev Loan asset has to be an ERC20 token, otherwise will transaction fail
+     * @param _offer Flexible offer struct with plain flexible offer data. See { PWNDeed.sol }
+     * @param _offerInstance Concrete parameters of a flexible offer set by borrower
+     * @param _signature Flexible offer typed struct signed by lender
+     * @return True if successful
+     */
     function createDeedFlexible(
         PWNDeed.FlexibleOffer memory _offer,
         PWNDeed.OfferInstance memory _offerInstance,
