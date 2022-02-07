@@ -564,9 +564,11 @@ contract PWNDeed is ERC1155, Ownable {
      * @return True if item is in the list
      */
     function _contains(uint256[] memory _list, uint256 _item) private pure returns (bool) {
-        for (uint256 i = 0; i < _list.length; i++)
-            if (_list[i] == _item)
-                return true;
+        unchecked {
+            for (uint256 i = 0; i < _list.length; ++i)
+                if (_list[i] == _item)
+                    return true;
+        }
 
         return false;
     }
