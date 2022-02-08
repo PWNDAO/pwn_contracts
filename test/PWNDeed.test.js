@@ -100,51 +100,31 @@ describe("PWNDeed contract", function() {
 	describe("Revoke offer", function() { // -> PWN is trusted source so we believe that it would not send invalid data
 
 		it("Should fail when sender is not PWN contract", async function() {
-			try {
-				await deed.connect(addr1).revokeOffer(offerHash, signature, lender.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the PWN");
-			}
+			await expect(
+				deed.connect(addr1).revokeOffer(offerHash, signature, lender.address)
+			).to.be.revertedWith("Caller is not the PWN");
 		});
 
 		it("Should fail when lender is not the offer signer", async function() {
-			try {
-				await deed.revokeOffer(offerHash, signature, borrower.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Sender is not an offer signer");
-			}
+			await expect(
+				deed.revokeOffer(offerHash, signature, borrower.address)
+			).to.be.revertedWith("Sender is not an offer signer");
 		});
 
 		it("Should fail with invalid signature", async function() {
 			const fakeSignature = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a6732801029378ddf837210000397c68129387fd887839708320980942102910a00";
 
-			try {
-				await deed.revokeOffer(offerHash, fakeSignature, lender.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("ECDSA: invalid signature");
-			}
+			await expect(
+				deed.revokeOffer(offerHash, fakeSignature, lender.address)
+			).to.be.revertedWith("ECDSA: invalid signature");
 		});
 
 		it("Should fail if offer is already revoked", async function() {
 			await deed.revokeOffer(offerHash, signature, lender.address);
 
-			try {
-				await deed.revokeOffer(offerHash, signature, lender.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Offer is already revoked or has been accepted");
-			}
+			await expect(
+				deed.revokeOffer(offerHash, signature, lender.address)
+			).to.be.revertedWith("Offer is already revoked or has been accepted");
 		});
 
 		it("Should set offer as revoked", async function() {
@@ -155,14 +135,11 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should emit OfferRevoked event", async function() {
-			const tx = await deed.revokeOffer(offerHash, signature, lender.address);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = deedEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("OfferRevoked");
-			const args = logDescription.args;
-			expect(args.offerHash).to.equal(ethers.utils.hexValue(offerHash));
+			await expect(
+				deed.revokeOffer(offerHash, signature, lender.address)
+			).to.emit(deed, "OfferRevoked").withArgs(
+				ethers.utils.hexValue(offerHash)
+			);
 		});
 
 	});
@@ -171,27 +148,17 @@ describe("PWNDeed contract", function() {
 	describe("Create", function() { // -> PWN is trusted source so we believe that it would not send invalid data
 
 		it("Should fail when sender is not PWN contract", async function() {
-			try {
-				await deed.connect(addr1).create(offer, signature, borrower.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the PWN");
-			}
+			await expect(
+				deed.connect(addr1).create(offer, signature, borrower.address)
+			).to.be.revertedWith("Caller is not the PWN");
 		});
 
 		it("Should fail when offer lender is not offer signer", async function() {
 			offer[9] = addr1.address;
 
-			try {
-				await deed.create(offer, signature, borrower.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Lender address didn't sign the offer");
-			}
+			await expect(
+				deed.create(offer, signature, borrower.address)
+			).to.be.revertedWith("Lender address didn't sign the offer");
 		});
 
 		it("Should pass when offer is signed on behalf of a contract wallet", async function() {
@@ -201,15 +168,10 @@ describe("PWNDeed contract", function() {
 			signature = await signOffer(offer, deed.address, addr1);
 			fakeContractWallet.isValidSignature.whenCalledWith(offerHash, signature).returns("0x1626ba7e");
 			fakeContractWallet.onERC1155Received.returns("0xf23a6e61");
-			let failed = false;
 
-			try {
-				await deed.create(offer, signature, borrower.address);
-			} catch {
-				failed = true;
-			}
-
-			expect(failed).to.equal(false);
+			await expect(
+				deed.create(offer, signature, borrower.address)
+			).to.not.be.reverted;
 		});
 
 		it("Should fail when contract wallet returns that offer signed on behalf of a contract wallet is invalid", async function() {
@@ -219,69 +181,44 @@ describe("PWNDeed contract", function() {
 			fakeContractWallet.isValidSignature.returns("0xffffffff");
 			fakeContractWallet.onERC1155Received.returns("0xf23a6e61");
 
-			try {
-				await deed.create(offer, signature, borrower.address);
-
-				expect.fai();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Signature on behalf of contract is invalid");
-			}
+			await expect(
+				deed.create(offer, signature, borrower.address)
+			).to.be.revertedWith("Signature on behalf of contract is invalid");
 		});
 
 		it("Should fail when given invalid signature", async function() {
 			const fakeSignature = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a6732801029378ddf837210000397c68129387fd887839708320980942102910a00";
 
-			try {
-				await deed.create(offer, fakeSignature, borrower.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("ECDSA: invalid signature");
-			}
+			await expect(
+				deed.create(offer, fakeSignature, borrower.address)
+			).to.be.revertedWith("ECDSA: invalid signature");
 		});
 
 		it("Should fail when offer is expired", async function() {
 			offer[8] = 1;
 			signature = await signOffer(offer, deed.address, lender);
 
-			try {
-				await deed.create(offer, signature, borrower.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Offer is expired");
-			}
+			await expect(
+				deed.create(offer, signature, borrower.address)
+			).to.be.revertedWith("Offer is expired");
 		});
 
 		it("Should pass when offer has expiration but is not expired", async function() {
 			const expiration = await timestampFromNow(100);
 			offer[8] = expiration;
 			signature = await signOffer(offer, deed.address, lender);
-			let failed = false;
 
-			try {
-				await deed.create(offer, signature, borrower.address);
-			} catch {
-				failed = true;
-			}
-
-			expect(failed).to.equal(false);
+			await expect(
+				deed.create(offer, signature, borrower.address)
+			).to.not.be.reverted;
 		});
 
 		it("Should fail when offer is revoked", async function() {
 			await deed.revokeOffer(offerHash, signature, lender.address);
 
-			try {
-				await deed.create(offer, signature, borrower.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Offer is revoked or has been accepted");
-			}
+			await expect(
+				deed.create(offer, signature, borrower.address)
+			).to.be.revertedWith("Offer is revoked or has been accepted");
 		});
 
 		it("Should revoke accepted offer", async function() {
@@ -334,16 +271,13 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should emit DeedCreated event", async function() {
-			const tx = await deed.create(offer, signature, borrower.address);
-			const response = await tx.wait();
 			const did = await deed.id();
 
-			expect(response.logs.length).to.equal(2);
-			const logDescription = deedEventIface.parseLog(response.logs[1]);
-			expect(logDescription.name).to.equal("DeedCreated");
-			expect(logDescription.args.did).to.equal(did);
-			expect(logDescription.args.lender).to.equal(lender.address);
-			expect(logDescription.args.offerHash).to.equal(ethers.utils.hexValue(offerHash));
+			await expect(
+				deed.create(offer, signature, borrower.address)
+			).to.emit(deed, "DeedCreated").withArgs(
+				did + 1, lender.address, ethers.utils.hexValue(offerHash)
+			);
 		});
 
 	});
@@ -566,16 +500,13 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should emit DeedCreated event", async function() {
-			const tx = await deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address);
-			const response = await tx.wait();
 			const did = await deed.id();
 
-			expect(response.logs.length).to.equal(2);
-			const logDescription = deedEventIface.parseLog(response.logs[1]);
-			expect(logDescription.name).to.equal("DeedCreated");
-			expect(logDescription.args.did).to.equal(did);
-			expect(logDescription.args.lender).to.equal(lender.address);
-			expect(logDescription.args.offerHash).to.equal(ethers.utils.hexValue(offerHash));
+			await expect(
+				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+			).to.emit(deed, "DeedCreated").withArgs(
+				did + 1, lender.address, ethers.utils.hexValue(offerHash)
+			);
 		});
 
 	});
@@ -592,14 +523,9 @@ describe("PWNDeed contract", function() {
 
 
 		it("Should fail when sender is not PWN contract", async function() {
-			try {
-				await deed.connect(addr1).repayLoan(did);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the PWN");
-			}
+			await expect(
+				deed.connect(addr1).repayLoan(did)
+			).to.be.revertedWith("Caller is not the PWN");
 		});
 
 		it("Should fail when deed is not in running state", async function() {
@@ -612,14 +538,9 @@ describe("PWNDeed contract", function() {
 				}
 			});
 
-			try {
-				await deedMock.repayLoan(did);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Deed is not running and cannot be paid back");
-			}
+			await expect(
+				deedMock.repayLoan(did)
+			).to.be.revertedWith("Deed is not running and cannot be paid back");
 		});
 
 		it("Should update deed to paid back state", async function() {
@@ -630,14 +551,11 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should emit PaidBack event", async function() {
-			const tx = await deed.repayLoan(did);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = deedEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("PaidBack");
-			const args = logDescription.args;
-			expect(args.did).to.equal(did);
+			await expect(
+				deed.repayLoan(did)
+			).to.emit(deed, "PaidBack").withArgs(
+				did
+			);
 		});
 
 	});
@@ -665,25 +583,15 @@ describe("PWNDeed contract", function() {
 
 
 		it("Should fail when sender is not PWN contract", async function() {
-			try {
-				await deedMock.connect(addr1).claim(did, lender.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the PWN");
-			}
+			await expect(
+				deedMock.connect(addr1).claim(did, lender.address)
+			).to.be.revertedWith("Caller is not the PWN");
 		});
 
 		it("Should fail when sender is not deed owner", async function() {
-			try {
-				await deedMock.claim(did, addr4.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the deed owner");
-			}
+			await expect(
+				deedMock.claim(did, addr4.address)
+			).to.be.revertedWith("Caller is not the deed owner");
 		});
 
 		it("Should fail when deed is not in paid back nor expired state", async function() {
@@ -693,14 +601,9 @@ describe("PWNDeed contract", function() {
 				}
 			});
 
-			try {
-				await deedMock.claim(did, lender.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Deed can't be claimed yet");
-			}
+			await expect(
+				deedMock.claim(did, lender.address)
+			).to.be.revertedWith("Deed can't be claimed yet");
 		});
 
 		it("Should be possible to claim expired deed", async function() {
@@ -739,14 +642,11 @@ describe("PWNDeed contract", function() {
 		it("Should emit DeedClaimed event", async function() {
 			await deedMock.repayLoan(did);
 
-			const tx = await deedMock.claim(did, lender.address);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = deedEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("DeedClaimed");
-			const args = logDescription.args;
-			expect(args.did).to.equal(did);
+			await expect(
+				deedMock.claim(did, lender.address)
+			).to.emit(deedMock, "DeedClaimed").withArgs(
+				did
+			);
 		});
 
 	});
@@ -774,25 +674,15 @@ describe("PWNDeed contract", function() {
 
 
 		it("Should fail when sender is not PWN contract", async function() {
-			try {
-				await deedMock.connect(addr1).burn(did, lender.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the PWN");
-			}
+			await expect(
+				deedMock.connect(addr1).burn(did, lender.address)
+			).to.be.revertedWith("Caller is not the PWN");
 		});
 
 		it("Should fail when passing address is not deed owner", async function() {
-			try {
-				await deedMock.burn(did, addr4.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the deed owner");
-			}
+			await expect(
+				deedMock.burn(did, addr4.address)
+			).to.be.revertedWith("Caller is not the deed owner");
 		});
 
 		it("Should fail when deed is not in dead state", async function() {
@@ -802,14 +692,9 @@ describe("PWNDeed contract", function() {
 				}
 			});
 
-			try {
-				await deedMock.burn(did, lender.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Deed can't be burned at this stage");
-			}
+			await expect(
+				deedMock.burn(did, lender.address)
+			).to.be.revertedWith("Deed can't be burned at this stage");
 		});
 
 		it("Should delete deed data", async function() {
@@ -1093,14 +978,9 @@ describe("PWNDeed contract", function() {
 	describe("Set PWN", function() {
 
 		it("Should fail when sender is not owner", async function() {
-			try {
-				await deed.connect(addr1).setPWN(addr2.address);
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Ownable: caller is not the owner");
-			}
+			await expect(
+				deed.connect(addr1).setPWN(addr2.address)
+			).to.be.revertedWith("Ownable: caller is not the owner");
 		});
 
 		it("Should set PWN address", async function() {
@@ -1118,14 +998,9 @@ describe("PWNDeed contract", function() {
 	describe("Set new URI", function() {
 
 		it("Should fail when sender is not owner", async function() {
-			try {
-				await deed.connect(addr1).setUri("https://new.uri.com/deed/{id}");
-
-				expect.fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Ownable: caller is not the owner");
-			}
+			await expect(
+				deed.connect(addr1).setUri("https://new.uri.com/deed/{id}")
+			).to.be.revertedWith("Ownable: caller is not the owner");
 		});
 
 		it("Should set a new URI", async function() {

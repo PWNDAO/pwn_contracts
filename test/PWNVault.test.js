@@ -69,13 +69,9 @@ describe("PWNVault contract", async function() {
 				id: 0,
 			};
 
-			try {
-				await vault.connect(addr1).pull(dummyAsset, addr1.address);
-				expect().fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the PWN");
-			}
+			await expect(
+				vault.connect(addr1).pull(dummyAsset, addr1.address)
+			).to.be.revertedWith("Caller is not the PWN");
 		});
 
 		it("Should send asset from address to vault", async function() {
@@ -94,18 +90,11 @@ describe("PWNVault contract", async function() {
 		it("Should emit VaultPull event", async function() {
 			const amount = 37;
 
-			const tx = await vault.pull([fakeToken.address, CATEGORY.ERC20, amount, 0], addr1.address);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = vaultEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("VaultPull");
-			expect(logDescription.args.origin).to.equal(addr1.address);
-			const args = logDescription.args[0];
-			expect(args.assetAddress).to.equal(fakeToken.address);
-			expect(args.category).to.equal(CATEGORY.ERC20);
-			expect(args.amount).to.equal(amount);
-			expect(args.id).to.equal(0);
+			await expect(
+				vault.pull([fakeToken.address, CATEGORY.ERC20, amount, 0], addr1.address)
+			).to.emit(vault, "VaultPull").withArgs(
+				[fakeToken.address, CATEGORY.ERC20, amount, 0], addr1.address
+			);
 		});
 
 		it("Should return true if successful", async function() {
@@ -135,13 +124,9 @@ describe("PWNVault contract", async function() {
 				id: 0,
 			};
 
-			try {
-				await vault.connect(addr1).push(dummyAsset, addr3.address);
-				expect().fail();
-			} catch(error) {
-				expect(error.message).to.contain("revert");
-				expect(error.message).to.contain("Caller is not the PWN");
-			}
+			await expect(
+				vault.connect(addr1).push(dummyAsset, addr3.address)
+			).to.be.revertedWith("Caller is not the PWN");
 		});
 
 		it("Should send asset from vault to address", async function() {
@@ -160,18 +145,11 @@ describe("PWNVault contract", async function() {
 		it("Should emit VaultPush event", async function() {
 			const amount = 73;
 
-			const tx = await vault.push([fakeToken.address, CATEGORY.ERC20, amount, 0], addr2.address);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = vaultEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("VaultPush");
-			expect(logDescription.args.beneficiary).to.equal(addr2.address);
-			const args = logDescription.args[0];
-			expect(args.assetAddress).to.equal(fakeToken.address);
-			expect(args.category).to.equal(CATEGORY.ERC20);
-			expect(args.amount).to.equal(amount);
-			expect(args.id).to.equal(0);
+			await expect(
+				vault.push([fakeToken.address, CATEGORY.ERC20, amount, 0], addr2.address)
+			).to.emit(vault, "VaultPush").withArgs(
+				[fakeToken.address, CATEGORY.ERC20, amount, 0], addr2.address
+			);
 		});
 
 		it("Should return true if successful", async function() {
@@ -227,19 +205,11 @@ describe("PWNVault contract", async function() {
 		it("Should emit VaultPushFrom event", async function() {
 			const amount = 7;
 
-			const tx = await vault.pushFrom([fakeToken.address, CATEGORY.ERC20, amount, 0], addr2.address, addr3.address);
-			const response = await tx.wait();
-
-			expect(response.logs.length).to.equal(1);
-			const logDescription = vaultEventIface.parseLog(response.logs[0]);
-			expect(logDescription.name).to.equal("VaultPushFrom");
-			expect(logDescription.args.origin).to.equal(addr2.address);
-			expect(logDescription.args.beneficiary).to.equal(addr3.address);
-			const args = logDescription.args[0];
-			expect(args.assetAddress).to.equal(fakeToken.address);
-			expect(args.category).to.equal(CATEGORY.ERC20);
-			expect(args.amount).to.equal(amount);
-			expect(args.id).to.equal(0);
+			await expect(
+				vault.pushFrom([fakeToken.address, CATEGORY.ERC20, amount, 0], addr2.address, addr3.address)
+			).to.emit(vault, "VaultPushFrom").withArgs(
+				[fakeToken.address, CATEGORY.ERC20, amount, 0], addr2.address, addr3.address
+			);
 		});
 
 		it("Should return true if successful", async function() {

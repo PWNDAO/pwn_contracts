@@ -121,16 +121,11 @@ describe("PWN contract", function() {
 
 
 		it("Should fail for unknown asset category", async function() {
-			let failed;
 			offer[1] = CATEGORY.unknown;
 
-			try {
-				await pwn.connect(borrower).createDeed(offer, signature);
-			} catch {
-				failed = true;
-			}
-
-			expect(failed).to.equal(true);
+			await expect(
+				pwn.connect(borrower).createDeed(offer, signature)
+			).to.be.reverted;
 		});
 
 		it("Should mint deed token for offer signer", async function() {
@@ -199,16 +194,11 @@ describe("PWN contract", function() {
 
 
 		it("Should fail for unknown asset category", async function() {
-			let failed;
 			flexibleOffer[1] = CATEGORY.unknown;
 
-			try {
-				await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature);
-			} catch {
-				failed = true;
-			}
-
-			expect(failed).to.equal(true);
+			await expect(
+				pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature)
+			).to.be.reverted;
 		});
 
 		it("Should mint deed token for offer signer", async function() {

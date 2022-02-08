@@ -3,7 +3,7 @@ const { time } = require('@openzeppelin/test-helpers');
 const { CATEGORY, getOfferHashBytes, signOffer } = require("./test-helpers");
 
 
-describe("PWN contract", function () {
+describe("PWN", function () {
 
 	let ERC20, ERC721, ERC1155;
 	let NFT, WETH, DAI, GAME;
