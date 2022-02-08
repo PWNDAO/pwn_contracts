@@ -70,8 +70,18 @@ Following diagram shows deed lifecycle with borrower, lender and pwn protocol in
 
 6. In case borrower is not able to repay loan in time, lender can claim borrowers collateral and borrower keeps the loan asset. 
 
-
 ![Basic user flow](.github/img/user_flow.png "Basic user flow")
+
+## Offer types
+Lender can choose between two types while making an offer. Basic and flexible. 
+
+### Basic
+Basic offer is where lender is setting all loan parameters up-front and borrower has an option to accept of not. Nothing else. 
+
+### Flexible
+With flexible offers, lender can give borrower additional flexibilty by not providing concrete values but rather give borrower ranges for several parameters. When accepting an offer, borrower has to provider concrete values to proceed. This increases a lenders chance to have their offer accepted as it could be accepted by more borrowers.
+
+Flexible parameters are: collateral id, loan amount, loan duration.
 
 ## Deployed addresses
 ### Mainnet
