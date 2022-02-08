@@ -60,7 +60,7 @@ describe("PWNDeed contract", function() {
 		];
 
 		flexibleOffer = [
-			collateral.assetAddress, collateral.category, collateral.amount, [], [],
+			collateral.assetAddress, collateral.category, collateral.amount, [],
 			loan.assetAddress, loanAmountMax, loanAmountMin, loanYield,
 			durationMax, durationMin, offerExpiration, lender.address, nonce,
 		];
@@ -298,7 +298,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should fail when offer lender is not offer signer", async function() {
-			flexibleOffer[12] = addr1.address;
+			flexibleOffer[11] = addr1.address;
 
 			await expect(
 				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
@@ -307,7 +307,7 @@ describe("PWNDeed contract", function() {
 
 		it("Should pass when offer is signed on behalf of a contract wallet", async function() {
 			const fakeContractWallet = await smock.fake("ContractWallet");
-			flexibleOffer[12] = fakeContractWallet.address;
+			flexibleOffer[11] = fakeContractWallet.address;
 			offerHash = getOfferHashBytes(flexibleOffer, deed.address);
 			signature = await signOffer(flexibleOffer, deed.address, addr1);
 			fakeContractWallet.isValidSignature.whenCalledWith(offerHash, signature).returns("0x1626ba7e");
@@ -320,7 +320,7 @@ describe("PWNDeed contract", function() {
 
 		it("Should fail when contract wallet returns that offer signed on behalf of a contract wallet is invalid", async function() {
 			const fakeContractWallet = await smock.fake("ContractWallet");
-			flexibleOffer[12] = fakeContractWallet.address;
+			flexibleOffer[11] = fakeContractWallet.address;
 			signature = await signOffer(flexibleOffer, deed.address, addr1);
 			fakeContractWallet.isValidSignature.returns("0xffffffff");
 			fakeContractWallet.onERC1155Received.returns("0xf23a6e61");
@@ -339,7 +339,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should fail when offer is expired", async function() {
-			flexibleOffer[11] = 1;
+			flexibleOffer[10] = 1;
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
 			await expect(
@@ -349,7 +349,7 @@ describe("PWNDeed contract", function() {
 
 		it("Should pass when offer has expiration but is not expired", async function() {
 			const expiration = await timestampFromNow(100);
-			flexibleOffer[11] = expiration;
+			flexibleOffer[10] = expiration;
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
 			await expect(
@@ -383,22 +383,13 @@ describe("PWNDeed contract", function() {
 			).to.not.be.reverted;
 		});
 
-		it("Should pass with any selected collateral ID when are whitelist & blacklist empty", async function() {
+		it("Should pass with any selected collateral ID when is whitelist empty", async function() {
 			flexibleOffer[3] = [];
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
 			await expect(
 				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
 			).to.not.be.reverted;
-		});
-
-		it("Should fail when selected collateral ID is blacklisted", async function() {
-			flexibleOffer[4] = [123];
-			signature = await signOffer(flexibleOffer, deed.address, lender);
-
-			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
-			).to.be.revertedWith("Selected collateral id is contained in blacklist");
 		});
 
 		it("Should fail when given amount is above offered range", async function() {
@@ -490,7 +481,7 @@ describe("PWNDeed contract", function() {
 			await deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address);
 			const did1 = await deed.id();
 
-			flexibleOffer[13] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
+			flexibleOffer[12] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
 			await deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address);

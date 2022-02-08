@@ -44,7 +44,6 @@ const EIP712FlexibleOfferTypes = {
 		{ name: "collateralCategory", type: "uint8" },
 		{ name: "collateralAmount", type: "uint256" },
 		{ name: "collateralIdsWhitelist", type: "uint256[]" },
-		{ name: "collateralIdsBlacklist", type: "uint256[]" },
 		{ name: "loanAssetAddress", type: "address" },
 		{ name: "loanAmountMax", type: "uint256" },
 		{ name: "loanAmountMin", type: "uint256" },
@@ -65,7 +64,7 @@ function getOfferHashBytes(offerArray, deedAddress) {
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
-	} else if (offerArray.length == 14) {
+	} else if (offerArray.length == 13) {
 		// Flexible offer
 		return ethers.utils._TypedDataEncoder.hash(
 			getEIP712Domain(deedAddress),
@@ -83,7 +82,7 @@ async function signOffer(offerArray, deedAddress, signer) {
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
-	} else if (offerArray.length == 14) {
+	} else if (offerArray.length == 13) {
 		// Flexible offer
 		return signer._signTypedData(
 			getEIP712Domain(deedAddress),
@@ -126,7 +125,6 @@ function getFlexibleOfferObject(
 	collateralCategory,
 	collateralAmount,
 	collateralIdsWhitelist,
-	collateralIdsBlacklist,
 	loanAssetAddress,
 	loanAmountMax,
 	loanAmountMin,
@@ -142,7 +140,6 @@ function getFlexibleOfferObject(
 		collateralCategory: collateralCategory,
 		collateralAmount: collateralAmount,
 		collateralIdsWhitelist: collateralIdsWhitelist,
-		collateralIdsBlacklist: collateralIdsBlacklist,
 		loanAssetAddress: loanAssetAddress,
 		loanAmountMax: loanAmountMax,
 		loanAmountMin: loanAmountMin,

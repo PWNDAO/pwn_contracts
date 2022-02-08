@@ -39,7 +39,7 @@ contract PWNDeed is ERC1155, Ownable {
      * EIP-712 flexible offer struct type hash
      */
     bytes32 constant internal FLEXIBLE_OFFER_TYPEHASH = keccak256(
-        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256[] collateralIdsWhitelist,uint256[] collateralIdsBlacklist,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address lender,bytes32 nonce)"
+        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256[] collateralIdsWhitelist,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address lender,bytes32 nonce)"
     );
 
     /**
@@ -112,7 +112,6 @@ contract PWNDeed is ERC1155, Ownable {
         MultiToken.Category collateralCategory;
         uint256 collateralAmount;
         uint256[] collateralIdsWhitelist;
-        uint256[] collateralIdsBlacklist;
         address loanAssetAddress;
         uint256 loanAmountMax;
         uint256 loanAmountMin;
@@ -280,10 +279,7 @@ contract PWNDeed is ERC1155, Ownable {
         } else if (_offer.collateralIdsWhitelist.length > 1) {
             // Whitelisted collateral id
             require(_contains(_offer.collateralIdsWhitelist, _offerInstance.collateralId), "Selected collateral id is not contained in whitelist");
-        } else if (_offer.collateralIdsWhitelist.length == 0 && _offer.collateralIdsBlacklist.length > 0) {
-            // Blacklisted collateral id
-            require(!_contains(_offer.collateralIdsBlacklist, _offerInstance.collateralId), "Selected collateral id is contained in blacklist");
-        } else if (_offer.collateralIdsWhitelist.length == 0 && _offer.collateralIdsBlacklist.length == 0) {
+        } else {
             // Any collateral id - collection offer
         }
 
@@ -609,8 +605,7 @@ contract PWNDeed is ERC1155, Ownable {
             _offer.collateralAddress,
             _offer.collateralCategory,
             _offer.collateralAmount,
-            keccak256(abi.encodePacked(_offer.collateralIdsWhitelist)),
-            keccak256(abi.encodePacked(_offer.collateralIdsBlacklist))
+            keccak256(abi.encodePacked(_offer.collateralIdsWhitelist))
         );
 
         bytes memory encodedOfferLoanData = abi.encode(

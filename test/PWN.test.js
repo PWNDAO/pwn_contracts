@@ -57,7 +57,7 @@ describe("PWN contract", function() {
 		];
 
 		flexibleOffer = [
-			collateral.assetAddress, collateral.category, collateral.amount, [1, 2, 3], [4, 5, 6],
+			collateral.assetAddress, collateral.category, collateral.amount, [1, 2, 3],
 			loan.assetAddress, loanAmountMax, loanAmountMin, loanYield,
 			durationMax, durationMin, offerExpiration, lender.address, nonce,
 		];
@@ -210,7 +210,6 @@ describe("PWN contract", function() {
 			expect(args._offer.collateralCategory).to.equal(collateral.category);
 			expect(args._offer.collateralAmount).to.equal(collateral.amount);
 			expect(args._offer.collateralIdsWhitelist).to.have.lengthOf(3);
-			expect(args._offer.collateralIdsBlacklist).to.have.lengthOf(3);
 			expect(args._offer.loanAssetAddress).to.equal(loan.assetAddress);
 			expect(args._offer.loanAmountMax).to.equal(loanAmountMax);
 			expect(args._offer.loanAmountMin).to.equal(loanAmountMin);
