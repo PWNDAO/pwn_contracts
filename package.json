@@ -17,12 +17,12 @@
         "@openzeppelin/contracts": "^4.3.2",
         "@openzeppelin/hardhat-upgrades": "^1.6.0",
         "@openzeppelin/test-helpers": "^0.5.15",
-        "@pwnfinance/multitoken": "^1.0.1",
+        "@pwnfinance/multitoken": "^1.0.3",
         "chai": "^4.3.4",
         "config": "^3.3.6",
         "ethereum-waffle": "^3.3.0",
         "ethers": "5.4.7",
-        "hardhat": "^2.6.5",
+        "hardhat": "^2.8.4",
         "hardhat-gas-reporter": "^1.0.4",
         "surya": "^0.4.5"
     }
