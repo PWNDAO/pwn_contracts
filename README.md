@@ -56,9 +56,9 @@ Following diagram shows deed lifecycle with borrower, lender and pwn protocol in
 - PWNVault deployed at: _0x45DB28b2d4878Ad124c037d4558AcF5Db3bBa6A5_
 
 ### Rinkeby testnet
-- PWN deployed at: _0xdB41a9D0Ae5cBEE58b3e2D00DA6Bd1eB323B92e8_
-- PWNDeed deployed at: _0x4704A3492F3c839B88fB3920ddAff8b3a6F4f7bC_
-- PWNVault deployed at: _0xA1ECA77e64a348B28E1aadf2Bf56D1Eb68Ca518e_
+- PWN deployed at: _0xcBFa1D792F5bf3986f30A3fe14707005B00B0152_
+- PWNDeed deployed at: _0x055dcDB5A5E67D889A934571B6bE9AF0d8c5BF77_
+- PWNVault deployed at: _0x3F1f80062299614B59B035f66E416c016da4F6Ff_
 
 ### OpenSea shortcuts
 - PWN Deeds Listings: https://opensea.io/collection/pwn-deed
