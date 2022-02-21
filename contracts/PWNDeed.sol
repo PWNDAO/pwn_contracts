@@ -32,19 +32,19 @@ contract PWNDeed is ERC1155, Ownable {
      * EIP-712 offer struct type hash
      */
     bytes32 constant internal OFFER_TYPEHASH = keccak256(
-        "Offer(MultiTokenAsset collateral,MultiTokenAsset loan,uint256 loanRepayAmount,uint32 duration,uint40 expiration,address lender,bytes32 nonce)MultiTokenAsset(address assetAddress,uint8 category,uint256 amount,uint256 id)"
+        "Offer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256 collateralId,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address lender,bytes32 nonce)"
     );
 
     /**
-     * EIP-712 multitoken asset struct type hash
+     * EIP-712 flexible offer struct type hash
      */
-    bytes32 constant internal MULTITOKEN_ASSET_TYPEHASH = keccak256(
-        "MultiTokenAsset(address assetAddress,uint8 category,uint256 amount,uint256 id)"
+    bytes32 constant internal FLEXIBLE_OFFER_TYPEHASH = keccak256(
+        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256[] collateralIdsWhitelist,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address lender,bytes32 nonce)"
     );
 
     /**
      * Construct defining a Deed
-     * @param status 0 == none/dead || 1 == new/open || 2 == running/accepted offer || 3 == paid back || 4 == expired
+     * @param status 0 == none/dead || 2 == running/accepted offer || 3 == paid back || 4 == expired
      * @param borrower Address of the borrower - stays the same for entire lifespan of the token
      * @param duration Loan duration in seconds
      * @param expiration Unix timestamp (in seconds) setting up the default deadline
@@ -64,22 +64,75 @@ contract PWNDeed is ERC1155, Ownable {
 
     /**
      * Construct defining an Offer
-     * @param collateral Asset used as a loan collateral
-     * @param loan Asset to be borrowed by lender to borrower
-     * @param loanRepayAmount Amount of loan asset to be repaid
+     * @param collateralAddress Address of an asset used as a collateral
+     * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0
+     * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0
+     * @param loanAssetAddress Address of an asset which is lended to borrower
+     * @param loanAmount Amount of tokens which is offered as a loan to borrower
+     * @param loanYield Amount of tokens which acts as a lenders loan interest. Borrower has to pay back borrowed amount + yield.
      * @param duration Loan duration in seconds
      * @param expiration Offer expiration timestamp in seconds
-     * @param lender Offer owner and provider of a loan asset
-     * @param nonce Incremental nonce to help distinguish between otherwise identical offers
+     * @param lender Address of a lender. This address has to sign an offer to be valid.
+     * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
      */
     struct Offer {
-        MultiToken.Asset collateral;
-        MultiToken.Asset loan;
-        uint256 loanRepayAmount;
+        address collateralAddress;
+        MultiToken.Category collateralCategory;
+        uint256 collateralAmount;
+        uint256 collateralId;
+        address loanAssetAddress;
+        uint256 loanAmount;
+        uint256 loanYield;
         uint32 duration;
         uint40 expiration;
         address lender;
         bytes32 nonce;
+    }
+
+    /**
+     * Construct defining an Flexible offer
+     * @param collateralAddress Address of an asset used as a collateral
+     * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0
+     * @param collateralIdsWhitelist List of acceptable collateral ids. If empty, any id is acceptable. Should be empty in case of ERC20.
+     * @param collateralIdsBlacklist List of blacklisted collateral ids. These ids are excluded from the list of acceptable ids.
+     * @param loanAssetAddress Address of an asset which is lended to borrower
+     * @param loanAmountMax Max amount of tokens which is offered as a loan to borrower
+     * @param loanAmountMin Min amount of tokens which is offered as a loan to borrower
+     * @param loanYieldMax Amount of tokens which acts as a lenders loan interest for max duration.
+     * @param durationMax Max loan duration in seconds
+     * @param durationMin Min loan duration in seconds
+     * @param expiration Offer expiration timestamp in seconds
+     * @param lender Address of a lender. This address has to sign a flexible offer to be valid.
+     * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
+     */
+    struct FlexibleOffer {
+        address collateralAddress;
+        MultiToken.Category collateralCategory;
+        uint256 collateralAmount;
+        uint256[] collateralIdsWhitelist;
+        address loanAssetAddress;
+        uint256 loanAmountMax;
+        uint256 loanAmountMin;
+        uint256 loanYieldMax;
+        uint32 durationMax;
+        uint32 durationMin;
+        uint40 expiration;
+        address lender;
+        bytes32 nonce;
+    }
+
+    /**
+     * Construct defining an Flexible offer concrete instance
+     * @param collateralId Selected collateral id to be used as a collateral. Id has to be in the flexible offer list `collateralIdsWhitelist`. If `collateralIdsWhitelist` is empty, it could be any id.
+     * @param loanAmount Selected loan amount to be borrowed from lender.
+     * @param duration Selected loan duration. Shorter duration reflexts into smaller loan yield for a lender.
+     */
+    struct OfferInstance {
+        uint256 collateralId;
+        uint256 loanAmount;
+        uint32 duration;
     }
 
     /**
@@ -151,7 +204,7 @@ contract PWNDeed is ERC1155, Ownable {
 
     /**
      * create
-     * @notice Creates the PWN Deed token contract - ERC1155 with extra use case specific features
+     * @notice Creates the PWN Deed token contract - ERC1155 with extra use case specific features from simple offer
      * @dev Contract wallets need to implement EIP-1271 to validate signature on the contract behalf
      * @param _offer Offer struct holding plain offer data
      * @param _signature Offer typed struct signature signed by lender
@@ -162,42 +215,106 @@ contract PWNDeed is ERC1155, Ownable {
         bytes memory _signature,
         address _sender
     ) external onlyPWN {
-        bytes32 eip712DomainSeparator = keccak256(abi.encode(
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes("PWN")),
-            keccak256(bytes("1")),
-            block.chainid,
-            address(this)
-        ));
-
         bytes32 offerHash = keccak256(abi.encodePacked(
-            "\x19\x01", eip712DomainSeparator, hash(_offer)
+            "\x19\x01", _eip712DomainSeparator(), hash(_offer)
         ));
 
-        if (_offer.lender.code.length > 0) {
-            require(IERC1271(_offer.lender).isValidSignature(offerHash, _signature) == EIP1271_VALID_SIGNATURE, "Signature on behalf of contract is invalid");
-        } else {
-            require(ECDSA.recover(offerHash, _signature) == _offer.lender, "Lender address didn't sign the offer");
-        }
-        require(_offer.expiration == 0 || block.timestamp < _offer.expiration, "Offer is expired");
-        require(revokedOffers[offerHash] == false, "Offer is revoked or has been accepted");
+        _checkValidSignature(_offer.lender, offerHash, _signature);
+        _checkValidOffer(_offer.expiration, offerHash);
 
         revokedOffers[offerHash] = true;
 
-        id++;
+        uint256 _id = ++id;
 
-        Deed storage deed = deeds[id];
+        Deed storage deed = deeds[_id];
         deed.status = 2;
         deed.borrower = _sender;
         deed.duration = _offer.duration;
         deed.expiration = uint40(block.timestamp) + _offer.duration;
-        deed.collateral = _offer.collateral;
-        deed.loan = _offer.loan;
-        deed.loanRepayAmount = _offer.loanRepayAmount;
+        deed.collateral = MultiToken.Asset(
+            _offer.collateralAddress,
+            _offer.collateralCategory,
+            _offer.collateralAmount,
+            _offer.collateralId
+        );
+        deed.loan = MultiToken.Asset(
+            _offer.loanAssetAddress,
+            MultiToken.Category.ERC20,
+            _offer.loanAmount,
+            0
+        );
+        deed.loanRepayAmount = _offer.loanAmount + _offer.loanYield;
 
-        _mint(_offer.lender, id, 1, "");
+        _mint(_offer.lender, _id, 1, "");
 
-        emit DeedCreated(id, _offer.lender, offerHash);
+        emit DeedCreated(_id, _offer.lender, offerHash);
+    }
+
+    /**
+     * createFlexible
+     * @notice Creates the PWN Deed token contract - ERC1155 with extra use case specific features from flexible offer
+     * @dev Contract wallets need to implement EIP-1271 to validate signature on the contract behalf
+     * @param _offer Flexible offer struct holding plain flexible offer data
+     * @param _offerInstance Concrete values for flexible offer selected by borrower
+     * @param _signature Offer typed struct signature signed by lender
+     * @param _sender Address of a message sender (borrower)
+     */
+    function createFlexible(
+        FlexibleOffer memory _offer,
+        OfferInstance memory _offerInstance,
+        bytes memory _signature,
+        address _sender
+    ) external onlyPWN {
+        bytes32 offerHash = keccak256(abi.encodePacked(
+            "\x19\x01", _eip712DomainSeparator(), hash(_offer)
+        ));
+
+        _checkValidSignature(_offer.lender, offerHash, _signature);
+        _checkValidOffer(_offer.expiration, offerHash);
+
+        // Flexible collateral id
+        if (_offer.collateralIdsWhitelist.length > 0) {
+            // Whitelisted collateral id
+            require(_contains(_offer.collateralIdsWhitelist, _offerInstance.collateralId), "Selected collateral id is not contained in whitelist");
+        } // else: Any collateral id - collection offer
+
+        // Flexible amount
+        require(_offer.loanAmountMin <= _offerInstance.loanAmount && _offerInstance.loanAmount <= _offer.loanAmountMax, "Loan amount is not in offered range");
+
+        // Flexible duration
+        require(_offer.durationMin <= _offerInstance.duration && _offerInstance.duration <= _offer.durationMax, "Loan duration is not in offered range");
+
+        revokedOffers[offerHash] = true;
+
+        uint256 _id = ++id;
+
+        Deed storage deed = deeds[_id];
+        deed.status = 2;
+        deed.borrower = _sender;
+        deed.duration = _offerInstance.duration;
+        deed.expiration = uint40(block.timestamp) + _offerInstance.duration;
+        deed.collateral = MultiToken.Asset(
+            _offer.collateralAddress,
+            _offer.collateralCategory,
+            _offer.collateralAmount,
+            _offerInstance.collateralId
+        );
+        deed.loan = MultiToken.Asset(
+            _offer.loanAssetAddress,
+            MultiToken.Category.ERC20,
+            _offerInstance.loanAmount,
+            0
+        );
+        deed.loanRepayAmount = countLoanRepayAmount(
+            _offerInstance.loanAmount,
+            _offerInstance.duration,
+            _offer.loanYieldMax,
+            _offer.durationMax
+        );
+
+        _mint(_offer.lender, _id, 1, "");
+
+        emit DeedCreated(_id, _offer.lender, offerHash);
     }
 
     /**
@@ -246,6 +363,25 @@ contract PWNDeed is ERC1155, Ownable {
 
         delete deeds[_did];
         _burn(_owner, _did, 1);
+    }
+
+    /**
+     * countLoanRepayAmount
+     * @notice Count a loan repay amount of flexible offer based on a loan amount and duration.
+     * @notice The smaller the duration is, the smaller is the lenders yield.
+     * @notice Loan repay amount is decreasing linearly from maximum duration and is fixing loans APR.
+     * @param _loanAmount Selected amount of loan asset by borrower
+     * @param _duration Selected loan duration by borrower
+     * @param _loanYieldMax Yield for maximum loan duration set by lender in an offer
+     * @param _durationMax Maximum loan duration set by lender in an offer
+     */
+    function countLoanRepayAmount(
+        uint256 _loanAmount,
+        uint32 _duration,
+        uint256 _loanYieldMax,
+        uint32 _durationMax
+    ) public pure returns (uint256) {
+        return _loanAmount + _loanYieldMax * _duration / _durationMax;
     }
 
     /*----------------------------------------------------------*|
@@ -364,6 +500,71 @@ contract PWNDeed is ERC1155, Ownable {
     |*--------------------------------*/
 
     /**
+     * _eip712DomainSeparator
+     * @notice Compose EIP712 domain separator
+     * @dev Domain separator is composing to prevent repay attack in case of an Ethereum fork
+     */
+    function _eip712DomainSeparator() private view returns (bytes32) {
+        return keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256(bytes("PWN")),
+            keccak256(bytes("1")),
+            block.chainid,
+            address(this)
+        ));
+    }
+
+    /**
+     * _checkValidSignature
+     * @notice
+     * @param _lender Address of a lender. This address has to sign an offer to be valid.
+     * @param _offerHash Hash of an offer EIP-712 data struct
+     * @param _signature Signed offer data
+     */
+    function _checkValidSignature(
+        address _lender,
+        bytes32 _offerHash,
+        bytes memory _signature
+    ) private view {
+        if (_lender.code.length > 0) {
+            require(IERC1271(_lender).isValidSignature(_offerHash, _signature) == EIP1271_VALID_SIGNATURE, "Signature on behalf of contract is invalid");
+        } else {
+            require(ECDSA.recover(_offerHash, _signature) == _lender, "Lender address didn't sign the offer");
+        }
+    }
+
+    /**
+     * _checkValidOffer
+     * @notice
+     * @param _expiration Offer expiration timestamp in seconds
+     * @param _offerHash Hash of an offer EIP-712 data struct
+     */
+    function _checkValidOffer(
+        uint40 _expiration,
+        bytes32 _offerHash
+    ) private view {
+        require(_expiration == 0 || block.timestamp < _expiration, "Offer is expired");
+        require(revokedOffers[_offerHash] == false, "Offer is revoked or has been accepted");
+    }
+
+    /**
+     * _contains
+     * @notice Function to determine if an item is in contained a list
+     * @param _list List of all items
+     * @param _item Item that should be found in a list
+     * @return True if item is in the list
+     */
+    function _contains(uint256[] memory _list, uint256 _item) private pure returns (bool) {
+        unchecked {
+            for (uint256 i = 0; i < _list.length; ++i)
+                if (_list[i] == _item)
+                    return true;
+        }
+
+        return false;
+    }
+
+    /**
      * hash offer
      * @notice Hash offer struct according to EIP-712
      * @param _offer Offer struct to be hashed
@@ -372,9 +573,13 @@ contract PWNDeed is ERC1155, Ownable {
     function hash(Offer memory _offer) private pure returns (bytes32) {
         return keccak256(abi.encode(
             OFFER_TYPEHASH,
-            hash(_offer.collateral),
-            hash(_offer.loan),
-            _offer.loanRepayAmount,
+            _offer.collateralAddress,
+            _offer.collateralCategory,
+            _offer.collateralAmount,
+            _offer.collateralId,
+            _offer.loanAssetAddress,
+            _offer.loanAmount,
+            _offer.loanYield,
             _offer.duration,
             _offer.expiration,
             _offer.lender,
@@ -383,18 +588,41 @@ contract PWNDeed is ERC1155, Ownable {
     }
 
     /**
-     * hash multitoken asset
-     * @notice Hash MultiToken asset struct according to EIP-712
-     * @param _asset MultiToken asset struct to be hashed
-     * @return MultiToken asset struct hash
+     * hash offer
+     * @notice Hash flexible offer struct according to EIP-712
+     * @param _offer FlexibleOffer struct to be hashed
+     * @return FlexibleOffer struct hash
      */
-    function hash(MultiToken.Asset memory _asset) private pure returns (bytes32) {
-        return keccak256(abi.encode(
-            MULTITOKEN_ASSET_TYPEHASH,
-            _asset.assetAddress,
-            _asset.category,
-            _asset.amount,
-            _asset.id
+    function hash(FlexibleOffer memory _offer) private pure returns (bytes32) {
+        // Need to divide encoding into smaller parts because of "Stack to deep" error
+
+        bytes memory encodedOfferCollateralData = abi.encode(
+            _offer.collateralAddress,
+            _offer.collateralCategory,
+            _offer.collateralAmount,
+            keccak256(abi.encodePacked(_offer.collateralIdsWhitelist))
+        );
+
+        bytes memory encodedOfferLoanData = abi.encode(
+            _offer.loanAssetAddress,
+            _offer.loanAmountMax,
+            _offer.loanAmountMin,
+            _offer.loanYieldMax
+        );
+
+        bytes memory encodedOfferOtherData = abi.encode(
+            _offer.durationMax,
+            _offer.durationMin,
+            _offer.expiration,
+            _offer.lender,
+            _offer.nonce
+        );
+
+        return keccak256(abi.encodePacked(
+            FLEXIBLE_OFFER_TYPEHASH,
+            encodedOfferCollateralData,
+            encodedOfferLoanData,
+            encodedOfferOtherData
         ));
     }
 }

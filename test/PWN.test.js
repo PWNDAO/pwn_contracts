@@ -14,10 +14,14 @@ describe("PWN contract", function() {
 
 	let PWN, pwn;
 	let owner, lender, borrower, asset1, asset2, addr1;
-	let offer, loan, collateral;
+	let offer, flexibleOffer, flexibleOfferInstance, loan, collateral;
 
+	const loanAmountMax = 2000;
+	const loanAmountMin = 1000;
+	const durationMax = 31323;
+	const durationMin = 10000;
 	const duration = 31323;
-	const loanRepayAmount = 2222;
+	const loanYield = 1000;
 	const offerExpiration = 33333333;
 	const nonce = ethers.utils.solidityKeccak256([ "string" ], [ "nonce" ]);
 	const signature = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a6732801029378ddf837210000397c68129387fd887839708320980942102910a00";
@@ -47,18 +51,19 @@ describe("PWN contract", function() {
 		pwn = await PWN.deploy(deedFake.address, vaultFake.address);
 
 		offer = [
-			collateral.assetAddress,
-			collateral.category,
-			collateral.amount,
-			collateral.id,
-			loan.assetAddress,
-			loan.amount,
-			loanRepayAmount,
-			duration,
-			offerExpiration,
-			lender.address,
-			nonce,
-			signature,
+			collateral.assetAddress, collateral.category, collateral.amount, collateral.id,
+			loan.assetAddress, loan.amount, loanYield,
+			duration, offerExpiration, lender.address, nonce,
+		];
+
+		flexibleOffer = [
+			collateral.assetAddress, collateral.category, collateral.amount, [1, 2, 3],
+			loan.assetAddress, loanAmountMax, loanAmountMin, loanYield,
+			durationMax, durationMin, offerExpiration, lender.address, nonce,
+		];
+
+		flexibleOfferInstance = [
+			collateral.id, loan.amount, duration,
 		];
 	});
 
@@ -116,30 +121,25 @@ describe("PWN contract", function() {
 
 
 		it("Should fail for unknown asset category", async function() {
-			let failed;
 			offer[1] = CATEGORY.unknown;
 
-			try {
-				await pwn.connect(borrower).createDeed(...offer);
-			} catch {
-				failed = true;
-			}
-
-			expect(failed).to.equal(true);
+			await expect(
+				pwn.connect(borrower).createDeed(offer, signature)
+			).to.be.reverted;
 		});
 
 		it("Should mint deed token for offer signer", async function() {
-			await pwn.connect(borrower).createDeed(...offer);
+			await pwn.connect(borrower).createDeed(offer, signature);
 
 			expect(deedFake.create).to.have.been.calledOnce;
 			const args = deedFake.create.getCall(0).args;
-			expect(args._offer.collateral.assetAddress).to.equal(collateral.assetAddress);
-			expect(args._offer.collateral.category).to.equal(collateral.category);
-			expect(args._offer.collateral.id).to.equal(collateral.id);
-			expect(args._offer.collateral.amount).to.equal(collateral.amount);
-			expect(args._offer.loan.assetAddress).to.equal(loan.assetAddress);
-			expect(args._offer.loan.amount).to.equal(loan.amount);
-			expect(args._offer.loanRepayAmount).to.equal(loanRepayAmount);
+			expect(args._offer.collateralAddress).to.equal(collateral.assetAddress);
+			expect(args._offer.collateralCategory).to.equal(collateral.category);
+			expect(args._offer.collateralAmount).to.equal(collateral.amount);
+			expect(args._offer.collateralId).to.equal(collateral.id);
+			expect(args._offer.loanAssetAddress).to.equal(loan.assetAddress);
+			expect(args._offer.loanAmount).to.equal(loan.amount);
+			expect(args._offer.loanYield).to.equal(loanYield);
 			expect(args._offer.duration).to.equal(duration);
 			expect(args._offer.expiration).to.equal(offerExpiration);
 			expect(args._offer.lender).to.equal(lender.address);
@@ -150,46 +150,125 @@ describe("PWN contract", function() {
 		});
 
 		it("Should send borrower collateral to vault", async function() {
-			await pwn.connect(borrower).createDeed(...offer);
+			await pwn.connect(borrower).createDeed(offer, signature);
 
 			expect(vaultFake.pull).to.have.been.calledOnce;
 			const args = vaultFake.pull.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
 			expect(args._asset.category).to.equal(collateral.category);
-			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._asset.amount).to.equal(collateral.amount);
+			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._origin).to.equal(borrower.address);
 			expect(vaultFake.pushFrom).to.have.been.calledAfter(deedFake.create);
 		});
 
 		it("Should send lender asset to borrower", async function() {
-			await pwn.connect(borrower).createDeed(...offer);
+			await pwn.connect(borrower).createDeed(offer, signature);
 
 			expect(vaultFake.pushFrom).to.have.been.calledOnce;
 			const args = vaultFake.pushFrom.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(loan.assetAddress);
 			expect(args._asset.category).to.equal(loan.category);
-			expect(args._asset.id).to.equal(loan.id);
 			expect(args._asset.amount).to.equal(loan.amount);
+			expect(args._asset.id).to.equal(loan.id);
 			expect(args._origin).to.equal(lender.address);
 			expect(args._beneficiary).to.equal(borrower.address);
 			expect(vaultFake.pushFrom).to.have.been.calledAfter(deedFake.create);
 		});
 
 		it("Should return true if successful", async function() {
-			const success = await pwn.connect(borrower).callStatic.createDeed(...offer);
+			const success = await pwn.connect(borrower).callStatic.createDeed(offer, signature);
 
 			expect(success).to.equal(true);
 		});
 
 	});
 
+
+	describe("Create deed flexible", function() {
+
+		beforeEach(async function() {
+			vaultFake.pull.returns(true);
+			vaultFake.pushFrom.returns(true);
+		});
+
+
+		it("Should fail for unknown asset category", async function() {
+			flexibleOffer[1] = CATEGORY.unknown;
+
+			await expect(
+				pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature)
+			).to.be.reverted;
+		});
+
+		it("Should mint deed token for offer signer", async function() {
+			await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature);
+
+			expect(deedFake.createFlexible).to.have.been.calledOnce;
+			const args = deedFake.createFlexible.getCall(0).args;
+			expect(args._offer.collateralAddress).to.equal(collateral.assetAddress);
+			expect(args._offer.collateralCategory).to.equal(collateral.category);
+			expect(args._offer.collateralAmount).to.equal(collateral.amount);
+			expect(args._offer.collateralIdsWhitelist).to.have.lengthOf(3);
+			expect(args._offer.loanAssetAddress).to.equal(loan.assetAddress);
+			expect(args._offer.loanAmountMax).to.equal(loanAmountMax);
+			expect(args._offer.loanAmountMin).to.equal(loanAmountMin);
+			expect(args._offer.loanYieldMax).to.equal(loanYield);
+			expect(args._offer.durationMax).to.equal(durationMax);
+			expect(args._offer.durationMin).to.equal(durationMin);
+			expect(args._offer.expiration).to.equal(offerExpiration);
+			expect(args._offer.lender).to.equal(lender.address);
+			expect(args._offer.nonce).to.equal(nonce);
+			expect(args._offerInstance.collateralId).to.equal(collateral.id);
+			expect(args._offerInstance.loanAmount).to.equal(loan.amount);
+			expect(args._offerInstance.duration).to.equal(duration);
+			expect(args._signature).to.equal(signature);
+			expect(args._sender).to.equal(borrower.address);
+			expect(vaultFake.pushFrom).to.have.been.calledAfter(deedFake.createFlexible);
+		});
+
+		it("Should send borrower collateral to vault", async function() {
+			await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature);
+
+			expect(vaultFake.pull).to.have.been.calledOnce;
+			const args = vaultFake.pull.getCall(0).args;
+			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
+			expect(args._asset.category).to.equal(collateral.category);
+			expect(args._asset.amount).to.equal(collateral.amount);
+			expect(args._asset.id).to.equal(collateral.id);
+			expect(args._origin).to.equal(borrower.address);
+			expect(vaultFake.pushFrom).to.have.been.calledAfter(deedFake.createFlexible);
+		});
+
+		it("Should send lender asset to borrower", async function() {
+			await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature);
+
+			expect(vaultFake.pushFrom).to.have.been.calledOnce;
+			const args = vaultFake.pushFrom.getCall(0).args;
+			expect(args._asset.assetAddress).to.equal(loan.assetAddress);
+			expect(args._asset.category).to.equal(loan.category);
+			expect(args._asset.amount).to.equal(loan.amount);
+			expect(args._asset.id).to.equal(loan.id);
+			expect(args._origin).to.equal(lender.address);
+			expect(args._beneficiary).to.equal(borrower.address);
+			expect(vaultFake.pushFrom).to.have.been.calledAfter(deedFake.createFlexible);
+		});
+
+		it("Should return true if successful", async function() {
+			const success = await pwn.connect(borrower).callStatic.createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature);
+
+			expect(success).to.equal(true);
+		});
+
+	});
+
+
 	describe("Repay loan", function() {
 
 		const did = 536;
 
 		beforeEach(async function() {
-			deedFake.getLoanRepayAmount.whenCalledWith(did).returns(loanRepayAmount);
+			deedFake.getLoanRepayAmount.whenCalledWith(did).returns(loan.amount + loanYield);
 			deedFake.getLoan.whenCalledWith(did).returns(loan);
 			deedFake.getCollateral.whenCalledWith(did).returns(collateral);
 			deedFake.getBorrower.whenCalledWith(did).returns(borrower.address);
@@ -210,8 +289,8 @@ describe("PWN contract", function() {
 			const args = vaultFake.push.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
 			expect(args._asset.category).to.equal(collateral.category);
-			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._asset.amount).to.equal(collateral.amount);
+			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._beneficiary).to.equal(borrower.address);
 			expect(vaultFake.push).to.have.been.calledAfter(deedFake.repayLoan);
 		});
@@ -222,8 +301,8 @@ describe("PWN contract", function() {
 			const args = vaultFake.pull.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(loan.assetAddress);
 			expect(args._asset.category).to.equal(loan.category);
+			expect(args._asset.amount).to.equal(loan.amount + loanYield);
 			expect(args._asset.id).to.equal(loan.id);
-			expect(args._asset.amount).to.equal(loanRepayAmount);
 			expect(args._origin).to.equal(borrower.address);
 			expect(vaultFake.pull).to.have.been.calledAfter(deedFake.repayLoan);
 		});
@@ -249,7 +328,7 @@ describe("PWN contract", function() {
 
 		beforeEach(async function() {
 			deedFake.getStatus.whenCalledWith(did).returns(3);
-			deedFake.getLoanRepayAmount.whenCalledWith(did).returns(loanRepayAmount);
+			deedFake.getLoanRepayAmount.whenCalledWith(did).returns(loan.amount + loanYield);
 			deedFake.getCollateral.whenCalledWith(did).returns(collateral);
 			deedFake.getLoan.whenCalledWith(did).returns(loan);
 			vaultFake.push.returns(true);
@@ -272,8 +351,8 @@ describe("PWN contract", function() {
 			const args = vaultFake.push.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(collateral.assetAddress);
 			expect(args._asset.category).to.equal(collateral.category);
-			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._asset.amount).to.equal(collateral.amount);
+			expect(args._asset.id).to.equal(collateral.id);
 			expect(args._beneficiary).to.equal(lender.address);
 		});
 
@@ -287,8 +366,8 @@ describe("PWN contract", function() {
 			const args = vaultFake.push.getCall(0).args;
 			expect(args._asset.assetAddress).to.equal(loan.assetAddress);
 			expect(args._asset.category).to.equal(loan.category);
+			expect(args._asset.amount).to.equal(loan.amount + loanYield);
 			expect(args._asset.id).to.equal(loan.id);
-			expect(args._asset.amount).to.equal(loanRepayAmount);
 		});
 
 		it("Should burn deed token", async function() {

@@ -22,11 +22,11 @@ contract ContractWallet is Ownable, IERC1271, IERC1155Receiver {
     }
 
     function onERC1155Received(
-        address operator,
-        address from,
-        uint256 id,
-        uint256 value,
-        bytes calldata data
+        address /*operator*/,
+        address /*from*/,
+        uint256 /*id*/,
+        uint256 /*value*/,
+        bytes calldata /*data*/
     )
         override
         external
@@ -37,11 +37,11 @@ contract ContractWallet is Ownable, IERC1271, IERC1155Receiver {
     }
 
     function onERC1155BatchReceived(
-        address operator,
-        address from,
-        uint256[] calldata ids,
-        uint256[] calldata values,
-        bytes calldata data
+        address /*operator*/,
+        address /*from*/,
+        uint256[] calldata /*ids*/,
+        uint256[] calldata /*values*/,
+        bytes calldata /*data*/
     )
         override
         external
