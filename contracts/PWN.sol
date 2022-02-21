@@ -98,28 +98,28 @@ contract PWN is Ownable {
      * @dev A UI should do an off-chain balance check on the lender side to make sure the call won't throw
      * @dev Loan asset has to be an ERC20 token, otherwise will transaction fail
      * @param _offer Flexible offer struct with plain flexible offer data. See { PWNDeed.sol }
-     * @param _offerInstance Concrete parameters of a flexible offer set by borrower
+     * @param _offerValues Concrete values of a flexible offer set by borrower
      * @param _signature Flexible offer typed struct signed by lender
      * @return True if successful
      */
     function createDeedFlexible(
         PWNDeed.FlexibleOffer memory _offer,
-        PWNDeed.OfferInstance memory _offerInstance,
+        PWNDeed.FlexibleOfferValues memory _offerValues,
         bytes memory _signature
     ) external returns (bool) {
-        deed.createFlexible(_offer, _offerInstance, _signature, msg.sender);
+        deed.createFlexible(_offer, _offerValues, _signature, msg.sender);
 
         MultiToken.Asset memory collateral = MultiToken.Asset(
             _offer.collateralAddress,
             _offer.collateralCategory,
             _offer.collateralAmount,
-            _offerInstance.collateralId
+            _offerValues.collateralId
         );
 
         MultiToken.Asset memory loan = MultiToken.Asset(
             _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
-            _offerInstance.loanAmount,
+            _offerValues.loanAmount,
             0
         );
 

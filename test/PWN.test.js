@@ -14,7 +14,7 @@ describe("PWN contract", function() {
 
 	let PWN, pwn;
 	let owner, lender, borrower, asset1, asset2, addr1;
-	let offer, flexibleOffer, flexibleOfferInstance, loan, collateral;
+	let offer, flexibleOffer, flexibleOfferValues, loan, collateral;
 
 	const loanAmountMax = 2000;
 	const loanAmountMin = 1000;
@@ -62,7 +62,7 @@ describe("PWN contract", function() {
 			durationMax, durationMin, offerExpiration, lender.address, nonce,
 		];
 
-		flexibleOfferInstance = [
+		flexibleOfferValues = [
 			collateral.id, loan.amount, duration,
 		];
 	});
@@ -197,12 +197,12 @@ describe("PWN contract", function() {
 			flexibleOffer[1] = CATEGORY.unknown;
 
 			await expect(
-				pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature)
+				pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferValues, signature)
 			).to.be.reverted;
 		});
 
 		it("Should mint deed token for offer signer", async function() {
-			await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature);
+			await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferValues, signature);
 
 			expect(deedFake.createFlexible).to.have.been.calledOnce;
 			const args = deedFake.createFlexible.getCall(0).args;
@@ -219,16 +219,16 @@ describe("PWN contract", function() {
 			expect(args._offer.expiration).to.equal(offerExpiration);
 			expect(args._offer.lender).to.equal(lender.address);
 			expect(args._offer.nonce).to.equal(nonce);
-			expect(args._offerInstance.collateralId).to.equal(collateral.id);
-			expect(args._offerInstance.loanAmount).to.equal(loan.amount);
-			expect(args._offerInstance.duration).to.equal(duration);
+			expect(args._offerValues.collateralId).to.equal(collateral.id);
+			expect(args._offerValues.loanAmount).to.equal(loan.amount);
+			expect(args._offerValues.duration).to.equal(duration);
 			expect(args._signature).to.equal(signature);
 			expect(args._sender).to.equal(borrower.address);
 			expect(vaultFake.pushFrom).to.have.been.calledAfter(deedFake.createFlexible);
 		});
 
 		it("Should send borrower collateral to vault", async function() {
-			await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature);
+			await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferValues, signature);
 
 			expect(vaultFake.pull).to.have.been.calledOnce;
 			const args = vaultFake.pull.getCall(0).args;
@@ -241,7 +241,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should send lender asset to borrower", async function() {
-			await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature);
+			await pwn.connect(borrower).createDeedFlexible(flexibleOffer, flexibleOfferValues, signature);
 
 			expect(vaultFake.pushFrom).to.have.been.calledOnce;
 			const args = vaultFake.pushFrom.getCall(0).args;
@@ -255,7 +255,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should return true if successful", async function() {
-			const success = await pwn.connect(borrower).callStatic.createDeedFlexible(flexibleOffer, flexibleOfferInstance, signature);
+			const success = await pwn.connect(borrower).callStatic.createDeedFlexible(flexibleOffer, flexibleOfferValues, signature);
 
 			expect(success).to.equal(true);
 		});
