@@ -56,36 +56,36 @@ const EIP712FlexibleOfferTypes = {
 	]
 }
 
-function getOfferHashBytes(offerArray, deedAddress) {
+function getOfferHashBytes(offerArray, loanAddress) {
 	if (offerArray.length == 11) {
 		// Simple offer
 		return ethers.utils._TypedDataEncoder.hash(
-			getEIP712Domain(deedAddress),
+			getEIP712Domain(loanAddress),
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
 	} else if (offerArray.length == 13) {
 		// Flexible offer
 		return ethers.utils._TypedDataEncoder.hash(
-			getEIP712Domain(deedAddress),
+			getEIP712Domain(loanAddress),
 			EIP712FlexibleOfferTypes,
 			getFlexibleOfferObject(...offerArray)
 		);
 	}
 }
 
-async function signOffer(offerArray, deedAddress, signer) {
+async function signOffer(offerArray, loanAddress, signer) {
 	if (offerArray.length == 11) {
 		// Simple offer
 		return signer._signTypedData(
-			getEIP712Domain(deedAddress),
+			getEIP712Domain(loanAddress),
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
 	} else if (offerArray.length == 13) {
 		// Flexible offer
 		return signer._signTypedData(
-			getEIP712Domain(deedAddress),
+			getEIP712Domain(loanAddress),
 			EIP712FlexibleOfferTypes,
 			getFlexibleOfferObject(...offerArray)
 		);
