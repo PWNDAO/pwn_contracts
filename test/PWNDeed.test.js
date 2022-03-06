@@ -12,7 +12,7 @@ describe("PWNDeed contract", function() {
 
 	let Deed, deed, deedEventIface;
 	let pwn, lender, borrower, asset1, asset2, addr1, addr2, addr3, addr4, addr5;
-	let offer, flexibleOffer, flexibleOfferInstance, offerHash, signature, loan, collateral;
+	let offer, flexibleOffer, flexibleOfferValues, offerHash, signature, loan, collateral;
 
 	const loanAmountMax = 2_000;
 	const loanAmountMin = 1_000;
@@ -65,7 +65,7 @@ describe("PWNDeed contract", function() {
 			durationMax, durationMin, offerExpiration, lender.address, nonce,
 		];
 
-		flexibleOfferInstance = [
+		flexibleOfferValues = [
 			collateral.id, loan.amount, duration,
 		];
 
@@ -293,7 +293,7 @@ describe("PWNDeed contract", function() {
 
 		it("Should fail when sender is not PWN contract", async function() {
 			await expect(
-				deed.connect(addr1).createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.connect(addr1).createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Caller is not the PWN");
 		});
 
@@ -301,7 +301,7 @@ describe("PWNDeed contract", function() {
 			flexibleOffer[11] = addr1.address;
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Lender address didn't sign the offer");
 		});
 
@@ -314,7 +314,7 @@ describe("PWNDeed contract", function() {
 			fakeContractWallet.onERC1155Received.returns("0xf23a6e61");
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.not.be.reverted;
 		});
 
@@ -326,7 +326,7 @@ describe("PWNDeed contract", function() {
 			fakeContractWallet.onERC1155Received.returns("0xf23a6e61");
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Signature on behalf of contract is invalid");
 		});
 
@@ -334,7 +334,7 @@ describe("PWNDeed contract", function() {
 			const fakeSignature = "0x6732801029378ddf837210000397c68129387fd887839708320980942102910a6732801029378ddf837210000397c68129387fd887839708320980942102910a00";
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, fakeSignature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, fakeSignature, borrower.address)
 			).to.be.revertedWith("ECDSA: invalid signature");
 		});
 
@@ -343,7 +343,7 @@ describe("PWNDeed contract", function() {
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Offer is expired");
 		});
 
@@ -353,7 +353,7 @@ describe("PWNDeed contract", function() {
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.not.be.reverted;
 		});
 
@@ -361,7 +361,7 @@ describe("PWNDeed contract", function() {
 			await deed.revokeOffer(offerHash, signature, lender.address);
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Offer is revoked or has been accepted");
 		});
 
@@ -370,7 +370,7 @@ describe("PWNDeed contract", function() {
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Selected collateral id is not contained in whitelist");
 		});
 
@@ -379,7 +379,7 @@ describe("PWNDeed contract", function() {
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.not.be.reverted;
 		});
 
@@ -388,51 +388,51 @@ describe("PWNDeed contract", function() {
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.not.be.reverted;
 		});
 
 		it("Should fail when given amount is above offered range", async function() {
-			flexibleOfferInstance[1] = loanAmountMax + 1;
+			flexibleOfferValues[1] = loanAmountMax + 1;
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Loan amount is not in offered range");
 		});
 
 		it("Should fail when given amount is below offered range", async function() {
-			flexibleOfferInstance[1] = loanAmountMin - 1;
+			flexibleOfferValues[1] = loanAmountMin - 1;
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Loan amount is not in offered range");
 		});
 
 		it("Should fail when given duration is above offered range", async function() {
-			flexibleOfferInstance[2] = durationMax + 1;
+			flexibleOfferValues[2] = durationMax + 1;
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Loan duration is not in offered range");
 		});
 
 		it("Should fail when given duration is below offered range", async function() {
-			flexibleOfferInstance[2] = durationMin - 1;
+			flexibleOfferValues[2] = durationMin - 1;
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.be.revertedWith("Loan duration is not in offered range");
 		});
 
 		it("Should revoke accepted offer", async function() {
-			await deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address);
+			await deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
 
 			const isRevoked = await deed.revokedOffers(offerHash);
 			expect(isRevoked).to.equal(true);
 		});
 
 		it("Should mint deed ERC1155 token", async function () {
-			await deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address);
+			await deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
 			const did = await deed.id();
 
 			const balance = await deed.balanceOf(lender.address, did);
@@ -440,7 +440,7 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should save deed data", async function () {
-			await deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address);
+			await deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
 			const expiration = await timestampFromNow(duration);
 			const did = await deed.id();
 
@@ -469,7 +469,7 @@ describe("PWNDeed contract", function() {
 			deedMock.countLoanRepayAmount.returns(1);
 			signature = await signOffer(flexibleOffer, deedMock.address, lender);
 
-			await deedMock.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address);
+			await deedMock.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
 
 			const did = await deedMock.id();
 			const deedToken = await deedMock.deeds(did);
@@ -478,13 +478,13 @@ describe("PWNDeed contract", function() {
 		});
 
 		it("Should increase global deed ID", async function() {
-			await deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address);
+			await deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
 			const did1 = await deed.id();
 
 			flexibleOffer[12] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
 			signature = await signOffer(flexibleOffer, deed.address, lender);
 
-			await deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address);
+			await deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
 			const did2 = await deed.id();
 
 			expect(did2).to.equal(did1.add(1));
@@ -494,7 +494,7 @@ describe("PWNDeed contract", function() {
 			const did = await deed.id();
 
 			await expect(
-				deed.createFlexible(flexibleOffer, flexibleOfferInstance, signature, borrower.address)
+				deed.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.emit(deed, "DeedCreated").withArgs(
 				did + 1, lender.address, ethers.utils.hexValue(offerHash)
 			);

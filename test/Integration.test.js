@@ -163,14 +163,14 @@ describe("PWN", function () {
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
-			const offerInstance = [
+			const offerValues = [
 				0, 900, 3300
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bWETH.approve(PWNVault.address, 100);
-			const tx = await bPWN.createDeedFlexible(offer, offerInstance, signature);
+			const tx = await bPWN.createDeedFlexible(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -206,14 +206,14 @@ describe("PWN", function () {
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
-			const offerInstance = [
+			const offerValues = [
 				42, 900, 3300
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createDeedFlexible(offer, offerInstance, signature);
+			const tx = await bPWN.createDeedFlexible(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -229,14 +229,14 @@ describe("PWN", function () {
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
-			const offerInstance = [
+			const offerValues = [
 				42, 900, 3300
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createDeedFlexible(offer, offerInstance, signature);
+			const tx = await bPWN.createDeedFlexible(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -273,14 +273,14 @@ describe("PWN", function () {
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
-			const offerInstance = [
+			const offerValues = [
 				1337, 900, 3300
 			];
 			const signature = await signOffer(offer, PWNDeed.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bGAME.setApprovalForAll(PWNVault.address, true);
-			const tx = await bPWN.createDeedFlexible(offer, offerInstance, signature);
+			const tx = await bPWN.createDeedFlexible(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();
@@ -317,14 +317,14 @@ describe("PWN", function () {
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, ContractWallet.address, nonce,
 			];
-			const offerInstance = [
+			const offerValues = [
 				42, 900, 3300
 			];
 			const signature = await signOffer(offer, PWNDeed.address, contractOwner);
 			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createDeedFlexible(offer, offerInstance, signature);
+			const tx = await bPWN.createDeedFlexible(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = deedEventIface.parseLog(response.logs[1]);
 			const did = logDescription.args.did.toNumber();

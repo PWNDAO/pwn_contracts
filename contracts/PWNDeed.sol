@@ -124,12 +124,12 @@ contract PWNDeed is ERC1155, Ownable {
     }
 
     /**
-     * Construct defining an Flexible offer concrete instance
+     * Construct defining an Flexible offer concrete values
      * @param collateralId Selected collateral id to be used as a collateral. Id has to be in the flexible offer list `collateralIdsWhitelist`. If `collateralIdsWhitelist` is empty, it could be any id.
      * @param loanAmount Selected loan amount to be borrowed from lender.
      * @param duration Selected loan duration. Shorter duration reflexts into smaller loan yield for a lender.
      */
-    struct OfferInstance {
+    struct FlexibleOfferValues {
         uint256 collateralId;
         uint256 loanAmount;
         uint32 duration;
@@ -255,13 +255,13 @@ contract PWNDeed is ERC1155, Ownable {
      * @notice Creates the PWN Deed token contract - ERC1155 with extra use case specific features from flexible offer
      * @dev Contract wallets need to implement EIP-1271 to validate signature on the contract behalf
      * @param _offer Flexible offer struct holding plain flexible offer data
-     * @param _offerInstance Concrete values for flexible offer selected by borrower
-     * @param _signature Offer typed struct signature signed by lender
+     * @param _offerValues Concrete values of a flexible offer set by borrower
+     * @param _signature FlexibleOffer typed struct signature signed by lender
      * @param _sender Address of a message sender (borrower)
      */
     function createFlexible(
         FlexibleOffer memory _offer,
-        OfferInstance memory _offerInstance,
+        FlexibleOfferValues memory _offerValues,
         bytes memory _signature,
         address _sender
     ) external onlyPWN {
@@ -275,14 +275,14 @@ contract PWNDeed is ERC1155, Ownable {
         // Flexible collateral id
         if (_offer.collateralIdsWhitelist.length > 0) {
             // Whitelisted collateral id
-            require(_contains(_offer.collateralIdsWhitelist, _offerInstance.collateralId), "Selected collateral id is not contained in whitelist");
+            require(_contains(_offer.collateralIdsWhitelist, _offerValues.collateralId), "Selected collateral id is not contained in whitelist");
         } // else: Any collateral id - collection offer
 
         // Flexible amount
-        require(_offer.loanAmountMin <= _offerInstance.loanAmount && _offerInstance.loanAmount <= _offer.loanAmountMax, "Loan amount is not in offered range");
+        require(_offer.loanAmountMin <= _offerValues.loanAmount && _offerValues.loanAmount <= _offer.loanAmountMax, "Loan amount is not in offered range");
 
         // Flexible duration
-        require(_offer.durationMin <= _offerInstance.duration && _offerInstance.duration <= _offer.durationMax, "Loan duration is not in offered range");
+        require(_offer.durationMin <= _offerValues.duration && _offerValues.duration <= _offer.durationMax, "Loan duration is not in offered range");
 
         revokedOffers[offerHash] = true;
 
@@ -291,23 +291,23 @@ contract PWNDeed is ERC1155, Ownable {
         Deed storage deed = deeds[_id];
         deed.status = 2;
         deed.borrower = _sender;
-        deed.duration = _offerInstance.duration;
-        deed.expiration = uint40(block.timestamp) + _offerInstance.duration;
+        deed.duration = _offerValues.duration;
+        deed.expiration = uint40(block.timestamp) + _offerValues.duration;
         deed.collateral = MultiToken.Asset(
             _offer.collateralAddress,
             _offer.collateralCategory,
             _offer.collateralAmount,
-            _offerInstance.collateralId
+            _offerValues.collateralId
         );
         deed.loan = MultiToken.Asset(
             _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
-            _offerInstance.loanAmount,
+            _offerValues.loanAmount,
             0
         );
         deed.loanRepayAmount = countLoanRepayAmount(
-            _offerInstance.loanAmount,
-            _offerInstance.duration,
+            _offerValues.loanAmount,
+            _offerValues.duration,
             _offer.loanYieldMax,
             _offer.durationMax
         );
