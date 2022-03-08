@@ -3,7 +3,7 @@ Smart contracts enabling p2p loans using arbitrary collateral (supporting ERC20,
 
 ## Architecture
 ### PWN (logic)
-PWN is the core interface users are expected to use (also the only interactive contract allowing for premissionless external calls). 
+PWN is the core interface users are expected to use (also the only interactive contract allowing for permissionless external calls). 
 The contract defines the workflow functionality and handles the market making. Allowing to:
 - Create and revoke Deeds 
 - Make, revoke or accept credit offers 
