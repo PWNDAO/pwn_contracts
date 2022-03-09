@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
-contract PWNLoan is ERC1155, Ownable {
+contract PWNLOAN is ERC1155, Ownable {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -19,7 +19,7 @@ contract PWNLoan is ERC1155, Ownable {
     address public PWN;
 
     /**
-     * Incremental Loan ID counter
+     * Incremental LOAN ID counter
      */
     uint256 public id;
 
@@ -50,9 +50,9 @@ contract PWNLoan is ERC1155, Ownable {
      * @param expiration Unix timestamp (in seconds) setting up the default deadline
      * @param collateral Asset used as a loan collateral. Consisting of another `Asset` struct defined in the MultiToken library
      * @param asset Asset to be borrowed by lender to borrower. Consisting of another `Asset` struct defined in the MultiToken library
-     * @param loanRepayAmount Amount of loan asset to be repaid
+     * @param loanRepayAmount Amount of LOAN asset to be repaid
      */
-    struct Loan {
+    struct LOAN {
         uint8 status;
         address borrower;
         uint32 duration;
@@ -138,7 +138,7 @@ contract PWNLoan is ERC1155, Ownable {
     /**
      * Mapping of all LOAN data by loan id
      */
-    mapping (uint256 => Loan) public loans;
+    mapping (uint256 => LOAN) public LOANs;
 
     /**
      * Mapping of revoked offers by offer struct typed hash
@@ -149,10 +149,10 @@ contract PWNLoan is ERC1155, Ownable {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event LoanCreated(uint256 indexed loanId, address indexed lender, bytes32 indexed offerHash);
+    event LOANCreated(uint256 indexed loanId, address indexed lender, bytes32 indexed offerHash);
     event OfferRevoked(bytes32 indexed offerHash);
     event PaidBack(uint256 loanId);
-    event LoanClaimed(uint256 loanId);
+    event LOANClaimed(uint256 loanId);
 
     /*----------------------------------------------------------*|
     |*  # MODIFIERS                                             *|
@@ -204,7 +204,7 @@ contract PWNLoan is ERC1155, Ownable {
 
     /**
      * create
-     * @notice Creates the PWN LOAN token contract - ERC1155 with extra use case specific features from simple offer
+     * @notice Creates the PWN LOAN token - ERC1155 with extra use case specific features from simple offer
      * @dev Contract wallets need to implement EIP-1271 to validate signature on the contract behalf
      * @param _offer Offer struct holding plain offer data
      * @param _signature Offer typed struct signature signed by lender
@@ -226,7 +226,7 @@ contract PWNLoan is ERC1155, Ownable {
 
         uint256 _id = ++id;
 
-        Loan storage loan = loans[_id];
+        LOAN storage loan = LOANs[_id];
         loan.status = 2;
         loan.borrower = _sender;
         loan.duration = _offer.duration;
@@ -247,12 +247,12 @@ contract PWNLoan is ERC1155, Ownable {
 
         _mint(_offer.lender, _id, 1, "");
 
-        emit LoanCreated(_id, _offer.lender, offerHash);
+        emit LOANCreated(_id, _offer.lender, offerHash);
     }
 
     /**
      * createFlexible
-     * @notice Creates the PWN LOAN token contract - ERC1155 with extra use case specific features from flexible offer
+     * @notice Creates the PWN LOAN token - ERC1155 with extra use case specific features from flexible offer
      * @dev Contract wallets need to implement EIP-1271 to validate signature on the contract behalf
      * @param _offer Flexible offer struct holding plain flexible offer data
      * @param _offerValues Concrete values of a flexible offer set by borrower
@@ -288,7 +288,7 @@ contract PWNLoan is ERC1155, Ownable {
 
         uint256 _id = ++id;
 
-        Loan storage loan = loans[_id];
+        LOAN storage loan = LOANs[_id];
         loan.status = 2;
         loan.borrower = _sender;
         loan.duration = _offerValues.duration;
@@ -314,7 +314,7 @@ contract PWNLoan is ERC1155, Ownable {
 
         _mint(_offer.lender, _id, 1, "");
 
-        emit LoanCreated(_id, _offer.lender, offerHash);
+        emit LOANCreated(_id, _offer.lender, offerHash);
     }
 
     /**
@@ -325,7 +325,7 @@ contract PWNLoan is ERC1155, Ownable {
     function repayLoan(uint256 _loanId) external onlyPWN {
         require(getStatus(_loanId) == 2, "Loan is not running and cannot be paid back");
 
-        loans[_loanId].status = 3;
+        LOANs[_loanId].status = 3;
 
         emit PaidBack(_loanId);
     }
@@ -343,9 +343,9 @@ contract PWNLoan is ERC1155, Ownable {
         require(balanceOf(_owner, _loanId) == 1, "Caller is not the loan owner");
         require(getStatus(_loanId) >= 3, "Loan can't be claimed yet");
 
-        loans[_loanId].status = 0;
+        LOANs[_loanId].status = 0;
 
-        emit LoanClaimed(_loanId);
+        emit LOANClaimed(_loanId);
     }
 
     /**
@@ -359,9 +359,9 @@ contract PWNLoan is ERC1155, Ownable {
         address _owner
     ) external onlyPWN {
         require(balanceOf(_owner, _loanId) == 1, "Caller is not the loan owner");
-        require(loans[_loanId].status == 0, "Loan can't be burned at this stage");
+        require(LOANs[_loanId].status == 0, "Loan can't be burned at this stage");
 
-        delete loans[_loanId];
+        delete LOANs[_loanId];
         _burn(_owner, _loanId, 1);
     }
 
@@ -395,10 +395,10 @@ contract PWNLoan is ERC1155, Ownable {
      * @return a status number
      */
     function getStatus(uint256 _loanId) public view returns (uint8) {
-        if (loans[_loanId].expiration > 0 && loans[_loanId].expiration < block.timestamp && loans[_loanId].status != 3) {
+        if (LOANs[_loanId].expiration > 0 && LOANs[_loanId].expiration < block.timestamp && LOANs[_loanId].status != 3) {
             return 4;
         } else {
-            return loans[_loanId].status;
+            return LOANs[_loanId].status;
         }
     }
 
@@ -410,7 +410,7 @@ contract PWNLoan is ERC1155, Ownable {
      * @return unix time stamp in seconds
      */
     function getExpiration(uint256 _loanId) public view returns (uint40) {
-        return loans[_loanId].expiration;
+        return LOANs[_loanId].expiration;
     }
 
     /**
@@ -420,7 +420,7 @@ contract PWNLoan is ERC1155, Ownable {
      * @return loan duration period in seconds
      */
     function getDuration(uint256 _loanId) public view returns (uint32) {
-        return loans[_loanId].duration;
+        return LOANs[_loanId].duration;
     }
 
     /**
@@ -430,7 +430,7 @@ contract PWNLoan is ERC1155, Ownable {
      * @return address of the borrower
      */
     function getBorrower(uint256 _loanId) public view returns (address) {
-        return loans[_loanId].borrower;
+        return LOANs[_loanId].borrower;
     }
 
     /**
@@ -440,7 +440,7 @@ contract PWNLoan is ERC1155, Ownable {
      * @return Asset construct - for definition see { MultiToken.sol }
      */
     function getCollateral(uint256 _loanId) public view returns (MultiToken.Asset memory) {
-        return loans[_loanId].collateral;
+        return LOANs[_loanId].collateral;
     }
 
     /**
@@ -450,7 +450,7 @@ contract PWNLoan is ERC1155, Ownable {
      * @return Asset construct - for definition see { MultiToken.sol }
      */
     function getLoan(uint256 _loanId) public view returns (MultiToken.Asset memory) {
-        return loans[_loanId].asset;
+        return LOANs[_loanId].asset;
     }
 
     /**
@@ -460,7 +460,7 @@ contract PWNLoan is ERC1155, Ownable {
      * @return Amount of loan asset to be repaid
      */
     function getLoanRepayAmount(uint256 _loanId) public view returns (uint256) {
-        return loans[_loanId].loanRepayAmount;
+        return LOANs[_loanId].loanRepayAmount;
     }
 
     /**
