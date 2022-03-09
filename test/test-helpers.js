@@ -102,7 +102,7 @@ function getMerkleRootWithProof(ids, index) {
 
 	const leaves = ids.map((x) => keccak256(ethers.utils.hexZeroPad(x, 32)));
 	const tree = new MerkleTree(leaves, keccak256, { sort: true });
-	const proof = tree.getHexProof(leaves[index]);
+	const proof = index == -1 ? [] : tree.getHexProof(leaves[index]);
 	return [tree.getHexRoot(), proof, tree];
 }
 

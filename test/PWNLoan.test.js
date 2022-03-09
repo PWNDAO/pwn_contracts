@@ -2,7 +2,7 @@ const chai = require("chai");
 const { ethers } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const { time } = require('@openzeppelin/test-helpers');
-const { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer } = require("./test-helpers");
+const { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, getMerkleRootWithProof } = require("./test-helpers");
 
 const expect = chai.expect;
 chai.use(smock.matchers);
@@ -12,6 +12,7 @@ describe("PWNLoan contract", function() {
 
 	let PWNLOAN, loan, loanEventIface;
 	let pwn, lender, borrower, asset1, asset2, addr1, addr2, addr3, addr4, addr5;
+	let mTree, mTreeRoot, mTreeProof;
 	let offer, flexibleOffer, flexibleOfferValues, offerHash, signature, loanAsset, collateral;
 
 	const loanAmountMax = 2_000;
@@ -59,14 +60,16 @@ describe("PWNLoan contract", function() {
 			loanYield, duration, offerExpiration, lender.address, nonce,
 		];
 
+		[mTreeRoot, mTreeProof, mTree] = getMerkleRootWithProof([], -1);
+
 		flexibleOffer = [
-			collateral.assetAddress, collateral.category, collateral.amount, [],
+			collateral.assetAddress, collateral.category, collateral.amount, mTreeRoot,
 			loanAsset.assetAddress, loanAmountMax, loanAmountMin, loanYield,
 			durationMax, durationMin, offerExpiration, lender.address, nonce,
 		];
 
 		flexibleOfferValues = [
-			collateral.id, loanAsset.amount, duration,
+			collateral.id, loanAsset.amount, duration, mTreeProof
 		];
 
 		offerHash = getOfferHashBytes(offer, loan.address);
@@ -366,8 +369,13 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should fail when selected collateral ID is not whitelisted", async function() {
-			flexibleOffer[3] = [1, 2, 3];
+			let fakeMTreeRoot, fakeMTreeProof;
+			[fakeMTreeRoot, fakeMTreeProof] = getMerkleRootWithProof([4, 5, 6, 7, 8, 123], 5);
+
+			[mTreeRoot] = getMerkleRootWithProof([1, 2, 3], -1);
+			flexibleOffer[3] = mTreeRoot;
 			signature = await signOffer(flexibleOffer, loan.address, lender);
+			flexibleOfferValues[3] = fakeMTreeProof;
 
 			await expect(
 				loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
@@ -375,8 +383,10 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should pass when selected collateral ID is whitelisted", async function() {
-			flexibleOffer[3] = [1, 2, 3, 123, 4, 5, 6];
+			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([1, 2, 3, 123, 4, 5, 6], 3);
+			flexibleOffer[3] = mTreeRoot;
 			signature = await signOffer(flexibleOffer, loan.address, lender);
+			flexibleOfferValues[3] = mTreeProof;
 
 			await expect(
 				loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
@@ -384,7 +394,8 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should pass with any selected collateral ID when is whitelist empty", async function() {
-			flexibleOffer[3] = [];
+			[mTreeRoot] = getMerkleRootWithProof([], -1);
+			flexibleOffer[3] = mTreeRoot;
 			signature = await signOffer(flexibleOffer, loan.address, lender);
 
 			await expect(
