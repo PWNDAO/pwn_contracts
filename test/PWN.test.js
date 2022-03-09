@@ -47,7 +47,7 @@ describe("PWN contract", function() {
 
 	beforeEach(async function() {
 		vaultFake = await smock.fake("PWNVault");
-		loanFake = await smock.fake("PWNLoan");
+		loanFake = await smock.fake("PWNLOAN");
 		pwn = await PWN.deploy(loanFake.address, vaultFake.address);
 
 		offer = [
@@ -85,7 +85,7 @@ describe("PWN contract", function() {
 			pwn = await factory.deploy(loanFake.address, vaultFake.address);
 
 			const vaultAddress = await pwn.vault();
-			const loanAddress = await pwn.loan();
+			const loanAddress = await pwn.LOAN();
 			expect(vaultAddress).to.equal(vaultFake.address);
 			expect(loanAddress).to.equal(loanFake.address);
 		});
@@ -197,12 +197,12 @@ describe("PWN contract", function() {
 			flexibleOffer[1] = CATEGORY.unknown;
 
 			await expect(
-				pwn.connect(borrower).createLoanFlexible(flexibleOffer, flexibleOfferValues, signature)
+				pwn.connect(borrower).createFlexibleLoan(flexibleOffer, flexibleOfferValues, signature)
 			).to.be.reverted;
 		});
 
 		it("Should mint loan token for offer signer", async function() {
-			await pwn.connect(borrower).createLoanFlexible(flexibleOffer, flexibleOfferValues, signature);
+			await pwn.connect(borrower).createFlexibleLoan(flexibleOffer, flexibleOfferValues, signature);
 
 			expect(loanFake.createFlexible).to.have.been.calledOnce;
 			const args = loanFake.createFlexible.getCall(0).args;
@@ -228,7 +228,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should send borrower collateral to vault", async function() {
-			await pwn.connect(borrower).createLoanFlexible(flexibleOffer, flexibleOfferValues, signature);
+			await pwn.connect(borrower).createFlexibleLoan(flexibleOffer, flexibleOfferValues, signature);
 
 			expect(vaultFake.pull).to.have.been.calledOnce;
 			const args = vaultFake.pull.getCall(0).args;
@@ -241,7 +241,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should send lender asset to borrower", async function() {
-			await pwn.connect(borrower).createLoanFlexible(flexibleOffer, flexibleOfferValues, signature);
+			await pwn.connect(borrower).createFlexibleLoan(flexibleOffer, flexibleOfferValues, signature);
 
 			expect(vaultFake.pushFrom).to.have.been.calledOnce;
 			const args = vaultFake.pushFrom.getCall(0).args;
@@ -255,7 +255,7 @@ describe("PWN contract", function() {
 		});
 
 		it("Should return true if successful", async function() {
-			const success = await pwn.connect(borrower).callStatic.createLoanFlexible(flexibleOffer, flexibleOfferValues, signature);
+			const success = await pwn.connect(borrower).callStatic.createFlexibleLoan(flexibleOffer, flexibleOfferValues, signature);
 
 			expect(success).to.equal(true);
 		});
@@ -269,7 +269,7 @@ describe("PWN contract", function() {
 
 		beforeEach(async function() {
 			loanFake.getLoanRepayAmount.whenCalledWith(loanId).returns(loanAsset.amount + loanYield);
-			loanFake.getLoan.whenCalledWith(loanId).returns(loanAsset);
+			loanFake.getLoanAsset.whenCalledWith(loanId).returns(loanAsset);
 			loanFake.getCollateral.whenCalledWith(loanId).returns(collateral);
 			loanFake.getBorrower.whenCalledWith(loanId).returns(borrower.address);
 			vaultFake.push.returns(true);
@@ -330,7 +330,7 @@ describe("PWN contract", function() {
 			loanFake.getStatus.whenCalledWith(loanId).returns(3);
 			loanFake.getLoanRepayAmount.whenCalledWith(loanId).returns(loanAsset.amount + loanYield);
 			loanFake.getCollateral.whenCalledWith(loanId).returns(collateral);
-			loanFake.getLoan.whenCalledWith(loanId).returns(loanAsset);
+			loanFake.getLoanAsset.whenCalledWith(loanId).returns(loanAsset);
 			vaultFake.push.returns(true);
 		});
 

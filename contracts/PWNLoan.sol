@@ -489,7 +489,7 @@ contract PWNLOAN is ERC1155, Ownable {
     /**
      * setUri
      * @dev An non-essential setup function. Can be called to adjust the LOAN token metadata URI
-     * @param _newUri setting the new origin of LOA metadata
+     * @param _newUri setting the new origin of LOAN metadata
      */
     function setUri(string memory _newUri) external onlyOwner {
         _setURI(_newUri);

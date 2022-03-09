@@ -7,12 +7,12 @@ describe("PWN", function () {
 
 	let ERC20, ERC721, ERC1155;
 	let NFT, WETH, DAI, GAME;
-	let PWN, PWNLoan, PWNVault, ContractWallet;
+	let PWN, PWNLOAN, PWNVault, ContractWallet;
 	let borrower, lender, contractOwner;
 	let addr1, addr2, addrs;
 
 	const loanEventIface = new ethers.utils.Interface([
-		"event LoanCreated(uint256 indexed loanId, address indexed lender, bytes32 indexed offerHash)",
+		"event LOANCreated(uint256 indexed loanId, address indexed lender, bytes32 indexed offerHash)",
 	]);
 
 	const lInitialDAI = 1000;
@@ -26,7 +26,7 @@ describe("PWN", function () {
 		ERC1155 = await ethers.getContractFactory("Basic1155");
 
 		PWN = await ethers.getContractFactory("PWN");
-		PWNLoan = await ethers.getContractFactory("PWNLoan");
+		PWNLOAN = await ethers.getContractFactory("PWNLOAN");
 		PWNVault = await ethers.getContractFactory("PWNVault");
 		ContractWallet = await ethers.getContractFactory("ContractWallet");
 
@@ -37,19 +37,19 @@ describe("PWN", function () {
 		NFT = await ERC721.deploy("Real NFT", "NFT");
 		GAME = await ERC1155.deploy("https://pwn.finance/game/")
 
-		PWNLoan = await PWNLoan.deploy("https://pwn.finance/");
+		PWNLOAN = await PWNLOAN.deploy("https://pwn.finance/");
 		PWNVault = await PWNVault.deploy();
-		PWN = await PWN.deploy(PWNLoan.address, PWNVault.address);
+		PWN = await PWN.deploy(PWNLOAN.address, PWNVault.address);
 		ContractWallet = await ContractWallet.connect(contractOwner).deploy();
 
 		await NFT.deployed();
 		await DAI.deployed();
 		await GAME.deployed();
-		await PWNLoan.deployed();
+		await PWNLOAN.deployed();
 		await PWNVault.deployed();
 		await PWN.deployed();
 
-		await PWNLoan.setPWN(PWN.address);
+		await PWNLOAN.setPWN(PWN.address);
 		await PWNVault.setPWN(PWN.address);
 
 		await DAI.mint(lender.address, lInitialDAI);
@@ -74,8 +74,8 @@ describe("PWN", function () {
 
 	describe("Deployment", function () {
 
-		it("Should deploy PWN with links to Loan & Vault", async function () {
-			expect(await PWN.loan()).to.equal(PWNLoan.address);
+		it("Should deploy PWN with links to LOAN & Vault", async function () {
+			expect(await PWN.LOAN()).to.equal(PWNLOAN.address);
 			expect(await PWN.vault()).to.equal(PWNVault.address);
 		});
 
@@ -83,8 +83,8 @@ describe("PWN", function () {
 			expect(await PWNVault.PWN()).to.equal(PWN.address);
 		});
 
-		it("Should deploy Loan with a link to PWN", async function () {
-			expect(await PWNLoan.PWN()).to.equal(PWN.address);
+		it("Should deploy LOAN with a link to PWN", async function () {
+			expect(await PWNLOAN.PWN()).to.equal(PWN.address);
 		});
 
 		it("Should set initial balances", async function () {
@@ -106,12 +106,12 @@ describe("PWN", function () {
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
-			const offerHash = getOfferHashBytes(offer, PWNLoan.address);
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const offerHash = getOfferHashBytes(offer, PWNLOAN.address);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 
 			await lPWN.revokeOffer(offerHash, signature);
 
-			const isRevoked = await PWNLoan.isRevoked(offerHash);
+			const isRevoked = await PWNLOAN.isRevoked(offerHash);
 			expect(isRevoked).to.equal(true);
 		});
 
@@ -121,12 +121,12 @@ describe("PWN", function () {
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
-			const offerHash = getOfferHashBytes(offer, PWNLoan.address);
-			const signature = await signOffer(offer, PWNLoan.address, contractOwner);
+			const offerHash = getOfferHashBytes(offer, PWNLOAN.address);
+			const signature = await signOffer(offer, PWNLOAN.address, contractOwner);
 
 			await PWN.connect(contractOwner).revokeOffer(offerHash, signature);
 
-			const isRevoked = await PWNLoan.isRevoked(offerHash);
+			const isRevoked = await PWNLOAN.isRevoked(offerHash);
 			expect(isRevoked).to.equal(true);
 		});
 
@@ -141,7 +141,7 @@ describe("PWN", function () {
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bWETH.approve(PWNVault.address, 200);
@@ -150,7 +150,7 @@ describe("PWN", function () {
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
-			expect(await PWNLoan.balanceOf(lender.address, loanId)).to.equal(1);
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(1);
 			expect(await WETH.balanceOf(PWNVault.address)).to.equal(bInitialWETH);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 1000);
 		});
@@ -164,16 +164,16 @@ describe("PWN", function () {
 			const offerValues = [
 				0, 900, 3300
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bWETH.approve(PWNVault.address, 100);
-			const tx = await bPWN.createLoanFlexible(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
-			expect(await PWNLoan.balanceOf(lender.address, loanId)).to.equal(1);
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(1);
 			expect(await WETH.balanceOf(PWNVault.address)).to.equal(100);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 900);
 		});
@@ -184,7 +184,7 @@ describe("PWN", function () {
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
@@ -193,7 +193,7 @@ describe("PWN", function () {
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
-			expect(await PWNLoan.balanceOf(lender.address, loanId)).to.equal(1);
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(1);
 			expect(await NFT.ownerOf(42)).to.equal(PWNVault.address);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 1000);
 		});
@@ -207,16 +207,16 @@ describe("PWN", function () {
 			const offerValues = [
 				42, 900, 3300
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createLoanFlexible(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
-			expect(await PWNLoan.balanceOf(lender.address, loanId)).to.equal(1);
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(1);
 			expect(await NFT.ownerOf(42)).to.equal(PWNVault.address);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 900);
 		});
@@ -230,16 +230,16 @@ describe("PWN", function () {
 			const offerValues = [
 				42, 900, 3300
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createLoanFlexible(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
-			expect(await PWNLoan.balanceOf(lender.address, loanId)).to.equal(1);
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(1);
 			expect(await NFT.ownerOf(42)).to.equal(PWNVault.address);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 900);
 		});
@@ -250,7 +250,7 @@ describe("PWN", function () {
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bGAME.setApprovalForAll(PWNVault.address, true);
@@ -259,7 +259,7 @@ describe("PWN", function () {
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
-			expect(await PWNLoan.balanceOf(lender.address, loanId)).to.equal(1);
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(1);
 			expect(await GAME.balanceOf(borrower.address, 1337)).to.equal(0);
 			expect(await GAME.balanceOf(PWNVault.address, 1337)).to.equal(1);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 1000);
@@ -274,16 +274,16 @@ describe("PWN", function () {
 			const offerValues = [
 				1337, 900, 3300
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bGAME.setApprovalForAll(PWNVault.address, true);
-			const tx = await bPWN.createLoanFlexible(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
-			expect(await PWNLoan.balanceOf(lender.address, loanId)).to.equal(1);
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(1);
 			expect(await GAME.balanceOf(borrower.address, 1337)).to.equal(0);
 			expect(await GAME.balanceOf(PWNVault.address, 1337)).to.equal(1);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 900);
@@ -295,7 +295,7 @@ describe("PWN", function () {
 				DAI.address, 1000, 200,
 				3600, 0, ContractWallet.address, nonce,
 			];
-			const signature = await signOffer(offer, PWNLoan.address, contractOwner);
+			const signature = await signOffer(offer, PWNLOAN.address, contractOwner);
 			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
@@ -304,7 +304,7 @@ describe("PWN", function () {
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
-			expect(await PWNLoan.balanceOf(ContractWallet.address, loanId)).to.equal(1);
+			expect(await PWNLOAN.balanceOf(ContractWallet.address, loanId)).to.equal(1);
 			expect(await NFT.ownerOf(42)).to.equal(PWNVault.address);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 1000);
 		});
@@ -318,16 +318,16 @@ describe("PWN", function () {
 			const offerValues = [
 				42, 900, 3300
 			];
-			const signature = await signOffer(offer, PWNLoan.address, contractOwner);
+			const signature = await signOffer(offer, PWNLOAN.address, contractOwner);
 			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createLoanFlexible(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
-			expect(await PWNLoan.balanceOf(ContractWallet.address, loanId)).to.equal(1);
+			expect(await PWNLOAN.balanceOf(ContractWallet.address, loanId)).to.equal(1);
 			expect(await NFT.ownerOf(42)).to.equal(PWNVault.address);
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 900);
 		});
@@ -343,7 +343,7 @@ describe("PWN", function () {
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
@@ -367,7 +367,7 @@ describe("PWN", function () {
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
@@ -385,7 +385,7 @@ describe("PWN", function () {
 			expect(await DAI.balanceOf(lender.address)).is.equal(1200);
 			expect(await DAI.balanceOf(PWNVault.address)).is.equal(0);
 			expect(await NFT.ownerOf(42)).to.equal(borrower.address);
-			expect(await PWNLoan.balanceOf(lender.address, loanId)).to.equal(0);
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(0);
 		});
 
 		it("Should be possible to claim if loan wasn't paid", async function () {
@@ -394,7 +394,7 @@ describe("PWN", function () {
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
-			const signature = await signOffer(offer, PWNLoan.address, lender);
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
@@ -412,7 +412,7 @@ describe("PWN", function () {
 			expect(await DAI.balanceOf(lender.address)).is.equal(0);
 			expect(await DAI.balanceOf(PWNVault.address)).is.equal(0);
 			expect(await NFT.ownerOf(42)).to.equal(lender.address);
-			expect(await PWNLoan.balanceOf(lender.address, loanId)).to.equal(0);
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(0);
 		});
 
 	});

@@ -10,7 +10,7 @@ chai.use(smock.matchers);
 
 describe("PWNLoan contract", function() {
 
-	let Loan, loan, loanEventIface;
+	let PWNLOAN, loan, loanEventIface;
 	let pwn, lender, borrower, asset1, asset2, addr1, addr2, addr3, addr4, addr5;
 	let offer, flexibleOffer, flexibleOfferValues, offerHash, signature, loanAsset, collateral;
 
@@ -24,14 +24,14 @@ describe("PWNLoan contract", function() {
 	const nonce = ethers.utils.solidityKeccak256([ "string" ], [ "nonce" ]);
 
 	before(async function() {
-		Loan = await ethers.getContractFactory("PWNLoan");
+		PWNLOAN = await ethers.getContractFactory("PWNLOAN");
 		[pwn, lender, borrower, asset1, asset2, addr1, addr2, addr3, addr4, addr5] = await ethers.getSigners();
 
 		loanEventIface = new ethers.utils.Interface([
-			"event LoanCreated(uint256 indexed loanId, address indexed lender, bytes32 indexed offerHash)",
+			"event LOANCreated(uint256 indexed loanId, address indexed lender, bytes32 indexed offerHash)",
 			"event OfferRevoked(bytes32 indexed offerHash)",
 			"event PaidBack(uint256 loanId)",
-			"event LoanClaimed(uint256 loanId)",
+			"event LOANClaimed(uint256 loanId)",
 		]);
 
 		loanAsset = {
@@ -50,7 +50,7 @@ describe("PWNLoan contract", function() {
 	});
 
 	beforeEach(async function() {
-		loan = await Loan.deploy("https://test.uri");
+		loan = await PWNLOAN.deploy("https://test.uri");
 		await loan.setPWN(pwn.address);
 
 		offer = [
@@ -77,7 +77,7 @@ describe("PWNLoan contract", function() {
 	describe("Constructor", function() {
 
 		it("Should set correct owner", async function() {
-			const factory = await ethers.getContractFactory("PWNLoan", addr1);
+			const factory = await ethers.getContractFactory("PWNLOAN", addr1);
 
 			loan = await factory.deploy("https://test.uri");
 
@@ -86,7 +86,7 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should set correct uri", async function() {
-			const factory = await ethers.getContractFactory("PWNLoan");
+			const factory = await ethers.getContractFactory("PWNLOAN");
 
 			loan = await factory.deploy("xyz123");
 
@@ -134,7 +134,7 @@ describe("PWNLoan contract", function() {
 			expect(isRevoked).to.equal(true);
 		});
 
-		it("Should emit OfferRevoked event", async function() {
+		it("Should emit `OfferRevoked` event", async function() {
 			await expect(
 				loan.revokeOffer(offerHash, signature, lender.address)
 			).to.emit(loan, "OfferRevoked").withArgs(
@@ -241,7 +241,7 @@ describe("PWNLoan contract", function() {
 			const expiration = await timestampFromNow(duration);
 			const loanId = await loan.id();
 
-			const loanToken = await loan.loans(loanId);
+			const loanToken = await loan.LOANs(loanId);
 			expect(loanToken.status).to.equal(2);
 			expect(loanToken.borrower).to.equal(borrower.address);
 			expect(loanToken.duration).to.equal(duration);
@@ -270,12 +270,12 @@ describe("PWNLoan contract", function() {
 			expect(loanId2).to.equal(loanId1.add(1));
 		});
 
-		it("Should emit `LoanCreated` event", async function() {
+		it("Should emit `LOANCreated` event", async function() {
 			const loanId = await loan.id();
 
 			await expect(
 				loan.create(offer, signature, borrower.address)
-			).to.emit(loan, "LoanCreated").withArgs(
+			).to.emit(loan, "LOANCreated").withArgs(
 				loanId + 1, lender.address, ethers.utils.hexValue(offerHash)
 			);
 		});
@@ -444,7 +444,7 @@ describe("PWNLoan contract", function() {
 			const expiration = await timestampFromNow(duration);
 			const loanId = await loan.id();
 
-			const loanToken = await loan.loans(loanId);
+			const loanToken = await loan.LOANs(loanId);
 			expect(loanToken.status).to.equal(2);
 			expect(loanToken.borrower).to.equal(borrower.address);
 			expect(loanToken.duration).to.equal(duration);
@@ -463,7 +463,7 @@ describe("PWNLoan contract", function() {
 		// Waiting on smock to fix mocking functions calls on a same contract
 		// https://github.com/defi-wonderland/smock/issues/109
 		xit("Should call `countLoanRepayAmount` for loan repay amount value", async function() {
-			const loanMockFactory = await smock.mock("PWNLoan");
+			const loanMockFactory = await smock.mock("PWNLOAN");
 			const loanMock = await loanMockFactory.deploy("https://test.uri");
 			await loanMock.setPWN(pwn.address);
 			loanMock.countLoanRepayAmount.returns(1);
@@ -472,7 +472,7 @@ describe("PWNLoan contract", function() {
 			await loanMock.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
 
 			const loanId = await loanMock.id();
-			const loanToken = await loanMock.loans(loanId);
+			const loanToken = await loanMock.LOANs(loanId);
 			expect(loanToken.loanRepayAmount).to.equal(1);
 			expect(loanMock.countLoanRepayAmount).to.have.been.calledOnce;
 		});
@@ -490,12 +490,12 @@ describe("PWNLoan contract", function() {
 			expect(loanId2).to.equal(loanId1.add(1));
 		});
 
-		it("Should emit `LoanCreated` event", async function() {
+		it("Should emit `LOANCreated` event", async function() {
 			const loanId = await loan.id();
 
 			await expect(
 				loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
-			).to.emit(loan, "LoanCreated").withArgs(
+			).to.emit(loan, "LOANCreated").withArgs(
 				loanId + 1, lender.address, ethers.utils.hexValue(offerHash)
 			);
 		});
@@ -520,10 +520,10 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should fail when loan is not in running state", async function() {
-			const loanMockFactory = await smock.mock("PWNLoan");
+			const loanMockFactory = await smock.mock("PWNLOAN");
 			const loanMock = await loanMockFactory.deploy("https://test.uri");
 			await loanMock.setPWN(pwn.address);
-			await loanMock.setVariable("loans", {
+			await loanMock.setVariable("LOANs", {
 				1: {
 					status: 3
 				}
@@ -537,11 +537,11 @@ describe("PWNLoan contract", function() {
 		it("Should update loan to paid back state", async function() {
 			await loan.repayLoan(loanId);
 
-			const status = (await loan.loans(loanId)).status;
+			const status = (await loan.LOANs(loanId)).status;
 			expect(status).to.equal(3);
 		});
 
-		it("Should emit PaidBack event", async function() {
+		it("Should emit `PaidBack` event", async function() {
 			await expect(
 				loan.repayLoan(loanId)
 			).to.emit(loan, "PaidBack").withArgs(
@@ -558,7 +558,7 @@ describe("PWNLoan contract", function() {
 		let loanId;
 
 		before(async function() {
-			loanMockFactory = await smock.mock("PWNLoan");
+			loanMockFactory = await smock.mock("PWNLOAN");
 		});
 
 		beforeEach(async function() {
@@ -586,7 +586,7 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should fail when loan is not in paid back nor expired state", async function() {
-			await loanMock.setVariable("loans", {
+			await loanMock.setVariable("LOANs", {
 				1: {
 					status: 2
 				}
@@ -598,7 +598,7 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should be possible to claim expired loan", async function() {
-			await loanMock.setVariable("loans", {
+			await loanMock.setVariable("LOANs", {
 				1: {
 					status: 4
 				}
@@ -610,7 +610,7 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should be possible to claim paid back loan", async function() {
-			await loanMock.setVariable("loans", {
+			await loanMock.setVariable("LOANs", {
 				1: {
 					status: 3
 				}
@@ -626,16 +626,16 @@ describe("PWNLoan contract", function() {
 
 			await loanMock.claim(loanId, lender.address);
 
-			const status = (await loanMock.loans(loanId)).status;
+			const status = (await loanMock.LOANs(loanId)).status;
 			expect(status).to.equal(0);
 		});
 
-		it("Should emit LoanClaimed event", async function() {
+		it("Should emit `LOANClaimed` event", async function() {
 			await loanMock.repayLoan(loanId);
 
 			await expect(
 				loanMock.claim(loanId, lender.address)
-			).to.emit(loanMock, "LoanClaimed").withArgs(
+			).to.emit(loanMock, "LOANClaimed").withArgs(
 				loanId
 			);
 		});
@@ -649,7 +649,7 @@ describe("PWNLoan contract", function() {
 		let loanId;
 
 		before(async function() {
-			loanMockFactory = await smock.mock("PWNLoan");
+			loanMockFactory = await smock.mock("PWNLOAN");
 		});
 
 		beforeEach(async function() {
@@ -677,7 +677,7 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should fail when loan is not in dead state", async function() {
-			await loanMock.setVariable("loans", {
+			await loanMock.setVariable("LOANs", {
 				1: {
 					status: 2
 				}
@@ -689,7 +689,7 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should delete loan data", async function() {
-			await loanMock.setVariable("loans", {
+			await loanMock.setVariable("LOANs", {
 				1: {
 					status: 0
 				}
@@ -697,7 +697,7 @@ describe("PWNLoan contract", function() {
 
 			await loanMock.burn(loanId, lender.address);
 
-			const loanToken = await loanMock.loans(loanId);
+			const loanToken = await loanMock.LOANs(loanId);
 			expect(loanToken.expiration).to.equal(0);
 			expect(loanToken.duration).to.equal(0);
 			expect(loanToken.borrower).to.equal(ethers.constants.AddressZero);
@@ -708,7 +708,7 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should burn loan ERC1155 token", async function() {
-			await loanMock.setVariable("loans", {
+			await loanMock.setVariable("LOANs", {
 				1: {
 					status: 0
 				}
@@ -750,7 +750,7 @@ describe("PWNLoan contract", function() {
 		const loanId = 1;
 
 		before(async function() {
-			loanMockFactory = await smock.mock("PWNLoan");
+			loanMockFactory = await smock.mock("PWNLOAN");
 		});
 
 		beforeEach(async function() {
@@ -764,7 +764,7 @@ describe("PWNLoan contract", function() {
 		describe("Get loan status", function() {
 
 			it("Should return none/dead state", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						status: 0
 					}
@@ -776,7 +776,7 @@ describe("PWNLoan contract", function() {
 			});
 
 			it("Should return running state when not expired", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						status: 2,
 						expiration: await timestampFromNow(100)
@@ -789,7 +789,7 @@ describe("PWNLoan contract", function() {
 			});
 
 			it("Should return expired state when in running state", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						status: 2,
 						expiration: 1
@@ -802,7 +802,7 @@ describe("PWNLoan contract", function() {
 			});
 
 			it("Should return paid back state when not expired", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						status: 3,
 						expiration: await timestampFromNow(100)
@@ -815,7 +815,7 @@ describe("PWNLoan contract", function() {
 			});
 
 			it("Should return paid back state when expired", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						status: 3,
 						expiration: 1
@@ -833,7 +833,7 @@ describe("PWNLoan contract", function() {
 		describe("Get expiration", function() {
 
 			it("Should return loan expiration", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						expiration: 3123
 					}
@@ -849,7 +849,7 @@ describe("PWNLoan contract", function() {
 		describe("Get duration", function() {
 
 			it("Should return loan duration", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						duration: 1111
 					}
@@ -866,7 +866,7 @@ describe("PWNLoan contract", function() {
 		describe("Get borrower", function() {
 
 			it("Should return loan borrower address", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						borrower: borrower.address
 					}
@@ -884,7 +884,7 @@ describe("PWNLoan contract", function() {
 
 			// Smock doesn't support updating enums in storage
 			xit("Should return loan collateral asset", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						collateral: {
 							assetAddress: asset1.address,
@@ -910,7 +910,7 @@ describe("PWNLoan contract", function() {
 
 			// Smock doesn't support updating enums in storage
 			xit("Should return loan loan asset", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						loan: {
 							assetAddress: asset2.address,
@@ -921,7 +921,7 @@ describe("PWNLoan contract", function() {
 					}
 				});
 
-				const loanAsset = await loanMock.getLoan(loanId);
+				const loanAsset = await loanMock.getLoanAsset(loanId);
 
 				expect(loanAsset.assetAddress).to.equal(asset2.address);
 				expect(loanAsset.category).to.equal(0);
@@ -935,7 +935,7 @@ describe("PWNLoan contract", function() {
 		describe("Get loan repay amount", function() {
 
 			it("Should return loan loan repay amount", async function() {
-				await loanMock.setVariable("loans", {
+				await loanMock.setVariable("LOANs", {
 					1: {
 						loanRepayAmount: 88393993
 					}
