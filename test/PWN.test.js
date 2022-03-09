@@ -2,7 +2,7 @@ const chai = require("chai");
 const { ethers } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const { time } = require('@openzeppelin/test-helpers');
-const { CATEGORY, timestampFromNow } = require("./test-helpers");
+const { CATEGORY, timestampFromNow, getMerkleRootWithProof } = require("./test-helpers");
 
 const expect = chai.expect;
 chai.use(smock.matchers);
@@ -14,6 +14,7 @@ describe("PWN contract", function() {
 
 	let PWN, pwn;
 	let owner, lender, borrower, asset1, asset2, addr1;
+	let mTree, mTreeRoot, mTreeProof;
 	let offer, flexibleOffer, flexibleOfferValues, loanAsset, collateral;
 
 	const loanAmountMax = 2000;
@@ -56,14 +57,16 @@ describe("PWN contract", function() {
 			duration, offerExpiration, lender.address, nonce,
 		];
 
+		[mTreeRoot, mTreeProof] = getMerkleRootWithProof([1, 2, 3], 0);
+
 		flexibleOffer = [
-			collateral.assetAddress, collateral.category, collateral.amount, [1, 2, 3],
+			collateral.assetAddress, collateral.category, collateral.amount, mTreeRoot,
 			loanAsset.assetAddress, loanAmountMax, loanAmountMin, loanYield,
 			durationMax, durationMin, offerExpiration, lender.address, nonce,
 		];
 
 		flexibleOfferValues = [
-			collateral.id, loanAsset.amount, duration,
+			collateral.id, loanAsset.amount, duration, mTreeProof
 		];
 	});
 
@@ -209,7 +212,7 @@ describe("PWN contract", function() {
 			expect(args._offer.collateralAddress).to.equal(collateral.assetAddress);
 			expect(args._offer.collateralCategory).to.equal(collateral.category);
 			expect(args._offer.collateralAmount).to.equal(collateral.amount);
-			expect(args._offer.collateralIdsWhitelist).to.have.lengthOf(3);
+			expect(args._offer.collateralIdsWhitelistMerkleRoot).to.equal(mTreeRoot)
 			expect(args._offer.loanAssetAddress).to.equal(loanAsset.assetAddress);
 			expect(args._offer.loanAmountMax).to.equal(loanAmountMax);
 			expect(args._offer.loanAmountMin).to.equal(loanAmountMin);
@@ -222,6 +225,7 @@ describe("PWN contract", function() {
 			expect(args._offerValues.collateralId).to.equal(collateral.id);
 			expect(args._offerValues.loanAmount).to.equal(loanAsset.amount);
 			expect(args._offerValues.duration).to.equal(duration);
+			expect(args._offerValues.merkleInclusionProof).to.have.lengthOf(mTreeProof.length);
 			expect(args._signature).to.equal(signature);
 			expect(args._sender).to.equal(borrower.address);
 			expect(vaultFake.pushFrom).to.have.been.calledAfter(loanFake.createFlexible);
