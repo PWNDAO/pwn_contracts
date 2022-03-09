@@ -96,7 +96,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param collateralAddress Address of an asset used as a collateral
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0
-     * @param collateralIdsWhitelistMerkleRoot TODO
+     * @param collateralIdsWhitelistMerkleRoot Root of a merkle tree constructed on array of whitelisted collateral ids
      * @param loanAssetAddress Address of an asset which is lended to borrower
      * @param loanAmountMax Max amount of tokens which is offered as a loan to borrower
      * @param loanAmountMin Min amount of tokens which is offered as a loan to borrower
@@ -128,7 +128,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param collateralId Selected collateral id to be used as a collateral.
      * @param loanAmount Selected loan amount to be borrowed from lender.
      * @param duration Selected loan duration. Shorter duration reflexts into smaller loan yield for a lender.
-     * @param merkleInclusionProof TODO
+     * @param merkleInclusionProof Proof of inclusion, that selected collateral id is whitelisted. This proof should create same hash as the merkle tree root given in flexible offer.
      */
     struct FlexibleOfferValues {
         uint256 collateralId;
