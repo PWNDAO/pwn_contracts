@@ -43,7 +43,7 @@ contract PWNLOAN is ERC1155, Ownable {
     );
 
     /**
-     * Construct defining a LOAN
+     * Construct defining a LOAN which is an acronym for: ... (TODO)
      * @param status 0 == none/dead || 2 == running/accepted offer || 3 == paid back || 4 == expired
      * @param borrower Address of the borrower - stays the same for entire lifespan of the token
      * @param duration Loan duration in seconds
