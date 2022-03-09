@@ -95,8 +95,15 @@ async function signOffer(offerArray, loanAddress, signer) {
 	}
 }
 
-function getMerkleTree(leaves) {
-	return new MerkleTree(leaves, keccak256, { sort: true });
+function getMerkleRootWithProof(ids, index) {
+	if (ids.length == 0) {
+		return [ethers.utils.hexZeroPad(0, 32), []];
+	}
+
+	const leaves = ids.map((x) => keccak256(ethers.utils.hexZeroPad(x, 32)));
+	const tree = new MerkleTree(leaves, keccak256, { sort: true });
+	const proof = tree.getHexProof(leaves[index]);
+	return [tree.getHexRoot(), proof, tree];
 }
 
 
@@ -161,4 +168,4 @@ function getFlexibleOfferObject(
 	}
 }
 
-module.exports = { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, getMerkleTree };
+module.exports = { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, getMerkleRootWithProof };
