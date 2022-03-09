@@ -444,12 +444,12 @@ contract PWNLOAN is ERC1155, Ownable {
     }
 
     /**
-     * getLoan
+     * getLoanAsset
      * @dev utility function to find out loan asset of a particular LOAN
      * @param _loanId LOAN ID to be checked
      * @return Asset construct - for definition see { MultiToken.sol }
      */
-    function getLoan(uint256 _loanId) public view returns (MultiToken.Asset memory) {
+    function getLoanAsset(uint256 _loanId) public view returns (MultiToken.Asset memory) {
         return LOANs[_loanId].asset;
     }
 

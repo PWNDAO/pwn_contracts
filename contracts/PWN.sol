@@ -140,7 +140,7 @@ contract PWN is Ownable {
     function repayLoan(uint256 _loanId) external returns (bool) {
         LOAN.repayLoan(_loanId);
 
-        MultiToken.Asset memory LOANAsset = LOAN.getLoan(_loanId);
+        MultiToken.Asset memory LOANAsset = LOAN.getLoanAsset(_loanId);
         LOANAsset.amount = LOAN.getLoanRepayAmount(_loanId);
 
         vault.pull(LOANAsset, msg.sender);
@@ -161,7 +161,7 @@ contract PWN is Ownable {
         LOAN.claim(_loanId, msg.sender);
 
         if (status == 3) {
-            MultiToken.Asset memory LOANAsset = LOAN.getLoan(_loanId);
+            MultiToken.Asset memory LOANAsset = LOAN.getLoanAsset(_loanId);
             LOANAsset.amount = LOAN.getLoanRepayAmount(_loanId);
 
             vault.push(LOANAsset, msg.sender);
