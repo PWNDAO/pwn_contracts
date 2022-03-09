@@ -4,7 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "test": "npx hardhat test"
+        "test": "npx hardhat test",
+        "clean": "npx hardhat clean"
     },
     "keywords": [],
     "author": "",
