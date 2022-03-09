@@ -79,7 +79,7 @@ contract PWN is Ownable {
             _offer.collateralId
         );
 
-        MultiToken.Asset memory LOANAsset = MultiToken.Asset(
+        MultiToken.Asset memory LoanAsset = MultiToken.Asset(
             _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
             _offer.loanAmount,
@@ -87,7 +87,7 @@ contract PWN is Ownable {
         );
 
         vault.pull(collateral, msg.sender);
-        vault.pushFrom(LOANAsset, _offer.lender, msg.sender);
+        vault.pushFrom(LoanAsset, _offer.lender, msg.sender);
 
         return true;
     }
@@ -116,7 +116,7 @@ contract PWN is Ownable {
             _offerValues.collateralId
         );
 
-        MultiToken.Asset memory LOANAsset = MultiToken.Asset(
+        MultiToken.Asset memory LoanAsset = MultiToken.Asset(
             _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
             _offerValues.loanAmount,
@@ -124,7 +124,7 @@ contract PWN is Ownable {
         );
 
         vault.pull(collateral, msg.sender);
-        vault.pushFrom(LOANAsset, _offer.lender, msg.sender);
+        vault.pushFrom(LoanAsset, _offer.lender, msg.sender);
 
         return true;
     }
@@ -140,10 +140,10 @@ contract PWN is Ownable {
     function repayLoan(uint256 _loanId) external returns (bool) {
         LOAN.repayLoan(_loanId);
 
-        MultiToken.Asset memory LOANAsset = LOAN.getLoanAsset(_loanId);
-        LOANAsset.amount = LOAN.getLoanRepayAmount(_loanId);
+        MultiToken.Asset memory LoanAsset = LOAN.getLoanAsset(_loanId);
+        LoanAsset.amount = LOAN.getLoanRepayAmount(_loanId);
 
-        vault.pull(LOANAsset, msg.sender);
+        vault.pull(LoanAsset, msg.sender);
         vault.push(LOAN.getCollateral(_loanId), LOAN.getBorrower(_loanId));
 
         return true;
@@ -161,10 +161,10 @@ contract PWN is Ownable {
         LOAN.claim(_loanId, msg.sender);
 
         if (status == 3) {
-            MultiToken.Asset memory LOANAsset = LOAN.getLoanAsset(_loanId);
-            LOANAsset.amount = LOAN.getLoanRepayAmount(_loanId);
+            MultiToken.Asset memory LoanAsset = LOAN.getLoanAsset(_loanId);
+            LoanAsset.amount = LOAN.getLoanRepayAmount(_loanId);
 
-            vault.push(LOANAsset, msg.sender);
+            vault.push(LoanAsset, msg.sender);
         } else if (status == 4) {
             vault.push(LOAN.getCollateral(_loanId), msg.sender);
         }
