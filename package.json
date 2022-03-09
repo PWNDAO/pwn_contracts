@@ -25,6 +25,7 @@
         "ethers": "5.4.7",
         "hardhat": "^2.8.4",
         "hardhat-gas-reporter": "^1.0.4",
+        "merkletreejs": "^0.2.30",
         "surya": "^0.4.5"
     }
 }

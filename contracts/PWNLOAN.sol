@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract PWNLOAN is ERC1155, Ownable {
 
@@ -39,7 +40,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * EIP-712 flexible offer struct type hash
      */
     bytes32 constant internal FLEXIBLE_OFFER_TYPEHASH = keccak256(
-        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256[] collateralIdsWhitelist,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address lender,bytes32 nonce)"
+        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,bytes32 collateralIdsWhitelistMerkleRoot,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address lender,bytes32 nonce)"
     );
 
     /**
@@ -95,8 +96,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param collateralAddress Address of an asset used as a collateral
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0
-     * @param collateralIdsWhitelist List of acceptable collateral ids. If empty, any id is acceptable. Should be empty in case of ERC20.
-     * @param collateralIdsBlacklist List of blacklisted collateral ids. These ids are excluded from the list of acceptable ids.
+     * @param collateralIdsWhitelistMerkleRoot TODO
      * @param loanAssetAddress Address of an asset which is lended to borrower
      * @param loanAmountMax Max amount of tokens which is offered as a loan to borrower
      * @param loanAmountMin Min amount of tokens which is offered as a loan to borrower
@@ -111,7 +111,7 @@ contract PWNLOAN is ERC1155, Ownable {
         address collateralAddress;
         MultiToken.Category collateralCategory;
         uint256 collateralAmount;
-        uint256[] collateralIdsWhitelist;
+        bytes32 collateralIdsWhitelistMerkleRoot;
         address loanAssetAddress;
         uint256 loanAmountMax;
         uint256 loanAmountMin;
@@ -125,14 +125,16 @@ contract PWNLOAN is ERC1155, Ownable {
 
     /**
      * Construct defining an Flexible offer concrete values
-     * @param collateralId Selected collateral id to be used as a collateral. Id has to be in the flexible offer list `collateralIdsWhitelist`. If `collateralIdsWhitelist` is empty, it could be any id.
+     * @param collateralId Selected collateral id to be used as a collateral.
      * @param loanAmount Selected loan amount to be borrowed from lender.
      * @param duration Selected loan duration. Shorter duration reflexts into smaller loan yield for a lender.
+     * @param merkleInclusionProof TODO
      */
     struct FlexibleOfferValues {
         uint256 collateralId;
         uint256 loanAmount;
         uint32 duration;
+        bytes32[] merkleInclusionProof;
     }
 
     /**
@@ -273,9 +275,10 @@ contract PWNLOAN is ERC1155, Ownable {
         _checkValidOffer(_offer.expiration, offerHash);
 
         // Flexible collateral id
-        if (_offer.collateralIdsWhitelist.length > 0) {
+        if (_offer.collateralIdsWhitelistMerkleRoot.length > 0) {
             // Whitelisted collateral id
-            require(_contains(_offer.collateralIdsWhitelist, _offerValues.collateralId), "Selected collateral id is not contained in whitelist");
+            bytes32 merkleTreeLeaf = keccak256(abi.encodePacked(_offerValues.collateralId));
+            require(MerkleProof.verify(_offerValues.merkleInclusionProof, _offer.collateralIdsWhitelistMerkleRoot, merkleTreeLeaf), "Selected collateral id is not contained in whitelist");
         } // else: Any collateral id - collection offer
 
         // Flexible amount
@@ -548,23 +551,6 @@ contract PWNLOAN is ERC1155, Ownable {
     }
 
     /**
-     * _contains
-     * @notice Function to determine if an item is in contained a list
-     * @param _list List of all items
-     * @param _item Item that should be found in a list
-     * @return True if item is in the list
-     */
-    function _contains(uint256[] memory _list, uint256 _item) private pure returns (bool) {
-        unchecked {
-            for (uint256 i = 0; i < _list.length; ++i)
-                if (_list[i] == _item)
-                    return true;
-        }
-
-        return false;
-    }
-
-    /**
      * hash offer
      * @notice Hash offer struct according to EIP-712
      * @param _offer Offer struct to be hashed
@@ -600,7 +586,7 @@ contract PWNLOAN is ERC1155, Ownable {
             _offer.collateralAddress,
             _offer.collateralCategory,
             _offer.collateralAmount,
-            keccak256(abi.encodePacked(_offer.collateralIdsWhitelist))
+            _offer.collateralIdsWhitelistMerkleRoot
         );
 
         bytes memory encodedOfferLoanData = abi.encode(
