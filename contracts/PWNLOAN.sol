@@ -275,7 +275,7 @@ contract PWNLOAN is ERC1155, Ownable {
         _checkValidOffer(_offer.expiration, offerHash);
 
         // Flexible collateral id
-        if (_offer.collateralIdsWhitelistMerkleRoot.length > 0) {
+        if (_offer.collateralIdsWhitelistMerkleRoot != bytes32(0x00)) {
             // Whitelisted collateral id
             bytes32 merkleTreeLeaf = keccak256(abi.encodePacked(_offerValues.collateralId));
             require(MerkleProof.verify(_offerValues.merkleInclusionProof, _offer.collateralIdsWhitelistMerkleRoot, merkleTreeLeaf), "Selected collateral id is not contained in whitelist");
