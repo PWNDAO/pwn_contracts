@@ -3,7 +3,7 @@ Smart contracts enabling p2p loans using arbitrary collateral (supporting ERC20,
 
 ## Architecture
 ### PWN (logic)
-PWN is the core interface users are expected to use (also the only interactive contract allowing for premissionless external calls). 
+PWN is the core interface users are expected to use (also the only interactive contract allowing for permissionless external calls).
 The contract defines the workflow functionality and handles the market making. Allowing to:
 - Create Deeds with off-chain signed offer
 - Pay back loans
@@ -51,7 +51,7 @@ Following diagram shows deed lifecycle with borrower, lender and pwn protocol in
 3. Borrower can accept any offer which is made to collateral he/she owns.
 
     a) collateral is transferred to PWNVaul contract (should be approved for PWNVault)
-    
+
     b) loan asset is transferred from lender to borrower (should be approved for PWNVault)
 
     c) deed token is minted to represent a loan and transferred to a lender
@@ -68,15 +68,15 @@ Following diagram shows deed lifecycle with borrower, lender and pwn protocol in
 
     b) deed token is burned
 
-6. In case borrower is not able to repay loan in time, lender can claim borrowers collateral and borrower keeps the loan asset. 
+6. In case borrower is not able to repay loan in time, lender can claim borrowers collateral and borrower keeps the loan asset.
 
 ![Basic user flow](.github/img/user_flow.png "Basic user flow")
 
 ## Offer types
-Lender can choose between two types while making an offer. Basic and flexible. 
+Lender can choose between two types while making an offer. Basic and flexible.
 
 ### Basic
-Basic offer is where lender is setting all loan parameters up-front and borrower has an option to accept of not. Nothing else. 
+Basic offer is where lender is setting all loan parameters up-front and borrower has an option to accept of not. Nothing else.
 
 ### Flexible
 With flexible offers, lender can give borrower additional flexibilty by not providing concrete values but rather give borrower ranges for several parameters. When accepting an offer, borrower has to provider concrete values to proceed. This increases a lenders chance to have their offer accepted as it could be accepted by more borrowers.
