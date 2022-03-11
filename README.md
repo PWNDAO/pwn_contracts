@@ -79,7 +79,7 @@ Lender can choose between two types while making an offer. Basic and flexible.
 Basic offer is where lender is setting all loan parameters up-front and borrower has an option to accept of not. Nothing else.
 
 ### Flexible
-With flexible offers, lender can give borrower additional flexibilty by not providing concrete values but rather give borrower ranges for several parameters. When accepting an offer, borrower has to provider concrete values to proceed. This increases a lenders chance to have their offer accepted as it could be accepted by more borrowers.
+With flexible offers, lender can give borrower additional flexibility by not providing concrete values but rather give borrower ranges for several parameters. When accepting an offer, borrower has to provide concrete values to proceed. This increases a lenders chance to have their offer accepted as it could be accepted by more borrowers.
 
 Flexible parameters are: collateral id, loan amount, loan duration.
 
