@@ -61,7 +61,7 @@ async function deploy(Owner, metadataUri) {
     [sign, ...addrs] = await ethers.getSigners();
 
     const PWN = await hardhat.ethers.getContractFactory("PWN");
-    const PWNDEED = await hardhat.ethers.getContractFactory("PWNDeed");
+    const PWNLOAN = await hardhat.ethers.getContractFactory("PWNLOAN");
     const PWNVAULT = await hardhat.ethers.getContractFactory("PWNVault");
 
 
@@ -72,16 +72,16 @@ async function deploy(Owner, metadataUri) {
     log(" ⛏  Deploying PWNVault...   (tx: " + PwnVault.deployTransaction.hash + ")");
     const vaultPromise = PwnVault.deployed();
 
-    const PwnDeed = await PWNDEED.deploy(metadataUri);
-    log(" ⛏  Deploying PWNDeed...   (tx: " + PwnDeed.deployTransaction.hash) + ")";
-    const deedPromise = PwnDeed.deployed();
+    const PwnLoan = await PWNLOAN.deploy(metadataUri);
+    log(" ⛏  Deploying PWNLOAN...   (tx: " + PwnLoan.deployTransaction.hash) + ")";
+    const loanPromise = PwnLoan.deployed();
 
-    await Promise.all([vaultPromise, deedPromise]);
+    await Promise.all([vaultPromise, loanPromise]);
     moveToLine(-2);
     log(" PWNVault deployed at: `" + PwnVault.address + "`");
-    log(" PWNDeed deployed at: `" + PwnDeed.address + "`");
+    log(" PWNLOAN deployed at: `" + PwnLoan.address + "`");
 
-    const Pwn = await PWN.deploy(PwnDeed.address, PwnVault.address);
+    const Pwn = await PWN.deploy(PwnLoan.address, PwnVault.address);
     log(" ⛏  Deploying PWN...   (tx: " + Pwn.deployTransaction.hash + ")");
     await Pwn.deployed();
     moveToLine(-1);
@@ -91,17 +91,17 @@ async function deploy(Owner, metadataUri) {
 
 
     // Set PWN contract
-    const pwnToDeed = await PwnDeed.connect(sign).setPWN(Pwn.address);
-    log(" ⛏  Setting PWN address to PWNDeed...   (tx: " + pwnToDeed.hash + ")");
-    const pwnToDeedPromise = pwnToDeed.wait();
+    const pwnToLoan = await PwnLoan.connect(sign).setPWN(Pwn.address);
+    log(" ⛏  Setting PWN address to PWNLOAN...   (tx: " + pwnToLoan.hash + ")");
+    const pwnToLoanPromise = pwnToLoan.wait();
 
     const pwnToVault = await PwnVault.connect(sign).setPWN(Pwn.address);
     log(" ⛏  Setting PWN address to PWNVault...   (tx: " + pwnToVault.hash + ")");
     const pwnToVaultPromise = pwnToVault.wait();
 
-    await Promise.all([pwnToDeedPromise, pwnToVaultPromise]);
+    await Promise.all([pwnToLoanPromise, pwnToVaultPromise]);
     moveToLine(-2);
-    log(" PWNDeed PWN address set");
+    log(" PWNLOAN PWN address set");
     log(" PWNVault PWN address set");
 
 
@@ -112,18 +112,18 @@ async function deploy(Owner, metadataUri) {
     log(" ⛏  Transferring PWN ownership...   (tx: " + ownershipPwn.hash + ")");
     const ownershipPwnPromise = ownershipPwn.wait();
 
-    const ownershipDeed = await PwnDeed.connect(sign).transferOwnership(Owner);
-    log(" ⛏  Transferring PWNDeed ownership...   (tx: " + ownershipDeed.hash + ")");
-    const ownershipDeedPromise = ownershipDeed.wait();
+    const ownershipLOAN = await PwnLoan.connect(sign).transferOwnership(Owner);
+    log(" ⛏  Transferring PWNLOAN ownership...   (tx: " + ownershipLOAN.hash + ")");
+    const ownershipLOANPromise = ownershipLOAN.wait();
 
     const ownershipVault = await PwnVault.connect(sign).transferOwnership(Owner);
     log(" ⛏  Transferring PWNVault ownership...   (tx: " + ownershipVault.hash + ")");
     const ownershipVaultPromise = ownershipVault.wait();
 
-    await Promise.all([ownershipPwnPromise, ownershipDeedPromise, ownershipVaultPromise]);
+    await Promise.all([ownershipPwnPromise, ownershipLOANPromise, ownershipVaultPromise]);
     moveToLine(-3);
     log(" PWN ownership transferred");
-    log(" PWNDeed ownership transferred");
+    log(" PWNLOAN ownership transferred");
     log(" PWNVault ownership transferred");
 
 
@@ -135,7 +135,7 @@ async function deploy(Owner, metadataUri) {
         try {
             await hardhat.run("verify:verify", {
                 address: Pwn.address,
-                constructorArguments: [PwnDeed.address, PwnVault.address]
+                constructorArguments: [PwnLoan.address, PwnVault.address]
             });
         } catch(error) {
             if (error.message != "Already Verified" && error.message != "Contract source code already verified") {
@@ -144,10 +144,10 @@ async function deploy(Owner, metadataUri) {
         }
         log(" Verified PWN contract on Etherscan");
 
-        log(" 🗄  Verifying PWNDeed contract on Etherscan...");
+        log(" 🗄  Verifying PWNLOAN contract on Etherscan...");
         try {
             await hardhat.run("verify:verify", {
-                address: PwnDeed.address,
+                address: PwnLoan.address,
                 constructorArguments: [metadataUri]
             });
         } catch(error) {
@@ -155,7 +155,7 @@ async function deploy(Owner, metadataUri) {
                 throw error;
             }
         }
-        log(" Verified PWNDeed contract on Etherscan");
+        log(" Verified PWNLOAN contract on Etherscan");
 
         log(" 🗄  Verifying PWNVault contract on Etherscan...");
         try {
