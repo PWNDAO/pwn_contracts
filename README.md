@@ -31,7 +31,7 @@ It wraps transfer, allowance & balance check calls of the following token standa
 Unifying the function calls used within the PWN context (not having to worry about handling those individually).
 
 ### High level contract architecture
-![PWN contracts interaction](.github/img/contracts_interaction.png "PWN contracts interaction")
+![PWN contracts interaction](.github/img/pwn-hf.png "PWN contracts interaction")
 
 ## PWN LOAN
 PWN LOAN token is a tokenized representation of a loan which can aquire different states:
