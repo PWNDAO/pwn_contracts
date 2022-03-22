@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { time } = require('@openzeppelin/test-helpers');
-const { CATEGORY, getOfferHashBytes, signOffer } = require("./test-helpers");
+const { CATEGORY, getOfferHashBytes, signOffer, getMerkleRootWithProof } = require("./test-helpers");
 
 
 describe("PWN", function () {
@@ -156,13 +156,16 @@ describe("PWN", function () {
 		});
 
 		it("Should be possible to create a loan with ERC20 collateral with flexible offer", async function () {
+			let mTreeRoot, mTreeProof;
+			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([], -1);
+
 			const offer = [
-				WETH.address, CATEGORY.ERC20, 100, [],
+				WETH.address, CATEGORY.ERC20, 100, mTreeRoot,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
 			const offerValues = [
-				0, 900, 3300
+				0, 900, 3300, mTreeProof
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -199,13 +202,16 @@ describe("PWN", function () {
 		});
 
 		it("Should be possible to create a loan with ERC721 collateral with flexible offer", async function () {
+			let mTreeRoot, mTreeProof;
+			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([42], 0);
+
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, [42],
+				NFT.address, CATEGORY.ERC721, 0, mTreeRoot,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
 			const offerValues = [
-				42, 900, 3300
+				42, 900, 3300, mTreeProof
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -222,13 +228,16 @@ describe("PWN", function () {
 		});
 
 		it("Should be possible to create a loan with ERC721 collateral with flexible collection offer", async function () {
+			let mTreeRoot, mTreeProof;
+			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([], -1);
+
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, [],
+				NFT.address, CATEGORY.ERC721, 0, mTreeRoot,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
 			const offerValues = [
-				42, 900, 3300
+				42, 900, 3300, mTreeProof
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -266,13 +275,16 @@ describe("PWN", function () {
 		});
 
 		it("Should be possible to create a loan with ERC1155 collateral with flexible offer", async function () {
+			let mTreeRoot, mTreeProof;
+			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([1337], 0);
+
 			const offer = [
-				GAME.address, CATEGORY.ERC1155, 1, [1337],
+				GAME.address, CATEGORY.ERC1155, 1, mTreeRoot,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
 			const offerValues = [
-				1337, 900, 3300
+				1337, 900, 3300, mTreeProof
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -310,13 +322,16 @@ describe("PWN", function () {
 		});
 
 		it("Should be possible to create a loan with flexible offer signed on behalf of a contract wallet", async function() {
+			let mTreeRoot, mTreeProof;
+			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([42], 0);
+
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, [42],
+				NFT.address, CATEGORY.ERC721, 0, mTreeRoot,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, ContractWallet.address, nonce,
 			];
 			const offerValues = [
-				42, 900, 3300
+				42, 900, 3300, mTreeProof
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, contractOwner);
 			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);

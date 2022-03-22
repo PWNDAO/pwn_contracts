@@ -1,4 +1,7 @@
+const { MerkleTree } = require("merkletreejs");
 const { ethers } = require("hardhat");
+const utils = ethers.utils;
+const keccak256 = ethers.utils.keccak256;
 
 const CATEGORY = {
 	ERC20: 0,
@@ -43,7 +46,7 @@ const EIP712FlexibleOfferTypes = {
 		{ name: "collateralAddress", type: "address" },
 		{ name: "collateralCategory", type: "uint8" },
 		{ name: "collateralAmount", type: "uint256" },
-		{ name: "collateralIdsWhitelist", type: "uint256[]" },
+		{ name: "collateralIdsWhitelistMerkleRoot", type: "bytes32" },
 		{ name: "loanAssetAddress", type: "address" },
 		{ name: "loanAmountMax", type: "uint256" },
 		{ name: "loanAmountMin", type: "uint256" },
@@ -92,6 +95,19 @@ async function signOffer(offerArray, loanAddress, signer) {
 	}
 }
 
+function getMerkleRootWithProof(ids, index) {
+	if (ids.length == 0) {
+		return [ethers.utils.hexZeroPad(0, 32), []];
+	}
+
+	const leaves = ids.map((x) => keccak256(ethers.utils.hexZeroPad(x, 32)));
+	const tree = new MerkleTree(leaves, keccak256, { sort: true });
+	const proof = index == -1 ? [] : tree.getHexProof(leaves[index]);
+	return [tree.getHexRoot(), proof, tree];
+}
+
+
+
 function getOfferObject(
 	collateralAddress,
 	collateralCategory,
@@ -124,7 +140,7 @@ function getFlexibleOfferObject(
 	collateralAddress,
 	collateralCategory,
 	collateralAmount,
-	collateralIdsWhitelist,
+	collateralIdsWhitelistMerkleRoot,
 	loanAssetAddress,
 	loanAmountMax,
 	loanAmountMin,
@@ -139,7 +155,7 @@ function getFlexibleOfferObject(
 		collateralAddress: collateralAddress,
 		collateralCategory: collateralCategory,
 		collateralAmount: collateralAmount,
-		collateralIdsWhitelist: collateralIdsWhitelist,
+		collateralIdsWhitelistMerkleRoot: collateralIdsWhitelistMerkleRoot,
 		loanAssetAddress: loanAssetAddress,
 		loanAmountMax: loanAmountMax,
 		loanAmountMin: loanAmountMin,
@@ -152,4 +168,4 @@ function getFlexibleOfferObject(
 	}
 }
 
-module.exports = { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer };
+module.exports = { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, getMerkleRootWithProof };
