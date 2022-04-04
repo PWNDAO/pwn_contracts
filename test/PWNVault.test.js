@@ -273,7 +273,8 @@ describe("PWNVault contract", async function() {
 		function functionSelector(signature) {
 			const bytes = ethers.utils.toUtf8Bytes(signature)
 			const hash = ethers.utils.keccak256(bytes);
-			return ethers.utils.hexDataSlice(hash, 0, 4);
+			const selector = ethers.utils.hexDataSlice(hash, 0, 4);
+			return ethers.BigNumber.from(selector);
 		}
 
 		it("Should support ERC165 interface", async function() {
@@ -285,12 +286,9 @@ describe("PWNVault contract", async function() {
 		});
 
 		it("Should support Ownable interface", async function() {
-			const ownerSelector = functionSelector("owner()");
-			const renounceOwnershipSelector = functionSelector("renounceOwnership()");
-			const transferOwnershipSelector = functionSelector("transferOwnership(address)");
-			const interfaceId = ethers.BigNumber.from(ownerSelector)
-				.xor(ethers.BigNumber.from(renounceOwnershipSelector))
-				.xor(ethers.BigNumber.from(transferOwnershipSelector));
+			const interfaceId = functionSelector("owner()")
+				.xor(functionSelector("renounceOwnership()"))
+				.xor(functionSelector("transferOwnership(address)"));
 
 			const supportsOwnable = await vault.callStatic.supportsInterface(interfaceId);
 
@@ -298,28 +296,28 @@ describe("PWNVault contract", async function() {
 		});
 
 		it("Should support PWN Vault interface", async function() {
-			const pwnSelector = functionSelector("PWN()");
-			const pullSelector = functionSelector("pull((address,uint8,uint256,uint256),address)");
-			const pushSelector = functionSelector("push((address,uint8,uint256,uint256),address)");
-			const pushFromSelector = functionSelector("pushFrom((address,uint8,uint256,uint256),address,address)");
-			const setPWNSelector = functionSelector("setPWN(address)");
-			
-			const interfaceId = ethers.BigNumber.from(pwnSelector)
-			.xor(ethers.BigNumber.from(pullSelector))
-				.xor(ethers.BigNumber.from(pushSelector))
-				.xor(ethers.BigNumber.from(pushFromSelector))
-				.xor(ethers.BigNumber.from(setPWNSelector));
+			const interfaceId = functionSelector("PWN()")
+				.xor(functionSelector("pull((address,uint8,uint256,uint256),address)"))
+				.xor(functionSelector("push((address,uint8,uint256,uint256),address)"))
+				.xor(functionSelector("pushFrom((address,uint8,uint256,uint256),address,address)"))
+				.xor(functionSelector("setPWN(address)"));
 
 			const supportsPWNVault = await vault.callStatic.supportsInterface(interfaceId);
 
 			expect(supportsPWNVault).to.equal(true);
 		});
 
+		it("Should support ERC721Receiver interface", async function() {
+			const interfaceId = functionSelector("onERC721Received(address,address,uint256,bytes)");
+
+			const supportsERC721Receiver = await vault.callStatic.supportsInterface(interfaceId);
+
+			expect(supportsERC721Receiver).to.equal(true);
+		});
+
 		it("Should support ERC1155Receiver interface", async function() {
-			const onERC1155ReceivedSelector = functionSelector("onERC1155Received(address,address,uint256,uint256,bytes)");
-			const onERC1155BatchReceivedSelector = functionSelector("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)");
-			const interfaceId = ethers.BigNumber.from(onERC1155ReceivedSelector)
-				.xor(ethers.BigNumber.from(onERC1155BatchReceivedSelector));
+			const interfaceId = functionSelector("onERC1155Received(address,address,uint256,uint256,bytes)")
+				.xor(functionSelector("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"));
 
 			const supportsERC1155Receiver = await vault.callStatic.supportsInterface(interfaceId);
 

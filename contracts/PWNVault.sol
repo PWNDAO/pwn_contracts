@@ -3,9 +3,10 @@ pragma solidity 0.8.4;
 
 import "@pwnfinance/multitoken/contracts/MultiToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-contract PWNVault is Ownable, IERC1155Receiver {
+contract PWNVault is Ownable, IERC721Receiver, IERC1155Receiver {
     using MultiToken for MultiToken.Asset;
 
     /*----------------------------------------------------------*|
@@ -85,6 +86,24 @@ contract PWNVault is Ownable, IERC1155Receiver {
         emit VaultPushFrom(_asset, _origin, _beneficiary);
         return true;
     }
+
+    /**
+     * @dev Whenever an {IERC721} `tokenId` token is transferred to this contract via {IERC721-safeTransferFrom}
+     * by `operator` from `from`, this function is called.
+     *
+     * It must return its Solidity selector to confirm the token transfer.
+     * If any other value is returned or the interface is not implemented by the recipient, the transfer will be reverted.
+     *
+     * @return `IERC721Receiver.onERC721Received.selector` if transfer is allowed
+     */
+    function onERC721Received(
+        address /*operator*/,
+        address /*from*/,
+        uint256 /*tokenId*/,
+        bytes calldata /*data*/
+    ) override external pure returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
+    }
     
     /**
      * @dev Handles the receipt of a single ERC1155 token type. This function is
@@ -100,13 +119,8 @@ contract PWNVault is Ownable, IERC1155Receiver {
         uint256 /*id*/,
         uint256 /*value*/,
         bytes calldata /*data*/
-    )
-        override
-        external
-        pure
-        returns(bytes4)
-    {
-        return 0xf23a6e61;
+    ) override external pure returns (bytes4) {
+        return IERC1155Receiver.onERC1155Received.selector;
     }
     
     /**
@@ -123,13 +137,8 @@ contract PWNVault is Ownable, IERC1155Receiver {
         uint256[] calldata /*ids*/,
         uint256[] calldata /*values*/,
         bytes calldata /*data*/
-    )
-        override
-        external
-        pure
-        returns(bytes4)
-    {
-        return 0xbc197c81;
+    ) override external pure returns (bytes4) {
+        return IERC1155Receiver.onERC1155BatchReceived.selector;
     }
 
     /**
@@ -151,9 +160,10 @@ contract PWNVault is Ownable, IERC1155Receiver {
      */
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return
-            interfaceId == type(IERC165).interfaceId || // ERC165
-            interfaceId == type(Ownable).interfaceId || // Ownable
-            interfaceId == type(IERC1155Receiver).interfaceId || // ERC1155Receiver
+            interfaceId == type(IERC165).interfaceId ||
+            interfaceId == type(Ownable).interfaceId ||
+            interfaceId == type(IERC721Receiver).interfaceId ||
+            interfaceId == type(IERC1155Receiver).interfaceId ||
             interfaceId == this.PWN.selector
                             ^ this.pull.selector
                             ^ this.push.selector
