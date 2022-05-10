@@ -67,7 +67,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * Construct defining an Offer
      * @param collateralAddress Address of an asset used as a collateral
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
-     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0
      * @param loanAssetAddress Address of an asset which is lended to borrower
      * @param loanAmount Amount of tokens which is offered as a loan to borrower
@@ -95,7 +95,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * Construct defining an Flexible offer
      * @param collateralAddress Address of an asset used as a collateral
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
-     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1
      * @param collateralIdsWhitelistMerkleRoot Root of a merkle tree constructed on array of whitelisted collateral ids
      * @param loanAssetAddress Address of an asset which is lended to borrower
      * @param loanAmountMax Max amount of tokens which is offered as a loan to borrower
