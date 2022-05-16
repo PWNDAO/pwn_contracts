@@ -41,7 +41,7 @@ describe("PWN contract", function() {
 		collateral = {
 			assetAddress: asset2.address,
 			category: CATEGORY.ERC721,
-			amount: 10,
+			amount: 1,
 			id: 123,
 		};
 	});

@@ -167,6 +167,8 @@ contract PWN is Ownable {
             vault.push(LoanAsset, msg.sender);
         } else if (status == 4) {
             vault.push(LOAN.getCollateral(_loanId), msg.sender);
+        } else {
+            revert("Invalid status code");
         }
 
         LOAN.burn(_loanId, msg.sender);

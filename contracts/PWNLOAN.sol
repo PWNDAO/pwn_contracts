@@ -67,7 +67,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * Construct defining an Offer
      * @param collateralAddress Address of an asset used as a collateral
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
-     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0
      * @param loanAssetAddress Address of an asset which is lended to borrower
      * @param loanAmount Amount of tokens which is offered as a loan to borrower
@@ -95,7 +95,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * Construct defining an Flexible offer
      * @param collateralAddress Address of an asset used as a collateral
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
-     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1
      * @param collateralIdsWhitelistMerkleRoot Root of a merkle tree constructed on array of whitelisted collateral ids
      * @param loanAssetAddress Address of an asset which is lended to borrower
      * @param loanAmountMax Max amount of tokens which is offered as a loan to borrower
@@ -412,7 +412,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param _loanId LOAN ID to be checked
      * @return unix time stamp in seconds
      */
-    function getExpiration(uint256 _loanId) public view returns (uint40) {
+    function getExpiration(uint256 _loanId) external view returns (uint40) {
         return LOANs[_loanId].expiration;
     }
 
@@ -422,7 +422,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param _loanId LOAN ID to be checked
      * @return loan duration period in seconds
      */
-    function getDuration(uint256 _loanId) public view returns (uint32) {
+    function getDuration(uint256 _loanId) external view returns (uint32) {
         return LOANs[_loanId].duration;
     }
 
@@ -432,7 +432,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param _loanId LOAN ID to be checked
      * @return address of the borrower
      */
-    function getBorrower(uint256 _loanId) public view returns (address) {
+    function getBorrower(uint256 _loanId) external view returns (address) {
         return LOANs[_loanId].borrower;
     }
 
@@ -442,7 +442,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param _loanId LOAN ID to be checked
      * @return Asset construct - for definition see { MultiToken.sol }
      */
-    function getCollateral(uint256 _loanId) public view returns (MultiToken.Asset memory) {
+    function getCollateral(uint256 _loanId) external view returns (MultiToken.Asset memory) {
         return LOANs[_loanId].collateral;
     }
 
@@ -452,17 +452,17 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param _loanId LOAN ID to be checked
      * @return Asset construct - for definition see { MultiToken.sol }
      */
-    function getLoanAsset(uint256 _loanId) public view returns (MultiToken.Asset memory) {
+    function getLoanAsset(uint256 _loanId) external view returns (MultiToken.Asset memory) {
         return LOANs[_loanId].asset;
     }
 
     /**
-     * getLoan
+     * getLoanRepayAmount
      * @dev utility function to find out loan repay amount of a particular LOAN
      * @param _loanId LOAN ID to be checked
      * @return Amount of loan asset to be repaid
      */
-    function getLoanRepayAmount(uint256 _loanId) public view returns (uint256) {
+    function getLoanRepayAmount(uint256 _loanId) external view returns (uint256) {
         return LOANs[_loanId].loanRepayAmount;
     }
 
@@ -472,7 +472,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param _offerHash Offer typed struct hash
      * @return True if offer is revoked
      */
-    function isRevoked(bytes32 _offerHash) public view returns (bool) {
+    function isRevoked(bytes32 _offerHash) external view returns (bool) {
         return revokedOffers[_offerHash];
     }
 

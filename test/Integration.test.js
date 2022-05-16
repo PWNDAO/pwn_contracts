@@ -183,7 +183,7 @@ describe("PWN", function () {
 
 		it("Should be possible to create a loan with ERC721 collateral with simple offer", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 42,
+				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
@@ -206,7 +206,7 @@ describe("PWN", function () {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([42], 0);
 
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, mTreeRoot,
+				NFT.address, CATEGORY.ERC721, 1, mTreeRoot,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
@@ -232,7 +232,7 @@ describe("PWN", function () {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([], -1);
 
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, mTreeRoot,
+				NFT.address, CATEGORY.ERC721, 1, mTreeRoot,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, lender.address, nonce,
 			];
@@ -303,7 +303,7 @@ describe("PWN", function () {
 
 		it("Should be possible to create a loan with simple offer signed on behalf of a contract wallet", async function() {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 42,
+				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
 				3600, 0, ContractWallet.address, nonce,
 			];
@@ -326,7 +326,7 @@ describe("PWN", function () {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([42], 0);
 
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, mTreeRoot,
+				NFT.address, CATEGORY.ERC721, 1, mTreeRoot,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, ContractWallet.address, nonce,
 			];
@@ -354,7 +354,7 @@ describe("PWN", function () {
 
 		it("Should be possible to pay back", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 42,
+				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
@@ -378,7 +378,7 @@ describe("PWN", function () {
 
 		it("Should be possible to claim after loan was paid", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 42,
+				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];
@@ -405,7 +405,7 @@ describe("PWN", function () {
 
 		it("Should be possible to claim if loan wasn't paid", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 42,
+				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
 				3600, 0, lender.address, nonce,
 			];

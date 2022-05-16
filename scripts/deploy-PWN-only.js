@@ -24,7 +24,7 @@ function moveToLine(line) {
 
 function main() {
     const Owner = "0x2c4480C87430CB81fBd1c970b185116C067059AB"; //J
-    const metadataUri = "https://api.pwn.finance/deed/{id}.json";
+    const metadataUri = "https://api.pwn.finance/deed/{id}/metadata";
 
     log("\n ===============================", highlighted);
     log("PWN contracts deployment script", highlighted);
