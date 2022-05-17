@@ -90,9 +90,15 @@ Flexible parameters are: collateral id, loan amount, loan duration.
 - PWNVault deployed at: _TBD_
 
 ### Rinkeby testnet
-- PWN deployed at: _TBD_
-- PWNLOAN deployed at: _TBD_
-- PWNVault deployed at: _TBD_
+- PWN deployed at: `0x34fCA53BbCbc2a4E2fF5D7F704b7143133dfaCF7`
+- PWNLOAN deployed at: `0xC33B746Ac85703178D5a796f960b5e855172e7F7`
+- PWNVault deployed at: `0x2f705615E25D705813cC0E29f4225Db0EDB82eCa`
+
+### Mumbai (Polygon) testnet
+- PWN deployed at: `0xDa88e79E5Dd786AD3c29CeFbe6a2bece6f6c0477`
+- PWNLOAN deployed at: `0x7C995e64a24aCb5806521276697B244D1f65f708`
+- PWNVault deployed at: `0x2fd4B676192C701778724408B72e9A29af2eB8c0`
+
 
 ### OpenSea shortcuts
 - PWN LOANs Listings: https://opensea.io/collection/TBD
