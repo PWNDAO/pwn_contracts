@@ -1,9 +1,5 @@
 {
 	"networks": {
-		"mumbai": {
-			"url": "ADD ALCHEMY RPC URL HERE",
-			"accounts": ["ADD PRIVATE KEY HERE"]
-		}
 	},
 	"etherscan": {
 	}
