@@ -24,20 +24,20 @@ function moveToLine(line) {
 
 function main() {
     const Owner = "0x2c4480C87430CB81fBd1c970b185116C067059AB"; //J
-    const metadataUri = "https://api.pwn.finance/deed/{id}/metadata";
+    const metadataBaseUri = "https://api.pwn.finance/";
 
     log("\n ===============================", highlighted);
     log("PWN contracts deployment script", highlighted);
     log("===============================\n", highlighted);
 
 
-    let question = "\x1b[36mMetadataUri:\t" + metadataUri + "\n";
-    question += "Owner:\t\t" + Owner + "\n\n";
+    let question = "\x1b[36mMetadataBaseUri:\t" + metadataBaseUri + "\n";
+    question += "Owner:\t\t\t" + Owner + "\n\n";
     question += "\x1b[0mDo you want to continue? (y/n): ";
 
     rl.question(question, async function(answer) {
         if (answer.toLowerCase() == "y" || answer.toLowerCase() == "yes") {
-            deploy(Owner, metadataUri)
+            deploy(Owner, metadataBaseUri)
                 .then(() => {
                     process.exit(0);
                 })
@@ -55,7 +55,7 @@ function main() {
     });
 }
 
-async function deploy(Owner, metadataUri) {
+async function deploy(Owner, metadataBaseUri) {
     // Get signer
     let sign, addrs;
     [sign, ...addrs] = await ethers.getSigners();
@@ -72,22 +72,31 @@ async function deploy(Owner, metadataUri) {
     log(" ⛏  Deploying PWNVault...   (tx: " + PwnVault.deployTransaction.hash + ")");
     const vaultPromise = PwnVault.deployed();
 
-    const PwnLoan = await PWNLOAN.deploy(metadataUri);
+    const PwnLoan = await PWNLOAN.deploy(metadataBaseUri);
     log(" ⛏  Deploying PWNLOAN...   (tx: " + PwnLoan.deployTransaction.hash) + ")";
     const loanPromise = PwnLoan.deployed();
 
     await Promise.all([vaultPromise, loanPromise]);
     moveToLine(-2);
-    log(" PWNVault deployed at: `" + PwnVault.address + "`");
-    log(" PWNLOAN deployed at: `" + PwnLoan.address + "`");
+    log(" PWNVault deployed at: " + PwnVault.address);
+    log(" PWNLOAN deployed at: " + PwnLoan.address);
 
     const Pwn = await PWN.deploy(PwnLoan.address, PwnVault.address);
     log(" ⛏  Deploying PWN...   (tx: " + Pwn.deployTransaction.hash + ")");
     await Pwn.deployed();
     moveToLine(-1);
-    log(" PWN deployed at: `" + Pwn.address + "`");
+    log(" PWN deployed at: " + Pwn.address);
 
     log("\n 🎉 PWN contracts deployed 🎉\n", highlighted);
+
+    // Set PWNLOAN metadata
+
+    const metadata = metadataBaseUri + `loan/${hardhat.network.config.chainId}/${PwnLoan.address}/{id}/metadata`;
+    const pwnloanMetadata = await PwnLoan.connect(sign).setUri(metadata);
+    log(" ⛏  Setting PWNLOAN metadata...   (tx: " + pwnloanMetadata.hash + ")");
+    await pwnloanMetadata.wait();
+    moveToLine(-1);
+    log(" PWNLOAN metadata set to " + metadata);
 
 
     // Set PWN contract
