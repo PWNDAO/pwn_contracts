@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const { time } = require('@openzeppelin/test-helpers');
 const { CATEGORY, timestampFromNow, getMerkleRootWithProof } = require("./test-helpers");
+const AddressZero = ethers.constants.AddressZero;
 
 const expect = chai.expect;
 chai.use(smock.matchers);
@@ -54,7 +55,7 @@ describe("PWN contract", function() {
 		offer = [
 			collateral.assetAddress, collateral.category, collateral.amount, collateral.id,
 			loanAsset.assetAddress, loanAsset.amount, loanYield,
-			duration, offerExpiration, lender.address, nonce,
+			duration, offerExpiration, AddressZero, lender.address, nonce,
 		];
 
 		[mTreeRoot, mTreeProof] = getMerkleRootWithProof([1, 2, 3], 0);
@@ -62,7 +63,7 @@ describe("PWN contract", function() {
 		flexibleOffer = [
 			collateral.assetAddress, collateral.category, collateral.amount, mTreeRoot,
 			loanAsset.assetAddress, loanAmountMax, loanAmountMin, loanYield,
-			durationMax, durationMin, offerExpiration, lender.address, nonce,
+			durationMax, durationMin, offerExpiration, AddressZero, lender.address, nonce,
 		];
 
 		flexibleOfferValues = [
