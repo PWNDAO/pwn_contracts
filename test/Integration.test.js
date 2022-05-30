@@ -104,7 +104,7 @@ describe("PWN", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
 				DAI.address, 1000, 200,
-				3600, 0, borrower.address, lender.address, nonce,
+				3600, 0, borrower.address, lender.address, false, nonce,
 			];
 			const offerHash = getOfferHashBytes(offer, PWNLOAN.address);
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
@@ -119,7 +119,7 @@ describe("PWN", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 0, 42,
 				DAI.address, 1000, 200,
-				3600, 0, borrower.address, lender.address, nonce,
+				3600, 0, borrower.address, lender.address, false, nonce,
 			];
 			const offerHash = getOfferHashBytes(offer, PWNLOAN.address);
 			const signature = await signOffer(offer, PWNLOAN.address, contractOwner);
@@ -139,7 +139,7 @@ describe("PWN", function () {
 			const offer = [
 				WETH.address, CATEGORY.ERC20, 100, 0,
 				DAI.address, 1000, 200,
-				3600, 0, borrower.address, lender.address, nonce,
+				3600, 0, borrower.address, lender.address, false, nonce,
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -162,7 +162,7 @@ describe("PWN", function () {
 			const offer = [
 				WETH.address, CATEGORY.ERC20, 100, mTreeRoot,
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, borrower.address, lender.address, nonce,
+				3600, 3000, 0, borrower.address, lender.address, false, nonce,
 			];
 			const offerValues = [
 				0, 900, 3300, mTreeProof
@@ -185,7 +185,7 @@ describe("PWN", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
-				3600, 0, borrower.address, lender.address, nonce,
+				3600, 0, borrower.address, lender.address, false, nonce,
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -208,7 +208,7 @@ describe("PWN", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 1, mTreeRoot,
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, borrower.address, lender.address, nonce,
+				3600, 3000, 0, borrower.address, lender.address, false, nonce,
 			];
 			const offerValues = [
 				42, 900, 3300, mTreeProof
@@ -234,7 +234,7 @@ describe("PWN", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 1, mTreeRoot,
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, borrower.address, lender.address, nonce,
+				3600, 3000, 0, borrower.address, lender.address, false, nonce,
 			];
 			const offerValues = [
 				42, 900, 3300, mTreeProof
@@ -257,7 +257,7 @@ describe("PWN", function () {
 			const offer = [
 				GAME.address, CATEGORY.ERC1155, 1, 1337,
 				DAI.address, 1000, 200,
-				3600, 0, borrower.address, lender.address, nonce,
+				3600, 0, borrower.address, lender.address, false, nonce,
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -281,7 +281,7 @@ describe("PWN", function () {
 			const offer = [
 				GAME.address, CATEGORY.ERC1155, 1, mTreeRoot,
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, borrower.address, lender.address, nonce,
+				3600, 3000, 0, borrower.address, lender.address, false, nonce,
 			];
 			const offerValues = [
 				1337, 900, 3300, mTreeProof
@@ -305,7 +305,7 @@ describe("PWN", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
-				3600, 0, borrower.address, ContractWallet.address, nonce,
+				3600, 0, borrower.address, ContractWallet.address, false, nonce,
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, contractOwner);
 			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);
@@ -328,7 +328,7 @@ describe("PWN", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 1, mTreeRoot,
 				DAI.address, 1000, 800, 200,
-				3600, 3000, 0, borrower.address, ContractWallet.address, nonce,
+				3600, 3000, 0, borrower.address, ContractWallet.address, false, nonce,
 			];
 			const offerValues = [
 				42, 900, 3300, mTreeProof
@@ -350,13 +350,83 @@ describe("PWN", function () {
 	});
 
 
+	describe("Workflow - New loans from persistent offer", function () {
+
+		it("Should be possible to create multiple loans with simple persistent offer", async function () {
+			const offer = [
+				WETH.address, CATEGORY.ERC20, 50, 0,
+				DAI.address, 500, 200,
+				3600, 0, borrower.address, lender.address, true, nonce,
+			];
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
+			await lDAI.approve(PWNVault.address, 1000);
+
+			await bWETH.approve(PWNVault.address, 50);
+			let tx = await bPWN.createLoan(offer, signature);
+			let response = await tx.wait();
+			let logDescription = loanEventIface.parseLog(response.logs[1]);
+			const loanId1 = logDescription.args.loanId.toNumber();
+
+			expect(await PWNLOAN.balanceOf(lender.address, loanId1)).to.equal(1);
+			expect(await WETH.balanceOf(PWNVault.address)).to.equal(50);
+			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 500);
+
+			await bWETH.approve(PWNVault.address, 50);
+			tx = await bPWN.createLoan(offer, signature);
+			response = await tx.wait();
+			logDescription = loanEventIface.parseLog(response.logs[1]);
+			const loanId2 = logDescription.args.loanId.toNumber();
+
+			expect(await PWNLOAN.balanceOf(lender.address, loanId2)).to.equal(1);
+			expect(await WETH.balanceOf(PWNVault.address)).to.equal(100);
+			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 1000);
+		});
+
+		it("Should be possible to create multiple loans with flexible persistent offer", async function () {
+			let mTreeRoot, mTreeProof;
+			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([], -1);
+
+			const offer = [
+				WETH.address, CATEGORY.ERC20, 50, mTreeRoot,
+				DAI.address, 1000, 300, 200,
+				3600, 3000, 0, borrower.address, lender.address, true, nonce,
+			];
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
+			await lDAI.approve(PWNVault.address, 1000);
+
+			// First loan
+			await bWETH.approve(PWNVault.address, 50);
+			let tx = await bPWN.createFlexibleLoan(offer, [0, 300, 3300, mTreeProof], signature);
+			let response = await tx.wait();
+			let logDescription = loanEventIface.parseLog(response.logs[1]);
+			const loanId1 = logDescription.args.loanId.toNumber();
+
+			expect(await PWNLOAN.balanceOf(lender.address, loanId1)).to.equal(1);
+			expect(await WETH.balanceOf(PWNVault.address)).to.equal(50);
+			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 300);
+
+			// Second loan
+			await bWETH.approve(PWNVault.address, 50);
+			tx = await bPWN.createFlexibleLoan(offer, [0, 600, 3300, mTreeProof], signature);
+			response = await tx.wait();
+			logDescription = loanEventIface.parseLog(response.logs[1]);
+			const loanId2 = logDescription.args.loanId.toNumber();
+
+			expect(await PWNLOAN.balanceOf(lender.address, loanId2)).to.equal(1);
+			expect(await WETH.balanceOf(PWNVault.address)).to.equal(100);
+			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 900);
+		});
+
+	});
+
+
 	describe("Workflow - Settlement", function () {
 
 		it("Should be possible to pay back", async function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
-				3600, 0, borrower.address, lender.address, nonce,
+				3600, 0, borrower.address, lender.address, false, nonce,
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -380,7 +450,7 @@ describe("PWN", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
-				3600, 0, borrower.address, lender.address, nonce,
+				3600, 0, borrower.address, lender.address, false, nonce,
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);
@@ -407,7 +477,7 @@ describe("PWN", function () {
 			const offer = [
 				NFT.address, CATEGORY.ERC721, 1, 42,
 				DAI.address, 1000, 200,
-				3600, 0, borrower.address, lender.address, nonce,
+				3600, 0, borrower.address, lender.address, false, nonce,
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
 			await lDAI.approve(PWNVault.address, 1000);

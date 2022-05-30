@@ -55,7 +55,7 @@ describe("PWN contract", function() {
 		offer = [
 			collateral.assetAddress, collateral.category, collateral.amount, collateral.id,
 			loanAsset.assetAddress, loanAsset.amount, loanYield,
-			duration, offerExpiration, AddressZero, lender.address, nonce,
+			duration, offerExpiration, AddressZero, lender.address, false, nonce,
 		];
 
 		[mTreeRoot, mTreeProof] = getMerkleRootWithProof([1, 2, 3], 0);
@@ -63,7 +63,7 @@ describe("PWN contract", function() {
 		flexibleOffer = [
 			collateral.assetAddress, collateral.category, collateral.amount, mTreeRoot,
 			loanAsset.assetAddress, loanAmountMax, loanAmountMin, loanYield,
-			durationMax, durationMin, offerExpiration, AddressZero, lender.address, nonce,
+			durationMax, durationMin, offerExpiration, AddressZero, lender.address, false, nonce,
 		];
 
 		flexibleOfferValues = [
@@ -146,7 +146,9 @@ describe("PWN contract", function() {
 			expect(args._offer.loanYield).to.equal(loanYield);
 			expect(args._offer.duration).to.equal(duration);
 			expect(args._offer.expiration).to.equal(offerExpiration);
+			expect(args._offer.borrower).to.equal(AddressZero);
 			expect(args._offer.lender).to.equal(lender.address);
+			expect(args._offer.isPersistent).to.equal(false);
 			expect(args._offer.nonce).to.equal(nonce);
 			expect(args._signature).to.equal(signature);
 			expect(args._sender).to.equal(borrower.address);
@@ -221,7 +223,9 @@ describe("PWN contract", function() {
 			expect(args._offer.durationMax).to.equal(durationMax);
 			expect(args._offer.durationMin).to.equal(durationMin);
 			expect(args._offer.expiration).to.equal(offerExpiration);
+			expect(args._offer.borrower).to.equal(AddressZero);
 			expect(args._offer.lender).to.equal(lender.address);
+			expect(args._offer.isPersistent).to.equal(false);
 			expect(args._offer.nonce).to.equal(nonce);
 			expect(args._offerValues.collateralId).to.equal(collateral.id);
 			expect(args._offerValues.loanAmount).to.equal(loanAsset.amount);
