@@ -84,10 +84,15 @@ With flexible offers, lender can give borrower additional flexibility by not pro
 Flexible parameters are: collateral id, loan amount, loan duration.
 
 ## Deployed addresses
-### Mainnet
+### Ethereum
 - PWN deployed at: _TBD_
 - PWNLOAN deployed at: _TBD_
 - PWNVault deployed at: _TBD_
+
+### Polygon
+- PWN deployed at: `0xBCdE56e9FB8c30aBB2D19Fb33D7DeD5031102da2`
+- PWNLOAN deployed at: `0x8680AEE63E48AACB51Ddc5Ad15979FC169C1cf2B`
+- PWNVault deployed at: `0xaF0d978275a2e7e3109F8C6307Ffd281774C623E`
 
 ### Rinkeby testnet
 - PWN deployed at: `0x34fCA53BbCbc2a4E2fF5D7F704b7143133dfaCF7`
