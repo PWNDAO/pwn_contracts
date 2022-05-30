@@ -58,7 +58,7 @@ describe("PWNLoan contract", function() {
 		offer = [
 			collateral.assetAddress, collateral.category, collateral.amount, collateral.id,
 			loanAsset.assetAddress, loanAsset.amount,
-			loanYield, duration, offerExpiration, AddressZero, lender.address, nonce,
+			loanYield, duration, offerExpiration, AddressZero, lender.address, false, nonce,
 		];
 
 		[mTreeRoot, mTreeProof, mTree] = getMerkleRootWithProof([], -1);
@@ -66,7 +66,7 @@ describe("PWNLoan contract", function() {
 		flexibleOffer = [
 			collateral.assetAddress, collateral.category, collateral.amount, mTreeRoot,
 			loanAsset.assetAddress, loanAmountMax, loanAmountMin, loanYield,
-			durationMax, durationMin, offerExpiration, AddressZero, lender.address, nonce,
+			durationMax, durationMin, offerExpiration, AddressZero, lender.address, false, nonce,
 		];
 
 		flexibleOfferValues = [
@@ -132,6 +132,17 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should set offer as revoked", async function() {
+			await loan.revokeOffer(offerHash, signature, lender.address);
+
+			const isRevoked = await loan.revokedOffers(offerHash);
+			expect(isRevoked).to.equal(true);
+		});
+
+		it("Should set persistent offer as revoked", async function() {
+			offer[11] = true;
+			offerHash = getOfferHashBytes(offer, loan.address);
+			signature = await signOffer(offer, loan.address, lender);
+
 			await loan.revokeOffer(offerHash, signature, lender.address);
 
 			const isRevoked = await loan.revokedOffers(offerHash);
@@ -250,6 +261,16 @@ describe("PWNLoan contract", function() {
 			expect(isRevoked).to.equal(true);
 		});
 
+		it("Should not revoke offer when is persistent", async function() {
+			offer[11] = true;
+			signature = await signOffer(offer, loan.address, lender);
+
+			await loan.create(offer, signature, borrower.address);
+
+			const isRevoked = await loan.revokedOffers(offerHash);
+			expect(isRevoked).to.equal(false);
+		});
+
 		it("Should mint loan ERC1155 token", async function () {
 			await loan.create(offer, signature, borrower.address);
 			const loanId = await loan.id();
@@ -283,7 +304,7 @@ describe("PWNLoan contract", function() {
 			await loan.create(offer, signature, borrower.address);
 			const loanId1 = await loan.id();
 
-			offer[11] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
+			offer[12] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
 			signature = await signOffer(offer, loan.address, lender);
 
 			await loan.create(offer, signature, borrower.address);
@@ -477,6 +498,16 @@ describe("PWNLoan contract", function() {
 
 			const isRevoked = await loan.revokedOffers(offerHash);
 			expect(isRevoked).to.equal(true);
+		});
+
+		it("Should not revoke offer when is persistent", async function() {
+			flexibleOffer[13] = true;
+			signature = await signOffer(flexibleOffer, loan.address, lender);
+
+			await loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
+
+			const isRevoked = await loan.revokedOffers(offerHash);
+			expect(isRevoked).to.equal(false);
 		});
 
 		it("Should mint loan ERC1155 token", async function () {
