@@ -105,9 +105,5 @@ Flexible parameters are: collateral id, loan amount, loan duration.
 - PWNVault: `0x2fd4B676192C701778724408B72e9A29af2eB8c0`
 
 
-### OpenSea shortcuts
-- PWN LOANs Listings: https://opensea.io/collection/TBD
-- Collateral Collection: https://opensea.io/TBD
-
 # PWN is hiring!
 https://www.notion.so/PWN-is-hiring-f5a49899369045e39f41fc7e4c7b5633
