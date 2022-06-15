@@ -21,7 +21,7 @@ async function deploy() {
     const vaultPromise = PwnVault.deployed();
 
     const PwnLoan = await PWNLOAN.deploy("");
-    log(" ⛏  Deploying PWNLOAN...   (tx: " + PwnLoan.deployTransaction.hash) + ")";
+    log(" ⛏  Deploying PWNLOAN...   (tx: " + PwnLoan.deployTransaction.hash + ")");
     const loanPromise = PwnLoan.deployed();
 
     await Promise.all([vaultPromise, loanPromise]);
