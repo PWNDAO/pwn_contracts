@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
@@ -10,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract Basic1155 is ERC1155, Ownable {
     
-    constructor(string memory uri) public
+    constructor(string memory uri)
         ERC1155(uri)
         Ownable()
     { }

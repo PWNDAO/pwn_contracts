@@ -8,7 +8,13 @@ config/local.json
 
 #Hardhat files
 cache
-artifacts
+artifacts/*
+
+# Include ABI
+!/artifacts/contracts/
+/artifacts/contracts/*
+!/artifacts/contracts/*.sol
+/artifacts/contracts/*.sol/*.dbg.json
 
 /.vscode/
 /.keys/

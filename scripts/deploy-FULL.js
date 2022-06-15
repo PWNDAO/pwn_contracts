@@ -31,7 +31,7 @@ async function main() {
 
   const FAUCET = await hre.ethers.getContractFactory("Faucet");
   const PWN = await hre.ethers.getContractFactory("PWN");
-  const PWNDEED = await hre.ethers.getContractFactory("PWNDeed");
+  const PWNLOAN = await hre.ethers.getContractFactory("PWNLOAN");
   const PWNVAULT = await hre.ethers.getContractFactory("PWNVault");
 
   // Deploy test tokens of all kinds
@@ -66,7 +66,7 @@ async function main() {
   await NFTZ.connect(sign).setBaseURI("https://api.pwn.finance/z/");
 
   // deploy & populate faucet
-  const Faucet = await FAUCET.deploy(DAI.address, WETH.address, TOK.address, NFTX.address, NFTY.address, NFTZ.address, A1155.address, B1155.address);
+  const Faucet = await FAUCET.deploy(DAI.address, WETH.address, TOK.address, NFTX.address, NFTY.address, NFTZ.address, A1155.address, B1155.address, 1);
   await Faucet.deployed();
 
   console.log("Faucet deployed!");
@@ -86,20 +86,20 @@ async function main() {
   console.log("Faucet utilized!");
   // Deploy PWN
   const PwnVault = await PWNVAULT.deploy();
-  const PwnDeed = await PWNDEED.deploy("https://api.pwn.finance/deed/")
+  const PwnLoan = await PWNLOAN.deploy("https://api.pwn.finance/loan/")
 
   await PwnVault.deployed();
-  await PwnDeed.deployed();
+  await PwnLoan.deployed();
 
   console.log("PWN D & V deployed!");
-  const Pwn = await PWN.deploy(PwnDeed.address, PwnVault.address);
+  const Pwn = await PWN.deploy(PwnLoan.address, PwnVault.address);
   await Pwn.deployed();
 
   console.log("PWN deployed!");
 
   // Dump to log
   console.log("PWN deployed at: `" + Pwn.address + "`");
-  console.log("PWNDeed deployed at: `" + PwnDeed.address + "`");
+  console.log("PWNLOAN deployed at: `" + PwnLoan.address + "`");
   console.log("PWNVault deployed at: `" + PwnVault.address + "`");
 
   console.log("DAI deployed at: `" + DAI.address + "`");
@@ -115,7 +115,7 @@ async function main() {
 
   console.log("Faucet deployed at: `" + Faucet.address + "`");
 
-  await PwnDeed.connect(sign).setPWN(Pwn.address);
+  await PwnLoan.connect(sign).setPWN(Pwn.address);
   await PwnVault.connect(sign).setPWN(Pwn.address);
 
   // Pass ownership of PWN & Faucet
