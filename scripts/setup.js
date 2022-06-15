@@ -3,10 +3,10 @@ const { log, STYLE } = require("./scripts-helpers");
 const { highlighted } = STYLE;
 
 
-const owner = "0x...";
-const pwnAddress = "0x...";
-const pwnLoanAddress = "0x...";
-const pwnVaultAddress = "0x...";
+const owner = "0x";
+const pwnAddress = "0x";
+const pwnLoanAddress = "0x";
+const pwnVaultAddress = "0x";
 const metadataBaseUri = "https://api.pwn.xyz/";
 
 
