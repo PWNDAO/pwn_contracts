@@ -36,6 +36,7 @@ const EIP712OfferTypes = {
 		{ name: "loanYield", type: "uint256" },
 		{ name: "duration", type: "uint32" },
 		{ name: "expiration", type: "uint40" },
+		{ name: "borrower", type: "address" },
 		{ name: "lender", type: "address" },
 		{ name: "nonce", type: "bytes32" },
 	]
@@ -54,20 +55,21 @@ const EIP712FlexibleOfferTypes = {
 		{ name: "durationMax", type: "uint32" },
 		{ name: "durationMin", type: "uint32" },
 		{ name: "expiration", type: "uint40" },
+		{ name: "borrower", type: "address" },
 		{ name: "lender", type: "address" },
 		{ name: "nonce", type: "bytes32" },
 	]
 }
 
 function getOfferHashBytes(offerArray, loanAddress) {
-	if (offerArray.length == 11) {
+	if (offerArray.length == 12) {
 		// Simple offer
 		return ethers.utils._TypedDataEncoder.hash(
 			getEIP712Domain(loanAddress),
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
-	} else if (offerArray.length == 13) {
+	} else if (offerArray.length == 14) {
 		// Flexible offer
 		return ethers.utils._TypedDataEncoder.hash(
 			getEIP712Domain(loanAddress),
@@ -78,14 +80,14 @@ function getOfferHashBytes(offerArray, loanAddress) {
 }
 
 async function signOffer(offerArray, loanAddress, signer) {
-	if (offerArray.length == 11) {
+	if (offerArray.length == 12) {
 		// Simple offer
 		return signer._signTypedData(
 			getEIP712Domain(loanAddress),
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
-	} else if (offerArray.length == 13) {
+	} else if (offerArray.length == 14) {
 		// Flexible offer
 		return signer._signTypedData(
 			getEIP712Domain(loanAddress),
@@ -118,6 +120,7 @@ function getOfferObject(
 	loanYield,
 	duration,
 	expiration,
+	borrower,
 	lender,
 	nonce,
 ) {
@@ -131,6 +134,7 @@ function getOfferObject(
 		loanYield: loanYield,
 		duration: duration,
 		expiration: expiration,
+		borrower: borrower,
 		lender: lender,
 		nonce: nonce,
 	}
@@ -148,6 +152,7 @@ function getFlexibleOfferObject(
 	durationMax,
 	durationMin,
 	expiration,
+	borrower,
 	lender,
 	nonce
 ) {
@@ -163,6 +168,7 @@ function getFlexibleOfferObject(
 		durationMax: durationMax,
 		durationMin: durationMin,
 		expiration: expiration,
+		borrower: borrower,
 		lender: lender,
 		nonce: nonce,
 	}

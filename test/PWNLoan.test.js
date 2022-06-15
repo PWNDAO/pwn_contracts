@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const { smock } = require("@defi-wonderland/smock");
 const { time } = require('@openzeppelin/test-helpers');
 const { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, getMerkleRootWithProof } = require("./test-helpers");
+const AddressZero = ethers.constants.AddressZero;
 
 const expect = chai.expect;
 chai.use(smock.matchers);
@@ -57,7 +58,7 @@ describe("PWNLoan contract", function() {
 		offer = [
 			collateral.assetAddress, collateral.category, collateral.amount, collateral.id,
 			loanAsset.assetAddress, loanAsset.amount,
-			loanYield, duration, offerExpiration, lender.address, nonce,
+			loanYield, duration, offerExpiration, AddressZero, lender.address, nonce,
 		];
 
 		[mTreeRoot, mTreeProof, mTree] = getMerkleRootWithProof([], -1);
@@ -65,7 +66,7 @@ describe("PWNLoan contract", function() {
 		flexibleOffer = [
 			collateral.assetAddress, collateral.category, collateral.amount, mTreeRoot,
 			loanAsset.assetAddress, loanAmountMax, loanAmountMin, loanYield,
-			durationMax, durationMin, offerExpiration, lender.address, nonce,
+			durationMax, durationMin, offerExpiration, AddressZero, lender.address, nonce,
 		];
 
 		flexibleOfferValues = [
@@ -141,7 +142,7 @@ describe("PWNLoan contract", function() {
 			await expect(
 				loan.revokeOffer(offerHash, signature, lender.address)
 			).to.emit(loan, "OfferRevoked").withArgs(
-				ethers.utils.hexValue(offerHash)
+				ethers.utils.hexZeroPad(offerHash, 32)
 			);
 		});
 
@@ -157,7 +158,7 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should fail when offer lender is not offer signer", async function() {
-			offer[9] = addr1.address;
+			offer[10] = addr1.address;
 
 			await expect(
 				loan.create(offer, signature, borrower.address)
@@ -166,7 +167,7 @@ describe("PWNLoan contract", function() {
 
 		it("Should pass when offer is signed on behalf of a contract wallet", async function() {
 			const fakeContractWallet = await smock.fake("ContractWallet");
-			offer[9] = fakeContractWallet.address;
+			offer[10] = fakeContractWallet.address;
 			offerHash = getOfferHashBytes(offer, loan.address);
 			signature = await signOffer(offer, loan.address, addr1);
 			fakeContractWallet.isValidSignature.whenCalledWith(offerHash, signature).returns("0x1626ba7e");
@@ -179,7 +180,7 @@ describe("PWNLoan contract", function() {
 
 		it("Should fail when contract wallet returns that offer signed on behalf of a contract wallet is invalid", async function() {
 			const fakeContractWallet = await smock.fake("ContractWallet");
-			offer[9] = fakeContractWallet.address;
+			offer[10] = fakeContractWallet.address;
 			signature = await signOffer(offer, loan.address, addr1);
 			fakeContractWallet.isValidSignature.returns("0xffffffff");
 			fakeContractWallet.onERC1155Received.returns("0xf23a6e61");
@@ -213,6 +214,24 @@ describe("PWNLoan contract", function() {
 
 			await expect(
 				loan.create(offer, signature, borrower.address)
+			).to.not.be.reverted;
+		});
+
+		it("Should fail when sender is not stated offer borrower", async function() {
+			offer[9] = addr1.address;
+			signature = await signOffer(offer, loan.address, lender);
+
+			await expect(
+				loan.create(offer, signature, borrower.address)
+			).to.be.revertedWith("Sender is not offer borrower");
+		});
+
+		it("Should pass when sender is stated offer borrower", async function() {
+			offer[9] = addr1.address;
+			signature = await signOffer(offer, loan.address, lender);
+
+			await expect(
+				loan.create(offer, signature, addr1.address)
 			).to.not.be.reverted;
 		});
 
@@ -264,7 +283,7 @@ describe("PWNLoan contract", function() {
 			await loan.create(offer, signature, borrower.address);
 			const loanId1 = await loan.id();
 
-			offer[10] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
+			offer[11] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
 			signature = await signOffer(offer, loan.address, lender);
 
 			await loan.create(offer, signature, borrower.address);
@@ -279,7 +298,7 @@ describe("PWNLoan contract", function() {
 			await expect(
 				loan.create(offer, signature, borrower.address)
 			).to.emit(loan, "LOANCreated").withArgs(
-				loanId + 1, lender.address, ethers.utils.hexValue(offerHash)
+				loanId + 1, lender.address, ethers.utils.hexZeroPad(offerHash, 32)
 			);
 		});
 
@@ -301,7 +320,7 @@ describe("PWNLoan contract", function() {
 		});
 
 		it("Should fail when offer lender is not offer signer", async function() {
-			flexibleOffer[11] = addr1.address;
+			flexibleOffer[12] = addr1.address;
 
 			await expect(
 				loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
@@ -310,7 +329,7 @@ describe("PWNLoan contract", function() {
 
 		it("Should pass when offer is signed on behalf of a contract wallet", async function() {
 			const fakeContractWallet = await smock.fake("ContractWallet");
-			flexibleOffer[11] = fakeContractWallet.address;
+			flexibleOffer[12] = fakeContractWallet.address;
 			offerHash = getOfferHashBytes(flexibleOffer, loan.address);
 			signature = await signOffer(flexibleOffer, loan.address, addr1);
 			fakeContractWallet.isValidSignature.whenCalledWith(offerHash, signature).returns("0x1626ba7e");
@@ -323,7 +342,7 @@ describe("PWNLoan contract", function() {
 
 		it("Should fail when contract wallet returns that offer signed on behalf of a contract wallet is invalid", async function() {
 			const fakeContractWallet = await smock.fake("ContractWallet");
-			flexibleOffer[11] = fakeContractWallet.address;
+			flexibleOffer[12] = fakeContractWallet.address;
 			signature = await signOffer(flexibleOffer, loan.address, addr1);
 			fakeContractWallet.isValidSignature.returns("0xffffffff");
 			fakeContractWallet.onERC1155Received.returns("0xf23a6e61");
@@ -357,6 +376,24 @@ describe("PWNLoan contract", function() {
 
 			await expect(
 				loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
+			).to.not.be.reverted;
+		});
+
+		it("Should fail when sender is not stated offer borrower", async function() {
+			flexibleOffer[11] = addr1.address;
+			signature = await signOffer(flexibleOffer, loan.address, lender);
+
+			await expect(
+				loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
+			).to.be.revertedWith("Sender is not offer borrower");
+		});
+
+		it("Should pass when sender is stated offer borrower", async function() {
+			flexibleOffer[11] = addr1.address;
+			signature = await signOffer(flexibleOffer, loan.address, lender);
+
+			await expect(
+				loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, addr1.address)
 			).to.not.be.reverted;
 		});
 
@@ -492,7 +529,7 @@ describe("PWNLoan contract", function() {
 			await loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
 			const loanId1 = await loan.id();
 
-			flexibleOffer[12] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
+			flexibleOffer[13] = ethers.utils.solidityKeccak256([ "string" ], [ "nonce_2" ]);
 			signature = await signOffer(flexibleOffer, loan.address, lender);
 
 			await loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address);
@@ -507,7 +544,7 @@ describe("PWNLoan contract", function() {
 			await expect(
 				loan.createFlexible(flexibleOffer, flexibleOfferValues, signature, borrower.address)
 			).to.emit(loan, "LOANCreated").withArgs(
-				loanId + 1, lender.address, ethers.utils.hexValue(offerHash)
+				loanId + 1, lender.address, ethers.utils.hexZeroPad(offerHash, 32)
 			);
 		});
 
