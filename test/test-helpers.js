@@ -38,6 +38,7 @@ const EIP712OfferTypes = {
 		{ name: "expiration", type: "uint40" },
 		{ name: "borrower", type: "address" },
 		{ name: "lender", type: "address" },
+		{ name: "isPersistent", type: "bool" },
 		{ name: "nonce", type: "bytes32" },
 	]
 }
@@ -57,19 +58,20 @@ const EIP712FlexibleOfferTypes = {
 		{ name: "expiration", type: "uint40" },
 		{ name: "borrower", type: "address" },
 		{ name: "lender", type: "address" },
+		{ name: "isPersistent", type: "bool" },
 		{ name: "nonce", type: "bytes32" },
 	]
 }
 
 function getOfferHashBytes(offerArray, loanAddress) {
-	if (offerArray.length == 12) {
+	if (offerArray.length == 13) {
 		// Simple offer
 		return ethers.utils._TypedDataEncoder.hash(
 			getEIP712Domain(loanAddress),
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
-	} else if (offerArray.length == 14) {
+	} else if (offerArray.length == 15) {
 		// Flexible offer
 		return ethers.utils._TypedDataEncoder.hash(
 			getEIP712Domain(loanAddress),
@@ -80,14 +82,14 @@ function getOfferHashBytes(offerArray, loanAddress) {
 }
 
 async function signOffer(offerArray, loanAddress, signer) {
-	if (offerArray.length == 12) {
+	if (offerArray.length == 13) {
 		// Simple offer
 		return signer._signTypedData(
 			getEIP712Domain(loanAddress),
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
-	} else if (offerArray.length == 14) {
+	} else if (offerArray.length == 15) {
 		// Flexible offer
 		return signer._signTypedData(
 			getEIP712Domain(loanAddress),
@@ -122,6 +124,7 @@ function getOfferObject(
 	expiration,
 	borrower,
 	lender,
+	isPersistent,
 	nonce,
 ) {
 	return {
@@ -136,6 +139,7 @@ function getOfferObject(
 		expiration: expiration,
 		borrower: borrower,
 		lender: lender,
+		isPersistent: isPersistent,
 		nonce: nonce,
 	}
 }
@@ -154,6 +158,7 @@ function getFlexibleOfferObject(
 	expiration,
 	borrower,
 	lender,
+	isPersistent,
 	nonce
 ) {
 	return {
@@ -170,6 +175,7 @@ function getFlexibleOfferObject(
 		expiration: expiration,
 		borrower: borrower,
 		lender: lender,
+		isPersistent: isPersistent,
 		nonce: nonce,
 	}
 }

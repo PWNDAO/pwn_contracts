@@ -33,14 +33,14 @@ contract PWNLOAN is ERC1155, Ownable {
      * EIP-712 offer struct type hash
      */
     bytes32 constant internal OFFER_TYPEHASH = keccak256(
-        "Offer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256 collateralId,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bytes32 nonce)"
+        "Offer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256 collateralId,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"
     );
 
     /**
      * EIP-712 flexible offer struct type hash
      */
     bytes32 constant internal FLEXIBLE_OFFER_TYPEHASH = keccak256(
-        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,bytes32 collateralIdsWhitelistMerkleRoot,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address borrower,address lender,bytes32 nonce)"
+        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,bytes32 collateralIdsWhitelistMerkleRoot,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"
     );
 
     /**
@@ -76,6 +76,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param expiration Offer expiration timestamp in seconds
      * @param borrower Address of a borrower. Only this address can accept an offer. If address is zero address, anybody with a collateral can accept an offer.
      * @param lender Address of a lender. This address has to sign an offer to be valid.
+     * @param isPersistent If true, offer will not be revoked after acceptance. Persistent offer can be revoked manually.
      * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
      */
     struct Offer {
@@ -90,6 +91,7 @@ contract PWNLOAN is ERC1155, Ownable {
         uint40 expiration;
         address borrower;
         address lender;
+        bool isPersistent;
         bytes32 nonce;
     }
 
@@ -108,6 +110,7 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param expiration Offer expiration timestamp in seconds
      * @param borrower Address of a borrower. Only this address can accept an offer. If address is zero address, anybody with a collateral can accept an offer.
      * @param lender Address of a lender. This address has to sign a flexible offer to be valid.
+     * @param isPersistent If true, offer will not be revoked after acceptance. Persistent offer can be revoked manually.
      * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
      */
     struct FlexibleOffer {
@@ -124,6 +127,7 @@ contract PWNLOAN is ERC1155, Ownable {
         uint40 expiration;
         address borrower;
         address lender;
+        bool isPersistent;
         bytes32 nonce;
     }
 
@@ -228,7 +232,8 @@ contract PWNLOAN is ERC1155, Ownable {
         _checkValidSignature(_offer.lender, offerHash, _signature);
         _checkValidOffer(_offer.expiration, _offer.borrower, _sender, offerHash);
 
-        revokedOffers[offerHash] = true;
+        if (!_offer.isPersistent)
+            revokedOffers[offerHash] = true;
 
         uint256 _id = ++id;
 
@@ -291,7 +296,8 @@ contract PWNLOAN is ERC1155, Ownable {
         // Flexible duration
         require(_offer.durationMin <= _offerValues.duration && _offerValues.duration <= _offer.durationMax, "Loan duration is not in offered range");
 
-        revokedOffers[offerHash] = true;
+        if (!_offer.isPersistent)
+            revokedOffers[offerHash] = true;
 
         uint256 _id = ++id;
 
@@ -581,6 +587,7 @@ contract PWNLOAN is ERC1155, Ownable {
             _offer.expiration,
             _offer.borrower,
             _offer.lender,
+            _offer.isPersistent,
             _offer.nonce
         ));
     }
@@ -614,6 +621,7 @@ contract PWNLOAN is ERC1155, Ownable {
             _offer.expiration,
             _offer.borrower,
             _offer.lender,
+            _offer.isPersistent,
             _offer.nonce
         );
 
