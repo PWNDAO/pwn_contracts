@@ -20,7 +20,7 @@
         "@openzeppelin/test-helpers": "^0.5.15",
         "@pwnfinance/multitoken": "1.1.0",
         "chai": "^4.3.4",
-        "config": "^3.3.6",
+        "dotenv": "16.0.1",
         "ethereum-waffle": "^3.3.0",
         "ethers": "5.4.7",
         "hardhat": "2.9.0",

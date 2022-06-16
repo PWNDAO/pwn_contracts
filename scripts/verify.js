@@ -6,9 +6,9 @@ require("@nomiclabs/hardhat-etherscan");
 
 const supportedNetworks = ["mainnet", "rinkeby", "polygon"];
 
-const pwnAddress = "0x...";
-const pwnLoanAddress = "0x...";
-const pwnVaultAddress = "0x...";
+const pwnAddress = "0x";
+const pwnLoanAddress = "0x";
+const pwnVaultAddress = "0x";
 const metadataBaseUri = "https://api.pwn.xyz/";
 
 
