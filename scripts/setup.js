@@ -1,4 +1,4 @@
-const hardhat = require("hardhat");
+const { ethers, network } = require("hardhat");
 const { log, STYLE } = require("./scripts-helpers");
 const { highlighted } = STYLE;
 
@@ -15,13 +15,13 @@ async function setup() {
     let signer, addrs;
     [signer, ...addrs] = await ethers.getSigners();
 
-    const Pwn = await hardhat.ethers.getContractAt("PWN", pwnAddress);
-    const PwnLoan = await hardhat.ethers.getContractAt("PWNLOAN", pwnLoanAddress);
-    const PwnVault = await hardhat.ethers.getContractAt("PWNVault", pwnVaultAddress);
+    const Pwn = await ethers.getContractAt("PWN", pwnAddress);
+    const PwnLoan = await ethers.getContractAt("PWNLOAN", pwnLoanAddress);
+    const PwnVault = await ethers.getContractAt("PWNVault", pwnVaultAddress);
 
 
     // Set PWNLOAN metadata
-    const metadata = metadataBaseUri + `loan/${hardhat.network.config.chainId}/${PwnLoan.address}/{id}/metadata`;
+    const metadata = metadataBaseUri + `loan/${network.config.chainId}/${PwnLoan.address}/{id}/metadata`;
     const pwnloanMetadata = await PwnLoan.connect(signer).setUri(metadata);
     log(" ⛏  Setting PWNLOAN metadata...   (tx: " + pwnloanMetadata.hash + ")");
     await pwnloanMetadata.wait();

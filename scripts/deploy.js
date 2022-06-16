@@ -1,4 +1,4 @@
-const hardhat = require("hardhat");
+const { ethers } = require("hardhat");
 const { log, STYLE } = require("./scripts-helpers");
 const { highlighted } = STYLE;
 
@@ -8,9 +8,9 @@ async function deploy() {
     let signer, addrs;
     [signer, ...addrs] = await ethers.getSigners();
 
-    const PWN = await hardhat.ethers.getContractFactory("PWN", signer);
-    const PWNLOAN = await hardhat.ethers.getContractFactory("PWNLOAN", signer);
-    const PWNVAULT = await hardhat.ethers.getContractFactory("PWNVault", signer);
+    const PWN = await ethers.getContractFactory("PWN", signer);
+    const PWNLOAN = await ethers.getContractFactory("PWNLOAN", signer);
+    const PWNVAULT = await ethers.getContractFactory("PWNVault", signer);
 
 
     // Deploy contracts
