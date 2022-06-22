@@ -18,7 +18,7 @@
         "@openzeppelin/contracts": "4.5.0",
         "@openzeppelin/hardhat-upgrades": "^1.6.0",
         "@openzeppelin/test-helpers": "^0.5.15",
-        "@pwnfinance/multitoken": "1.1.0",
+        "@pwnfinance/multitoken": "2.0.0-beta.2",
         "chai": "^4.3.4",
         "dotenv": "16.0.1",
         "ethereum-waffle": "^3.3.0",
