@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { time } = require('@openzeppelin/test-helpers');
-const { CATEGORY, getOfferHashBytes, signOffer, getMerkleRootWithProof } = require("./test-helpers");
+const { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, signPermit20, getMerkleRootWithProof } = require("./test-helpers");
 
 
 describe("PWN", function () {
@@ -142,10 +142,54 @@ describe("PWN", function () {
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];
 			const signature = await signOffer(offer, PWNLOAN.address, lender);
+
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bWETH.approve(PWNVault.address, 200);
-			const tx = await bPWN.createLoan(offer, signature);
+
+			const tx = await bPWN.createLoan(offer, signature, "0x", "0x");
+			const response = await tx.wait();
+			const logDescription = loanEventIface.parseLog(response.logs[1]);
+			const loanId = logDescription.args.loanId.toNumber();
+
+			expect(await PWNLOAN.balanceOf(lender.address, loanId)).to.equal(1);
+			expect(await WETH.balanceOf(PWNVault.address)).to.equal(bInitialWETH);
+			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 1000);
+		});
+
+		it("Should be possible to create a loan with ERC20 collateral with simple offer and permits", async function () {
+			// Sing offer
+			const offer = [
+				WETH.address, CATEGORY.ERC20, 100, 0,
+				DAI.address, 1000, 200,
+				3600, 0, borrower.address, lender.address, false, nonce,
+			];
+			const signature = await signOffer(offer, PWNLOAN.address, lender);
+
+			// Sign loan asset permit
+			const deadline = await timestampFromNow(10_000);
+			const loanAssetPermitSignature = await signPermit20(
+				[lender.address, PWNVault.address, 1000, 0, deadline],
+				lDAI.address,
+				lender
+			);
+			const loanAssetPermit = ethers.utils.solidityPack(
+				["uint", "bytes"], [deadline, loanAssetPermitSignature]
+			);
+
+			// Sign collateral permit
+			const collateralPermitSignature = await signPermit20(
+				[borrower.address, PWNVault.address, 100, 0, deadline],
+				bWETH.address,
+				borrower
+			);
+			const collateralPermit = ethers.utils.solidityPack(
+				["uint", "bytes"], [deadline, collateralPermitSignature]
+			);
+
+			// Create a loan
+			const tx = await bPWN.createLoan(offer, signature, loanAssetPermit, collateralPermit);
+
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
@@ -171,7 +215,7 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bWETH.approve(PWNVault.address, 100);
-			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
@@ -191,7 +235,7 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createLoan(offer, signature);
+			const tx = await bPWN.createLoan(offer, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
@@ -217,7 +261,7 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
@@ -243,7 +287,7 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
@@ -263,7 +307,7 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bGAME.setApprovalForAll(PWNVault.address, true);
-			const tx = await bPWN.createLoan(offer, signature);
+			const tx = await bPWN.createLoan(offer, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
@@ -290,7 +334,7 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bGAME.setApprovalForAll(PWNVault.address, true);
-			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
@@ -311,7 +355,7 @@ describe("PWN", function () {
 			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createLoan(offer, signature);
+			const tx = await bPWN.createLoan(offer, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
@@ -337,7 +381,7 @@ describe("PWN", function () {
 			await ContractWallet.approve(DAI.address, PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature);
+			const tx = await bPWN.createFlexibleLoan(offer, offerValues, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
@@ -362,7 +406,7 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bWETH.approve(PWNVault.address, 50);
-			let tx = await bPWN.createLoan(offer, signature);
+			let tx = await bPWN.createLoan(offer, signature, "0x", "0x");
 			let response = await tx.wait();
 			let logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId1 = logDescription.args.loanId.toNumber();
@@ -372,7 +416,7 @@ describe("PWN", function () {
 			expect(await DAI.balanceOf(borrower.address)).to.equal(bInitialDAI + 500);
 
 			await bWETH.approve(PWNVault.address, 50);
-			tx = await bPWN.createLoan(offer, signature);
+			tx = await bPWN.createLoan(offer, signature, "0x", "0x");
 			response = await tx.wait();
 			logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId2 = logDescription.args.loanId.toNumber();
@@ -396,7 +440,7 @@ describe("PWN", function () {
 
 			// First loan
 			await bWETH.approve(PWNVault.address, 50);
-			let tx = await bPWN.createFlexibleLoan(offer, [0, 300, 3300, mTreeProof], signature);
+			let tx = await bPWN.createFlexibleLoan(offer, [0, 300, 3300, mTreeProof], signature, "0x", "0x");
 			let response = await tx.wait();
 			let logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId1 = logDescription.args.loanId.toNumber();
@@ -407,7 +451,7 @@ describe("PWN", function () {
 
 			// Second loan
 			await bWETH.approve(PWNVault.address, 50);
-			tx = await bPWN.createFlexibleLoan(offer, [0, 600, 3300, mTreeProof], signature);
+			tx = await bPWN.createFlexibleLoan(offer, [0, 600, 3300, mTreeProof], signature, "0x", "0x");
 			response = await tx.wait();
 			logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId2 = logDescription.args.loanId.toNumber();
@@ -432,13 +476,13 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createLoan(offer, signature);
+			const tx = await bPWN.createLoan(offer, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
 			await bDAI.approve(PWNVault.address, 1200);
-			await bPWN.repayLoan(loanId);
+			await bPWN.repayLoan(loanId, "0x");
 
 			expect(await DAI.balanceOf(borrower.address)).is.equal(0);
 			expect(await DAI.balanceOf(lender.address)).is.equal(0);
@@ -456,13 +500,13 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createLoan(offer, signature);
+			const tx = await bPWN.createLoan(offer, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
 
 			await bDAI.approve(PWNVault.address, 1200);
-			await bPWN.repayLoan(loanId);
+			await bPWN.repayLoan(loanId, "0x");
 
 			await lPWN.claimLoan(loanId);
 
@@ -483,7 +527,7 @@ describe("PWN", function () {
 			await lDAI.approve(PWNVault.address, 1000);
 
 			await bNFT.approve(PWNVault.address, 42);
-			const tx = await bPWN.createLoan(offer, signature);
+			const tx = await bPWN.createLoan(offer, signature, "0x", "0x");
 			const response = await tx.wait();
 			const logDescription = loanEventIface.parseLog(response.logs[1]);
 			const loanId = logDescription.args.loanId.toNumber();
