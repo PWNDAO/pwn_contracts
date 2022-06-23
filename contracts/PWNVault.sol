@@ -43,6 +43,7 @@ contract PWNVault is Ownable, IERC721Receiver, IERC1155Receiver {
      * @dev in order for the vault to work it has to have an association with the PWN logic via `.setPWN(PWN.address)`
      */
     constructor() Ownable() IERC1155Receiver() {
+
     }
 
     /**
@@ -50,9 +51,16 @@ contract PWNVault is Ownable, IERC721Receiver, IERC1155Receiver {
      * @dev function accessing an asset and pulling it INTO the vault
      * @dev the function assumes a prior token approval was made with the PWNVault.address to be approved
      * @param _asset An asset construct - for definition see { MultiToken.sol }
+     * @param _origin Borrower address that is transferring collateral to Vault or repaying loan
+     * @param _permit Data about permit deadline (uint256) and permit signature (64/65 bytes).
+     * Deadline and signature should be pack encoded together.
+     * Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
      * @return true if successful
      */
-    function pull(MultiToken.Asset memory _asset, address _origin) external onlyPWN returns (bool) {
+    function pull(MultiToken.Asset memory _asset, address _origin, bytes memory _permit) external onlyPWN returns (bool) {
+        if (_permit.length > 0) {
+            _asset.permit(_origin, address(this), _permit);
+        }
         _asset.transferAssetFrom(_origin, address(this));
         emit VaultPull(_asset, _origin);
         return true;
@@ -79,9 +87,15 @@ contract PWNVault is Ownable, IERC721Receiver, IERC1155Receiver {
      * @param _asset An asset construct - for definition see { MultiToken.sol }
      * @param _origin An address of the lender who is providing the loan asset
      * @param _beneficiary An address of the recipient of the asset - is set in the PWN logic contract
+     * @param _permit Data about permit deadline (uint256) and permit signature (64/65 bytes).
+     * Deadline and signature should be pack encoded together.
+     * Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
      * @return true if successful
      */
-    function pushFrom(MultiToken.Asset memory _asset, address _origin, address _beneficiary) external onlyPWN returns (bool) {
+    function pushFrom(MultiToken.Asset memory _asset, address _origin, address _beneficiary, bytes memory _permit) external onlyPWN returns (bool) {
+        if (_permit.length > 0) {
+            _asset.permit(_origin, address(this), _permit);
+        }
         _asset.transferAssetFrom(_origin, _beneficiary);
         emit VaultPushFrom(_asset, _origin, _beneficiary);
         return true;
@@ -171,4 +185,5 @@ contract PWNVault is Ownable, IERC721Receiver, IERC1155Receiver {
                             ^ this.setPWN.selector; // PWN Vault
 
     }
+
 }

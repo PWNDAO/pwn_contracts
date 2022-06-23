@@ -64,11 +64,19 @@ contract PWN is Ownable {
      * @dev Loan asset has to be an ERC20 token, otherwise will transaction fail
      * @param _offer Offer struct with plain offer data. See { PWNLOAN.sol }
      * @param _signature Offer typed struct signed by lender
+     * @param _loanAssetPermit Data about loan asset permit deadline (uint256) and permit signature (64/65 bytes).
+     * Deadline and signature should be pack encoded together.
+     * Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
+     * @param _collateralPermit Data about collateral permit deadline (uint256) and permit signature (64/65 bytes).
+     * Deadline and signature should be pack encoded together.
+     * Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
      * @return True if successful
      */
     function createLoan(
         PWNLOAN.Offer memory _offer,
-        bytes memory _signature
+        bytes memory _signature,
+        bytes memory _loanAssetPermit,
+        bytes memory _collateralPermit
     ) external returns (bool) {
         LOAN.create(_offer, _signature, msg.sender);
 
@@ -79,15 +87,15 @@ contract PWN is Ownable {
             _offer.collateralId
         );
 
-        MultiToken.Asset memory LoanAsset = MultiToken.Asset(
+        MultiToken.Asset memory loanAsset = MultiToken.Asset(
             _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
             _offer.loanAmount,
             0
         );
 
-        vault.pull(collateral, msg.sender);
-        vault.pushFrom(LoanAsset, _offer.lender, msg.sender);
+        vault.pull(collateral, msg.sender, _collateralPermit);
+        vault.pushFrom(loanAsset, _offer.lender, msg.sender, _loanAssetPermit);
 
         return true;
     }
@@ -100,12 +108,20 @@ contract PWN is Ownable {
      * @param _offer Flexible offer struct with plain flexible offer data. See { PWNLOAN.sol }
      * @param _offerValues Concrete values of a flexible offer set by borrower. See { PWNLOAN.sol }
      * @param _signature Flexible offer typed struct signed by lender
+     * @param _loanAssetPermit Data about loan asset permit deadline (uint256) and permit signature (64/65 bytes).
+     * Deadline and signature should be pack encoded together.
+     * Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
+     * @param _collateralPermit Data about collateral permit deadline (uint256) and permit signature (64/65 bytes).
+     * Deadline and signature should be pack encoded together.
+     * Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
      * @return True if successful
      */
     function createFlexibleLoan(
         PWNLOAN.FlexibleOffer memory _offer,
         PWNLOAN.FlexibleOfferValues memory _offerValues,
-        bytes memory _signature
+        bytes memory _signature,
+        bytes memory _loanAssetPermit,
+        bytes memory _collateralPermit
     ) external returns (bool) {
         LOAN.createFlexible(_offer, _offerValues, _signature, msg.sender);
 
@@ -116,15 +132,15 @@ contract PWN is Ownable {
             _offerValues.collateralId
         );
 
-        MultiToken.Asset memory LoanAsset = MultiToken.Asset(
+        MultiToken.Asset memory loanAsset = MultiToken.Asset(
             _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
             _offerValues.loanAmount,
             0
         );
 
-        vault.pull(collateral, msg.sender);
-        vault.pushFrom(LoanAsset, _offer.lender, msg.sender);
+        vault.pull(collateral, msg.sender, _collateralPermit);
+        vault.pushFrom(loanAsset, _offer.lender, msg.sender, _loanAssetPermit);
 
         return true;
     }
@@ -135,15 +151,21 @@ contract PWN is Ownable {
      * @dev The function assumes the asset (and amount to be paid back) to be returned is approved for PWNVault
      * @dev The function assumes the borrower has the full amount to be paid back in their account
      * @param _loanId LOAN ID of the loan being paid back
+     * @param _loanAssetPermit Data about loan asset permit deadline (uint256) and permit signature (64/65 bytes).
+     * Deadline and signature should be pack encoded together.
+     * Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
      * @return True if successful
      */
-    function repayLoan(uint256 _loanId) external returns (bool) {
+    function repayLoan(
+        uint256 _loanId,
+        bytes memory _loanAssetPermit
+    ) external returns (bool) {
         LOAN.repayLoan(_loanId);
 
-        MultiToken.Asset memory LoanAsset = LOAN.getLoanAsset(_loanId);
-        LoanAsset.amount = LOAN.getLoanRepayAmount(_loanId);
+        MultiToken.Asset memory loanAsset = LOAN.getLoanAsset(_loanId);
+        loanAsset.amount = LOAN.getLoanRepayAmount(_loanId);
 
-        vault.pull(LoanAsset, msg.sender);
+        vault.pull(loanAsset, msg.sender, _loanAssetPermit);
         vault.push(LOAN.getCollateral(_loanId), LOAN.getBorrower(_loanId));
 
         return true;
@@ -161,10 +183,10 @@ contract PWN is Ownable {
         LOAN.claim(_loanId, msg.sender);
 
         if (status == 3) {
-            MultiToken.Asset memory LoanAsset = LOAN.getLoanAsset(_loanId);
-            LoanAsset.amount = LOAN.getLoanRepayAmount(_loanId);
+            MultiToken.Asset memory loanAsset = LOAN.getLoanAsset(_loanId);
+            loanAsset.amount = LOAN.getLoanRepayAmount(_loanId);
 
-            vault.push(LoanAsset, msg.sender);
+            vault.push(loanAsset, msg.sender);
         } else if (status == 4) {
             vault.push(LOAN.getCollateral(_loanId), msg.sender);
         } else {

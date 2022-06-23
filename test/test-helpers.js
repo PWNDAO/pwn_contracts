@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const utils = ethers.utils;
 const keccak256 = ethers.utils.keccak256;
 
+
 const CATEGORY = {
 	ERC20: 0,
 	ERC721: 1,
@@ -10,13 +11,15 @@ const CATEGORY = {
 	unknown: 3,
 };
 
+
 async function timestampFromNow(delta) {
 	const lastBlockNumber = await ethers.provider.getBlockNumber();
 	const lastBlock = await ethers.provider.getBlock(lastBlockNumber);
 	return lastBlock.timestamp + delta;
 }
 
-function getEIP712Domain(address) {
+
+function getPWNEIP712Domain(address) {
 	return {
 		name: "PWN",
 		version: "1",
@@ -24,6 +27,16 @@ function getEIP712Domain(address) {
 		verifyingContract: address
 	}
 };
+
+function getPermit20EIP712Domain(address) {
+	return {
+		name: "Basic20",
+		version: "1",
+		chainId: 31337, // Default hardhat network chain id
+		verifyingContract: address
+	}
+};
+
 
 const EIP712OfferTypes = {
 	Offer: [
@@ -63,41 +76,62 @@ const EIP712FlexibleOfferTypes = {
 	]
 }
 
+const Permit20OfferType = {
+	Permit: [
+		{ name: "owner", type: "address" },
+		{ name: "spender", type: "address" },
+		{ name: "value", type: "uint256" },
+		{ name: "nonce", type: "uint256" },
+		{ name: "deadline", type: "uint256" },
+	]
+}
+
+
 function getOfferHashBytes(offerArray, loanAddress) {
 	if (offerArray.length == 13) {
 		// Simple offer
 		return ethers.utils._TypedDataEncoder.hash(
-			getEIP712Domain(loanAddress),
+			getPWNEIP712Domain(loanAddress),
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
 	} else if (offerArray.length == 15) {
 		// Flexible offer
 		return ethers.utils._TypedDataEncoder.hash(
-			getEIP712Domain(loanAddress),
+			getPWNEIP712Domain(loanAddress),
 			EIP712FlexibleOfferTypes,
 			getFlexibleOfferObject(...offerArray)
 		);
 	}
 }
 
+
 async function signOffer(offerArray, loanAddress, signer) {
 	if (offerArray.length == 13) {
 		// Simple offer
 		return signer._signTypedData(
-			getEIP712Domain(loanAddress),
+			getPWNEIP712Domain(loanAddress),
 			EIP712OfferTypes,
 			getOfferObject(...offerArray)
 		);
 	} else if (offerArray.length == 15) {
 		// Flexible offer
 		return signer._signTypedData(
-			getEIP712Domain(loanAddress),
+			getPWNEIP712Domain(loanAddress),
 			EIP712FlexibleOfferTypes,
 			getFlexibleOfferObject(...offerArray)
 		);
 	}
 }
+
+async function signPermit20(permitArray, tokenAddress, signer) {
+	return signer._signTypedData(
+		getPermit20EIP712Domain(tokenAddress),
+		Permit20OfferType,
+		getPermit20Object(...permitArray)
+	);
+}
+
 
 function getMerkleRootWithProof(ids, index) {
 	if (ids.length == 0) {
@@ -180,4 +214,21 @@ function getFlexibleOfferObject(
 	}
 }
 
-module.exports = { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, getMerkleRootWithProof };
+function getPermit20Object(
+	owner,
+	spender,
+	value,
+	nonce,
+	deadline
+){
+	return {
+		owner: owner,
+		spender: spender,
+		value: value,
+		nonce: nonce,
+		deadline: deadline,
+	}
+}
+
+
+module.exports = { CATEGORY, timestampFromNow, getOfferHashBytes, signOffer, signPermit20, getMerkleRootWithProof };
