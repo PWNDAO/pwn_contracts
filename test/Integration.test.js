@@ -106,7 +106,7 @@ describe("PWN", function () {
 
 		it("Should be possible to revoke an offer", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 42,
+				CATEGORY.ERC721, NFT.address, 42, 0,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -121,7 +121,7 @@ describe("PWN", function () {
 
 		it("Should be possible to revoke an offer on behalf of contract wallet", async function() {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 0, 42,
+				CATEGORY.ERC721, NFT.address, 42, 0,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -141,7 +141,7 @@ describe("PWN", function () {
 
 		it("Should be possible to create a loan with ERC20 collateral with simple offer", async function () {
 			const offer = [
-				WETH.address, CATEGORY.ERC20, 100, 0,
+				CATEGORY.ERC20, WETH.address, 0, 100,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -164,7 +164,7 @@ describe("PWN", function () {
 		it("Should be possible to create a loan with ERC20 collateral with simple offer and permits", async function () {
 			// Sing offer
 			const offer = [
-				WETH.address, CATEGORY.ERC20, 100, 0,
+				CATEGORY.ERC20, WETH.address, 0, 100,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -208,7 +208,7 @@ describe("PWN", function () {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([], -1);
 
 			const offer = [
-				WETH.address, CATEGORY.ERC20, 100, mTreeRoot,
+				CATEGORY.ERC20, WETH.address, mTreeRoot, 100,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -231,7 +231,7 @@ describe("PWN", function () {
 
 		it("Should be possible to create a loan with ERC721 collateral with simple offer", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 1, 42,
+				CATEGORY.ERC721, NFT.address, 42, 1,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -254,7 +254,7 @@ describe("PWN", function () {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([42], 0);
 
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 1, mTreeRoot,
+				CATEGORY.ERC721, NFT.address, mTreeRoot, 1,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -280,7 +280,7 @@ describe("PWN", function () {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([], -1);
 
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 1, mTreeRoot,
+				CATEGORY.ERC721, NFT.address, mTreeRoot, 1,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -303,7 +303,7 @@ describe("PWN", function () {
 
 		it("Should be possible to create a loan with ERC1155 collateral with simple offer", async function () {
 			const offer = [
-				GAME.address, CATEGORY.ERC1155, 1, 1337,
+				CATEGORY.ERC1155, GAME.address, 1337, 1,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -327,7 +327,7 @@ describe("PWN", function () {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([1337], 0);
 
 			const offer = [
-				GAME.address, CATEGORY.ERC1155, 1, mTreeRoot,
+				CATEGORY.ERC1155, GAME.address, mTreeRoot, 1,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -351,7 +351,7 @@ describe("PWN", function () {
 
 		it("Should be possible to create a loan with simple offer signed on behalf of a contract wallet", async function() {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 1, 42,
+				CATEGORY.ERC721, NFT.address, 42, 1,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, ContractWallet.address, false, nonce,
 			];
@@ -374,7 +374,7 @@ describe("PWN", function () {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([42], 0);
 
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 1, mTreeRoot,
+				CATEGORY.ERC721, NFT.address, mTreeRoot, 1,
 				DAI.address, 1000, 800, 200,
 				3600, 3000, 0, borrower.address, ContractWallet.address, false, nonce,
 			];
@@ -402,7 +402,7 @@ describe("PWN", function () {
 
 		it("Should be possible to create multiple loans with simple persistent offer", async function () {
 			const offer = [
-				WETH.address, CATEGORY.ERC20, 50, 0,
+				CATEGORY.ERC20, WETH.address, 0, 50,
 				DAI.address, 500, 200,
 				3600, 0, borrower.address, lender.address, true, nonce,
 			];
@@ -435,7 +435,7 @@ describe("PWN", function () {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([], -1);
 
 			const offer = [
-				WETH.address, CATEGORY.ERC20, 50, mTreeRoot,
+				CATEGORY.ERC20, WETH.address, mTreeRoot, 50,
 				DAI.address, 1000, 300, 200,
 				3600, 3000, 0, borrower.address, lender.address, true, nonce,
 			];
@@ -472,7 +472,7 @@ describe("PWN", function () {
 
 		it("Should be possible to pay back", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 1, 42,
+				CATEGORY.ERC721, NFT.address, 42, 1,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -496,7 +496,7 @@ describe("PWN", function () {
 
 		it("Should be possible to claim after loan was paid", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 1, 42,
+				CATEGORY.ERC721, NFT.address, 42, 1,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];
@@ -523,7 +523,7 @@ describe("PWN", function () {
 
 		it("Should be possible to claim if loan wasn't paid", async function () {
 			const offer = [
-				NFT.address, CATEGORY.ERC721, 1, 42,
+				CATEGORY.ERC721, NFT.address, 42, 1,
 				DAI.address, 1000, 200,
 				3600, 0, borrower.address, lender.address, false, nonce,
 			];

@@ -40,10 +40,10 @@ function getPermit20EIP712Domain(address) {
 
 const EIP712OfferTypes = {
 	Offer: [
-		{ name: "collateralAddress", type: "address" },
 		{ name: "collateralCategory", type: "uint8" },
-		{ name: "collateralAmount", type: "uint256" },
+		{ name: "collateralAddress", type: "address" },
 		{ name: "collateralId", type: "uint256" },
+		{ name: "collateralAmount", type: "uint256" },
 		{ name: "loanAssetAddress", type: "address" },
 		{ name: "loanAmount", type: "uint256" },
 		{ name: "loanYield", type: "uint256" },
@@ -58,10 +58,10 @@ const EIP712OfferTypes = {
 
 const EIP712FlexibleOfferTypes = {
 	FlexibleOffer: [
-		{ name: "collateralAddress", type: "address" },
 		{ name: "collateralCategory", type: "uint8" },
-		{ name: "collateralAmount", type: "uint256" },
+		{ name: "collateralAddress", type: "address" },
 		{ name: "collateralIdsWhitelistMerkleRoot", type: "bytes32" },
+		{ name: "collateralAmount", type: "uint256" },
 		{ name: "loanAssetAddress", type: "address" },
 		{ name: "loanAmountMax", type: "uint256" },
 		{ name: "loanAmountMin", type: "uint256" },
@@ -147,10 +147,10 @@ function getMerkleRootWithProof(ids, index) {
 
 
 function getOfferObject(
-	collateralAddress,
 	collateralCategory,
-	collateralAmount,
+	collateralAddress,
 	collateralId,
+	collateralAmount,
 	loanAssetAddress,
 	loanAmount,
 	loanYield,
@@ -162,10 +162,10 @@ function getOfferObject(
 	nonce,
 ) {
 	return {
-		collateralAddress: collateralAddress,
 		collateralCategory: collateralCategory,
-		collateralAmount: collateralAmount,
+		collateralAddress: collateralAddress,
 		collateralId: collateralId,
+		collateralAmount: collateralAmount,
 		loanAssetAddress: loanAssetAddress,
 		loanAmount: loanAmount,
 		loanYield: loanYield,
@@ -179,10 +179,10 @@ function getOfferObject(
 }
 
 function getFlexibleOfferObject(
-	collateralAddress,
 	collateralCategory,
-	collateralAmount,
+	collateralAddress,
 	collateralIdsWhitelistMerkleRoot,
+	collateralAmount,
 	loanAssetAddress,
 	loanAmountMax,
 	loanAmountMin,
@@ -196,10 +196,10 @@ function getFlexibleOfferObject(
 	nonce
 ) {
 	return {
-		collateralAddress: collateralAddress,
 		collateralCategory: collateralCategory,
-		collateralAmount: collateralAmount,
+		collateralAddress: collateralAddress,
 		collateralIdsWhitelistMerkleRoot: collateralIdsWhitelistMerkleRoot,
+		collateralAmount: collateralAmount,
 		loanAssetAddress: loanAssetAddress,
 		loanAmountMax: loanAmountMax,
 		loanAmountMin: loanAmountMin,

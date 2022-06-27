@@ -37,17 +37,17 @@ describe("PWNLoan contract", function() {
 		]);
 
 		loanAsset = {
-			assetAddress: asset1.address,
 			category: CATEGORY.ERC20,
-			amount: 1234,
+			assetAddress: asset1.address,
 			id: 0,
+			amount: 1234,
 		};
 
 		collateral = {
-			assetAddress: asset2.address,
 			category: CATEGORY.ERC721,
-			amount: 10,
+			assetAddress: asset2.address,
 			id: 123,
+			amount: 10,
 		};
 	});
 
@@ -56,7 +56,7 @@ describe("PWNLoan contract", function() {
 		await loan.setPWN(pwn.address);
 
 		offer = [
-			collateral.assetAddress, collateral.category, collateral.amount, collateral.id,
+			collateral.category, collateral.assetAddress, collateral.id, collateral.amount,
 			loanAsset.assetAddress, loanAsset.amount,
 			loanYield, duration, offerExpiration, AddressZero, lender.address, false, nonce,
 		];
@@ -64,7 +64,7 @@ describe("PWNLoan contract", function() {
 		[mTreeRoot, mTreeProof, mTree] = getMerkleRootWithProof([], -1);
 
 		flexibleOffer = [
-			collateral.assetAddress, collateral.category, collateral.amount, mTreeRoot,
+			collateral.category, collateral.assetAddress, mTreeRoot, collateral.amount,
 			loanAsset.assetAddress, loanAmountMax, loanAmountMin, loanYield,
 			durationMax, durationMin, offerExpiration, AddressZero, lender.address, false, nonce,
 		];
@@ -289,14 +289,14 @@ describe("PWNLoan contract", function() {
 			expect(loanToken.borrower).to.equal(borrower.address);
 			expect(loanToken.duration).to.equal(duration);
 			expect(loanToken.expiration).to.equal(expiration);
-			expect(loanToken.collateral.assetAddress).to.equal(collateral.assetAddress);
 			expect(loanToken.collateral.category).to.equal(collateral.category);
-			expect(loanToken.collateral.id).to.equal(collateral.id);
+			expect(loanToken.collateral.assetAddress).to.equal(collateral.assetAddress);
 			expect(loanToken.collateral.amount).to.equal(collateral.amount);
-			expect(loanToken.asset.assetAddress).to.equal(loanAsset.assetAddress);
+			expect(loanToken.collateral.id).to.equal(collateral.id);
 			expect(loanToken.asset.category).to.equal(loanAsset.category);
-			expect(loanToken.asset.id).to.equal(loanAsset.id);
+			expect(loanToken.asset.assetAddress).to.equal(loanAsset.assetAddress);
 			expect(loanToken.asset.amount).to.equal(loanAsset.amount);
+			expect(loanToken.asset.id).to.equal(loanAsset.id);
 			expect(loanToken.loanRepayAmount).to.equal(loanAsset.amount + loanYield);
 		});
 
@@ -431,7 +431,7 @@ describe("PWNLoan contract", function() {
 			[fakeMTreeRoot, fakeMTreeProof] = getMerkleRootWithProof([4, 5, 6, 7, 8, 123], 5);
 
 			[mTreeRoot] = getMerkleRootWithProof([1, 2, 3], -1);
-			flexibleOffer[3] = mTreeRoot;
+			flexibleOffer[2] = mTreeRoot;
 			signature = await signOffer(flexibleOffer, loan.address, lender);
 			flexibleOfferValues[3] = fakeMTreeProof;
 
@@ -442,7 +442,7 @@ describe("PWNLoan contract", function() {
 
 		it("Should pass when selected collateral ID is whitelisted", async function() {
 			[mTreeRoot, mTreeProof] = getMerkleRootWithProof([1, 2, 3, 123, 4, 5, 6], 3);
-			flexibleOffer[3] = mTreeRoot;
+			flexibleOffer[2] = mTreeRoot;
 			signature = await signOffer(flexibleOffer, loan.address, lender);
 			flexibleOfferValues[3] = mTreeProof;
 
@@ -453,7 +453,7 @@ describe("PWNLoan contract", function() {
 
 		it("Should pass with any selected collateral ID when is whitelist empty", async function() {
 			[mTreeRoot] = getMerkleRootWithProof([], -1);
-			flexibleOffer[3] = mTreeRoot;
+			flexibleOffer[2] = mTreeRoot;
 			signature = await signOffer(flexibleOffer, loan.address, lender);
 
 			await expect(
@@ -528,14 +528,14 @@ describe("PWNLoan contract", function() {
 			expect(loanToken.borrower).to.equal(borrower.address);
 			expect(loanToken.duration).to.equal(duration);
 			expect(loanToken.expiration).to.equal(expiration);
-			expect(loanToken.collateral.assetAddress).to.equal(collateral.assetAddress);
 			expect(loanToken.collateral.category).to.equal(collateral.category);
-			expect(loanToken.collateral.id).to.equal(collateral.id);
+			expect(loanToken.collateral.assetAddress).to.equal(collateral.assetAddress);
 			expect(loanToken.collateral.amount).to.equal(collateral.amount);
-			expect(loanToken.asset.assetAddress).to.equal(loanAsset.assetAddress);
+			expect(loanToken.collateral.id).to.equal(collateral.id);
 			expect(loanToken.asset.category).to.equal(loanAsset.category);
-			expect(loanToken.asset.id).to.equal(loanAsset.id);
+			expect(loanToken.asset.assetAddress).to.equal(loanAsset.assetAddress);
 			expect(loanToken.asset.amount).to.equal(loanAsset.amount);
+			expect(loanToken.asset.id).to.equal(loanAsset.id);
 			expect(loanToken.loanRepayAmount).to.equal(loanAsset.amount + loanYield);
 		});
 
@@ -780,10 +780,10 @@ describe("PWNLoan contract", function() {
 			expect(loanToken.expiration).to.equal(0);
 			expect(loanToken.duration).to.equal(0);
 			expect(loanToken.borrower).to.equal(ethers.constants.AddressZero);
-			expect(loanToken.collateral.assetAddress).to.equal(ethers.constants.AddressZero);
 			expect(loanToken.collateral.category).to.equal(0);
-			expect(loanToken.collateral.id).to.equal(0);
+			expect(loanToken.collateral.assetAddress).to.equal(ethers.constants.AddressZero);
 			expect(loanToken.collateral.amount).to.equal(0);
+			expect(loanToken.collateral.id).to.equal(0);
 		});
 
 		it("Should burn loan ERC1155 token", async function() {
@@ -1002,10 +1002,10 @@ describe("PWNLoan contract", function() {
 
 				const loanAsset = await loanMock.getLoanAsset(loanId);
 
-				expect(loanAsset.assetAddress).to.equal(asset2.address);
 				expect(loanAsset.category).to.equal(0);
-				expect(loanAsset.amount).to.equal(8838);
+				expect(loanAsset.assetAddress).to.equal(asset2.address);
 				expect(loanAsset.id).to.equal(0);
+				expect(loanAsset.amount).to.equal(8838);
 			});
 
 		});
