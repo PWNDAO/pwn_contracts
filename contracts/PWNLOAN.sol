@@ -33,14 +33,14 @@ contract PWNLOAN is ERC1155, Ownable {
      * EIP-712 offer struct type hash
      */
     bytes32 constant internal OFFER_TYPEHASH = keccak256(
-        "Offer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,uint256 collateralId,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"
+        "Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"
     );
 
     /**
      * EIP-712 flexible offer struct type hash
      */
     bytes32 constant internal FLEXIBLE_OFFER_TYPEHASH = keccak256(
-        "FlexibleOffer(address collateralAddress,uint8 collateralCategory,uint256 collateralAmount,bytes32 collateralIdsWhitelistMerkleRoot,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"
+        "FlexibleOffer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmountMax,uint256 loanAmountMin,uint256 loanYieldMax,uint32 durationMax,uint32 durationMin,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"
     );
 
     /**
@@ -65,10 +65,10 @@ contract PWNLOAN is ERC1155, Ownable {
 
     /**
      * Construct defining an Offer
-     * @param collateralAddress Address of an asset used as a collateral
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
-     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1
+     * @param collateralAddress Address of an asset used as a collateral
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1
      * @param loanAssetAddress Address of an asset which is lended to borrower
      * @param loanAmount Amount of tokens which is offered as a loan to borrower
      * @param loanYield Amount of tokens which acts as a lenders loan interest. Borrower has to pay back borrowed amount + yield.
@@ -80,10 +80,10 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
      */
     struct Offer {
-        address collateralAddress;
         MultiToken.Category collateralCategory;
-        uint256 collateralAmount;
+        address collateralAddress;
         uint256 collateralId;
+        uint256 collateralAmount;
         address loanAssetAddress;
         uint256 loanAmount;
         uint256 loanYield;
@@ -97,10 +97,10 @@ contract PWNLOAN is ERC1155, Ownable {
 
     /**
      * Construct defining an Flexible offer
-     * @param collateralAddress Address of an asset used as a collateral
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
-     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1
+     * @param collateralAddress Address of an asset used as a collateral
      * @param collateralIdsWhitelistMerkleRoot Root of a merkle tree constructed on array of whitelisted collateral ids
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1
      * @param loanAssetAddress Address of an asset which is lended to borrower
      * @param loanAmountMax Max amount of tokens which is offered as a loan to borrower
      * @param loanAmountMin Min amount of tokens which is offered as a loan to borrower
@@ -114,10 +114,10 @@ contract PWNLOAN is ERC1155, Ownable {
      * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
      */
     struct FlexibleOffer {
-        address collateralAddress;
         MultiToken.Category collateralCategory;
-        uint256 collateralAmount;
+        address collateralAddress;
         bytes32 collateralIdsWhitelistMerkleRoot;
+        uint256 collateralAmount;
         address loanAssetAddress;
         uint256 loanAmountMax;
         uint256 loanAmountMin;
@@ -243,16 +243,16 @@ contract PWNLOAN is ERC1155, Ownable {
         loan.duration = _offer.duration;
         loan.expiration = uint40(block.timestamp) + _offer.duration;
         loan.collateral = MultiToken.Asset(
-            _offer.collateralAddress,
             _offer.collateralCategory,
-            _offer.collateralAmount,
-            _offer.collateralId
+            _offer.collateralAddress,
+            _offer.collateralId,
+            _offer.collateralAmount
         );
         loan.asset = MultiToken.Asset(
-            _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
-            _offer.loanAmount,
-            0
+            _offer.loanAssetAddress,
+            0,
+            _offer.loanAmount
         );
         loan.loanRepayAmount = _offer.loanAmount + _offer.loanYield;
 
@@ -307,16 +307,16 @@ contract PWNLOAN is ERC1155, Ownable {
         loan.duration = _offerValues.duration;
         loan.expiration = uint40(block.timestamp) + _offerValues.duration;
         loan.collateral = MultiToken.Asset(
-            _offer.collateralAddress,
             _offer.collateralCategory,
-            _offer.collateralAmount,
-            _offerValues.collateralId
+            _offer.collateralAddress,
+            _offerValues.collateralId,
+            _offer.collateralAmount
         );
         loan.asset = MultiToken.Asset(
-            _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
-            _offerValues.loanAmount,
-            0
+            _offer.loanAssetAddress,
+            0,
+            _offerValues.loanAmount
         );
         loan.loanRepayAmount = countLoanRepayAmount(
             _offerValues.loanAmount,
@@ -574,12 +574,16 @@ contract PWNLOAN is ERC1155, Ownable {
      * @return Offer struct hash
      */
     function hash(Offer memory _offer) private pure returns (bytes32) {
-        return keccak256(abi.encode(
-            OFFER_TYPEHASH,
-            _offer.collateralAddress,
+        // Need to divide encoding into smaller parts because of "Stack to deep" error
+
+        bytes memory encodedOfferCollateralData = abi.encode(
             _offer.collateralCategory,
-            _offer.collateralAmount,
+            _offer.collateralAddress,
             _offer.collateralId,
+            _offer.collateralAmount
+        );
+
+        bytes memory encodedOfferOtherData = abi.encode(
             _offer.loanAssetAddress,
             _offer.loanAmount,
             _offer.loanYield,
@@ -589,6 +593,12 @@ contract PWNLOAN is ERC1155, Ownable {
             _offer.lender,
             _offer.isPersistent,
             _offer.nonce
+        );
+
+        return keccak256(abi.encodePacked(
+            OFFER_TYPEHASH,
+            encodedOfferCollateralData,
+            encodedOfferOtherData
         ));
     }
 
@@ -602,10 +612,10 @@ contract PWNLOAN is ERC1155, Ownable {
         // Need to divide encoding into smaller parts because of "Stack to deep" error
 
         bytes memory encodedOfferCollateralData = abi.encode(
-            _offer.collateralAddress,
             _offer.collateralCategory,
-            _offer.collateralAmount,
-            _offer.collateralIdsWhitelistMerkleRoot
+            _offer.collateralAddress,
+            _offer.collateralIdsWhitelistMerkleRoot,
+            _offer.collateralAmount
         );
 
         bytes memory encodedOfferLoanData = abi.encode(

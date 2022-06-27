@@ -81,17 +81,17 @@ contract PWN is Ownable {
         LOAN.create(_offer, _signature, msg.sender);
 
         MultiToken.Asset memory collateral = MultiToken.Asset(
-            _offer.collateralAddress,
             _offer.collateralCategory,
-            _offer.collateralAmount,
-            _offer.collateralId
+            _offer.collateralAddress,
+            _offer.collateralId,
+            _offer.collateralAmount
         );
 
         MultiToken.Asset memory loanAsset = MultiToken.Asset(
-            _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
-            _offer.loanAmount,
-            0
+            _offer.loanAssetAddress,
+            0,
+            _offer.loanAmount
         );
 
         vault.pull(collateral, msg.sender, _collateralPermit);
@@ -126,17 +126,17 @@ contract PWN is Ownable {
         LOAN.createFlexible(_offer, _offerValues, _signature, msg.sender);
 
         MultiToken.Asset memory collateral = MultiToken.Asset(
-            _offer.collateralAddress,
             _offer.collateralCategory,
-            _offer.collateralAmount,
-            _offerValues.collateralId
+            _offer.collateralAddress,
+            _offerValues.collateralId,
+            _offer.collateralAmount
         );
 
         MultiToken.Asset memory loanAsset = MultiToken.Asset(
-            _offer.loanAssetAddress,
             MultiToken.Category.ERC20,
-            _offerValues.loanAmount,
-            0
+            _offer.loanAssetAddress,
+            0,
+            _offerValues.loanAmount
         );
 
         vault.pull(collateral, msg.sender, _collateralPermit);
