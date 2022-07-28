@@ -42,6 +42,13 @@ module.exports = {
                 ? [process.env.PRIVATE_KEY_TESTNET]
                 : [],
         },
+        goerli: {
+            url: process.env.GOERLI_URL || "",
+            chainId: 5,
+            accounts: process.env.PRIVATE_KEY_TESTNET !== undefined
+                ? [process.env.PRIVATE_KEY_TESTNET]
+                : [],
+        },
         "arbitrum-rinkeby": {
             url: process.env.ARBITRUM_RINKEBY_URL || "",
             chainId: 421611,
@@ -68,6 +75,7 @@ module.exports = {
         apiKey: {
             mainnet: process.env.ETHERSCAN_API_KEY_MAINNET || "",
             polygon: process.env.ETHERSCAN_API_KEY_POLYGON || "",
+            goerli: process.env.ETHERSCAN_API_KEY_MAINNET || "",
         },
     },
     gasReporter: {

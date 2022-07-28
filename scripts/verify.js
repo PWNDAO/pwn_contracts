@@ -4,12 +4,11 @@ const { highlighted } = STYLE;
 require("@nomiclabs/hardhat-etherscan");
 
 
-const supportedNetworks = ["mainnet", "rinkeby", "polygon"];
+const supportedNetworks = ["mainnet", "rinkeby", "polygon", "goerli"];
 
 const pwnAddress = "0x";
 const pwnLoanAddress = "0x";
 const pwnVaultAddress = "0x";
-const metadataBaseUri = "https://api.pwn.xyz/";
 
 
 async function verify() {
@@ -26,7 +25,7 @@ async function verify() {
             {
                 name: "PWNLOAN",
                 address: pwnLoanAddress,
-                constructorArguments: [metadataBaseUri]
+                constructorArguments: [""]
             },
             {
                 name: "PWNVault",
