@@ -4,7 +4,7 @@ const { highlighted } = STYLE;
 require("@nomiclabs/hardhat-etherscan");
 
 
-const supportedNetworks = ["mainnet", "rinkeby", "polygon", "goerli"];
+const supportedNetworks = ["mainnet", "rinkeby", "polygon", "goerli", "mumbai"];
 
 const pwnAddress = "0x";
 const pwnLoanAddress = "0x";
