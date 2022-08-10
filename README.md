@@ -21,9 +21,9 @@ For in-depth documentation about PWN contracts see [PWN Developer Docs](https://
 - PWNVault: [`0xDBdb041842407c109F65b23eA86D99c1E0D94522`](https://goerli.etherscan.io/address/0xDBdb041842407c109F65b23eA86D99c1E0D94522)
 
 ### Mumbai (Polygon) testnet
-- PWN: [`0xDa88e79E5Dd786AD3c29CeFbe6a2bece6f6c0477`](https://mumbai.polygonscan.com/address/0xDa88e79E5Dd786AD3c29CeFbe6a2bece6f6c0477)
-- PWNLOAN: [`0x7C995e64a24aCb5806521276697B244D1f65f708`](https://mumbai.polygonscan.com/address/0x7C995e64a24aCb5806521276697B244D1f65f708)
-- PWNVault: [`0x2fd4B676192C701778724408B72e9A29af2eB8c0`](https://mumbai.polygonscan.com/address/0x2fd4B676192C701778724408B72e9A29af2eB8c0)
+- PWN: [`0x47C0A4614ec7ac0467D215dA3B215e4f536DF33F`](https://mumbai.polygonscan.com/address/0x47C0A4614ec7ac0467D215dA3B215e4f536DF33F)
+- PWNLOAN: [`0x43aFBD2a20dbfFA5228a2f13cA116aFACaAF4233`](https://mumbai.polygonscan.com/address/0x43aFBD2a20dbfFA5228a2f13cA116aFACaAF4233)
+- PWNVault: [`0xCF66F4841a4bB91d145DDF555B7d4e8adD086253`](https://mumbai.polygonscan.com/address/0xCF66F4841a4bB91d145DDF555B7d4e8adD086253)
 
 ### Rinkeby testnet (deprecated)
 - PWN: [`0x34fCA53BbCbc2a4E2fF5D7F704b7143133dfaCF7`](https://rinkeby.etherscan.io/address/0x34fCA53BbCbc2a4E2fF5D7F704b7143133dfaCF7)
