@@ -76,6 +76,7 @@ module.exports = {
             mainnet: process.env.ETHERSCAN_API_KEY_MAINNET || "",
             polygon: process.env.ETHERSCAN_API_KEY_POLYGON || "",
             goerli: process.env.ETHERSCAN_API_KEY_MAINNET || "",
+            polygonMumbai: process.env.ETHERSCAN_API_KEY_POLYGON || "",
         },
     },
     gasReporter: {
