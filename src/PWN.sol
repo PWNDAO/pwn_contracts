@@ -3,8 +3,8 @@ pragma solidity 0.8.4;
 
 import "./PWNVault.sol";
 import "./PWNLOAN.sol";
-import "@pwnfinance/multitoken/contracts/MultiToken.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "MultiToken/MultiToken.sol";
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract PWN is Ownable {
 
