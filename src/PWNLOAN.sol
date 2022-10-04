@@ -12,7 +12,7 @@ contract PWNLOAN is PWNLoanManagerAccesible, ERC721 {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    uint256 public id;
+    uint256 public lastLoanId;
 
     mapping (uint256 => address) public loanManagerContract;
 
@@ -31,15 +31,17 @@ contract PWNLOAN is PWNLoanManagerAccesible, ERC721 {
     |*----------------------------------------------------------*/
 
     function mint(address owner) external onlyActiveLoanManager returns (uint256 loanId) {
-        loanId = ++id;
+        loanId = ++lastLoanId;
         loanManagerContract[loanId] = msg.sender;
         _mint(owner, loanId);
+        // TODO: Emit
     }
 
     function burn(uint256 loanId) external onlyLoanManager {
         require(loanManagerContract[loanId] == msg.sender, "Loan manager did not mint given loan id");
         delete loanManagerContract[loanId];
         _burn(loanId);
+        // TODO: Emit
     }
 
 }
