@@ -47,7 +47,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @param beneficiary An address of the recipient of the asset - is set in the PWN logic contract
      */
     function _push(MultiToken.Asset memory asset, address beneficiary) internal {
-        asset.transferAsset(beneficiary);
+        asset.safeTransferAssetFrom(address(this), beneficiary);
         emit VaultPush(asset, beneficiary);
     }
 
@@ -64,7 +64,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      */
     function _pushFrom(MultiToken.Asset memory asset, address origin, address beneficiary, bytes memory permit) internal {
         _handlePermit(asset, origin, permit);
-        asset.transferAssetFrom(origin, beneficiary);
+        asset.safeTransferAssetFrom(origin, beneficiary);
         emit VaultPushFrom(asset, origin, beneficiary);
     }
 
