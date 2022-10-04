@@ -34,7 +34,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      *               Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
      */
     function _pull(MultiToken.Asset memory asset, address origin, bytes memory permit) internal {
-        _handlePermit(asset, origin, permit);
+        _handlePermit(asset, origin, address(this), permit);
         asset.transferAssetFrom(origin, address(this));
         emit VaultPull(asset, origin);
     }
@@ -63,14 +63,14 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      *               Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
      */
     function _pushFrom(MultiToken.Asset memory asset, address origin, address beneficiary, bytes memory permit) internal {
-        _handlePermit(asset, origin, permit);
+        _handlePermit(asset, origin, beneficiary, permit);
         asset.safeTransferAssetFrom(origin, beneficiary);
         emit VaultPushFrom(asset, origin, beneficiary);
     }
 
-    function _handlePermit(MultiToken.Asset memory asset, address origin, bytes memory permit) private {
+    function _handlePermit(MultiToken.Asset memory asset, address origin, address beneficiary, bytes memory permit) private {
         if (permit.length > 0) {
-            asset.permit(origin, address(this), permit);
+            asset.permit(origin, beneficiary, permit);
         }
     }
 
