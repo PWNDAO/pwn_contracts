@@ -6,13 +6,13 @@ import "MultiToken/MultiToken.sol";
 import "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 
-import "../hub/PWNHub.sol";
-import "../hub/PWNHubTags.sol";
-import "../loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
-import "../PWNConfig.sol";
-import "../PWNLOAN.sol";
-import "../PWNRevokedOfferNonce.sol";
+import "../../hub/PWNHub.sol";
+import "../../hub/PWNHubTags.sol";
+import "../../loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
+import "../../loan-factory/PWNRevokedOfferNonce.sol";
+import "../../PWNConfig.sol";
 import "../PWNVault.sol";
+import "../PWNLOAN.sol";
 
 
 contract PWNSimpleLoan is PWNVault {
@@ -80,17 +80,17 @@ contract PWNSimpleLoan is PWNVault {
 
     // TODO: Doc
     function createLoan(
-        address factoryContract,
+        address loanFactoryContract,
         bytes calldata loanFactoryData,
         bytes calldata signature,
         bytes calldata loanAssetPermit,
         bytes calldata collateralPermit
     ) external {
         // Check that loan factory contract is tagged in PWNHub
-        require(hub.hasTag(factoryContract, PWNHubTags.LOAN_FACTORY));
+        require(hub.hasTag(loanFactoryContract, PWNHubTags.LOAN_FACTORY));
 
         // Build LOAN by loan factory
-        (LOAN memory loan, address lender, address borrower) = IPWNSimpleLoanFactory(factoryContract).createLOAN({
+        (LOAN memory loan, address lender, address borrower) = IPWNSimpleLoanFactory(loanFactoryContract).createLOAN({
             caller: msg.sender,
             loanFactoryData: loanFactoryData,
             signature: signature
@@ -125,8 +125,8 @@ contract PWNSimpleLoan is PWNVault {
     ) external {
         LOAN memory loan = LOANs[loanId];
 
-        // Check that loan is not from a different manager
-        require(loan.status != 0, "Loan is not from current manager");
+        // Check that loan is not from a different loan contract
+        require(loan.status != 0, "Loan is not from current contract");
 
         // Check that loan running
         require(loan.status == 2, "Loan is not running");

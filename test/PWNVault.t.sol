@@ -9,7 +9,7 @@ import "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-import "../src/PWNVault.sol";
+import "../src/loan/PWNVault.sol";
 
 
 // The only reason for this contract is to expose internal functions of PWNVault

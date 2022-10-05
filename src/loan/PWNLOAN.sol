@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
-import "./hub/PWNHubAccessControl.sol";
+import "../hub/PWNHubAccessControl.sol";
 
 
 contract PWNLOAN is PWNHubAccessControl, ERC721 {
@@ -14,7 +14,7 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
 
     uint256 public lastLoanId;
 
-    mapping (uint256 => address) public loanManagerContract;
+    mapping (uint256 => address) public loanContract;
 
 
     /*----------------------------------------------------------*|
@@ -32,14 +32,14 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
 
     function mint(address owner) external onlyActiveLoan returns (uint256 loanId) {
         loanId = ++lastLoanId;
-        loanManagerContract[loanId] = msg.sender;
+        loanContract[loanId] = msg.sender;
         _mint(owner, loanId);
         // TODO: Emit
     }
 
     function burn(uint256 loanId) external onlyLoan {
-        require(loanManagerContract[loanId] == msg.sender, "Loan manager did not mint given loan id");
-        delete loanManagerContract[loanId];
+        require(loanContract[loanId] == msg.sender, "Loan manager did not mint given loan id");
+        delete loanContract[loanId];
         _burn(loanId);
         // TODO: Emit
     }

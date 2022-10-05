@@ -4,13 +4,13 @@ pragma solidity 0.8.4;
 import "forge-std/Test.sol";
 
 import "../src/hub/PWNHubTags.sol";
-import "../src/PWNLOAN.sol";
+import "../src/loan/PWNLOAN.sol";
 
 
 abstract contract PWNLOANTest is Test {
 
     bytes32 internal constant LAST_LOAN_ID_SLOT = bytes32(uint256(6)); // `lastLoanId` property position
-    bytes32 internal constant LOAN_MANAGER_CONTRACT_SLOT = bytes32(uint256(7)); // `loanManagerContract` mapping position
+    bytes32 internal constant LOAN_CONTRACT_SLOT = bytes32(uint256(7)); // `loanContract` mapping position
 
     PWNLOAN loanToken;
     address hub = address(0x80b);
@@ -39,10 +39,10 @@ abstract contract PWNLOANTest is Test {
     }
 
 
-    function _loanManagerSlot(uint256 loanId) internal pure returns (bytes32) {
+    function _loanContractSlot(uint256 loanId) internal pure returns (bytes32) {
         return keccak256(abi.encode(
             loanId,
-            LOAN_MANAGER_CONTRACT_SLOT
+            LOAN_CONTRACT_SLOT
         ));
     }
 
@@ -96,8 +96,8 @@ contract PWNLOAN_Mint_Test is PWNLOANTest {
         vm.prank(activeLoanManager);
         uint256 loanId = loanToken.mint(alice);
 
-        bytes32 loanManagerValue = vm.load(address(loanToken), _loanManagerSlot(loanId));
-        assertTrue(loanManagerValue == bytes32(uint256(uint160(activeLoanManager))));
+        bytes32 loanContractValue = vm.load(address(loanToken), _loanContractSlot(loanId));
+        assertTrue(loanContractValue == bytes32(uint256(uint160(activeLoanManager))));
     }
 
     function test_shouldMintLOANToken() external {
@@ -156,8 +156,8 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
         vm.prank(activeLoanManager);
         loanToken.burn(loanId);
 
-        bytes32 loanManagerValue = vm.load(address(loanToken), _loanManagerSlot(loanId));
-        assertTrue(loanManagerValue == bytes32(0));
+        bytes32 loanContractValue = vm.load(address(loanToken), _loanContractSlot(loanId));
+        assertTrue(loanContractValue == bytes32(0));
     }
 
     function test_shouldBurnLOANToken() external {

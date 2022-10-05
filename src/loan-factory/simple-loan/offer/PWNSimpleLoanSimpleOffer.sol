@@ -2,8 +2,8 @@
 pragma solidity 0.8.4;
 
 import "../../../hub/PWNHubAccessControl.sol";
-import "../../../loan/PWNSimpleLoan.sol";
-import "../../../PWNRevokedOfferNonce.sol";
+import "../../../loan/type/PWNSimpleLoan.sol";
+import "../../PWNRevokedOfferNonce.sol";
 import "../IPWNSimpleLoanFactory.sol";
 
 
