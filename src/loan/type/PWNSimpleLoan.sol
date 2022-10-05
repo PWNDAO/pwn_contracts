@@ -3,19 +3,17 @@ pragma solidity 0.8.4;
 
 import "MultiToken/MultiToken.sol";
 
-import "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-
 import "../../hub/PWNHub.sol";
 import "../../hub/PWNHubTags.sol";
 import "../../loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
-import "../../loan-factory/PWNRevokedOfferNonce.sol";
 import "../../PWNConfig.sol";
 import "../PWNVault.sol";
 import "../PWNLOAN.sol";
 
 
 contract PWNSimpleLoan is PWNVault {
+
+    string internal constant VERSION = "0.1.0";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -79,7 +77,7 @@ contract PWNSimpleLoan is PWNVault {
     |*----------------------------------------------------------*/
 
     // TODO: Doc
-    function createLoan(
+    function createLOAN(
         address loanFactoryContract,
         bytes calldata loanFactoryData,
         bytes calldata signature,
@@ -87,7 +85,7 @@ contract PWNSimpleLoan is PWNVault {
         bytes calldata collateralPermit
     ) external {
         // Check that loan factory contract is tagged in PWNHub
-        require(hub.hasTag(loanFactoryContract, PWNHubTags.LOAN_FACTORY));
+        require(hub.hasTag(loanFactoryContract, PWNHubTags.LOAN_FACTORY), "Given contract is not loan factory");
 
         // Build LOAN by loan factory
         (LOAN memory loan, address lender, address borrower) = IPWNSimpleLoanFactory(loanFactoryContract).createLOAN({
@@ -123,16 +121,16 @@ contract PWNSimpleLoan is PWNVault {
         uint256 loanId,
         bytes calldata loanAssetPermit
     ) external {
-        LOAN memory loan = LOANs[loanId];
+        LOAN storage loan = LOANs[loanId];
 
         // Check that loan is not from a different loan contract
-        require(loan.status != 0, "Loan is not from current contract");
+        require(loan.status != 0, "Loan does not exist or is not from current loan contract");
 
         // Check that loan running
         require(loan.status == 2, "Loan is not running");
 
         // Check that loan is not expired
-        require(loan.expiration < block.timestamp, "Loan is expired");
+        require(loan.expiration > block.timestamp, "Loan is expired");
 
         // Move loan to repaid state
         loan.status = 3;
@@ -159,8 +157,9 @@ contract PWNSimpleLoan is PWNVault {
 
         // Check that caller is LOAN token holder
         require(loanToken.ownerOf(loanId) == msg.sender, "Caller is not a LOAN token holder");
+
         // Check that loan can be claimed
-        require(loan.status == 3 || loan.expiration >= block.timestamp, "Loan can't be claimed yet");
+        require(loan.status == 3 || (loan.status == 2 && loan.expiration <= block.timestamp), "Loan can't be claimed yet or is not from current loan contract");
 
         // Delete loan data and burn loan token
         delete LOANs[loanId];
@@ -172,7 +171,7 @@ contract PWNSimpleLoan is PWNVault {
             repayLoanAsset.amount = loan.loanRepayAmount;
 
             _push(repayLoanAsset, msg.sender);
-        } else { // Loan expired
+        } else { // Loan is running but expired
              // Transfer collateral to lender
             _push(loan.collateral, msg.sender);
         }

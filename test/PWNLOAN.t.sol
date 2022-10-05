@@ -18,6 +18,10 @@ abstract contract PWNLOANTest is Test {
     address activeLoanManager = address(0x01);
     address loanManager = address(0x02);
 
+    constructor() {
+        vm.etch(hub, bytes("data"));
+    }
+
     function setUp() virtual public {
         loanToken = new PWNLOAN(hub);
 

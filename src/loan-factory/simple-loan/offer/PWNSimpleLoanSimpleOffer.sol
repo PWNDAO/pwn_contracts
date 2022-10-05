@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.4;
 
+import "MultiToken/MultiToken.sol";
+
+import "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
+
 import "../../../hub/PWNHubAccessControl.sol";
 import "../../../loan/type/PWNSimpleLoan.sol";
 import "../../PWNRevokedOfferNonce.sol";
@@ -8,6 +13,8 @@ import "../IPWNSimpleLoanFactory.sol";
 
 
 contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl {
+
+    string internal constant VERSION = "0.1.0";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
