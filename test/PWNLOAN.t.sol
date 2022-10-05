@@ -33,7 +33,7 @@ abstract contract PWNLOANTest is Test {
         );
         vm.mockCall(
             hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", loanManager, PWNHubTags.LOAN_MANAGER),
+            abi.encodeWithSignature("hasTag(address,bytes32)", loanManager, PWNHubTags.LOAN),
             abi.encode(true)
         );
     }
@@ -70,13 +70,13 @@ contract PWNLOAN_Constructor_Test is PWNLOANTest {
 contract PWNLOAN_Mint_Test is PWNLOANTest {
 
     function test_shouldFail_whenCallerIsNotActiveLoanManager() external {
-        vm.expectRevert("Caller is not active loan manager");
+        vm.expectRevert("Caller is not active loan");
         vm.prank(alice);
         loanToken.mint(alice);
     }
 
     function test_shouldFail_whenCallerIsLoanManager() external {
-        vm.expectRevert("Caller is not active loan manager");
+        vm.expectRevert("Caller is not active loan");
         vm.prank(loanManager);
         loanToken.mint(alice);
     }
@@ -141,7 +141,7 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
 
 
     function test_shouldFail_whenCallerIsNotLoanManager() external {
-        vm.expectRevert("Caller is not loan manager");
+        vm.expectRevert("Caller is not loan contract");
         vm.prank(alice);
         loanToken.burn(loanId);
     }

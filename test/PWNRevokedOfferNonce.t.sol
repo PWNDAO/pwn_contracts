@@ -78,12 +78,12 @@ contract PWNRevokedOfferNonce_RevokeOfferNonce_Test is PWNRevokedOfferNonceTest 
 
 
 /*----------------------------------------------------------*|
-|*  # REVOKE OFFER NONCE BY ACTIVE LOAN MANAGER             *|
+|*  # REVOKE OFFER NONCE BY LOAN OFFER                      *|
 |*----------------------------------------------------------*/
 
 contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferNonceTest {
 
-    address activeLoanManager = address(0x01);
+    address loanOffer = address(0x01);
 
     function setUp() override public {
         super.setUp();
@@ -95,14 +95,14 @@ contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferN
         );
         vm.mockCall(
             hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", activeLoanManager, PWNHubTags.ACTIVE_LOAN_MANAGER),
+            abi.encodeWithSignature("hasTag(address,bytes32)", loanOffer, PWNHubTags.LOAN_OFFER),
             abi.encode(true)
         );
     }
 
 
     function test_shouldFail_whenCallerIsNotActiveLoanManager() external {
-        vm.expectRevert("Caller is not active loan manager");
+        vm.expectRevert("Caller is not loan offer");
         vm.prank(alice);
         revokedOfferNonce.revokeOfferNonce(alice, nonce);
     }
@@ -115,12 +115,12 @@ contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferN
         );
 
         vm.expectRevert("Nonce is already revoked");
-        vm.prank(activeLoanManager);
+        vm.prank(loanOffer);
         revokedOfferNonce.revokeOfferNonce(alice, nonce);
     }
 
     function test_shouldStoreNonceAsRevoked() external {
-        vm.prank(activeLoanManager);
+        vm.prank(loanOffer);
         revokedOfferNonce.revokeOfferNonce(alice, nonce);
 
         bytes32 isRevokedValue = vm.load(
@@ -134,7 +134,7 @@ contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferN
         vm.expectEmit(true, true, false, false);
         emit OfferNonceRevoked(alice, nonce);
 
-        vm.prank(activeLoanManager);
+        vm.prank(loanOffer);
         revokedOfferNonce.revokeOfferNonce(alice, nonce);
     }
 

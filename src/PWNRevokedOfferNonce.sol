@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.4;
 
-import "./hub/PWNLoanManagerAccesible.sol";
+import "./hub/PWNHubAccessControl.sol";
 
 
-contract PWNRevokedOfferNonce is PWNLoanManagerAccesible {
+contract PWNRevokedOfferNonce is PWNHubAccessControl {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -24,7 +24,7 @@ contract PWNRevokedOfferNonce is PWNLoanManagerAccesible {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor(address pwnHub) PWNLoanManagerAccesible(pwnHub) {
+    constructor(address hub) PWNHubAccessControl(hub) {
 
     }
 
@@ -37,7 +37,7 @@ contract PWNRevokedOfferNonce is PWNLoanManagerAccesible {
         _revokeOfferNonce(msg.sender, offerNonce);
     }
 
-    function revokeOfferNonce(address owner, bytes32 offerNonce) external onlyActiveLoanManager {
+    function revokeOfferNonce(address owner, bytes32 offerNonce) external onlyLoanOffer {
         _revokeOfferNonce(owner, offerNonce);
     }
 
