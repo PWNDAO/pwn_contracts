@@ -5,7 +5,7 @@ import "./PWNHub.sol";
 import "./PWNHubTags.sol";
 
 
-abstract contract PWNLoanManagerAccesible {
+abstract contract PWNHubAccessControl {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -18,13 +18,18 @@ abstract contract PWNLoanManagerAccesible {
     |*  # MODIFIERS                                             *|
     |*----------------------------------------------------------*/
 
-    modifier onlyActiveLoanManager() {
-        require(hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN_MANAGER), "Caller is not active loan manager");
+    modifier onlyActiveLoan() {
+        require(hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN), "Caller is not active loan");
         _;
     }
 
-    modifier onlyLoanManager() {
-        require(hub.hasTag(msg.sender, PWNHubTags.LOAN_MANAGER), "Caller is not loan manager");
+    modifier onlyLoan() {
+        require(hub.hasTag(msg.sender, PWNHubTags.LOAN), "Caller is not loan contract");
+        _;
+    }
+
+    modifier onlyLoanOffer() {
+        require(hub.hasTag(msg.sender, PWNHubTags.LOAN_OFFER), "Caller is not loan offer");
         _;
     }
 
