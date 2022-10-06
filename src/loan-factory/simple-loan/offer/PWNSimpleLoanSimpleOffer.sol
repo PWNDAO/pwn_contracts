@@ -87,24 +87,24 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
     // TODO: Doc
     function makeOffer(Offer calldata offer) external {
         // Check that caller is a lender
-        require(msg.sender == offer.lender, "Caller has to be stated as a lender");
+        require(msg.sender == offer.lender, "Caller is not stated as a lender");
 
-        bytes32 offerStructHash = offerTypedDataHash(offer);
+        bytes32 offerStructHash = getOfferHash(offer);
 
-        // Check that permission is not have been granted
+        // Check that offer has not been made
         require(offersMade[offerStructHash] == false, "Offer already exists");
 
-        // Check that permission is not have been revoked
+        // Check that offer has not been revoked
         require(revokedOfferNonce.revokedOfferNonces(msg.sender, offer.nonce) == false, "Offer nonce is revoked");
 
-        // Grant permission
+        // Mark offer as made
         offersMade[offerStructHash] = true;
 
         emit OfferMade(offerStructHash);
     }
 
     // TODO: Doc
-    function revokeOffer(bytes32 offerNonce) external {
+    function revokeOfferNonce(bytes32 offerNonce) external {
         revokedOfferNonce.revokeOfferNonce(msg.sender, offerNonce);
     }
 
@@ -123,7 +123,7 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
         address borrower
     ) {
         Offer memory offer = abi.decode(loanFactoryData, (Offer));
-        bytes32 offerHash = offerTypedDataHash(offer);
+        bytes32 offerHash = getOfferHash(offer);
 
         lender = offer.lender;
         borrower = caller;
@@ -134,10 +134,9 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
 
         // Check valid offer
         require(offer.expiration == 0 || block.timestamp < offer.expiration, "Offer is expired");
-        require(revokedOfferNonce.revokedOfferNonces(borrower, offer.nonce) == false, "Offer is revoked or has been accepted");
-        if (offer.borrower != address(0)) {
+        require(revokedOfferNonce.revokedOfferNonces(lender, offer.nonce) == false, "Offer is revoked or has been accepted");
+        if (offer.borrower != address(0))
             require(borrower == offer.borrower, "Caller is not offer borrower");
-        }
 
         // Prepare collateral and loan asset
         MultiToken.Asset memory collateral = MultiToken.Asset({
@@ -166,7 +165,7 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
 
         // Revoke offer if not persistent
         if (!offer.isPersistent)
-            revokedOfferNonce.revokeOfferNonce(borrower, offer.nonce);
+            revokedOfferNonce.revokeOfferNonce(lender, offer.nonce);
     }
 
     // TODO: ??? function createLOAN(...) external view returns (...) for FE?
@@ -175,10 +174,16 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
 
 
     /*----------------------------------------------------------*|
-    |*  # OFFER TYPED STRUCT HASH                               *|
+    |*  # GET OFFER HASH                                        *|
     |*----------------------------------------------------------*/
 
-    function offerTypedDataHash(Offer memory offer) public view returns (bytes32) {
+    /**
+     * get offer hash
+     * @notice Hash offer struct according to EIP-712
+     * @param offer Offer struct to be hashed
+     * @return Offer struct hash
+     */
+    function getOfferHash(Offer memory offer) public view returns (bytes32) {
         return keccak256(abi.encodePacked(
             "\x19\x01",
             keccak256(abi.encode(
@@ -188,42 +193,26 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
                 block.chainid,
                 address(this)
             )),
-            _offerHash(offer)
-        ));
-    }
-
-    /**
-     * hash offer
-     * @notice Hash offer struct according to EIP-712
-     * @param offer Offer struct to be hashed
-     * @return Offer struct hash
-     */
-    function _offerHash(Offer memory offer) private pure returns (bytes32) {
-        // Need to divide encoding into smaller parts because of "Stack to deep" error
-
-        bytes memory encodedOfferCollateralData = abi.encode(
-            offer.collateralCategory,
-            offer.collateralAddress,
-            offer.collateralId,
-            offer.collateralAmount
-        );
-
-        bytes memory encodedOfferOtherData = abi.encode(
-            offer.loanAssetAddress,
-            offer.loanAmount,
-            offer.loanYield,
-            offer.duration,
-            offer.expiration,
-            offer.borrower,
-            offer.lender,
-            offer.isPersistent,
-            offer.nonce
-        );
-
-        return keccak256(abi.encodePacked(
-            OFFER_TYPEHASH,
-            encodedOfferCollateralData,
-            encodedOfferOtherData
+            keccak256(abi.encodePacked(
+                OFFER_TYPEHASH,
+                abi.encode(
+                    offer.collateralCategory,
+                    offer.collateralAddress,
+                    offer.collateralId,
+                    offer.collateralAmount
+                ), // Need to prevent `slot(s) too deep inside the stack` error
+                abi.encode(
+                    offer.loanAssetAddress,
+                    offer.loanAmount,
+                    offer.loanYield,
+                    offer.duration,
+                    offer.expiration,
+                    offer.borrower,
+                    offer.lender,
+                    offer.isPersistent,
+                    offer.nonce
+                )
+            ))
         ));
     }
 

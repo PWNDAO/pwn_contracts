@@ -36,7 +36,6 @@ abstract contract PWNSimpleLoanTest is Test {
 
     constructor() {
         vm.etch(hub, bytes("data"));
-        vm.etch(loanFactory, bytes("data"));
         vm.etch(loanToken, bytes("data"));
         vm.etch(loanFactory, bytes("data"));
         vm.etch(token, bytes("data"));
