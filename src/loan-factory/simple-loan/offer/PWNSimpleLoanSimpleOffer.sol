@@ -188,8 +188,8 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
             "\x19\x01",
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes("PWNSimpleLoanSimpleOffer")),
-                keccak256(bytes("1")),
+                keccak256("PWNSimpleLoanSimpleOffer"),
+                keccak256("1"),
                 block.chainid,
                 address(this)
             )),
