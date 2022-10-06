@@ -38,7 +38,7 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
     }
 
     function burn(uint256 loanId) external onlyLoan {
-        require(loanContract[loanId] == msg.sender, "Loan manager did not mint given loan id");
+        require(loanContract[loanId] == msg.sender, "Loan contract did not mint given loan id");
         delete loanContract[loanId];
         _burn(loanId);
         // TODO: Emit

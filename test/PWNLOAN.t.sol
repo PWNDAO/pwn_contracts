@@ -15,8 +15,8 @@ abstract contract PWNLOANTest is Test {
     PWNLOAN loanToken;
     address hub = address(0x80b);
     address alice = address(0xa11ce);
-    address activeLoanManager = address(0x01);
-    address loanManager = address(0x02);
+    address activeLoanContract = address(0x01);
+    address loanContract = address(0x02);
 
     constructor() {
         vm.etch(hub, bytes("data"));
@@ -32,12 +32,12 @@ abstract contract PWNLOANTest is Test {
         );
         vm.mockCall(
             hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", activeLoanManager),
+            abi.encodeWithSignature("hasTag(address,bytes32)", activeLoanContract),
             abi.encode(true)
         );
         vm.mockCall(
             hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", loanManager, PWNHubTags.LOAN),
+            abi.encodeWithSignature("hasTag(address,bytes32)", loanContract, PWNHubTags.LOAN),
             abi.encode(true)
         );
     }
@@ -73,15 +73,15 @@ contract PWNLOAN_Constructor_Test is PWNLOANTest {
 
 contract PWNLOAN_Mint_Test is PWNLOANTest {
 
-    function test_shouldFail_whenCallerIsNotActiveLoanManager() external {
+    function test_shouldFail_whenCallerIsNotActiveLoanContract() external {
         vm.expectRevert("Caller is not active loan");
         vm.prank(alice);
         loanToken.mint(alice);
     }
 
-    function test_shouldFail_whenCallerIsLoanManager() external {
+    function test_shouldFail_whenCallerIsLoanContract() external {
         vm.expectRevert("Caller is not active loan");
-        vm.prank(loanManager);
+        vm.prank(loanContract);
         loanToken.mint(alice);
     }
 
@@ -89,23 +89,23 @@ contract PWNLOAN_Mint_Test is PWNLOANTest {
         uint256 lastLoanId = 3123;
         vm.store(address(loanToken), LAST_LOAN_ID_SLOT, bytes32(lastLoanId));
 
-        vm.prank(activeLoanManager);
+        vm.prank(activeLoanContract);
         loanToken.mint(alice);
 
         bytes32 lastLoanIdValue = vm.load(address(loanToken), LAST_LOAN_ID_SLOT);
         assertTrue(uint256(lastLoanIdValue) == lastLoanId + 1);
     }
 
-    function test_shouldStoreLoanManagerUnderLoanId() external {
-        vm.prank(activeLoanManager);
+    function test_shouldStoreLoanContractUnderLoanId() external {
+        vm.prank(activeLoanContract);
         uint256 loanId = loanToken.mint(alice);
 
         bytes32 loanContractValue = vm.load(address(loanToken), _loanContractSlot(loanId));
-        assertTrue(loanContractValue == bytes32(uint256(uint160(activeLoanManager))));
+        assertTrue(loanContractValue == bytes32(uint256(uint160(activeLoanContract))));
     }
 
     function test_shouldMintLOANToken() external {
-        vm.prank(activeLoanManager);
+        vm.prank(activeLoanContract);
         uint256 loanId = loanToken.mint(alice);
 
         assertTrue(loanToken.ownerOf(loanId) == alice);
@@ -115,7 +115,7 @@ contract PWNLOAN_Mint_Test is PWNLOANTest {
         uint256 lastLoanId = 3123;
         vm.store(address(loanToken), LAST_LOAN_ID_SLOT, bytes32(lastLoanId));
 
-        vm.prank(activeLoanManager);
+        vm.prank(activeLoanContract);
         uint256 loanId = loanToken.mint(alice);
 
         assertTrue(loanId == lastLoanId + 1);
@@ -139,25 +139,25 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
     function setUp() override public {
         super.setUp();
 
-        vm.prank(activeLoanManager);
+        vm.prank(activeLoanContract);
         loanId = loanToken.mint(alice);
     }
 
 
-    function test_shouldFail_whenCallerIsNotLoanManager() external {
+    function test_shouldFail_whenCallerIsNotLoanContract() external {
         vm.expectRevert("Caller is not loan contract");
         vm.prank(alice);
         loanToken.burn(loanId);
     }
 
-    function test_shouldFail_whenCallerIsNotStoredLoanManagerForGivenLoanId() external {
-        vm.expectRevert("Loan manager did not mint given loan id");
-        vm.prank(loanManager);
+    function test_shouldFail_whenCallerIsNotStoredLoanContractForGivenLoanId() external {
+        vm.expectRevert("Loan contract did not mint given loan id");
+        vm.prank(loanContract);
         loanToken.burn(loanId);
     }
 
-    function test_shouldDeleteStoredLoanManager() external {
-        vm.prank(activeLoanManager);
+    function test_shouldDeleteStoredLoanContract() external {
+        vm.prank(activeLoanContract);
         loanToken.burn(loanId);
 
         bytes32 loanContractValue = vm.load(address(loanToken), _loanContractSlot(loanId));
@@ -165,7 +165,7 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
     }
 
     function test_shouldBurnLOANToken() external {
-        vm.prank(activeLoanManager);
+        vm.prank(activeLoanContract);
         loanToken.burn(loanId);
 
         vm.expectRevert("ERC721: invalid token ID");
