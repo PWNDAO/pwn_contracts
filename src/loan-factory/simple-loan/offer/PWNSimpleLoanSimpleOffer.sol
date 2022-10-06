@@ -3,12 +3,10 @@ pragma solidity 0.8.4;
 
 import "MultiToken/MultiToken.sol";
 
-import "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-
 import "../../../hub/PWNHubAccessControl.sol";
 import "../../../loan/type/PWNSimpleLoan.sol";
 import "../../PWNRevokedOfferNonce.sol";
+import "../../PWNSignatureChecker.sol";
 import "../IPWNSimpleLoanFactory.sol";
 
 
@@ -19,11 +17,6 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
-
-    /**
-     * EIP-1271 valid signature magic value
-     */
-    bytes4 constant internal EIP1271_VALID_SIGNATURE = 0x1626ba7e;
 
     /**
      * EIP-712 offer struct type hash
@@ -96,7 +89,7 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
         // Check that caller is a lender
         require(msg.sender == offer.lender, "Caller has to be stated as a lender");
 
-        bytes32 offerStructHash = offerTypedStructHash(offer);
+        bytes32 offerStructHash = offerTypedDataHash(offer);
 
         // Check that permission is not have been granted
         require(offersMade[offerStructHash] == false, "Offer already exists");
@@ -130,22 +123,14 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
         address borrower
     ) {
         Offer memory offer = abi.decode(loanFactoryData, (Offer));
-        bytes32 offerStructHash = offerTypedStructHash(offer);
+        bytes32 offerHash = offerTypedDataHash(offer);
 
         lender = offer.lender;
         borrower = caller;
 
-        // Check that offer has been made via on-chain tx, EIP-1271 or off-chain signature
-        if (offersMade[offerStructHash] == true) {
-            // Offer has been made on-chain, no need to check signature
-        } else if (lender.code.length > 0) {
-            // Check that offer signature is valid for contract account lender
-            require(IERC1271(lender).isValidSignature(offerStructHash, signature) == EIP1271_VALID_SIGNATURE, "Signature on behalf of contract is invalid");
-        } else {
-            // Check that offer signature is valid for EOA lender
-            // TODO: Check that support EIP-2098
-            require(ECDSA.recover(offerStructHash, signature) == lender, "Lender address didn't sign the offer");
-        }
+        // Check that offer has been made via on-chain tx, EIP-1271 or signed off-chain
+        if (offersMade[offerHash] == false)
+            require(PWNSignatureChecker.isValidSignatureNow(lender, offerHash, signature) == true, "Invalid offer signature");
 
         // Check valid offer
         require(offer.expiration == 0 || block.timestamp < offer.expiration, "Offer is expired");
@@ -153,10 +138,6 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
         if (offer.borrower != address(0)) {
             require(borrower == offer.borrower, "Caller is not offer borrower");
         }
-
-        // Revoke offer if not persistent
-        if (!offer.isPersistent)
-            revokedOfferNonce.revokeOfferNonce(borrower, offer.nonce);
 
         // Prepare collateral and loan asset
         MultiToken.Asset memory collateral = MultiToken.Asset({
@@ -182,16 +163,22 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
             asset: loanAsset,
             loanRepayAmount: offer.loanAmount + offer.loanYield
         });
+
+        // Revoke offer if not persistent
+        if (!offer.isPersistent)
+            revokedOfferNonce.revokeOfferNonce(borrower, offer.nonce);
     }
 
-    // TODO: ??? Implement createLOAN view function for FE?
+    // TODO: ??? function createLOAN(...) external view returns (...) for FE?
+
+    // TODO: ??? function encodeOffer(Offer) external pure returns (bytes memory) for FE?
 
 
     /*----------------------------------------------------------*|
     |*  # OFFER TYPED STRUCT HASH                               *|
     |*----------------------------------------------------------*/
 
-    function offerTypedStructHash(Offer memory offer) public view returns (bytes32) {
+    function offerTypedDataHash(Offer memory offer) public view returns (bytes32) {
         return keccak256(abi.encodePacked(
             "\x19\x01",
             keccak256(abi.encode(
