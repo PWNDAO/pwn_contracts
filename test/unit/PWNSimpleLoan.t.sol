@@ -5,8 +5,8 @@ import "forge-std/Test.sol";
 
 import "MultiToken/MultiToken.sol";
 
-import "../src/hub/PWNHubTags.sol";
-import "../src/loan/type/PWNSimpleLoan.sol";
+import "../../src/hub/PWNHubTags.sol";
+import "../../src/loan/type/PWNSimpleLoan.sol";
 
 
 abstract contract PWNSimpleLoanTest is Test {

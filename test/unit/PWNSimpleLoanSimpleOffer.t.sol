@@ -5,9 +5,9 @@ import "forge-std/Test.sol";
 
 import "MultiToken/MultiToken.sol";
 
-import "../src/hub/PWNHubTags.sol";
-import "../src/loan/type/PWNSimpleLoan.sol";
-import "../src/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
+import "../../src/hub/PWNHubTags.sol";
+import "../../src/loan/type/PWNSimpleLoan.sol";
+import "../../src/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
 
 
 abstract contract PWNSimpleLoanSimpleOfferTest is Test {
@@ -71,8 +71,8 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
             "\x19\x01",
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes("PWNSimpleLoanSimpleOffer")),
-                keccak256(bytes("1")),
+                keccak256("PWNSimpleLoanSimpleOffer"),
+                keccak256("1"),
                 block.chainid,
                 address(offerContract)
             )),

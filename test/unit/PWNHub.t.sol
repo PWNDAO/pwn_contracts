@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "forge-std/Test.sol";
 
-import "../src/hub/PWNHub.sol";
+import "../../src/hub/PWNHub.sol";
 
 
 abstract contract PWNHubTest is Test {
