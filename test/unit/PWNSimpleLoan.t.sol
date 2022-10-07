@@ -31,7 +31,7 @@ abstract contract PWNSimpleLoanTest is Test {
     bytes collateralPermit;
 
     event LOANCreated(uint256 indexed loanId, address indexed lender);
-    event PaidBack(uint256 loanId);
+    event LOANPaidBack(uint256 loanId);
     event LOANClaimed(uint256 loanId);
 
     constructor() {
@@ -373,11 +373,11 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         loan.repayLoan(loanId, loanAssetPermit);
     }
 
-    function test_shouldEmitPaidBackEvent() external {
+    function test_shouldEmitLOANPaidBackEvent() external {
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectEmit(true, false, false, false);
-        emit PaidBack(loanId);
+        emit LOANPaidBack(loanId);
 
         loan.repayLoan(loanId, loanAssetPermit);
     }

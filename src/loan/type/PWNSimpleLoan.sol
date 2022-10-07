@@ -26,7 +26,7 @@ contract PWNSimpleLoan is PWNVault {
     PWNConfig immutable internal config;
 
     /**
-     * Construct defining a LOAN which is an acronym for: ... (TODO)
+     * Struct defining a LOAN
      * @param status 0 == none/dead || 2 == running/accepted offer || 3 == paid back || 4 == expired
      * @param borrower Address of the borrower - stays the same for entire lifespan of the token
      * @param duration Loan duration in seconds
@@ -57,7 +57,7 @@ contract PWNSimpleLoan is PWNVault {
 
     // TODO: Update for Dune
     event LOANCreated(uint256 indexed loanId, address indexed lender);
-    event PaidBack(uint256 loanId);
+    event LOANPaidBack(uint256 loanId);
     event LOANClaimed(uint256 loanId);
 
 
@@ -94,21 +94,20 @@ contract PWNSimpleLoan is PWNVault {
             signature: signature
         });
 
-        // TODO: Potential reentrancy vulnerability?
         // Mint LOAN token for lender
         loanId = loanToken.mint(lender);
 
         // Store loan data under loan id
         LOANs[loanId] = loan;
 
+        emit LOANCreated(loanId, lender);
+
+        // TODO: Work with fee
+
         // Transfer collateral to Vault
         _pull(loan.collateral, borrower, collateralPermit);
         // Transfer loan asset to borrower
         _pushFrom(loan.asset, lender, borrower, loanAssetPermit);
-
-        // TODO: Work with fee
-
-        emit LOANCreated(loanId, lender);
     }
 
 
@@ -143,7 +142,7 @@ contract PWNSimpleLoan is PWNVault {
         // Transfer collateral back to borrower
         _push(loan.collateral, loan.borrower);
 
-        emit PaidBack(loanId);
+        emit LOANPaidBack(loanId);
     }
 
 
