@@ -15,7 +15,6 @@ library PWNSignatureChecker {
         bytes32 hash,
         bytes memory signature
     ) internal view returns (bool) {
-
         // Check that signature is valid for contract account
         if (signer.code.length > 0) {
             (bool success, bytes memory result) = signer.staticcall(
@@ -57,8 +56,6 @@ library PWNSignatureChecker {
 
             return signer == ECDSA.recover(hash, v, r, s);
         }
-
     }
-
 
 }

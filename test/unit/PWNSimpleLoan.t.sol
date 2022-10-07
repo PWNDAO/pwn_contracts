@@ -271,6 +271,12 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
+    function test_shouldReturnCreatedLoanId() external {
+        uint256 createdLoanId = loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
+
+        assertEq(createdLoanId, loanId);
+    }
+
 }
 
 

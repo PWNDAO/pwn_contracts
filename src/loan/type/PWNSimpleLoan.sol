@@ -83,7 +83,7 @@ contract PWNSimpleLoan is PWNVault {
         bytes calldata signature,
         bytes calldata loanAssetPermit,
         bytes calldata collateralPermit
-    ) external {
+    ) external returns (uint256 loanId) {
         // Check that loan factory contract is tagged in PWNHub
         require(hub.hasTag(loanFactoryContract, PWNHubTags.LOAN_FACTORY), "Given contract is not loan factory");
 
@@ -96,7 +96,7 @@ contract PWNSimpleLoan is PWNVault {
 
         // TODO: Potential reentrancy vulnerability?
         // Mint LOAN token for lender
-        uint256 loanId = loanToken.mint(lender);
+        loanId = loanToken.mint(lender);
 
         // Store loan data under loan id
         LOANs[loanId] = loan;
