@@ -4,12 +4,21 @@ pragma solidity 0.8.16;
 import "../hub/PWNHubAccessControl.sol";
 
 
+/**
+ * @title PWN Revoked Offer Nonce
+ * @notice Contract holding revoked offer nonces for loan offer contracts to check.
+ */
 contract PWNRevokedOfferNonce is PWNHubAccessControl {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
+    /**
+     * @dev Mapping of revoked offer nonces by an address.
+     *      Every address has its own nonce space.
+     *      (owner => nonce => is revoked)
+     */
     mapping (address => mapping (bytes32 => bool)) public revokedOfferNonces;
 
 
@@ -17,6 +26,9 @@ contract PWNRevokedOfferNonce is PWNHubAccessControl {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
+    /**
+     * @dev Emitted when an offer nonce is revoked.
+     */
     event OfferNonceRevoked(address indexed owner, bytes32 indexed offerNonce);
 
 
@@ -33,10 +45,21 @@ contract PWNRevokedOfferNonce is PWNHubAccessControl {
     |*  # REVOKE OFFER NONCE                                    *|
     |*----------------------------------------------------------*/
 
+    /**
+     * @notice Revoke an offer nonce.
+     * @dev Caller is used as an offer nonce owner.
+     * @param offerNonce Nonce to be revoked.
+     */
     function revokeOfferNonce(bytes32 offerNonce) external {
         _revokeOfferNonce(msg.sender, offerNonce);
     }
 
+    /**
+     * @notice Revoke an offer nonce on behalf of an owner.
+     * @dev Only an addresse with associated `LOAN_OFFER` tag in PWN Hub can call this function.
+     * @param owner Owner address of a revoking nonce.
+     * @param offerNonce Nonce to be revoked.
+     */
     function revokeOfferNonce(address owner, bytes32 offerNonce) external onlyLoanOffer {
         _revokeOfferNonce(owner, offerNonce);
     }

@@ -5,6 +5,10 @@ import "./PWNHub.sol";
 import "./PWNHubTags.sol";
 
 
+/**
+ * @title PWN Hub Access Control
+ * @notice Implement modifiers for PWN Hub access control.
+ */
 abstract contract PWNHubAccessControl {
 
     /*----------------------------------------------------------*|

@@ -7,6 +7,11 @@ import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
 
+/**
+ * @title PWN Vault
+ * @notice Base contract for transferring and managing collateral and loan assets in PWN protocol.
+ * @dev Loan contracts inherits PWN Vault to act as a Vault for its loan type.
+ */
 abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     using MultiToken for MultiToken.Asset;
 
@@ -14,8 +19,19 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
+    /**
+     * @dev Emitted when asset transfer happens from an `origin` address to a vault.
+     */
     event VaultPull(MultiToken.Asset asset, address indexed origin);
+
+    /**
+     * @dev Emitted when asset transfer happens from a vault to a `beneficiary` address.
+     */
     event VaultPush(MultiToken.Asset asset, address indexed beneficiary);
+
+    /**
+     * @dev Emitted when asset transfer happens from an `origin` address to a `beneficiary` address.
+     */
     event VaultPushFrom(MultiToken.Asset asset, address indexed origin, address indexed beneficiary);
 
 
@@ -25,10 +41,10 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
 
     /**
      * pull
-     * @dev function accessing an asset and pulling it INTO the vault
-     * @dev the function assumes a prior token approval was made with the PWNVault.address to be approved
-     * @param asset An asset construct - for definition see { MultiToken.sol }
-     * @param origin Borrower address that is transferring collateral to Vault or repaying loan
+     * @dev Function accessing an asset and pulling it INTO a vault.
+     *      The function assumes a prior token approval was made to a vault address.
+     * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
+     * @param origin Borrower address that is transferring collateral to Vault or repaying a loan.
      * @param permit Data about permit deadline (uint256) and permit signature (64/65 bytes).
      *               Deadline and signature should be pack encoded together.
      *               Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
@@ -41,10 +57,10 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
 
     /**
      * push
-     * @dev function pushing an asset FROM the vault, sending to a defined recipient
-     * @dev this is used for claiming a paidback loan or defaulted collateral
-     * @param asset An asset construct - for definition see { MultiToken.sol }
-     * @param beneficiary An address of the recipient of the asset - is set in the PWN logic contract
+     * @dev Function pushing an asset FROM a vault TO a defined recipient.
+     *      This is used for claiming a paid back loan or a defaulted collateral, or returning collateral to a borrower.
+     * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
+     * @param beneficiary An address of a recipient of an asset.
      */
     function _push(MultiToken.Asset memory asset, address beneficiary) internal {
         asset.safeTransferAssetFrom(address(this), beneficiary);
@@ -53,11 +69,11 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
 
     /**
      * pushFrom
-     * @dev function pushing an asset FROM a lender, sending to a borrower
-     * @dev this function assumes prior approval for the asset to be spend by the borrower address
-     * @param asset An asset construct - for definition see { MultiToken.sol }
-     * @param origin An address of the lender who is providing the loan asset
-     * @param beneficiary An address of the recipient of the asset - is set in the PWN logic contract
+     * @dev Function pushing an asset FROM a lender TO a borrower.
+     *      The function assumes a prior token approval was made to a vault address.
+     * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
+     * @param origin An address of a lender who is providing a loan asset.
+     * @param beneficiary An address of the recipient of an asset.
      * @param permit Data about permit deadline (uint256) and permit signature (64/65 bytes).
      *               Deadline and signature should be pack encoded together.
      *               Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.

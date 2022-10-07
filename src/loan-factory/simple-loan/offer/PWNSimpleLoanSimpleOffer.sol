@@ -10,6 +10,10 @@ import "../../lib/PWNSignatureChecker.sol";
 import "../IPWNSimpleLoanFactory.sol";
 
 
+/**
+ * @title PWN Simple Loan Simple Offer
+ * @notice Loan factory contract creating a simple loan from a simple offer.
+ */
 contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl {
 
     string internal constant VERSION = "0.1.0";
@@ -19,30 +23,30 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
     |*----------------------------------------------------------*/
 
     /**
-     * EIP-712 offer struct type hash
+     * @dev EIP-712 simple offer struct type hash.
      */
     bytes32 constant internal OFFER_TYPEHASH = keccak256(
         "Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"
     );
 
-    // TODO: Doc
     PWNRevokedOfferNonce immutable internal revokedOfferNonce;
 
     /**
-     * Construct defining an Offer
-     * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155)
-     * @param collateralAddress Address of an asset used as a collateral
-     * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0
-     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1
-     * @param loanAssetAddress Address of an asset which is lended to borrower
-     * @param loanAmount Amount of tokens which is offered as a loan to borrower
-     * @param loanYield Amount of tokens which acts as a lenders loan interest. Borrower has to pay back borrowed amount + yield.
-     * @param duration Loan duration in seconds
-     * @param expiration Offer expiration timestamp in seconds
-     * @param borrower Address of a borrower. Only this address can accept an offer. If address is zero address, anybody with a collateral can accept an offer.
+     * @notice Construct defining an simple offer.
+     * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
+     * @param collateralAddress Address of an asset used as a collateral.
+     * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1.
+     * @param loanAssetAddress Address of an asset which is lended to a borrower.
+     * @param loanAmount Amount of tokens which is offered as a loan to a borrower
+     * @param loanYield Amount of tokens which acts as a lenders loan interest. Borrower has to pay back a borrowed amount + yield.
+     * @param duration Loan duration in seconds.
+     * @param expiration Offer expiration timestamp in seconds.
+     * @param borrower Address of a borrower. Only this address can accept an offer. If the address is zero address, anybody with a collateral can accept the offer.
      * @param lender Address of a lender. This address has to sign an offer to be valid.
-     * @param isPersistent If true, offer will not be revoked after acceptance. Persistent offer can be revoked manually.
+     * @param isPersistent If true, offer will not be revoked on acceptance. Persistent offer can be revoked manually.
      * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
+     *              Can be used to create a group of offers, where accepting one offer will make other offers in the group revoked.
      */
     struct Offer {
         MultiToken.Category collateralCategory;
@@ -60,14 +64,20 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
         bytes32 nonce;
     }
 
-    // TODO: Doc
+    /**
+     * @dev Mapping of offers made via on-chain transactions.
+     *      Could be used by contract wallets instead of EIP-1271.
+     *      (offer hash => is made)
+     */
     mapping (bytes32 => bool) public offersMade;
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    // TODO: Update for Dune
+    /**
+     * @dev Emitted when an offer is made via an on-chain transaction.
+     */
     event OfferMade(bytes32 indexed offerHash);
 
 
@@ -84,7 +94,11 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
     |*  # OFFER MANAGEMENT                                      *|
     |*----------------------------------------------------------*/
 
-    // TODO: Doc
+    /**
+     * @notice Make an on-chain offer.
+     * @dev Function will mark an offer hash as proposed. Offer will become acceptable by a borrower without an offer signature.
+     * @param offer Offer struct containing all needed offer data.
+     */
     function makeOffer(Offer calldata offer) external {
         // Check that caller is a lender
         require(msg.sender == offer.lender, "Caller is not stated as a lender");
@@ -103,7 +117,10 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
         emit OfferMade(offerStructHash);
     }
 
-    // TODO: Doc
+    /**
+     * @notice Helper function for revoking an offer nonce on behalf of a caller.
+     * @param offerNonce Offer nonce to be revoked.
+     */
     function revokeOfferNonce(bytes32 offerNonce) external {
         revokedOfferNonce.revokeOfferNonce(msg.sender, offerNonce);
     }
@@ -113,6 +130,9 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
     |*  # IPWNSimpleLoanFactory                                 *|
     |*----------------------------------------------------------*/
 
+    /**
+     * @notice See { IPWNSimpleLoanFactory.sol }.
+     */
     function createLOAN(
         address caller,
         bytes calldata loanFactoryData,
@@ -178,10 +198,9 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
     |*----------------------------------------------------------*/
 
     /**
-     * get offer hash
-     * @notice Hash offer struct according to EIP-712
-     * @param offer Offer struct to be hashed
-     * @return Offer struct hash
+     * @notice Get an offer hash according to EIP-712
+     * @param offer Offer struct to be hashed.
+     * @return Offer struct hash.
      */
     function getOfferHash(Offer memory offer) public view returns (bytes32) {
         return keccak256(abi.encodePacked(

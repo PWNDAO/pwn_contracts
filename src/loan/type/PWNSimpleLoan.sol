@@ -11,6 +11,11 @@ import "../PWNVault.sol";
 import "../PWNLOAN.sol";
 
 
+/**
+ * @title PWN Simple Loan
+ * @notice Contract managing a simple loan in PWN protocol.
+ * @dev Acts as a vault for every loan created by this contract.
+ */
 contract PWNSimpleLoan is PWNVault {
 
     string internal constant VERSION = "0.1.0";
@@ -19,22 +24,19 @@ contract PWNSimpleLoan is PWNVault {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    // TODO: Doc
     PWNHub immutable internal hub;
-    // TODO: Doc
     PWNLOAN immutable internal loanToken;
-    // TODO: Doc
     PWNConfig immutable internal config;
 
     /**
-     * Struct defining a LOAN
-     * @param status 0 == none/dead || 2 == running/accepted offer || 3 == paid back || 4 == expired
-     * @param borrower Address of the borrower - stays the same for entire lifespan of the token
-     * @param duration Loan duration in seconds
-     * @param expiration Unix timestamp (in seconds) setting up the default deadline
-     * @param collateral Asset used as a loan collateral. Consisting of another `Asset` struct defined in the MultiToken library
-     * @param asset Asset to be borrowed by lender to borrower. Consisting of another `Asset` struct defined in the MultiToken library
-     * @param loanRepayAmount Amount of LOAN asset to be repaid
+     * @notice Struct defining a loan.
+     * @param status 0 == none/dead || 2 == running/accepted offer || 3 == paid back || 4 == expired.
+     * @param borrower Address of a borrower.
+     * @param duration Loan duration in seconds.
+     * @param expiration Unix timestamp (in seconds) setting up a default date.
+     * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
+     * @param asset Asset to be borrowed by lender to borrower. For a definition see { MultiToken dependency lib }.
+     * @param loanRepayAmount Amount of a loan asset to be paid back.
      */
     struct LOAN {
         uint8 status;
@@ -47,7 +49,7 @@ contract PWNSimpleLoan is PWNVault {
     }
 
     /**
-     * Mapping of all LOAN data by loan id
+     * Mapping of all LOAN data by loan id.
      */
     mapping (uint256 => LOAN) public LOANs;
 
@@ -56,9 +58,19 @@ contract PWNSimpleLoan is PWNVault {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    // TODO: Update for Dune
+    /**
+     * @dev Emitted when a new loan in created.
+     */
     event LOANCreated(uint256 indexed loanId, address indexed lender);
+
+    /**
+     * @dev Emitted when a loan in paid back.
+     */
     event LOANPaidBack(uint256 loanId);
+
+    /**
+     * @dev Emitted when a repaid or defaulted loan in claimed.
+     */
     event LOANClaimed(uint256 loanId);
 
 
@@ -77,7 +89,16 @@ contract PWNSimpleLoan is PWNVault {
     |*  # CREATE LOAN                                           *|
     |*----------------------------------------------------------*/
 
-    // TODO: Doc
+    /**
+     * @notice Create a new loan by minting LOAN token for lender, transferring loan asset to borrower and collateral to a vault.
+     * @dev The function assumes a prior token approval to a vault address or permits.
+     * @param loanFactoryContract Address of a loan factory contract. Need to have `LOAN_FACTORY` tag in PWN Hub.
+     * @param loanFactoryData Encoded data for a loan factory.
+     * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
+     * @param loanAssetPermit Permit data for a loan asset signed by a lender.
+     * @param collateralPermit Permit data for a collateral signed by a borrower.
+     * @return loanId Id of a newly minted LOAN token.
+     */
     function createLOAN(
         address loanFactoryContract,
         bytes calldata loanFactoryData,
@@ -116,7 +137,14 @@ contract PWNSimpleLoan is PWNVault {
     |*  # REPAY LOAN                                            *|
     |*----------------------------------------------------------*/
 
-    // TODO: Doc
+    /**
+     * @notice Repay running loan.
+     * @dev Any address can repay a running loan, but a collateral will be transferred to a borrower address associated with the loan.
+     *      Repay will transfer a loan asset to a vault, waiting on a LOAN token holder to claim it.
+     *      The function assumes a prior token approval to a vault address or a permit.
+     * @param loanId Id of a loan that is being repaid.
+     * @param loanAssetPermit Permit data for a loan asset signed by a borrower.
+     */
     function repayLoan(
         uint256 loanId,
         bytes calldata loanAssetPermit
@@ -152,7 +180,12 @@ contract PWNSimpleLoan is PWNVault {
     |*  # CLAIM LOAN                                            *|
     |*----------------------------------------------------------*/
 
-    // TODO: Doc
+    /**
+     * @notice Claim a repaid or defaulted loan.
+     * @dev Only a LOAN token holder can claim a repaid or defaulted loan.
+     *      Claim will transfer the repaid loan asset or collateral to a LOAN token holder address and burn the LOAN token.
+     * @param loanId Id of a loan that is being claimed.
+     */
     function claimLoan(uint256 loanId) external {
         LOAN storage loan = LOANs[loanId];
 

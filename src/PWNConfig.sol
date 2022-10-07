@@ -4,14 +4,20 @@ pragma solidity 0.8.16;
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 
+/**
+ * @title PWN Config
+ * @notice Contract holding configurable values of PWN protocol.
+ */
 contract PWNConfig is Ownable {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    /// Fee size in basis points
-    /// 100 -> 1%
+    /**
+     * @notice Protocol fee value in basis points.
+     * @dev Value of 100 is 1% fee.
+     */
     uint16 public fee;
 
 
@@ -19,7 +25,10 @@ contract PWNConfig is Ownable {
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
 
-    event FeeUpdated(uint16 indexed oldFee, uint16 indexed newFee);
+    /**
+     * @dev Emitted when new fee value is set.
+     */
+    event FeeUpdated(uint16 oldFee, uint16 newFee);
 
 
     /*----------------------------------------------------------*|
@@ -33,9 +42,14 @@ contract PWNConfig is Ownable {
 
 
     /*----------------------------------------------------------*|
-    |*  # SETTERS                                               *|
+    |*  # CONFIG MANAGEMENT                                     *|
     |*----------------------------------------------------------*/
 
+    /**
+     * @notice Set new protocol fee value.
+     * @dev Only contract owner can call this function.
+     * @param _fee New fee value in basis points. Value of 100 is 1% fee.
+     */
     function setFee(uint16 _fee) external onlyOwner {
         uint16 oldFee = fee;
         fee = _fee;
