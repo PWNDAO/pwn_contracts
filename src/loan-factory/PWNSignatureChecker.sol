@@ -22,7 +22,9 @@ library PWNSignatureChecker {
                 abi.encodeWithSelector(IERC1271.isValidSignature.selector, hash, signature)
             );
             return
-                success && result.length == 32 && abi.decode(result, (bytes32)) == bytes32(IERC1271.isValidSignature.selector);
+                success &&
+                result.length == 32 &&
+                abi.decode(result, (bytes32)) == bytes32(IERC1271.isValidSignature.selector);
         }
         // Check that signature is valid for EOA
         else {
