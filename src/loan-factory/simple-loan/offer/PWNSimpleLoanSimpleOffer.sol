@@ -6,7 +6,7 @@ import "MultiToken/MultiToken.sol";
 import "../../../hub/PWNHubAccessControl.sol";
 import "../../../loan/type/PWNSimpleLoan.sol";
 import "../../PWNRevokedOfferNonce.sol";
-import "../../PWNSignatureChecker.sol";
+import "../../lib/PWNSignatureChecker.sol";
 import "../IPWNSimpleLoanFactory.sol";
 
 

@@ -18,6 +18,9 @@ abstract contract PWNLOANTest is Test {
     address activeLoanContract = address(0x01);
     address loanContract = address(0x02);
 
+    event LOANMinted(uint256 indexed loanId, address indexed owner);
+    event LOANBurned(uint256 indexed loanId);
+
     constructor() {
         vm.etch(hub, bytes("data"));
     }
@@ -121,9 +124,16 @@ contract PWNLOAN_Mint_Test is PWNLOANTest {
         assertTrue(loanId == lastLoanId + 1);
     }
 
-    // function test_shouldEmit...Event() external {
+    function test_shouldEmitEvent_LOANMinted() external {
+        uint256 lastLoanId = 3123;
+        vm.store(address(loanToken), LAST_LOAN_ID_SLOT, bytes32(lastLoanId));
 
-    // }
+        vm.expectEmit(true, true, false, false);
+        emit LOANMinted(lastLoanId + 1, alice);
+
+        vm.prank(activeLoanContract);
+        loanToken.mint(alice);
+    }
 
 }
 
@@ -172,8 +182,12 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
         loanToken.ownerOf(loanId);
     }
 
-    // function test_shouldEmit...Event() external {
+    function test_shouldEmitEvent_LOANBurned() external {
+        vm.expectEmit(true, false, false, false);
+        emit LOANBurned(loanId);
 
-    // }
+        vm.prank(activeLoanContract);
+        loanToken.burn(loanId);
+    }
 
 }

@@ -12,9 +12,9 @@ import "../../src/loan/PWNLOAN.sol";
 import "../../src/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
 import "../../src/loan-factory/PWNRevokedOfferNonce.sol";
 import "../../src/PWNConfig.sol";
-import "../helpers/token/T20.sol";
-import "../helpers/token/T721.sol";
-import "../helpers/token/T1155.sol";
+import "../helper/token/T20.sol";
+import "../helper/token/T721.sol";
+import "../helper/token/T1155.sol";
 
 
 contract PWNSimpleLoanSimpleOfferIntegrationTest is Test {

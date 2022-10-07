@@ -18,6 +18,14 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
 
 
     /*----------------------------------------------------------*|
+    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*----------------------------------------------------------*/
+
+    event LOANMinted(uint256 indexed loanId, address indexed owner);
+    event LOANBurned(uint256 indexed loanId);
+
+
+    /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
@@ -34,14 +42,14 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
         loanId = ++lastLoanId;
         loanContract[loanId] = msg.sender;
         _mint(owner, loanId);
-        // TODO: Emit
+        emit LOANMinted(loanId, owner);
     }
 
     function burn(uint256 loanId) external onlyLoan {
         require(loanContract[loanId] == msg.sender, "Loan contract did not mint given loan id");
         delete loanContract[loanId];
         _burn(loanId);
-        // TODO: Emit
+        emit LOANBurned(loanId);
     }
 
 }

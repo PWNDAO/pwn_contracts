@@ -19,6 +19,7 @@ contract PWNSimpleLoan is PWNVault {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
+    // TODO: Doc
     PWNHub immutable internal hub;
     // TODO: Doc
     PWNLOAN immutable internal loanToken;
