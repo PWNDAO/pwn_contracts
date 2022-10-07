@@ -121,12 +121,13 @@ contract PWNSimpleLoan is PWNVault {
         bytes calldata loanAssetPermit
     ) external {
         LOAN storage loan = LOANs[loanId];
+        uint8 status = loan.status;
 
         // Check that loan is not from a different loan contract
-        require(loan.status != 0, "Loan does not exist or is not from current loan contract");
+        require(status != 0, "Loan does not exist or is not from current loan contract");
 
         // Check that loan running
-        require(loan.status == 2, "Loan is not running");
+        require(status == 2, "Loan is not running");
 
         // Check that loan is not expired
         require(loan.expiration > block.timestamp, "Loan is expired");
@@ -152,30 +153,47 @@ contract PWNSimpleLoan is PWNVault {
 
     // TODO: Doc
     function claimLoan(uint256 loanId) external {
-        LOAN memory loan = LOANs[loanId];
+        LOAN storage loan = LOANs[loanId];
 
         // Check that caller is LOAN token holder
         require(loanToken.ownerOf(loanId) == msg.sender, "Caller is not a LOAN token holder");
 
-        // Check that loan can be claimed
-        require(loan.status == 3 || (loan.status == 2 && loan.expiration <= block.timestamp), "Loan can't be claimed yet or is not from current loan contract");
+        // Loan has been paid back
+        if (loan.status == 3) {
+            MultiToken.Asset memory loanAsset = MultiToken.Asset({
+                category: loan.asset.category,
+                assetAddress: loan.asset.assetAddress,
+                id: loan.asset.id,
+                amount: loan.loanRepayAmount
+            });
 
-        // Delete loan data and burn loan token
-        delete LOANs[loanId];
-        loanToken.burn(loanId);
+            // Delete loan data & burn LOAN token before calling safe transfer
+            _deleteLoan(loanId);
 
-        if (loan.status == 3) { // Loan has been paid back
             // Transfer repaid loan to lender
-            MultiToken.Asset memory repayLoanAsset = loan.asset;
-            repayLoanAsset.amount = loan.loanRepayAmount;
+            _push(loanAsset, msg.sender);
+        }
+        // Loan is running but expired
+        else if (loan.status == 2 && loan.expiration <= block.timestamp) {
+             MultiToken.Asset memory collateral = loan.collateral;
 
-            _push(repayLoanAsset, msg.sender);
-        } else { // Loan is running but expired
-             // Transfer collateral to lender
-            _push(loan.collateral, msg.sender);
+            // Delete loan data & burn LOAN token before calling safe transfer
+            _deleteLoan(loanId);
+
+            // Transfer collateral to lender
+            _push(collateral, msg.sender);
+        }
+        // Loan is in wrong state or from different loan contract
+        else {
+            revert("Loan can't be claimed yet or is not from current loan contract");
         }
 
         emit LOANClaimed(loanId);
+    }
+
+    function _deleteLoan(uint256 loanId) private {
+        loanToken.burn(loanId);
+        delete LOANs[loanId];
     }
 
 }

@@ -155,7 +155,7 @@ contract PWNSimpleLoanSimpleOffer is IPWNSimpleLoanFactory, PWNHubAccessControl 
         // Create loan object
         loan = PWNSimpleLoan.LOAN({
             status: 2,
-            borrower: caller,
+            borrower: borrower,
             duration: offer.duration,
             expiration: uint40(block.timestamp) + offer.duration,
             collateral: collateral,

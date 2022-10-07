@@ -230,7 +230,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
     function test_shouldFail_whenPassingInvalidOfferData() external {
         vm.expectRevert();
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(uint16(1), uint256(3213), address(0x01320), false, "whhhat?"), signature);
+        offerContract.createLOAN(borrower, abi.encode(uint16(1), uint256(3213), address(0x01320), false, "whaaaaat?"), signature);
     }
 
     function test_shouldFail_whenInvalidSignature_whenEOA() external {
