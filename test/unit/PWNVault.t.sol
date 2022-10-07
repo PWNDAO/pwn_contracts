@@ -91,7 +91,7 @@ contract PWNVault_Pull_Test is PWNVaultTest {
         vault.pull(asset, alice, "");
     }
 
-    function test_shouldEmitVaultPullEvent() external {
+    function test_shouldEmitEvent_VaultPull() external {
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
 
         vm.expectEmit(true, true, false, false);
@@ -119,7 +119,7 @@ contract PWNVault_Push_Test is PWNVaultTest {
         vault.push(asset, alice);
     }
 
-    function test_shouldEmitVaultPushEvent() external {
+    function test_shouldEmitEvent_VaultPush() external {
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
 
         vm.expectEmit(true, true, false, false);
@@ -170,7 +170,7 @@ contract PWNVault_PushFrom_Test is PWNVaultTest {
         vault.pushFrom(asset, alice, bob, "");
     }
 
-    function test_shouldEmitVaultPushFromEvent() external {
+    function test_shouldEmitEvent_VaultPushFrom() external {
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
 
         vm.expectEmit(true, true, true, false);

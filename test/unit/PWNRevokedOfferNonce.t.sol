@@ -66,7 +66,7 @@ contract PWNRevokedOfferNonce_RevokeOfferNonce_Test is PWNRevokedOfferNonceTest 
         assertTrue(uint256(isRevokedValue) == 1);
     }
 
-    function test_shouldEmitOfferNonceRevokedEvent() external {
+    function test_shouldEmitEvent_OfferNonceRevoked() external {
         vm.expectEmit(true, true, false, false);
         emit OfferNonceRevoked(alice, nonce);
 
@@ -130,7 +130,7 @@ contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferN
         assertTrue(uint256(isRevokedValue) == 1);
     }
 
-    function test_shouldEmitOfferNonceRevokedEvent() external {
+    function test_shouldEmitEvent_OfferNonceRevoked() external {
         vm.expectEmit(true, true, false, false);
         emit OfferNonceRevoked(alice, nonce);
 

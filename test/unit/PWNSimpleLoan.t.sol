@@ -264,7 +264,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
-    function test_shouldEmitLOANCreatedEvent() external {
+    function test_shouldEmitEvent_LOANCreated() external {
         vm.expectEmit(true, true, false, false);
         emit LOANCreated(loanId, lender);
 
@@ -373,7 +373,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         loan.repayLoan(loanId, loanAssetPermit);
     }
 
-    function test_shouldEmitLOANPaidBackEvent() external {
+    function test_shouldEmitEvent_LOANPaidBack() external {
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectEmit(true, false, false, false);
@@ -517,7 +517,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         loan.claimLoan(loanId);
     }
 
-    function test_shouldEmitLOANClaimedEvent() external {
+    function test_shouldEmitEvent_LOANClaimed() external {
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectEmit(true, false, false, false);
