@@ -7,7 +7,7 @@ import "@pwn/hub/PWNHubAccessControl.sol";
 
 
 /**
- * @title PWN LOAN
+ * @title PWN LOAN token
  * @notice A LOAN token representing a loan in PWN protocol.
  * @dev Token doesn't hold any loan logic, just an address of a loan contract that minted the LOAN token.
  *      PWN LOAN token is shared between all loan contracts.

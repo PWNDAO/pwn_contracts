@@ -5,13 +5,13 @@ import "forge-std/Test.sol";
 
 import "MultiToken/MultiToken.sol";
 
+import "@pwn/config/PWNConfig.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan/PWNLOAN.sol";
 import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
 import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
-import "@pwn/PWNConfig.sol";
 
 import "@pwn-test/helper/token/T20.sol";
 import "@pwn-test/helper/token/T721.sol";

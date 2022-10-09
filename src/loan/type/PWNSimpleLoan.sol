@@ -3,12 +3,12 @@ pragma solidity 0.8.16;
 
 import "MultiToken/MultiToken.sol";
 
+import "@pwn/config/PWNConfig.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/PWNVault.sol";
 import "@pwn/loan/PWNLOAN.sol";
 import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
-import "@pwn/PWNConfig.sol";
 
 
 /**
