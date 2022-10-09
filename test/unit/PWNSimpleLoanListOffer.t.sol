@@ -7,18 +7,18 @@ import "MultiToken/MultiToken.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
-import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
+import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanListOffer.sol";
 
 
-abstract contract PWNSimpleLoanSimpleOfferTest is Test {
+abstract contract PWNSimpleLoanListOfferTest is Test {
 
     bytes32 internal constant OFFERS_MADE_SLOT = bytes32(uint256(0)); // `offersMade` mapping position
 
-    PWNSimpleLoanSimpleOffer offerContract;
+    PWNSimpleLoanListOffer offerContract;
     address hub = address(0x80b);
     address revokedOfferNonce = address(0x80c);
     address activeLoanContract = address(0x80d);
-    PWNSimpleLoanSimpleOffer.Offer offer;
+    PWNSimpleLoanListOffer.Offer offer;
     address token = address(0x070ce2);
     uint256 lenderPK = uint256(73661723);
     address lender = vm.addr(lenderPK);
@@ -30,12 +30,12 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
     }
 
     function setUp() virtual public {
-        offerContract = new PWNSimpleLoanSimpleOffer(hub, revokedOfferNonce);
+        offerContract = new PWNSimpleLoanListOffer(hub, revokedOfferNonce);
 
-        offer = PWNSimpleLoanSimpleOffer.Offer({
+        offer = PWNSimpleLoanListOffer.Offer({
             collateralCategory: MultiToken.Category.ERC721,
             collateralAddress: token,
-            collateralId: 42,
+            collateralIdsWhitelistMerkleRoot: bytes32(0),
             collateralAmount: 1032,
             loanAssetAddress: token,
             loanAmount: 1101001,
@@ -56,22 +56,22 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
     }
 
 
-    function _offerHash(PWNSimpleLoanSimpleOffer.Offer memory _offer) internal view returns (bytes32) {
+    function _offerHash(PWNSimpleLoanListOffer.Offer memory _offer) internal view returns (bytes32) {
         return keccak256(abi.encodePacked(
             "\x19\x01",
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("PWNSimpleLoanSimpleOffer"),
+                keccak256("PWNSimpleLoanListOffer"),
                 keccak256("1"),
                 block.chainid,
                 address(offerContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"),
+                keccak256("Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"),
                 abi.encode(
                     _offer.collateralCategory,
                     _offer.collateralAddress,
-                    _offer.collateralId,
+                    _offer.collateralIdsWhitelistMerkleRoot,
                     _offer.collateralAmount
                 ), // Need to prevent `slot(s) too deep inside the stack` error
                 abi.encode(
@@ -96,7 +96,7 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
 |*  # MAKE OFFER                                            *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanSimpleOfferTest {
+contract PWNSimpleLoanListOffer_MakeOffer_Test is PWNSimpleLoanListOfferTest {
 
     function test_shouldMakeOffer() external {
         vm.prank(lender);
@@ -116,10 +116,11 @@ contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanSimpleOfferTest
 |*  # CREATE LOAN                                           *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTest {
+contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
 
     bytes signature;
     address borrower = address(0x0303030303);
+    PWNSimpleLoanListOffer.OfferValues offerValues;
 
     function setUp() override public {
         super.setUp();
@@ -136,16 +137,21 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         );
 
         signature = "";
+
+        offerValues = PWNSimpleLoanListOffer.OfferValues({
+            collateralId: 32,
+            merkleInclusionProof: new bytes32[](0)
+        });
     }
 
     // Helpers
 
-    function _signOffer(uint256 pk, PWNSimpleLoanSimpleOffer.Offer memory _offer) private returns (bytes memory) {
+    function _signOffer(uint256 pk, PWNSimpleLoanListOffer.Offer memory _offer) private returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _offerHash(_offer));
         return abi.encodePacked(r, s, v);
     }
 
-    function _signOfferCompact(uint256 pk, PWNSimpleLoanSimpleOffer.Offer memory _offer) private returns (bytes memory) {
+    function _signOfferCompact(uint256 pk, PWNSimpleLoanListOffer.Offer memory _offer) private returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _offerHash(_offer));
         return abi.encodePacked(r, bytes32(uint256(v) - 27) << 255 | s);
     }
@@ -155,7 +161,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
 
     function test_shouldFail_whenCallerIsNotActiveLoan() external {
         vm.expectRevert("Caller is not active loan");
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenPassingInvalidOfferData() external {
@@ -169,7 +175,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
 
         vm.expectRevert("Invalid offer signature");
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenInvalidSignature_whenContractAccount() external {
@@ -177,7 +183,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
 
         vm.expectRevert("Invalid offer signature");
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_whenOfferHasBeenMadeOnchain() external {
@@ -188,21 +194,21 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         );
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_withValidSignature_whenEOA_whenStandardSignature() external {
         signature = _signOffer(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_withValidSignature_whenEOA_whenCompactEIP2098Signature() external {
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_whenValidSignature_whenContractAccount() external {
@@ -215,7 +221,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         );
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenOfferIsExpired() external {
@@ -225,7 +231,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
 
         vm.expectRevert("Offer is expired");
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_whenOfferHasNoExpiration() external {
@@ -234,7 +240,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_whenOfferIsNotExpired() external {
@@ -243,7 +249,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenOfferIsRevoked() external {
@@ -261,7 +267,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
 
         vm.expectRevert("Offer is revoked or has been accepted");
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenCallerIsNotBorrower_whenSetBorrower() external {
@@ -270,7 +276,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
 
         vm.expectRevert("Caller is not offer borrower");
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldRevokeOffer_whenIsNotPersistent() external {
@@ -283,7 +289,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         );
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     // This test should fail because `revokeOfferNonce` is not called for persistent offer
@@ -297,7 +303,45 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         );
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+    }
+
+    function test_shouldAcceptAnyCollateralId_whenMerkleRootIsZero() external {
+        offerValues.collateralId = 331;
+        offer.collateralIdsWhitelistMerkleRoot = bytes32(0);
+        signature = _signOfferCompact(lenderPK, offer);
+
+        vm.prank(activeLoanContract);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+    }
+
+    function test_shouldPass_whenGivenCollateralIdIsWhitelisted() external {
+        bytes32 id1Hash = keccak256(abi.encodePacked(uint256(331)));
+        bytes32 id2Hash = keccak256(abi.encodePacked(uint256(133)));
+        offer.collateralIdsWhitelistMerkleRoot = keccak256(abi.encodePacked(id1Hash, id2Hash));
+        signature = _signOfferCompact(lenderPK, offer);
+
+        offerValues.collateralId = 331;
+        offerValues.merkleInclusionProof = new bytes32[](1);
+        offerValues.merkleInclusionProof[0] = id2Hash;
+
+        vm.prank(activeLoanContract);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+    }
+
+    function test_shouldFail_whenGivenCollateralIdIsNotWhitelisted() external {
+        bytes32 id1Hash = keccak256(abi.encodePacked(uint256(331)));
+        bytes32 id2Hash = keccak256(abi.encodePacked(uint256(133)));
+        offer.collateralIdsWhitelistMerkleRoot = keccak256(abi.encodePacked(id1Hash, id2Hash));
+        signature = _signOfferCompact(lenderPK, offer);
+
+        offerValues.collateralId = 333;
+        offerValues.merkleInclusionProof = new bytes32[](1);
+        offerValues.merkleInclusionProof[0] = id2Hash;
+
+        vm.expectRevert("Given collateral id is not whitelisted");
+        vm.prank(activeLoanContract);
+        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldReturnCorrectValues() external {
@@ -306,7 +350,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        (PWNSimpleLoan.LOAN memory loan, address _lender, address _borrower) = offerContract.createLOAN(borrower, abi.encode(offer), signature);
+        (PWNSimpleLoan.LOAN memory loan, address _lender, address _borrower) = offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
 
         // LOAN
         assertTrue(loan.status == 2);
@@ -315,7 +359,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         assertTrue(loan.expiration == currentTimestamp + offer.duration);
         assertTrue(loan.collateral.category == offer.collateralCategory);
         assertTrue(loan.collateral.assetAddress == offer.collateralAddress);
-        assertTrue(loan.collateral.id == offer.collateralId);
+        assertTrue(loan.collateral.id == offerValues.collateralId);
         assertTrue(loan.collateral.amount == offer.collateralAmount);
         assertTrue(loan.asset.category == MultiToken.Category.ERC20);
         assertTrue(loan.asset.assetAddress == offer.loanAssetAddress);
@@ -335,7 +379,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
 |*  # GET OFFER HASH                                        *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanSimpleOffer_GetOfferHash_Test is PWNSimpleLoanSimpleOfferTest {
+contract PWNSimpleLoanListOffer_GetOfferHash_Test is PWNSimpleLoanListOfferTest {
 
     function test_shouldReturnOfferHash() external {
         assertEq(_offerHash(offer), offerContract.getOfferHash(offer));

@@ -65,7 +65,9 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
     /**
      * Construct defining an Offer concrete values
      * @param collateralId Selected collateral id to be used as a collateral.
-     * @param merkleInclusionProof Proof of inclusion, that selected collateral id is whitelisted. This proof should create same hash as the merkle tree root given in an Offer.
+     * @param merkleInclusionProof Proof of inclusion, that selected collateral id is whitelisted.
+     *                             This proof should create same hash as the merkle tree root given in an Offer.
+     *                             Can be empty for collection offers.
      */
     struct OfferValues {
         uint256 collateralId;
@@ -134,7 +136,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
             bool isVerifiedId = MerkleProof.verify(
                 offerValues.merkleInclusionProof,
                 offer.collateralIdsWhitelistMerkleRoot,
-                keccak256(abi.encodePacked(offerValues.collateralId)) // ??? Need to `encodePacked` here?
+                keccak256(abi.encodePacked(offerValues.collateralId))
             );
             require(isVerifiedId, "Given collateral id is not whitelisted");
         } // else: Any collateral id - collection offer
