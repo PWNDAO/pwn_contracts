@@ -108,37 +108,7 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
 
 contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanSimpleOfferTest {
 
-    function test_shouldFail_whenCallerIsNotLender() external {
-        vm.expectRevert("Caller is not stated as a lender");
-        offerContract.makeOffer(offer);
-    }
-
-    function test_shouldFail_whenOfferHasBeenMadeAlready() external {
-        _mockMadeOffer(offer);
-
-        vm.expectRevert("Offer already exists");
-        vm.prank(lender);
-        offerContract.makeOffer(offer);
-    }
-
-    function test_shouldFail_whenOfferIsRevoked() external {
-        vm.mockCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("revokedOfferNonces(address,bytes32)", offer.lender, offer.nonce),
-            abi.encode(true)
-        );
-
-        vm.expectCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("revokedOfferNonces(address,bytes32)", offer.lender, offer.nonce)
-        );
-
-        vm.expectRevert("Offer nonce is revoked");
-        vm.prank(lender);
-        offerContract.makeOffer(offer);
-    }
-
-    function test_shouldMarkOfferAsMade() external {
+    function test_shouldMakeOffer() external {
         vm.prank(lender);
         offerContract.makeOffer(offer);
 
@@ -147,35 +117,6 @@ contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanSimpleOfferTest
             keccak256(abi.encode(_offerHash(offer), OFFERS_MADE_SLOT))
         );
         assertEq(isMadeValue, bytes32(uint256(1)));
-    }
-
-    function test_shouldEmitEvent_OfferMade() external {
-        vm.expectEmit(true, false, false, false);
-        emit OfferMade(_offerHash(offer));
-
-        vm.prank(lender);
-        offerContract.makeOffer(offer);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # REVOKE OFFER NONCE                                    *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanSimpleOffer_RevokeOfferNonce_Test is PWNSimpleLoanSimpleOfferTest {
-
-    function test_shouldCallRevokeOfferNonce() external {
-        bytes32 nonce = keccak256("its my monkey");
-
-        vm.expectCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("revokeOfferNonce(address,bytes32)", lender, nonce)
-        );
-
-        vm.prank(lender);
-        offerContract.revokeOfferNonce(nonce);
     }
 
 }
