@@ -5,6 +5,8 @@ import "forge-std/Test.sol";
 
 import "MultiToken/MultiToken.sol";
 
+import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+
 import "@pwn/config/PWNConfig.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
@@ -32,6 +34,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is Test {
     PWNRevokedOfferNonce revokedOfferNonce;
     PWNSimpleLoanSimpleOffer simpleOffer;
 
+    address admin = address(0xad814);
     uint256 lenderPK = uint256(777);
     address lender = vm.addr(lenderPK);
     address borrower = address(0x1001);
@@ -40,8 +43,14 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is Test {
 
     function setUp() external {
         // Deploy realm
+        PWNConfig configSingleton = new PWNConfig();
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(configSingleton),
+            admin,
+            abi.encodeWithSignature("initialize(uint16,address)", 0, address(this))
+        );
+        config = PWNConfig(address(proxy));
         hub = new PWNHub();
-        config = new PWNConfig(0);
 
         loanToken = new PWNLOAN(address(hub));
         simpleLoan = new PWNSimpleLoan(address(hub), address(loanToken), address(config));

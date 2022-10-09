@@ -2,13 +2,17 @@
 pragma solidity 0.8.16;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
 
 /**
  * @title PWN Config
  * @notice Contract holding configurable values of PWN protocol.
+ * @dev Is intendet to be used as a proxy via `TransparentUpgradeableProxy`.
  */
-contract PWNConfig is Ownable {
+contract PWNConfig is Ownable, Initializable {
+
+    string internal constant VERSION = "0.1.0";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -35,9 +39,9 @@ contract PWNConfig is Ownable {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor(uint16 _fee) Ownable() {
-        fee = _fee;
-        emit FeeUpdated(0, _fee);
+    function initialize(uint16 _fee, address _owner) initializer public {
+        _transferOwnership(_owner);
+        _setFee(_fee);
     }
 
 
@@ -51,6 +55,10 @@ contract PWNConfig is Ownable {
      * @param _fee New fee value in basis points. Value of 100 is 1% fee.
      */
     function setFee(uint16 _fee) external onlyOwner {
+        _setFee(_fee);
+    }
+
+    function _setFee(uint16 _fee) private {
         uint16 oldFee = fee;
         fee = _fee;
         emit FeeUpdated(oldFee, _fee);
