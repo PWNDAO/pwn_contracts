@@ -48,9 +48,9 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessContr
     /**
      * @notice Make an on-chain offer.
      * @dev Function will mark an offer hash as proposed. Offer will become acceptable by a borrower without an offer signature.
-     * @param offerStructHash TODO
-     * @param lender TODO
-     * @param nonce TODO
+     * @param offerStructHash Hash of a proposed offer.
+     * @param lender Address of an offer proposer (lender).
+     * @param nonce Nonce used in an offer.
      */
     function _makeOffer(bytes32 offerStructHash, address lender, bytes32 nonce) internal {
         // Check that caller is a lender
