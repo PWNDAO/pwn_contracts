@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "../../hub/PWNHubAccessControl.sol";
-import "../../loan/type/PWNSimpleLoan.sol";
-import "../PWNRevokedOfferNonce.sol";
-import "./IPWNSimpleLoanFactory.sol";
+import "@pwn/hub/PWNHubAccessControl.sol";
+import "@pwn/loan/type/PWNSimpleLoan.sol";
+import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
+import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
 
 
 abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessControl {

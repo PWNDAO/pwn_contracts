@@ -3,8 +3,8 @@ pragma solidity 0.8.16;
 
 import "MultiToken/MultiToken.sol";
 
-import "../PWNSimpleLoanOffer.sol";
-import "../../lib/PWNSignatureChecker.sol";
+import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
+import "@pwn/loan-factory/simple-loan/PWNSimpleLoanOffer.sol";
 
 
 /**

@@ -5,16 +5,17 @@ import "forge-std/Test.sol";
 
 import "MultiToken/MultiToken.sol";
 
-import "../../src/hub/PWNHub.sol";
-import "../../src/hub/PWNHubTags.sol";
-import "../../src/loan/type/PWNSimpleLoan.sol";
-import "../../src/loan/PWNLOAN.sol";
-import "../../src/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
-import "../../src/loan-factory/PWNRevokedOfferNonce.sol";
-import "../../src/PWNConfig.sol";
-import "../helper/token/T20.sol";
-import "../helper/token/T721.sol";
-import "../helper/token/T1155.sol";
+import "@pwn/hub/PWNHub.sol";
+import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/loan/type/PWNSimpleLoan.sol";
+import "@pwn/loan/PWNLOAN.sol";
+import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
+import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
+import "@pwn/PWNConfig.sol";
+
+import "@pwn-test/helper/token/T20.sol";
+import "@pwn-test/helper/token/T721.sol";
+import "@pwn-test/helper/token/T1155.sol";
 
 
 contract PWNSimpleLoanSimpleOfferIntegrationTest is Test {

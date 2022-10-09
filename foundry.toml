@@ -2,6 +2,9 @@
 solc_version = '0.8.16'
 
 remappings = [
+    "@pwn/=src/",
+    "@pwn-test/=test/",
+
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
     "openzeppelin-contracts/contracts/=lib/openzeppelin-contracts/contracts/"
 ]

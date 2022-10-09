@@ -3,8 +3,8 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "../../src/hub/PWNHubTags.sol";
-import "../../src/loan-factory/PWNRevokedOfferNonce.sol";
+import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
 
 
 abstract contract PWNRevokedOfferNonceTest is Test {

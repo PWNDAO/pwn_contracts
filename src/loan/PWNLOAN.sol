@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
-import "../hub/PWNHubAccessControl.sol";
+import "@pwn/hub/PWNHubAccessControl.sol";
 
 
 /**
