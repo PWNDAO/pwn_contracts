@@ -214,6 +214,11 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         ));
     }
 
+
+    /*----------------------------------------------------------*|
+    |*  # LOAN FACTORY DATA ENCODING                            *|
+    |*----------------------------------------------------------*/
+
     /// TODO: Doc
     function encodeLoanFactoryData(Offer memory offer, OfferValues memory offerValues) external pure returns (bytes memory) {
         return abi.encode(offer, offerValues);

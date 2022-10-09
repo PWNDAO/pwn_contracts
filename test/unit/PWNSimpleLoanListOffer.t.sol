@@ -19,6 +19,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
     address revokedOfferNonce = address(0x80c);
     address activeLoanContract = address(0x80d);
     PWNSimpleLoanListOffer.Offer offer;
+    PWNSimpleLoanListOffer.OfferValues offerValues;
     address token = address(0x070ce2);
     uint256 lenderPK = uint256(73661723);
     address lender = vm.addr(lenderPK);
@@ -46,6 +47,11 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
             lender: lender,
             isPersistent: false,
             nonce: keccak256("nonce_1")
+        });
+
+        offerValues = PWNSimpleLoanListOffer.OfferValues({
+            collateralId: 32,
+            merkleInclusionProof: new bytes32[](0)
         });
 
         vm.mockCall(
@@ -120,7 +126,6 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
 
     bytes signature;
     address borrower = address(0x0303030303);
-    PWNSimpleLoanListOffer.OfferValues offerValues;
 
     function setUp() override public {
         super.setUp();
@@ -137,11 +142,6 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         );
 
         signature = "";
-
-        offerValues = PWNSimpleLoanListOffer.OfferValues({
-            collateralId: 32,
-            merkleInclusionProof: new bytes32[](0)
-        });
     }
 
     // Helpers
@@ -383,6 +383,19 @@ contract PWNSimpleLoanListOffer_GetOfferHash_Test is PWNSimpleLoanListOfferTest 
 
     function test_shouldReturnOfferHash() external {
         assertEq(_offerHash(offer), offerContract.getOfferHash(offer));
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # LOAN FACTORY DATA ENCODING                            *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanListOffer_EncodeLoanFactoryData_Test is PWNSimpleLoanListOfferTest {
+
+    function test_shouldReturnEncodedLoanFactoryDate() external {
+        assertEq(abi.encode(offer, offerValues), offerContract.encodeLoanFactoryData(offer, offerValues));
     }
 
 }
