@@ -40,6 +40,11 @@ contract PWNConfig is Ownable, Initializable {
      */
     event FeeUpdated(uint16 oldFee, uint16 newFee);
 
+    /**
+     * @dev Emitted when new LOAN token metadata uri is set.
+     */
+    event LoanMetadataUriUpdated(address indexed loanContract, string newUri);
+
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
@@ -52,7 +57,7 @@ contract PWNConfig is Ownable, Initializable {
 
 
     /*----------------------------------------------------------*|
-    |*  # CONFIG MANAGEMENT                                     *|
+    |*  # FEE MANAGEMENT                                        *|
     |*----------------------------------------------------------*/
 
     /**
@@ -82,6 +87,7 @@ contract PWNConfig is Ownable, Initializable {
      */
     function setLoanMetadataUri(address loanContract, string memory metadataUri) external onlyOwner {
         loanMetadataUri[loanContract] = metadataUri;
+        emit LoanMetadataUriUpdated(loanContract, metadataUri);
     }
 
 }
