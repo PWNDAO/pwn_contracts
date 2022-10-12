@@ -528,3 +528,42 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
     }
 
 }
+
+
+/*----------------------------------------------------------*|
+|*  # LOAN METADATA URI                                     *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoan_LoanMetadataUri_Test is PWNSimpleLoanTest {
+
+    string tokenUri;
+
+    function setUp() override public {
+        super.setUp();
+
+        tokenUri = "test.uri.xyz";
+
+        vm.mockCall(
+            config,
+            abi.encodeWithSignature("loanMetadataUri(address)"),
+            abi.encode(tokenUri)
+        );
+    }
+
+
+    function test_shouldCallConfig() external {
+        vm.expectCall(
+            config,
+            abi.encodeWithSignature("loanMetadataUri(address)", loan)
+        );
+
+        loan.loanMetadataUri();
+    }
+
+    function test_shouldReturnCorrectValue() external {
+        string memory _tokenUri = loan.loanMetadataUri();
+
+        assertEq(tokenUri, _tokenUri);
+    }
+
+}

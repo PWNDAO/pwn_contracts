@@ -191,3 +191,46 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
     }
 
 }
+
+
+/*----------------------------------------------------------*|
+|*  # TOKEN URI                                             *|
+|*----------------------------------------------------------*/
+
+contract PWNLOAN_TokenUri_Test is PWNLOANTest {
+
+    string tokenUri;
+    uint256 loanId;
+
+    function setUp() override public {
+        super.setUp();
+
+        tokenUri = "test.uri.xyz";
+
+        vm.mockCall(
+            activeLoanContract,
+            abi.encodeWithSignature("loanMetadataUri()"),
+            abi.encode(tokenUri)
+        );
+
+        vm.prank(activeLoanContract);
+        loanId = loanToken.mint(alice);
+    }
+
+
+    function test_shouldCallLoanContract() external {
+        vm.expectCall(
+            activeLoanContract,
+            abi.encodeWithSignature("loanMetadataUri()")
+        );
+
+        loanToken.tokenURI(loanId);
+    }
+
+    function test_shouldReturnCorrectValue() external {
+        string memory _tokenUri = loanToken.tokenURI(loanId);
+
+        assertEq(tokenUri, _tokenUri);
+    }
+
+}
