@@ -16,7 +16,7 @@ import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
  * @notice Contract managing a simple loan in PWN protocol.
  * @dev Acts as a vault for every loan created by this contract.
  */
-contract PWNSimpleLoan is PWNVault {
+contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
     string internal constant VERSION = "0.1.0";
 
@@ -217,7 +217,7 @@ contract PWNSimpleLoan is PWNVault {
             // Transfer collateral to lender
             _push(collateral, msg.sender);
         }
-        // Loan is in wrong state or from different loan contract
+        // Loan is in wrong state or from a different loan contract
         else {
             revert("Loan can't be claimed yet or is not from current loan contract");
         }
@@ -228,6 +228,18 @@ contract PWNSimpleLoan is PWNVault {
     function _deleteLoan(uint256 loanId) private {
         loanToken.burn(loanId);
         delete LOANs[loanId];
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # IPWNLoanMetadataProvider                              *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice See { IPWNLoanMetadataProvider.sol }.
+     */
+    function loanMetadataUri() override external view returns (string memory) {
+        return config.loanMetadataUri(address(this));
     }
 
 }

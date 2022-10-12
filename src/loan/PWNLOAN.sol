@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
 import "@pwn/hub/PWNHubAccessControl.sol";
+import "@pwn/loan/IPWNLoanMetadataProvider.sol";
 
 
 /**
@@ -80,6 +81,22 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
         delete loanContract[loanId];
         _burn(loanId);
         emit LOANBurned(loanId);
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # METADATA                                              *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Return a LOAN token metadata uri base on a loan contract that minted the token.
+     * @param tokenId Id of a LOAN token.
+     * @return Metadata uri for given token id (loan id).
+     */
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        _requireMinted(tokenId);
+
+        return IPWNLoanMetadataProvider(loanContract[tokenId]).loanMetadataUri();
     }
 
 }

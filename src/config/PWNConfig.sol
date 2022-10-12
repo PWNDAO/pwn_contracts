@@ -24,6 +24,12 @@ contract PWNConfig is Ownable, Initializable {
      */
     uint16 public fee;
 
+    /**
+     * @notice Mapping of a loan contract address to LOAN token metadata uri.
+     * @dev LOAN token minted by a loan contract will return metadata uri stored in this mapping.
+     */
+    mapping (address => string) public loanMetadataUri;
+
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
@@ -62,6 +68,20 @@ contract PWNConfig is Ownable, Initializable {
         uint16 oldFee = fee;
         fee = _fee;
         emit FeeUpdated(oldFee, _fee);
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # LOAN METADATA MANAGEMENT                              *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Set a LOAN token metadta uri for a specific loan contract.
+     * @param loanContract Address of a loan contract.
+     * @param metadataUri New value of LOAN token metadata uri for given `loanContract`.
+     */
+    function setLoanMetadataUri(address loanContract, string memory metadataUri) external onlyOwner {
+        loanMetadataUri[loanContract] = metadataUri;
     }
 
 }
