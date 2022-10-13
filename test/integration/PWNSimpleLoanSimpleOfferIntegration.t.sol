@@ -47,7 +47,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is Test {
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(configSingleton),
             admin,
-            abi.encodeWithSignature("initialize(uint16,address)", 0, address(this))
+            abi.encodeWithSignature("initialize(address, uint16)", address(this), 0)
         );
         config = PWNConfig(address(proxy));
         hub = new PWNHub();

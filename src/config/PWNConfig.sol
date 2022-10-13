@@ -50,7 +50,7 @@ contract PWNConfig is Ownable, Initializable {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    function initialize(uint16 _fee, address _owner) initializer public {
+    function initialize(address _owner, uint16 _fee) initializer public {
         _transferOwnership(_owner);
         _setFee(_fee);
     }
