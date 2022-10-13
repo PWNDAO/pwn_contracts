@@ -27,11 +27,6 @@ abstract contract PWNHubAccessControl {
         _;
     }
 
-    modifier onlyLoan() {
-        require(hub.hasTag(msg.sender, PWNHubTags.LOAN), "Caller is not loan contract");
-        _;
-    }
-
     modifier onlyLoanOffer() {
         require(hub.hasTag(msg.sender, PWNHubTags.LOAN_OFFER), "Caller is not loan offer");
         _;

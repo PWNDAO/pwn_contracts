@@ -73,10 +73,11 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
 
     /**
      * @notice Burn a LOAN token.
-     * @dev Only an addresse with associated `LOAN` tag in PWN Hub can call this function.
+     * @dev Any address that is associated with given loan id can call this function.
+     *      It is enabled to let deprecated loan contracts repay and claim existing loans.
      * @param loanId Id of a LOAN token to be burned.
      */
-    function burn(uint256 loanId) external onlyLoan {
+    function burn(uint256 loanId) external {
         require(loanContract[loanId] == msg.sender, "Loan contract did not mint given loan id");
         delete loanContract[loanId];
         _burn(loanId);

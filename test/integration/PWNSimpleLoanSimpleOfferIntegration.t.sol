@@ -47,7 +47,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is Test {
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(configSingleton),
             admin,
-            abi.encodeWithSignature("initialize(address, uint16)", address(this), 0)
+            abi.encodeWithSignature("initialize(address,uint16)", address(this), 0)
         );
         config = PWNConfig(address(proxy));
         hub = new PWNHub();
@@ -59,7 +59,6 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is Test {
         simpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedOfferNonce));
 
         // Set hub tags
-        hub.setTag(address(simpleLoan), PWNHubTags.LOAN, true);
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, true);
         hub.setTag(address(simpleOffer), PWNHubTags.LOAN_FACTORY, true);
         hub.setTag(address(simpleOffer), PWNHubTags.LOAN_OFFER, true);

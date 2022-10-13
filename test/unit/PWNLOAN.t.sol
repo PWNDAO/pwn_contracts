@@ -16,7 +16,6 @@ abstract contract PWNLOANTest is Test {
     address hub = address(0x80b);
     address alice = address(0xa11ce);
     address activeLoanContract = address(0x01);
-    address loanContract = address(0x02);
 
     event LOANMinted(uint256 indexed loanId, address indexed owner);
     event LOANBurned(uint256 indexed loanId);
@@ -35,12 +34,7 @@ abstract contract PWNLOANTest is Test {
         );
         vm.mockCall(
             hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", activeLoanContract),
-            abi.encode(true)
-        );
-        vm.mockCall(
-            hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", loanContract, PWNHubTags.LOAN),
+            abi.encodeWithSignature("hasTag(address,bytes32)", activeLoanContract, PWNHubTags.ACTIVE_LOAN),
             abi.encode(true)
         );
     }
@@ -79,12 +73,6 @@ contract PWNLOAN_Mint_Test is PWNLOANTest {
     function test_shouldFail_whenCallerIsNotActiveLoanContract() external {
         vm.expectRevert("Caller is not active loan");
         vm.prank(alice);
-        loanToken.mint(alice);
-    }
-
-    function test_shouldFail_whenCallerIsLoanContract() external {
-        vm.expectRevert("Caller is not active loan");
-        vm.prank(loanContract);
         loanToken.mint(alice);
     }
 
@@ -154,15 +142,9 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
     }
 
 
-    function test_shouldFail_whenCallerIsNotLoanContract() external {
-        vm.expectRevert("Caller is not loan contract");
-        vm.prank(alice);
-        loanToken.burn(loanId);
-    }
-
     function test_shouldFail_whenCallerIsNotStoredLoanContractForGivenLoanId() external {
         vm.expectRevert("Loan contract did not mint given loan id");
-        vm.prank(loanContract);
+        vm.prank(alice);
         loanToken.burn(loanId);
     }
 
