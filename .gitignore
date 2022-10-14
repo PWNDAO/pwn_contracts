@@ -1,21 +1,6 @@
 node_modules
+cache
+out
 .idea
 .vscode
 .env
-
-contracts/.deps
-/.deps/
-config/local.json
-
-#Hardhat files
-cache
-artifacts/*
-
-# Include ABI
-!/artifacts/contracts/
-/artifacts/contracts/*
-!/artifacts/contracts/*.sol
-/artifacts/contracts/*.sol/*.dbg.json
-
-/.vscode/
-/.keys/

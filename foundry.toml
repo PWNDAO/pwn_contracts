@@ -1,0 +1,9 @@
+[profile.default]
+solc_version = '0.8.16'
+
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "openzeppelin-contracts/contracts/=lib/openzeppelin-contracts/contracts/"
+]
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config
