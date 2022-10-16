@@ -107,11 +107,14 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @return `IERC721Receiver.onERC721Received.selector` if transfer is allowed
      */
     function onERC721Received(
-        address /*operator*/,
+        address operator,
         address /*from*/,
         uint256 /*tokenId*/,
         bytes calldata /*data*/
-    ) override external pure returns (bytes4) {
+    ) override external view returns (bytes4) {
+        if (operator != address(this))
+            revert PWNError.UnsupportedTransferFunction();
+
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -124,12 +127,15 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @return `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))` if transfer is allowed
      */
     function onERC1155Received(
-        address /*operator*/,
+        address operator,
         address /*from*/,
         uint256 /*id*/,
         uint256 /*value*/,
         bytes calldata /*data*/
-    ) override external pure returns (bytes4) {
+    ) override external view returns (bytes4) {
+        if (operator != address(this))
+            revert PWNError.UnsupportedTransferFunction();
+
         return IERC1155Receiver.onERC1155Received.selector;
     }
 

@@ -189,16 +189,26 @@ contract PWNVault_PushFrom_Test is PWNVaultTest {
 
 contract PWNVault_ReceivedHooks_Test is PWNVaultTest {
 
-    function test_shouldReturnCorrectVaule_onERC721Received() external {
-        bytes4 returnValue = vault.onERC721Received(address(0), address(0), 0, "");
+    function test_shouldReturnCorrectValue_whenOperatorIsVault_onERC721Received() external {
+        bytes4 returnValue = vault.onERC721Received(address(vault), address(0), 0, "");
 
         assertTrue(returnValue == IERC721Receiver.onERC721Received.selector);
     }
 
-    function test_shouldReturnCorrectVaule_onERC1155Received() external {
-        bytes4 returnValue = vault.onERC1155Received(address(0), address(0), 0, 0, "");
+    function test_shouldFail_whenOperatorIsNotVault_onERC721Received() external {
+        vm.expectRevert(abi.encodeWithSelector(PWNError.UnsupportedTransferFunction.selector));
+        vault.onERC721Received(address(0), address(0), 0, "");
+    }
+
+    function test_shouldReturnCorrectValue_whenOperatorIsVault_onERC1155Received() external {
+        bytes4 returnValue = vault.onERC1155Received(address(vault), address(0), 0, 0, "");
 
         assertTrue(returnValue == IERC1155Receiver.onERC1155Received.selector);
+    }
+
+    function test_shouldFail_whenOperatorIsNotVault_onERC1155Received() external {
+        vm.expectRevert(abi.encodeWithSelector(PWNError.UnsupportedTransferFunction.selector));
+        vault.onERC1155Received(address(0), address(0), 0, 0, "");
     }
 
     function test_shouldFail_whenOnERC1155BatchReceived() external {
