@@ -10,6 +10,7 @@ import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
 import "@pwn/loan/PWNVault.sol";
+import "@pwn/PWNError.sol";
 
 
 // The only reason for this contract is to expose internal functions of PWNVault
@@ -204,7 +205,7 @@ contract PWNVault_ReceivedHooks_Test is PWNVaultTest {
         uint256[] memory ids;
         uint256[] memory values;
 
-        vm.expectRevert("Unsupported transfer function");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.UnsupportedTransferFunction.selector));
         vault.onERC1155BatchReceived(address(0), address(0), ids, values, "");
     }
 

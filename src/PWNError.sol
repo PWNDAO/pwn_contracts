@@ -5,7 +5,6 @@ library PWNError {
 
     string internal constant VERSION = "0.1.0";
 
-
     // Access control
     error CallerMissingHubTag(bytes32);
 

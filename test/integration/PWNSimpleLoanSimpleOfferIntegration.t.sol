@@ -3,6 +3,8 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
+import "@pwn/PWNError.sol";
+
 import "@pwn-test/helper/BaseIntegrationTest.t.sol";
 
 
@@ -96,8 +98,12 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         uint256 loanId = _createERC1155Loan();
 
         // Try to repay loan
-        vm.warp(block.timestamp + uint256(offer.duration));
-        _repayLoanFailing(loanId, "Loan is expired");
+        uint256 expiration = block.timestamp + uint256(offer.duration);
+        vm.warp(expiration);
+        _repayLoanFailing(
+            loanId,
+            abi.encodeWithSelector(PWNError.LoanDefaulted.selector, uint40(expiration))
+        );
     }
 
 
@@ -201,7 +207,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         });
 
         // Fail to accept other offers with same nonce
-        vm.expectRevert("Offer is revoked or has been accepted");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
         vm.prank(borrower);
         simpleLoan.createLOAN({
             loanFactoryContract: address(simpleOffer),

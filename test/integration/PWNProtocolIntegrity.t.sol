@@ -3,6 +3,9 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
+import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/PWNError.sol";
+
 import "@pwn-test/helper/BaseIntegrationTest.t.sol";
 
 
@@ -13,7 +16,9 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Try to create LOAN
-        _createERC1155LoanFailing("Caller is not active loan");
+        _createERC1155LoanFailing(
+            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
+        );
     }
 
     function test_shouldRepayLOANWithNotActiveLoanContract() external {
@@ -69,7 +74,9 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         // Remove ACTIVE_LOAN tag
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
-        vm.expectRevert("Caller is not active loan");
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
+        );
         vm.prank(address(simpleLoan));
         simpleOffer.createLOAN(borrower, "", ""); // Offer data are not important in this test
     }
@@ -79,7 +86,9 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         hub.setTag(address(simpleOffer), PWNHubTags.LOAN_FACTORY, false);
 
         // Try to create LOAN
-        _createERC1155LoanFailing("Given contract is not loan factory");
+        _createERC1155LoanFailing(
+            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.LOAN_FACTORY)
+        );
     }
 
 }

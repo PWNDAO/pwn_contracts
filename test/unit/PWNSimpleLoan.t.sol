@@ -7,6 +7,7 @@ import "MultiToken/MultiToken.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
+import "@pwn/PWNError.sol";
 
 
 abstract contract PWNSimpleLoanTest is Test {
@@ -165,7 +166,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     function test_shouldFail_whenLoanFactoryContractIsNotTaggerInPWNHub() external {
         address notLoanFactory = address(0);
 
-        vm.expectRevert("Given contract is not loan factory");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.LOAN_FACTORY));
         loan.createLOAN(notLoanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
@@ -298,7 +299,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         simpleLoan.status = 0;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Loan does not exist or is not from current loan contract");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.NonExistingLoan.selector));
         loan.repayLoan(loanId, loanAssetPermit);
     }
 
@@ -306,7 +307,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         simpleLoan.status = 3;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Loan is not running");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidLoanStatus.selector, 3));
         loan.repayLoan(loanId, loanAssetPermit);
     }
 
@@ -314,7 +315,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         vm.warp(50039);
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Loan is expired");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.LoanDefaulted.selector, simpleLoan.expiration));
         loan.repayLoan(loanId, loanAssetPermit);
     }
 
@@ -408,13 +409,13 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
     function test_shouldFail_whenCallerIsNotLOANTokenHolder() external {
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Caller is not a LOAN token holder");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerNotLOANTokenHolder.selector));
         vm.prank(borrower);
         loan.claimLoan(loanId);
     }
 
     function test_shouldFail_whenLoanDoesNotExist() external {
-        vm.expectRevert("Loan can't be claimed yet or is not from current loan contract");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.NonExistingLoan.selector));
         vm.prank(lender);
         loan.claimLoan(loanId);
     }
@@ -423,7 +424,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Loan can't be claimed yet or is not from current loan contract");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidLoanStatus.selector, 2));
         vm.prank(lender);
         loan.claimLoan(loanId);
     }

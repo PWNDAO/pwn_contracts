@@ -132,7 +132,7 @@ abstract contract BaseIntegrationTest is Test {
         return _createERC1155LoanFailing("");
     }
 
-    function _createERC1155LoanFailing(bytes memory revertMessage) internal returns (uint256) {
+    function _createERC1155LoanFailing(bytes memory revertData) internal returns (uint256) {
         // Offer
         offer.collateralCategory = MultiToken.Category.ERC1155;
         offer.collateralAddress = address(t1155);
@@ -147,10 +147,10 @@ abstract contract BaseIntegrationTest is Test {
         t1155.setApprovalForAll(address(simpleLoan), true);
 
         // Create LOAN
-        return _createLoan(offer, revertMessage);
+        return _createLoan(offer, revertData);
     }
 
-    function _createLoan(PWNSimpleLoanSimpleOffer.Offer memory _offer, bytes memory revertMessage) private returns (uint256) {
+    function _createLoan(PWNSimpleLoanSimpleOffer.Offer memory _offer, bytes memory revertData) private returns (uint256) {
         // Sign offer
         bytes memory signature = _sign(lenderPK, simpleOffer.getOfferHash(_offer));
 
@@ -162,8 +162,8 @@ abstract contract BaseIntegrationTest is Test {
         loanAsset.approve(address(simpleLoan), 100e18);
 
         // Create LOAN
-        if (keccak256(revertMessage) != keccak256("")) {
-            vm.expectRevert(revertMessage);
+        if (keccak256(revertData) != keccak256("")) {
+            vm.expectRevert(revertData);
         }
         vm.prank(borrower);
         return simpleLoan.createLOAN({
@@ -179,7 +179,7 @@ abstract contract BaseIntegrationTest is Test {
         _repayLoanFailing(loanId, "");
     }
 
-    function _repayLoanFailing(uint256 loanId, bytes memory revertMessage) internal {
+    function _repayLoanFailing(uint256 loanId, bytes memory revertData) internal {
         // Get the yield by farming 100000% APR food tokens
         loanAsset.mint(borrower, 10e18);
 
@@ -188,8 +188,8 @@ abstract contract BaseIntegrationTest is Test {
         loanAsset.approve(address(simpleLoan), 110e18);
 
         // Repay loan
-        if (keccak256(revertMessage) != keccak256("")) {
-            vm.expectRevert(revertMessage);
+        if (keccak256(revertData) != keccak256("")) {
+            vm.expectRevert(revertData);
         }
         vm.prank(borrower);
         simpleLoan.repayLoan(loanId, "");
