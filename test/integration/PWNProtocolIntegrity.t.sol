@@ -82,12 +82,12 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
     }
 
     function test_shouldFail_whenPassingInvalidOfferContract() external {
-        // Remove LOAN_FACTORY tag
-        hub.setTag(address(simpleOffer), PWNHubTags.LOAN_FACTORY, false);
+        // Remove SIMPLE_LOAN_FACTORY tag
+        hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_FACTORY, false);
 
         // Try to create LOAN
         _createERC1155LoanFailing(
-            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.LOAN_FACTORY)
+            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.SIMPLE_LOAN_FACTORY)
         );
     }
 

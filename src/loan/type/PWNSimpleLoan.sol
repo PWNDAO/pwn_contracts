@@ -93,7 +93,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     /**
      * @notice Create a new loan by minting LOAN token for lender, transferring loan asset to borrower and collateral to a vault.
      * @dev The function assumes a prior token approval to a vault address or permits.
-     * @param loanFactoryContract Address of a loan factory contract. Need to have `LOAN_FACTORY` tag in PWN Hub.
+     * @param loanFactoryContract Address of a loan factory contract. Need to have `SIMPLE_LOAN_FACTORY` tag in PWN Hub.
      * @param loanFactoryData Encoded data for a loan factory.
      * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
      * @param loanAssetPermit Permit data for a loan asset signed by a lender.
@@ -108,8 +108,8 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         bytes calldata collateralPermit
     ) external returns (uint256 loanId) {
         // Check that loan factory contract is tagged in PWNHub
-        if (hub.hasTag(loanFactoryContract, PWNHubTags.LOAN_FACTORY) == false)
-            revert PWNError.CallerMissingHubTag(PWNHubTags.LOAN_FACTORY);
+        if (hub.hasTag(loanFactoryContract, PWNHubTags.SIMPLE_LOAN_FACTORY) == false)
+            revert PWNError.CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_FACTORY);
 
         // Build LOAN by loan factory
         (LOAN memory loan, address lender, address borrower) = IPWNSimpleLoanFactory(loanFactoryContract).createLOAN({
