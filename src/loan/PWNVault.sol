@@ -6,6 +6,8 @@ import "MultiToken/MultiToken.sol";
 import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
+import "@pwn/PWNError.sol";
+
 
 /**
  * @title PWN Vault
@@ -16,7 +18,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     using MultiToken for MultiToken.Asset;
 
     /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
     /**
@@ -146,7 +148,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256[] calldata /*values*/,
         bytes calldata /*data*/
     ) override external pure returns (bytes4) {
-        revert("Unsupported transfer function");
+        revert PWNError.UnsupportedTransferFunction();
     }
 
 

@@ -3,6 +3,7 @@ pragma solidity 0.8.16;
 
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/PWNError.sol";
 
 
 /**
@@ -23,12 +24,14 @@ abstract contract PWNHubAccessControl {
     |*----------------------------------------------------------*/
 
     modifier onlyActiveLoan() {
-        require(hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN), "Caller is not active loan");
+        if (hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN) == false)
+            revert PWNError.CallerMissingHubTag(PWNHubTags.ACTIVE_LOAN);
         _;
     }
 
     modifier onlyLoanOffer() {
-        require(hub.hasTag(msg.sender, PWNHubTags.LOAN_OFFER), "Caller is not loan offer");
+        if (hub.hasTag(msg.sender, PWNHubTags.LOAN_OFFER) == false)
+            revert PWNError.CallerMissingHubTag(PWNHubTags.LOAN_OFFER);
         _;
     }
 

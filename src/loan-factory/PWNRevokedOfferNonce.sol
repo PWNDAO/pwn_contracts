@@ -2,6 +2,7 @@
 pragma solidity 0.8.16;
 
 import "@pwn/hub/PWNHubAccessControl.sol";
+import "@pwn/PWNError.sol";
 
 
 /**
@@ -23,7 +24,7 @@ contract PWNRevokedOfferNonce is PWNHubAccessControl {
 
 
     /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
     /**
@@ -66,7 +67,8 @@ contract PWNRevokedOfferNonce is PWNHubAccessControl {
 
     function _revokeOfferNonce(address owner, bytes32 offerNonce) private {
         // Check that offer nonce is not have been revoked
-        require(revokedOfferNonces[owner][offerNonce] == false, "Nonce is already revoked");
+        if (revokedOfferNonces[owner][offerNonce] == true)
+            revert PWNError.NonceRevoked();
 
         // Revoke nonce
         revokedOfferNonces[owner][offerNonce] = true;

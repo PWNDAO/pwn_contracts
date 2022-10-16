@@ -5,6 +5,7 @@ import "MultiToken/MultiToken.sol";
 
 import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
 import "@pwn/loan-factory/simple-loan/PWNSimpleLoanOffer.sol";
+import "@pwn/PWNError.sol";
 
 
 /**
@@ -106,13 +107,19 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
 
         // Check that offer has been made via on-chain tx, EIP-1271 or signed off-chain
         if (offersMade[offerHash] == false)
-            require(PWNSignatureChecker.isValidSignatureNow(lender, offerHash, signature) == true, "Invalid offer signature");
+            if (PWNSignatureChecker.isValidSignatureNow(lender, offerHash, signature) == false)
+                revert PWNError.InvalidSignature();
 
         // Check valid offer
-        require(offer.expiration == 0 || block.timestamp < offer.expiration, "Offer is expired");
-        require(revokedOfferNonce.revokedOfferNonces(lender, offer.nonce) == false, "Offer is revoked or has been accepted");
+        if (offer.expiration != 0 && block.timestamp >= offer.expiration)
+            revert PWNError.OfferExpired();
+
+        if (revokedOfferNonce.revokedOfferNonces(lender, offer.nonce) == true)
+            revert PWNError.NonceRevoked();
+
         if (offer.borrower != address(0))
-            require(borrower == offer.borrower, "Caller is not offer borrower");
+            if (borrower != offer.borrower)
+                revert PWNError.CallerIsNotStatedBorrower(offer.borrower);
 
         // Prepare collateral and loan asset
         MultiToken.Asset memory collateral = MultiToken.Asset({

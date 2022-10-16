@@ -54,13 +54,16 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessContr
      */
     function _makeOffer(bytes32 offerStructHash, address lender, bytes32 nonce) internal {
         // Check that caller is a lender
-        require(msg.sender == lender, "Caller is not stated as a lender");
+        if (msg.sender != lender)
+            revert PWNError.CallerIsNotStatedLender(lender);
 
         // Check that offer has not been made
-        require(offersMade[offerStructHash] == false, "Offer already exists");
+        if (offersMade[offerStructHash] == true)
+            revert PWNError.OfferAlreadyExists();
 
         // Check that offer has not been revoked
-        require(revokedOfferNonce.revokedOfferNonces(lender, nonce) == false, "Offer nonce is revoked");
+        if (revokedOfferNonce.revokedOfferNonces(lender, nonce) == true)
+            revert PWNError.NonceRevoked();
 
         // Mark offer as made
         offersMade[offerStructHash] = true;

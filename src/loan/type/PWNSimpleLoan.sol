@@ -9,6 +9,7 @@ import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/PWNVault.sol";
 import "@pwn/loan/PWNLOAN.sol";
 import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
+import "@pwn/PWNError.sol";
 
 
 /**
@@ -107,7 +108,8 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         bytes calldata collateralPermit
     ) external returns (uint256 loanId) {
         // Check that loan factory contract is tagged in PWNHub
-        require(hub.hasTag(loanFactoryContract, PWNHubTags.LOAN_FACTORY), "Given contract is not loan factory");
+        if (hub.hasTag(loanFactoryContract, PWNHubTags.LOAN_FACTORY) == false)
+            revert PWNError.CallerMissingHubTag(PWNHubTags.LOAN_FACTORY);
 
         // Build LOAN by loan factory
         (LOAN memory loan, address lender, address borrower) = IPWNSimpleLoanFactory(loanFactoryContract).createLOAN({
@@ -153,13 +155,15 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         uint8 status = loan.status;
 
         // Check that loan is not from a different loan contract
-        require(status != 0, "Loan does not exist or is not from current loan contract");
-
+        if (status == 0)
+            revert PWNError.NonExistingLoan();
         // Check that loan running
-        require(status == 2, "Loan is not running");
+        else if (status != 2)
+            revert PWNError.InvalidLoanStatus(status);
 
         // Check that loan is not expired
-        require(loan.expiration > block.timestamp, "Loan is expired");
+        if (loan.expiration <= block.timestamp)
+            revert PWNError.LoanDefaulted(loan.expiration);
 
         // Move loan to repaid state
         loan.status = 3;
@@ -190,10 +194,14 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         LOAN storage loan = LOANs[loanId];
 
         // Check that caller is LOAN token holder
-        require(loanToken.ownerOf(loanId) == msg.sender, "Caller is not a LOAN token holder");
+        if (loanToken.ownerOf(loanId) != msg.sender)
+            revert PWNError.CallerNotLOANTokenHolder();
 
+        if (loan.status == 0) {
+            revert PWNError.NonExistingLoan();
+        }
         // Loan has been paid back
-        if (loan.status == 3) {
+        else if (loan.status == 3) {
             MultiToken.Asset memory loanAsset = MultiToken.Asset({
                 category: loan.asset.category,
                 assetAddress: loan.asset.assetAddress,
@@ -219,7 +227,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         }
         // Loan is in wrong state or from a different loan contract
         else {
-            revert("Loan can't be claimed yet or is not from current loan contract");
+            revert PWNError.InvalidLoanStatus(loan.status);
         }
 
         emit LOANClaimed(loanId);

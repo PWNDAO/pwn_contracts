@@ -5,6 +5,7 @@ import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
 import "@pwn/hub/PWNHubAccessControl.sol";
 import "@pwn/loan/IPWNLoanMetadataProvider.sol";
+import "@pwn/PWNError.sol";
 
 
 /**
@@ -31,7 +32,7 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
 
 
     /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
     /**
@@ -78,7 +79,9 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
      * @param loanId Id of a LOAN token to be burned.
      */
     function burn(uint256 loanId) external {
-        require(loanContract[loanId] == msg.sender, "Loan contract did not mint given loan id");
+        if (loanContract[loanId] != msg.sender)
+            revert PWNError.InvalidLoanContractCaller();
+
         delete loanContract[loanId];
         _burn(loanId);
         emit LOANBurned(loanId);
