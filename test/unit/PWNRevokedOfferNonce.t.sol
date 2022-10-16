@@ -140,3 +140,30 @@ contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferN
     }
 
 }
+
+
+/*----------------------------------------------------------*|
+|*  # IS OFFER NONCE REVOKED                                *|
+|*----------------------------------------------------------*/
+
+contract PWNRevokedOfferNonce_IsOfferNonceRevoked_Test is PWNRevokedOfferNonceTest {
+
+    function test_shouldReturnTrue_whenNonceIsRevoked() external {
+        vm.store(
+            address(revokedOfferNonce),
+            _revokedOfferNonceSlot(alice, nonce),
+            bytes32(uint256(1))
+        );
+
+        bool isRevoked = revokedOfferNonce.isOfferNonceRevoked(alice, nonce);
+
+        assertTrue(isRevoked);
+    }
+
+    function test_shouldReturnFalse_whenNonceIsNotRevoked() external {
+        bool isRevoked = revokedOfferNonce.isOfferNonceRevoked(alice, nonce);
+
+        assertFalse(isRevoked);
+    }
+
+}

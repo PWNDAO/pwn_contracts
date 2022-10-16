@@ -27,7 +27,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         assertEq(t20.balanceOf(borrower), 0);
         assertEq(t20.balanceOf(address(simpleLoan)), 10e18);
 
-        assertEq(revokedOfferNonce.revokedOfferNonces(lender, offer.nonce), true);
+        assertEq(revokedOfferNonce.isOfferNonceRevoked(lender, offer.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -44,7 +44,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
 
         assertEq(t721.ownerOf(42), address(simpleLoan));
 
-        assertEq(revokedOfferNonce.revokedOfferNonces(lender, offer.nonce), true);
+        assertEq(revokedOfferNonce.isOfferNonceRevoked(lender, offer.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -63,7 +63,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         assertEq(t1155.balanceOf(borrower, 42), 0);
         assertEq(t1155.balanceOf(address(simpleLoan), 42), 10e18);
 
-        assertEq(revokedOfferNonce.revokedOfferNonces(lender, nonce), true);
+        assertEq(revokedOfferNonce.isOfferNonceRevoked(lender, nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 

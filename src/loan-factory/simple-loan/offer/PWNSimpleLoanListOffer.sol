@@ -130,7 +130,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         if (offer.expiration != 0 && block.timestamp >= offer.expiration)
             revert PWNError.OfferExpired();
 
-        if (revokedOfferNonce.revokedOfferNonces(lender, offer.nonce) == true)
+        if (revokedOfferNonce.isOfferNonceRevoked(lender, offer.nonce) == true)
             revert PWNError.NonceRevoked();
 
         if (offer.borrower != address(0))

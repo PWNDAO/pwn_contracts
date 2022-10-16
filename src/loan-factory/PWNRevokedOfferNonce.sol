@@ -20,7 +20,7 @@ contract PWNRevokedOfferNonce is PWNHubAccessControl {
      *      Every address has its own nonce space.
      *      (owner => nonce => is revoked)
      */
-    mapping (address => mapping (bytes32 => bool)) public revokedOfferNonces;
+    mapping (address => mapping (bytes32 => bool)) private revokedOfferNonces;
 
 
     /*----------------------------------------------------------*|
@@ -75,6 +75,15 @@ contract PWNRevokedOfferNonce is PWNHubAccessControl {
 
         // Emit event
         emit OfferNonceRevoked(owner, offerNonce);
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # IS OFFER NONCE REVOKED                                *|
+    |*----------------------------------------------------------*/
+
+    function isOfferNonceRevoked(address owner, bytes32 offerNonce) external view returns (bool) {
+        return revokedOfferNonces[owner][offerNonce];
     }
 
 }

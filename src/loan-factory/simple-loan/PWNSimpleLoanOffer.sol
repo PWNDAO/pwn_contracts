@@ -62,7 +62,7 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessContr
             revert PWNError.OfferAlreadyExists();
 
         // Check that offer has not been revoked
-        if (revokedOfferNonce.revokedOfferNonces(lender, nonce) == true)
+        if (revokedOfferNonce.isOfferNonceRevoked(lender, nonce) == true)
             revert PWNError.NonceRevoked();
 
         // Mark offer as made

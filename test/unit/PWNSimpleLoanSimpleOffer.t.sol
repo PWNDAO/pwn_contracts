@@ -51,7 +51,7 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokedOfferNonces(address,bytes32)"),
+            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)"),
             abi.encode(false)
         );
     }
@@ -252,12 +252,12 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokedOfferNonces(address,bytes32)"),
+            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)"),
             abi.encode(true)
         );
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokedOfferNonces(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)", offer.lender, offer.nonce)
         );
 
         vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
