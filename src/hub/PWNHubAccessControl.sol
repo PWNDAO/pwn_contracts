@@ -29,6 +29,12 @@ abstract contract PWNHubAccessControl {
         _;
     }
 
+    modifier onlyLoanRequest() {
+        if (hub.hasTag(msg.sender, PWNHubTags.LOAN_REQUEST) == false)
+            revert PWNError.CallerMissingHubTag(PWNHubTags.LOAN_REQUEST);
+        _;
+    }
+
     modifier onlyLoanOffer() {
         if (hub.hasTag(msg.sender, PWNHubTags.LOAN_OFFER) == false)
             revert PWNError.CallerMissingHubTag(PWNHubTags.LOAN_OFFER);
