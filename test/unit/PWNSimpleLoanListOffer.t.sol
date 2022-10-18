@@ -103,6 +103,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
 |*  # MAKE OFFER                                            *|
 |*----------------------------------------------------------*/
 
+// Feature tested in PWNSimpleLoanOffer.t.sol
 contract PWNSimpleLoanListOffer_MakeOffer_Test is PWNSimpleLoanListOfferTest {
 
     function test_shouldMakeOffer() external {

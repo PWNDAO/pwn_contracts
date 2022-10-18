@@ -34,4 +34,8 @@ library PWNError {
     error OfferExpired();
     error CollateralIdIsNotWhitelisted();
 
+    // Request
+    error RequestAlreadyExists();
+    error RequestExpired();
+
 }

@@ -6,7 +6,7 @@ import "MultiToken/MultiToken.sol";
 import "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
-import "@pwn/loan-factory/simple-loan/PWNSimpleLoanOffer.sol";
+import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanOffer.sol";
 import "@pwn/PWNError.sol";
 
 
