@@ -39,6 +39,7 @@ abstract contract BaseIntegrationTest is Test {
     PWNSimpleLoanSimpleRequest simpleRequest;
 
     address admin = address(0xad814);
+    address feeCollector = address(0xfeeC001ec704);
     uint256 lenderPK = uint256(777);
     address lender = vm.addr(lenderPK);
     uint256 borrowerPK = uint256(888);
@@ -53,7 +54,7 @@ abstract contract BaseIntegrationTest is Test {
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(configSingleton),
             admin,
-            abi.encodeWithSignature("initialize(address,uint16)", address(this), 0)
+            abi.encodeWithSignature("initialize(address,uint16,address)", address(this), 0, feeCollector)
         );
         config = PWNConfig(address(proxy));
         hub = new PWNHub();

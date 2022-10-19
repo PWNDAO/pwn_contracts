@@ -25,6 +25,11 @@ contract PWNConfig is Ownable, Initializable {
     uint16 public fee;
 
     /**
+     * @notice Address which collects protocol fees.
+     */
+    address public feeCollector;
+
+    /**
      * @notice Mapping of a loan contract address to LOAN token metadata uri.
      * @dev LOAN token minted by a loan contract will return metadata uri stored in this mapping.
      */
@@ -41,6 +46,11 @@ contract PWNConfig is Ownable, Initializable {
     event FeeUpdated(uint16 oldFee, uint16 newFee);
 
     /**
+     * @dev Emitted when new fee collector address is set.
+     */
+    event FeeCollectorUpdated(address oldFeeCollector, address newFeeCollector);
+
+    /**
      * @dev Emitted when new LOAN token metadata uri is set.
      */
     event LoanMetadataUriUpdated(address indexed loanContract, string newUri);
@@ -50,9 +60,10 @@ contract PWNConfig is Ownable, Initializable {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    function initialize(address _owner, uint16 _fee) initializer public {
+    function initialize(address _owner, uint16 _fee, address _feeCollector) initializer public {
         _transferOwnership(_owner);
         _setFee(_fee);
+        feeCollector = _feeCollector;
     }
 
 
@@ -67,6 +78,17 @@ contract PWNConfig is Ownable, Initializable {
      */
     function setFee(uint16 _fee) external onlyOwner {
         _setFee(_fee);
+    }
+
+    /**
+     * @notice Set new fee collector address.
+     * @dev Only contract owner can call this function.
+     * @param _feeCollector New fee collector address.
+     */
+    function setFeeCollector(address _feeCollector) external onlyOwner {
+        address oldFeeCollector = feeCollector;
+        feeCollector = _feeCollector;
+        emit FeeCollectorUpdated(oldFeeCollector, _feeCollector);
     }
 
     function _setFee(uint16 _fee) private {
