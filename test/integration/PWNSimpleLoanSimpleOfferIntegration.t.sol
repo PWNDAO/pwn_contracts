@@ -72,95 +72,9 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
     }
 
 
-    // Repay LOAN
-
-    function test_shouldRepayLoan_whenNotExpired() external {
-        // Create LOAN
-        uint256 loanId = _createERC1155Loan();
-
-        // Repay loan
-        _repayLoan(loanId);
-
-        // Assert final state
-        assertEq(loanToken.ownerOf(loanId), lender);
-
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(simpleLoan)), 110e18);
-
-        assertEq(t1155.balanceOf(lender, 42), 0);
-        assertEq(t1155.balanceOf(borrower, 42), 10e18);
-        assertEq(t1155.balanceOf(address(simpleLoan), 42), 0);
-    }
-
-    function test_shouldFailToRepayLoan_whenLOANExpired() external {
-        // Create LOAN
-        uint256 loanId = _createERC1155Loan();
-
-        // Try to repay loan
-        uint256 expiration = block.timestamp + uint256(offer.duration);
-        vm.warp(expiration);
-        _repayLoanFailing(
-            loanId,
-            abi.encodeWithSelector(PWNError.LoanDefaulted.selector, uint40(expiration))
-        );
-    }
-
-
-    // Claim LOAN
-
-    function test_shouldClaimRepaidLOAN() external {
-        // Create LOAN
-        uint256 loanId = _createERC1155Loan();
-
-        // Repay loan
-        _repayLoan(loanId);
-
-        // Claim loan
-        vm.prank(lender);
-        simpleLoan.claimLoan(loanId);
-
-        // Assert final state
-        vm.expectRevert("ERC721: invalid token ID");
-        loanToken.ownerOf(loanId);
-
-        assertEq(loanAsset.balanceOf(lender), 110e18);
-        assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(simpleLoan)), 0);
-
-        assertEq(t1155.balanceOf(lender, 42), 0);
-        assertEq(t1155.balanceOf(borrower, 42), 10e18);
-        assertEq(t1155.balanceOf(address(simpleLoan), 42), 0);
-    }
-
-    function test_shouldClaimDefaultedLOAN() external {
-        // Create LOAN
-        uint256 loanId = _createERC1155Loan();
-
-        // Loan defaulted
-        vm.warp(block.timestamp + uint256(offer.duration));
-
-        // Claim defaulted loan
-        vm.prank(lender);
-        simpleLoan.claimLoan(loanId);
-
-        // Assert final state
-        vm.expectRevert("ERC721: invalid token ID");
-        loanToken.ownerOf(loanId);
-
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(simpleLoan)), 0);
-
-        assertEq(t1155.balanceOf(lender, 42), 10e18);
-        assertEq(t1155.balanceOf(borrower, 42), 0);
-        assertEq(t1155.balanceOf(address(simpleLoan), 42), 0);
-    }
-
-
     // Group of offers
 
-    function test_shouldRevokeOffesInGroup_whenAcceptingOneFromGroup() external {
+    function test_shouldRevokeOffersInGroup_whenAcceptingOneFromGroup() external {
         // Mint initial state
         loanAsset.mint(lender, 100e18);
         t1155.mint(borrower, 42, 10e18);
