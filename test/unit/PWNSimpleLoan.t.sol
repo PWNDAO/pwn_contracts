@@ -18,6 +18,7 @@ abstract contract PWNSimpleLoanTest is Test {
     address hub = address(0x80b);
     address loanToken = address(0x111111);
     address config = address(0xc0f1c);
+    address feeCollector = address(0xfee);
     address token = address(0x070ce2);
     address alice = address(0xa11ce);
     address loanFactory = address(0x1001);
@@ -40,6 +41,7 @@ abstract contract PWNSimpleLoanTest is Test {
         vm.etch(loanToken, bytes("data"));
         vm.etch(loanFactory, bytes("data"));
         vm.etch(token, bytes("data"));
+        vm.etch(config, bytes("data"));
     }
 
     function setUp() virtual public {
@@ -139,6 +141,17 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         super.setUp();
 
         vm.mockCall(
+            config,
+            abi.encodeWithSignature("fee()"),
+            abi.encode(0)
+        );
+        vm.mockCall(
+            config,
+            abi.encodeWithSignature("feeCollector()"),
+            abi.encode(feeCollector)
+        );
+
+        vm.mockCall(
             hub,
             abi.encodeWithSignature("hasTag(address,bytes32)"),
             abi.encode(false)
@@ -231,7 +244,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
-    function test_shouldTransferLoanAsset_fromLender_toBorrower() external {
+    function test_shouldTransferLoanAsset_fromLender_toBorrower_whenZeroFees() external {
         simpleLoan.asset.category = MultiToken.Category.ERC20;
         simpleLoan.asset.assetAddress = token;
         simpleLoan.asset.id = 0;
@@ -254,12 +267,58 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
             token,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                lender, borrower, simpleLoan.asset.amount, 1, uint8(4), uint256(2), uint256(3)
+                lender, address(loan), simpleLoan.asset.amount, 1, uint8(4), uint256(2), uint256(3)
             )
         );
         vm.expectCall(
             simpleLoan.asset.assetAddress,
             abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, simpleLoan.asset.amount)
+        );
+
+        loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
+    }
+
+    function test_shouldTransferLoanAsset_fromLender_toBorrowerAndFeeCollector_whenNonZeroFee() external {
+        simpleLoan.asset.category = MultiToken.Category.ERC20;
+        simpleLoan.asset.assetAddress = token;
+        simpleLoan.asset.id = 0;
+        simpleLoan.asset.amount = 100;
+
+        vm.mockCall(
+            config,
+            abi.encodeWithSignature("fee()"),
+            abi.encode(1000)
+        );
+
+        vm.mockCall(
+            loanFactory,
+            abi.encodeWithSignature("createLOAN(address,bytes,bytes)"),
+            abi.encode(simpleLoan, lender, borrower)
+        );
+
+        loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
+
+        vm.mockCall(
+            simpleLoan.asset.assetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
+            abi.encode(true)
+        );
+        vm.expectCall(
+            token,
+            abi.encodeWithSignature(
+                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+                lender, address(loan), simpleLoan.asset.amount, 1, uint8(4), uint256(2), uint256(3)
+            )
+        );
+        // Fee transfer
+        vm.expectCall(
+            simpleLoan.asset.assetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, feeCollector, 10)
+        );
+        // Updated amount transfer
+        vm.expectCall(
+            simpleLoan.asset.assetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, 90)
         );
 
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);

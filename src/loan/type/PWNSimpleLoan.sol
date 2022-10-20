@@ -6,6 +6,7 @@ import "MultiToken/MultiToken.sol";
 import "@pwn/config/PWNConfig.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/loan/lib/PWNFeeCalculator.sol";
 import "@pwn/loan/PWNVault.sol";
 import "@pwn/loan/PWNLOAN.sol";
 import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
@@ -126,12 +127,29 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
         emit LOANCreated(loanId, lender);
 
-        // TODO: Work with fee
-
         // Transfer collateral to Vault
-        _pull(loan.collateral, borrower, collateralPermit);
+        _permit(loan.collateral, borrower, collateralPermit);
+        _pull(loan.collateral, borrower);
+
+        // Permit spending if permit data provided
+        _permit(loan.asset, lender, loanAssetPermit);
+
+        uint16 fee = config.fee();
+        if (fee > 0) {
+            // Compute fee size
+            (uint256 feeAmount, uint256 newLoanAmount) = PWNFeeCalculator.calculateFeeAmount(fee, loan.asset.amount);
+
+            // Transfer fee amount to fee collector
+            loan.asset.amount = feeAmount;
+            _pushFrom(loan.asset, lender, config.feeCollector());
+
+            // Set new loan amount value
+            loan.asset.amount = newLoanAmount;
+        }
+
         // Transfer loan asset to borrower
-        _pushFrom(loan.asset, lender, borrower, loanAssetPermit);
+        _pushFrom(loan.asset, lender, borrower);
+
     }
 
 
@@ -171,7 +189,9 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         // Transfer repaid amount of loan asset to Vault
         MultiToken.Asset memory repayLoanAsset = loan.asset;
         repayLoanAsset.amount = loan.loanRepayAmount;
-        _pull(repayLoanAsset, msg.sender, loanAssetPermit);
+
+        _permit(repayLoanAsset, msg.sender, loanAssetPermit);
+        _pull(repayLoanAsset, msg.sender);
 
         // Transfer collateral back to borrower
         _push(loan.collateral, loan.borrower);
