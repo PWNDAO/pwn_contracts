@@ -102,7 +102,7 @@ contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferN
     }
 
 
-    function test_shouldFail_whenCallerIsNotActiveLoanContract() external {
+    function test_shouldFail_whenCallerIsNotLoanOfferContract() external {
         vm.expectRevert(abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.LOAN_OFFER));
         vm.prank(alice);
         revokedOfferNonce.revokeOfferNonce(alice, nonce);

@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "MultiToken/MultiToken.sol";
 
 import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
-import "@pwn/loan-factory/simple-loan/PWNSimpleLoanOffer.sol";
+import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanOffer.sol";
 import "@pwn/PWNError.sol";
 
 
@@ -28,7 +28,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
     );
 
     /**
-     * @notice Construct defining an simple offer.
+     * @notice Construct defining a simple offer.
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
@@ -64,7 +64,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor(address hub, address _revokedOfferNonce) PWNSimpleLoanOffer(hub, _revokedOfferNonce) {
+    constructor(address hub, address revokedOfferNonce) PWNSimpleLoanOffer(hub, revokedOfferNonce) {
 
     }
 
@@ -157,7 +157,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Get an offer hash according to EIP-712
+     * @notice Get an offer hash according to EIP-712.
      * @param offer Offer struct to be hashed.
      * @return Offer struct hash.
      */

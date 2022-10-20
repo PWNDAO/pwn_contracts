@@ -13,7 +13,9 @@ import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan/PWNLOAN.sol";
 import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
+import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanSimpleRequest.sol";
 import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
+import "@pwn/loan-factory/PWNRevokedRequestNonce.sol";
 
 import "@pwn-test/helper/token/T20.sol";
 import "@pwn-test/helper/token/T721.sol";
@@ -32,14 +34,18 @@ abstract contract BaseIntegrationTest is Test {
     PWNLOAN loanToken;
     PWNSimpleLoan simpleLoan;
     PWNRevokedOfferNonce revokedOfferNonce;
+    PWNRevokedRequestNonce revokedRequestNonce;
     PWNSimpleLoanSimpleOffer simpleOffer;
+    PWNSimpleLoanSimpleRequest simpleRequest;
 
     address admin = address(0xad814);
     uint256 lenderPK = uint256(777);
     address lender = vm.addr(lenderPK);
-    address borrower = address(0x1001);
+    uint256 borrowerPK = uint256(888);
+    address borrower = vm.addr(borrowerPK);
     bytes32 nonce = keccak256("nonce_1");
     PWNSimpleLoanSimpleOffer.Offer offer;
+    PWNSimpleLoanSimpleRequest.Request request;
 
     function setUp() external {
         // Deploy realm
@@ -58,10 +64,15 @@ abstract contract BaseIntegrationTest is Test {
         revokedOfferNonce = new PWNRevokedOfferNonce(address(hub));
         simpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedOfferNonce));
 
+        revokedRequestNonce = new PWNRevokedRequestNonce(address(hub));
+        simpleRequest = new PWNSimpleLoanSimpleRequest(address(hub), address(revokedRequestNonce));
+
         // Set hub tags
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, true);
         hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_FACTORY, true);
         hub.setTag(address(simpleOffer), PWNHubTags.LOAN_OFFER, true);
+        hub.setTag(address(simpleRequest), PWNHubTags.SIMPLE_LOAN_FACTORY, true);
+        hub.setTag(address(simpleRequest), PWNHubTags.LOAN_REQUEST, true);
 
         // Deploy tokens
         t20 = new T20();
@@ -85,12 +96,30 @@ abstract contract BaseIntegrationTest is Test {
             isPersistent: false,
             nonce: nonce
         });
+
+        // Default request
+        request = PWNSimpleLoanSimpleRequest.Request({
+            collateralCategory: MultiToken.Category.ERC1155,
+            collateralAddress: address(t1155),
+            collateralId: 42,
+            collateralAmount: 10e18,
+            loanAssetAddress: address(loanAsset),
+            loanAmount: 100e18,
+            loanYield: 10e18,
+            duration: 3600,
+            expiration: 0,
+            borrower: borrower,
+            lender: lender,
+            nonce: nonce
+        });
     }
 
     function _sign(uint256 pk, bytes32 digest) internal returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
         return abi.encodePacked(r, s, v);
     }
+
+    // Create from offer
 
     function _createERC20Loan() internal returns (uint256) {
         // Offer
@@ -174,6 +203,8 @@ abstract contract BaseIntegrationTest is Test {
             collateralPermit: ""
         });
     }
+
+    // Repay
 
     function _repayLoan(uint256 loanId) internal {
         _repayLoanFailing(loanId, "");

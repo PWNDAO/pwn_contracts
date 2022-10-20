@@ -7,11 +7,11 @@ import "MultiToken/MultiToken.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
-import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
+import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanOffer.sol";
 import "@pwn/PWNError.sol";
 
 
-// The only reason for this contract is to expose internal functions of PWNVault
+// The only reason for this contract is to expose internal functions of PWNSimpleLoanOffer
 // No additional logic is applied here
 contract PWNSimpleLoanOfferExposed is PWNSimpleLoanOffer {
 
@@ -29,19 +29,7 @@ contract PWNSimpleLoanOfferExposed is PWNSimpleLoanOffer {
         bytes calldata /*loanFactoryData*/,
         bytes calldata /*signature*/
     ) override external pure returns (PWNSimpleLoan.LOAN memory, address, address) {
-        return (
-            PWNSimpleLoan.LOAN({
-                status: 0,
-                borrower: address(0),
-                duration: 0,
-                expiration: 0,
-                collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0),
-                asset: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0),
-                loanRepayAmount: 0
-            }),
-            address(0),
-            address(0)
-        );
+        revert("Missing implementation");
     }
 
 }
@@ -82,7 +70,7 @@ abstract contract PWNSimpleLoanOfferTest is Test {
 |*  # MAKE OFFER                                            *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
+contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
 
     function test_shouldFail_whenCallerIsNotLender() external {
         vm.expectRevert(abi.encodeWithSelector(PWNError.CallerIsNotStatedLender.selector, lender));
@@ -144,7 +132,7 @@ contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
 |*  # REVOKE OFFER NONCE                                    *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanSimpleOffer_RevokeOfferNonce_Test is PWNSimpleLoanOfferTest {
+contract PWNSimpleLoanOffer_RevokeOfferNonce_Test is PWNSimpleLoanOfferTest {
 
     function test_shouldCallRevokeOfferNonce() external {
         bytes32 nonce = keccak256("its my monkey");

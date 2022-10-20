@@ -97,6 +97,7 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
 |*  # MAKE OFFER                                            *|
 |*----------------------------------------------------------*/
 
+// Feature tested in PWNSimpleLoanOffer.t.sol
 contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanSimpleOfferTest {
 
     function test_shouldMakeOffer() external {
@@ -322,7 +323,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOAN_Test is PWNSimpleLoanSimpleOfferTes
         assertTrue(loan.asset.assetAddress == offer.loanAssetAddress);
         assertTrue(loan.asset.id == 0);
         assertTrue(loan.asset.amount == offer.loanAmount);
-        assertTrue(loan.loanRepayAmount ==offer.loanAmount + offer.loanYield);
+        assertTrue(loan.loanRepayAmount == offer.loanAmount + offer.loanYield);
         // Lender
         assertTrue(_lender == offer.lender);
         // Borrower
