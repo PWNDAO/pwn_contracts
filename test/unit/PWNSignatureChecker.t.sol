@@ -3,7 +3,8 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "../../src/loan-factory/lib/PWNSignatureChecker.sol";
+import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
+import "@pwn/PWNError.sol";
 
 
 abstract contract PWNSignatureCheckerTest is Test {
@@ -85,7 +86,7 @@ contract PWNSignatureChecker_isValidSignatureNow_Test is PWNSignatureCheckerTest
     function test_shouldFail_whenSignerIsEOA_whenSignatureHasWrongLength() external {
         signature = abi.encodePacked(uint256(1), uint256(2), uint256(3));
 
-        vm.expectRevert("PWNSignatureChecker: Invalid signature length");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidSignatureLength.selector, 96));
         PWNSignatureChecker.isValidSignatureNow(signer, digest, signature);
     }
 

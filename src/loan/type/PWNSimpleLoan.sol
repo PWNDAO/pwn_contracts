@@ -3,12 +3,13 @@ pragma solidity 0.8.16;
 
 import "MultiToken/MultiToken.sol";
 
-import "../../hub/PWNHub.sol";
-import "../../hub/PWNHubTags.sol";
-import "../../loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
-import "../../PWNConfig.sol";
-import "../PWNVault.sol";
-import "../PWNLOAN.sol";
+import "@pwn/config/PWNConfig.sol";
+import "@pwn/hub/PWNHub.sol";
+import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/loan/PWNVault.sol";
+import "@pwn/loan/PWNLOAN.sol";
+import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
+import "@pwn/PWNError.sol";
 
 
 /**
@@ -16,7 +17,7 @@ import "../PWNLOAN.sol";
  * @notice Contract managing a simple loan in PWN protocol.
  * @dev Acts as a vault for every loan created by this contract.
  */
-contract PWNSimpleLoan is PWNVault {
+contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
     string internal constant VERSION = "0.1.0";
 
@@ -92,7 +93,7 @@ contract PWNSimpleLoan is PWNVault {
     /**
      * @notice Create a new loan by minting LOAN token for lender, transferring loan asset to borrower and collateral to a vault.
      * @dev The function assumes a prior token approval to a vault address or permits.
-     * @param loanFactoryContract Address of a loan factory contract. Need to have `LOAN_FACTORY` tag in PWN Hub.
+     * @param loanFactoryContract Address of a loan factory contract. Need to have `SIMPLE_LOAN_FACTORY` tag in PWN Hub.
      * @param loanFactoryData Encoded data for a loan factory.
      * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
      * @param loanAssetPermit Permit data for a loan asset signed by a lender.
@@ -107,7 +108,8 @@ contract PWNSimpleLoan is PWNVault {
         bytes calldata collateralPermit
     ) external returns (uint256 loanId) {
         // Check that loan factory contract is tagged in PWNHub
-        require(hub.hasTag(loanFactoryContract, PWNHubTags.LOAN_FACTORY), "Given contract is not loan factory");
+        if (hub.hasTag(loanFactoryContract, PWNHubTags.SIMPLE_LOAN_FACTORY) == false)
+            revert PWNError.CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_FACTORY);
 
         // Build LOAN by loan factory
         (LOAN memory loan, address lender, address borrower) = IPWNSimpleLoanFactory(loanFactoryContract).createLOAN({
@@ -153,13 +155,15 @@ contract PWNSimpleLoan is PWNVault {
         uint8 status = loan.status;
 
         // Check that loan is not from a different loan contract
-        require(status != 0, "Loan does not exist or is not from current loan contract");
-
+        if (status == 0)
+            revert PWNError.NonExistingLoan();
         // Check that loan running
-        require(status == 2, "Loan is not running");
+        else if (status != 2)
+            revert PWNError.InvalidLoanStatus(status);
 
         // Check that loan is not expired
-        require(loan.expiration > block.timestamp, "Loan is expired");
+        if (loan.expiration <= block.timestamp)
+            revert PWNError.LoanDefaulted(loan.expiration);
 
         // Move loan to repaid state
         loan.status = 3;
@@ -190,10 +194,14 @@ contract PWNSimpleLoan is PWNVault {
         LOAN storage loan = LOANs[loanId];
 
         // Check that caller is LOAN token holder
-        require(loanToken.ownerOf(loanId) == msg.sender, "Caller is not a LOAN token holder");
+        if (loanToken.ownerOf(loanId) != msg.sender)
+            revert PWNError.CallerNotLOANTokenHolder();
 
+        if (loan.status == 0) {
+            revert PWNError.NonExistingLoan();
+        }
         // Loan has been paid back
-        if (loan.status == 3) {
+        else if (loan.status == 3) {
             MultiToken.Asset memory loanAsset = MultiToken.Asset({
                 category: loan.asset.category,
                 assetAddress: loan.asset.assetAddress,
@@ -217,9 +225,9 @@ contract PWNSimpleLoan is PWNVault {
             // Transfer collateral to lender
             _push(collateral, msg.sender);
         }
-        // Loan is in wrong state or from different loan contract
+        // Loan is in wrong state or from a different loan contract
         else {
-            revert("Loan can't be claimed yet or is not from current loan contract");
+            revert PWNError.InvalidLoanStatus(loan.status);
         }
 
         emit LOANClaimed(loanId);
@@ -228,6 +236,18 @@ contract PWNSimpleLoan is PWNVault {
     function _deleteLoan(uint256 loanId) private {
         loanToken.burn(loanId);
         delete LOANs[loanId];
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # IPWNLoanMetadataProvider                              *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice See { IPWNLoanMetadataProvider.sol }.
+     */
+    function loanMetadataUri() override external view returns (string memory) {
+        return config.loanMetadataUri(address(this));
     }
 
 }

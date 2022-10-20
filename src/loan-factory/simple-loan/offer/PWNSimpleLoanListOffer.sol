@@ -3,16 +3,19 @@ pragma solidity 0.8.16;
 
 import "MultiToken/MultiToken.sol";
 
+import "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
+
 import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
 import "@pwn/loan-factory/simple-loan/PWNSimpleLoanOffer.sol";
 import "@pwn/PWNError.sol";
 
 
 /**
- * @title PWN Simple Loan Simple Offer
- * @notice Loan factory contract creating a simple loan from a simple offer.
+ * @title PWN Simple Loan List Offer
+ * @notice Loan factory contract creating a simple loan from a list offer.
+ * @dev This offer can be used as a collection offer or define a list of acceptable ids from a collection.
  */
-contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
+contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
 
     string internal constant VERSION = "0.1.0";
 
@@ -24,14 +27,14 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
      * @dev EIP-712 simple offer struct type hash.
      */
     bytes32 constant internal OFFER_TYPEHASH = keccak256(
-        "Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"
+        "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bytes32 nonce)"
     );
 
     /**
-     * @notice Construct defining an simple offer.
+     * @notice Construct defining a list offer.
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
-     * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
+     * @param collateralIdsWhitelistMerkleRoot Merkle tree root of a set of whitelisted collateral ids.
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1.
      * @param loanAssetAddress Address of an asset which is lended to a borrower.
      * @param loanAmount Amount of tokens which is offered as a loan to a borrower
@@ -47,7 +50,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
     struct Offer {
         MultiToken.Category collateralCategory;
         address collateralAddress;
-        uint256 collateralId;
+        bytes32 collateralIdsWhitelistMerkleRoot;
         uint256 collateralAmount;
         address loanAssetAddress;
         uint256 loanAmount;
@@ -59,6 +62,19 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         bool isPersistent;
         bytes32 nonce;
     }
+
+    /**
+     * Construct defining an Offer concrete values
+     * @param collateralId Selected collateral id to be used as a collateral.
+     * @param merkleInclusionProof Proof of inclusion, that selected collateral id is whitelisted.
+     *                             This proof should create same hash as the merkle tree root given in an Offer.
+     *                             Can be empty for collection offers.
+     */
+    struct OfferValues {
+        uint256 collateralId;
+        bytes32[] merkleInclusionProof;
+    }
+
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
@@ -99,7 +115,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         address lender,
         address borrower
     ) {
-        Offer memory offer = abi.decode(loanFactoryData, (Offer));
+        (Offer memory offer, OfferValues memory offerValues) = abi.decode(loanFactoryData, (Offer, OfferValues));
         bytes32 offerHash = getOfferHash(offer);
 
         lender = offer.lender;
@@ -121,11 +137,23 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
             if (borrower != offer.borrower)
                 revert PWNError.CallerIsNotStatedBorrower(offer.borrower);
 
+        // Collateral id list
+        if (offer.collateralIdsWhitelistMerkleRoot != bytes32(0)) {
+            // Verify whitelisted collateral id
+            bool isVerifiedId = MerkleProof.verify(
+                offerValues.merkleInclusionProof,
+                offer.collateralIdsWhitelistMerkleRoot,
+                keccak256(abi.encodePacked(offerValues.collateralId))
+            );
+            if (isVerifiedId == false)
+                revert PWNError.CollateralIdIsNotWhitelisted();
+        } // else: Any collateral id - collection offer
+
         // Prepare collateral and loan asset
         MultiToken.Asset memory collateral = MultiToken.Asset({
             category: offer.collateralCategory,
             assetAddress: offer.collateralAddress,
-            id: offer.collateralId,
+            id: offerValues.collateralId,
             amount: offer.collateralAmount
         });
         MultiToken.Asset memory loanAsset = MultiToken.Asset({
@@ -166,7 +194,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
             "\x19\x01",
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("PWNSimpleLoanSimpleOffer"),
+                keccak256("PWNSimpleLoanListOffer"),
                 keccak256("1"),
                 block.chainid,
                 address(this)
@@ -176,7 +204,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
                 abi.encode(
                     offer.collateralCategory,
                     offer.collateralAddress,
-                    offer.collateralId,
+                    offer.collateralIdsWhitelistMerkleRoot,
                     offer.collateralAmount
                 ), // Need to prevent `slot(s) too deep inside the stack` error
                 abi.encode(
@@ -201,11 +229,12 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
 
     /**
      * @notice Return encoded input data for this loan factory.
-     * @param offer Simple loan simple offer struct to encode.
+     * @param offer Simple loan list offer struct to encode.
+     * @param offerValues Simple loan list offer concrete values from borrower.
      * @return Encoded loan factory data that can be used as an input of `createLOAN` function with this loan factory.
      */
-    function encodeLoanFactoryData(Offer memory offer) external pure returns (bytes memory) {
-        return abi.encode(offer);
+    function encodeLoanFactoryData(Offer memory offer, OfferValues memory offerValues) external pure returns (bytes memory) {
+        return abi.encode(offer, offerValues);
     }
 
 }

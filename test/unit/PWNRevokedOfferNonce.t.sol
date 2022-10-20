@@ -3,8 +3,9 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "../../src/hub/PWNHubTags.sol";
-import "../../src/loan-factory/PWNRevokedOfferNonce.sol";
+import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
+import "@pwn/PWNError.sol";
 
 
 abstract contract PWNRevokedOfferNonceTest is Test {
@@ -50,7 +51,7 @@ contract PWNRevokedOfferNonce_RevokeOfferNonce_Test is PWNRevokedOfferNonceTest 
             bytes32(uint256(1))
         );
 
-        vm.expectRevert("Nonce is already revoked");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
         vm.prank(alice);
         revokedOfferNonce.revokeOfferNonce(nonce);
     }
@@ -102,7 +103,7 @@ contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferN
 
 
     function test_shouldFail_whenCallerIsNotActiveLoanContract() external {
-        vm.expectRevert("Caller is not loan offer");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.LOAN_OFFER));
         vm.prank(alice);
         revokedOfferNonce.revokeOfferNonce(alice, nonce);
     }
@@ -114,7 +115,7 @@ contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferN
             bytes32(uint256(1))
         );
 
-        vm.expectRevert("Nonce is already revoked");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
         vm.prank(loanOffer);
         revokedOfferNonce.revokeOfferNonce(alice, nonce);
     }
@@ -136,6 +137,33 @@ contract PWNRevokedOfferNonce_RevokeOfferNonceWithOwner_Test is PWNRevokedOfferN
 
         vm.prank(loanOffer);
         revokedOfferNonce.revokeOfferNonce(alice, nonce);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # IS OFFER NONCE REVOKED                                *|
+|*----------------------------------------------------------*/
+
+contract PWNRevokedOfferNonce_IsOfferNonceRevoked_Test is PWNRevokedOfferNonceTest {
+
+    function test_shouldReturnTrue_whenNonceIsRevoked() external {
+        vm.store(
+            address(revokedOfferNonce),
+            _revokedOfferNonceSlot(alice, nonce),
+            bytes32(uint256(1))
+        );
+
+        bool isRevoked = revokedOfferNonce.isOfferNonceRevoked(alice, nonce);
+
+        assertTrue(isRevoked);
+    }
+
+    function test_shouldReturnFalse_whenNonceIsNotRevoked() external {
+        bool isRevoked = revokedOfferNonce.isOfferNonceRevoked(alice, nonce);
+
+        assertFalse(isRevoked);
     }
 
 }

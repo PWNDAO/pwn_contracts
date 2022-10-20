@@ -5,8 +5,9 @@ import "forge-std/Test.sol";
 
 import "MultiToken/MultiToken.sol";
 
-import "../../src/hub/PWNHubTags.sol";
-import "../../src/loan/type/PWNSimpleLoan.sol";
+import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/loan/type/PWNSimpleLoan.sol";
+import "@pwn/PWNError.sol";
 
 
 abstract contract PWNSimpleLoanTest is Test {
@@ -144,7 +145,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         );
         vm.mockCall(
             hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", loanFactory, PWNHubTags.LOAN_FACTORY),
+            abi.encodeWithSignature("hasTag(address,bytes32)", loanFactory, PWNHubTags.SIMPLE_LOAN_FACTORY),
             abi.encode(true)
         );
 
@@ -165,7 +166,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     function test_shouldFail_whenLoanFactoryContractIsNotTaggerInPWNHub() external {
         address notLoanFactory = address(0);
 
-        vm.expectRevert("Given contract is not loan factory");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.SIMPLE_LOAN_FACTORY));
         loan.createLOAN(notLoanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
@@ -298,7 +299,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         simpleLoan.status = 0;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Loan does not exist or is not from current loan contract");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.NonExistingLoan.selector));
         loan.repayLoan(loanId, loanAssetPermit);
     }
 
@@ -306,7 +307,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         simpleLoan.status = 3;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Loan is not running");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidLoanStatus.selector, 3));
         loan.repayLoan(loanId, loanAssetPermit);
     }
 
@@ -314,7 +315,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         vm.warp(50039);
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Loan is expired");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.LoanDefaulted.selector, simpleLoan.expiration));
         loan.repayLoan(loanId, loanAssetPermit);
     }
 
@@ -408,13 +409,13 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
     function test_shouldFail_whenCallerIsNotLOANTokenHolder() external {
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Caller is not a LOAN token holder");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerNotLOANTokenHolder.selector));
         vm.prank(borrower);
         loan.claimLoan(loanId);
     }
 
     function test_shouldFail_whenLoanDoesNotExist() external {
-        vm.expectRevert("Loan can't be claimed yet or is not from current loan contract");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.NonExistingLoan.selector));
         vm.prank(lender);
         loan.claimLoan(loanId);
     }
@@ -423,7 +424,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert("Loan can't be claimed yet or is not from current loan contract");
+        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidLoanStatus.selector, 2));
         vm.prank(lender);
         loan.claimLoan(loanId);
     }
@@ -525,6 +526,45 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
 
         vm.prank(lender);
         loan.claimLoan(loanId);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # LOAN METADATA URI                                     *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoan_LoanMetadataUri_Test is PWNSimpleLoanTest {
+
+    string tokenUri;
+
+    function setUp() override public {
+        super.setUp();
+
+        tokenUri = "test.uri.xyz";
+
+        vm.mockCall(
+            config,
+            abi.encodeWithSignature("loanMetadataUri(address)"),
+            abi.encode(tokenUri)
+        );
+    }
+
+
+    function test_shouldCallConfig() external {
+        vm.expectCall(
+            config,
+            abi.encodeWithSignature("loanMetadataUri(address)", loan)
+        );
+
+        loan.loanMetadataUri();
+    }
+
+    function test_shouldReturnCorrectValue() external {
+        string memory _tokenUri = loan.loanMetadataUri();
+
+        assertEq(tokenUri, _tokenUri);
     }
 
 }

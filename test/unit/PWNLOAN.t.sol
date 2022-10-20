@@ -3,8 +3,9 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "../../src/hub/PWNHubTags.sol";
-import "../../src/loan/PWNLOAN.sol";
+import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/loan/PWNLOAN.sol";
+import "@pwn/PWNError.sol";
 
 
 abstract contract PWNLOANTest is Test {
@@ -16,7 +17,6 @@ abstract contract PWNLOANTest is Test {
     address hub = address(0x80b);
     address alice = address(0xa11ce);
     address activeLoanContract = address(0x01);
-    address loanContract = address(0x02);
 
     event LOANMinted(uint256 indexed loanId, address indexed owner);
     event LOANBurned(uint256 indexed loanId);
@@ -35,12 +35,7 @@ abstract contract PWNLOANTest is Test {
         );
         vm.mockCall(
             hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", activeLoanContract),
-            abi.encode(true)
-        );
-        vm.mockCall(
-            hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", loanContract, PWNHubTags.LOAN),
+            abi.encodeWithSignature("hasTag(address,bytes32)", activeLoanContract, PWNHubTags.ACTIVE_LOAN),
             abi.encode(true)
         );
     }
@@ -77,14 +72,10 @@ contract PWNLOAN_Constructor_Test is PWNLOANTest {
 contract PWNLOAN_Mint_Test is PWNLOANTest {
 
     function test_shouldFail_whenCallerIsNotActiveLoanContract() external {
-        vm.expectRevert("Caller is not active loan");
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
+        );
         vm.prank(alice);
-        loanToken.mint(alice);
-    }
-
-    function test_shouldFail_whenCallerIsLoanContract() external {
-        vm.expectRevert("Caller is not active loan");
-        vm.prank(loanContract);
         loanToken.mint(alice);
     }
 
@@ -154,15 +145,11 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
     }
 
 
-    function test_shouldFail_whenCallerIsNotLoanContract() external {
-        vm.expectRevert("Caller is not loan contract");
-        vm.prank(alice);
-        loanToken.burn(loanId);
-    }
-
     function test_shouldFail_whenCallerIsNotStoredLoanContractForGivenLoanId() external {
-        vm.expectRevert("Loan contract did not mint given loan id");
-        vm.prank(loanContract);
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNError.InvalidLoanContractCaller.selector)
+        );
+        vm.prank(alice);
         loanToken.burn(loanId);
     }
 
@@ -188,6 +175,49 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
 
         vm.prank(activeLoanContract);
         loanToken.burn(loanId);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # TOKEN URI                                             *|
+|*----------------------------------------------------------*/
+
+contract PWNLOAN_TokenUri_Test is PWNLOANTest {
+
+    string tokenUri;
+    uint256 loanId;
+
+    function setUp() override public {
+        super.setUp();
+
+        tokenUri = "test.uri.xyz";
+
+        vm.mockCall(
+            activeLoanContract,
+            abi.encodeWithSignature("loanMetadataUri()"),
+            abi.encode(tokenUri)
+        );
+
+        vm.prank(activeLoanContract);
+        loanId = loanToken.mint(alice);
+    }
+
+
+    function test_shouldCallLoanContract() external {
+        vm.expectCall(
+            activeLoanContract,
+            abi.encodeWithSignature("loanMetadataUri()")
+        );
+
+        loanToken.tokenURI(loanId);
+    }
+
+    function test_shouldReturnCorrectValue() external {
+        string memory _tokenUri = loanToken.tokenURI(loanId);
+
+        assertEq(tokenUri, _tokenUri);
     }
 
 }

@@ -6,6 +6,8 @@ import "MultiToken/MultiToken.sol";
 import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
+import "@pwn/PWNError.sol";
+
 
 /**
  * @title PWN Vault
@@ -16,7 +18,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     using MultiToken for MultiToken.Asset;
 
     /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
     /**
@@ -105,11 +107,14 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @return `IERC721Receiver.onERC721Received.selector` if transfer is allowed
      */
     function onERC721Received(
-        address /*operator*/,
+        address operator,
         address /*from*/,
         uint256 /*tokenId*/,
         bytes calldata /*data*/
-    ) override external pure returns (bytes4) {
+    ) override external view returns (bytes4) {
+        if (operator != address(this))
+            revert PWNError.UnsupportedTransferFunction();
+
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -122,12 +127,15 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @return `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))` if transfer is allowed
      */
     function onERC1155Received(
-        address /*operator*/,
+        address operator,
         address /*from*/,
         uint256 /*id*/,
         uint256 /*value*/,
         bytes calldata /*data*/
-    ) override external pure returns (bytes4) {
+    ) override external view returns (bytes4) {
+        if (operator != address(this))
+            revert PWNError.UnsupportedTransferFunction();
+
         return IERC1155Receiver.onERC1155Received.selector;
     }
 
@@ -146,7 +154,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256[] calldata /*values*/,
         bytes calldata /*data*/
     ) override external pure returns (bytes4) {
-        revert("Unsupported transfer function");
+        revert PWNError.UnsupportedTransferFunction();
     }
 
 

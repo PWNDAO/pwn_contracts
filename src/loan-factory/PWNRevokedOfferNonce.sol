@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "../hub/PWNHubAccessControl.sol";
+import "@pwn/hub/PWNHubAccessControl.sol";
+import "@pwn/PWNError.sol";
 
 
 /**
@@ -19,11 +20,11 @@ contract PWNRevokedOfferNonce is PWNHubAccessControl {
      *      Every address has its own nonce space.
      *      (owner => nonce => is revoked)
      */
-    mapping (address => mapping (bytes32 => bool)) public revokedOfferNonces;
+    mapping (address => mapping (bytes32 => bool)) private revokedOfferNonces;
 
 
     /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
     /**
@@ -66,13 +67,23 @@ contract PWNRevokedOfferNonce is PWNHubAccessControl {
 
     function _revokeOfferNonce(address owner, bytes32 offerNonce) private {
         // Check that offer nonce is not have been revoked
-        require(revokedOfferNonces[owner][offerNonce] == false, "Nonce is already revoked");
+        if (revokedOfferNonces[owner][offerNonce] == true)
+            revert PWNError.NonceRevoked();
 
         // Revoke nonce
         revokedOfferNonces[owner][offerNonce] = true;
 
         // Emit event
         emit OfferNonceRevoked(owner, offerNonce);
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # IS OFFER NONCE REVOKED                                *|
+    |*----------------------------------------------------------*/
+
+    function isOfferNonceRevoked(address owner, bytes32 offerNonce) external view returns (bool) {
+        return revokedOfferNonces[owner][offerNonce];
     }
 
 }
