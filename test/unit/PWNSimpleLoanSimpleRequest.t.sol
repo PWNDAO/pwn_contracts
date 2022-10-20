@@ -291,26 +291,21 @@ contract PWNSimpleLoanSimpleRequest_CreateLOAN_Test is PWNSimpleLoanSimpleReques
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.prank(activeLoanContract);
-        (PWNSimpleLoan.LOAN memory loan, address _lender, address _borrower) = requestContract.createLOAN(lender, abi.encode(request), signature);
+        PWNSimpleLoan.LOANTerms memory loanTerms = requestContract.createLOAN(lender, abi.encode(request), signature);
 
         // LOAN
-        assertTrue(loan.status == 2);
-        assertTrue(loan.borrower == borrower);
-        assertTrue(loan.duration == request.duration);
-        assertTrue(loan.expiration == currentTimestamp + request.duration);
-        assertTrue(loan.collateral.category == request.collateralCategory);
-        assertTrue(loan.collateral.assetAddress == request.collateralAddress);
-        assertTrue(loan.collateral.id == request.collateralId);
-        assertTrue(loan.collateral.amount == request.collateralAmount);
-        assertTrue(loan.asset.category == MultiToken.Category.ERC20);
-        assertTrue(loan.asset.assetAddress == request.loanAssetAddress);
-        assertTrue(loan.asset.id == 0);
-        assertTrue(loan.asset.amount == request.loanAmount);
-        assertTrue(loan.loanRepayAmount == request.loanAmount + request.loanYield);
-        // Lender
-        assertTrue(_lender == lender);
-        // Borrower
-        assertTrue(_borrower == request.borrower);
+        assertTrue(loanTerms.lender == lender);
+        assertTrue(loanTerms.borrower == request.borrower);
+        assertTrue(loanTerms.expiration == currentTimestamp + request.duration);
+        assertTrue(loanTerms.collateral.category == request.collateralCategory);
+        assertTrue(loanTerms.collateral.assetAddress == request.collateralAddress);
+        assertTrue(loanTerms.collateral.id == request.collateralId);
+        assertTrue(loanTerms.collateral.amount == request.collateralAmount);
+        assertTrue(loanTerms.asset.category == MultiToken.Category.ERC20);
+        assertTrue(loanTerms.asset.assetAddress == request.loanAssetAddress);
+        assertTrue(loanTerms.asset.id == 0);
+        assertTrue(loanTerms.asset.amount == request.loanAmount);
+        assertTrue(loanTerms.loanRepayAmount == request.loanAmount + request.loanYield);
     }
 
 }

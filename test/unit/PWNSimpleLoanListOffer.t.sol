@@ -352,26 +352,21 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        (PWNSimpleLoan.LOAN memory loan, address _lender, address _borrower) = offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        PWNSimpleLoan.LOANTerms memory loanTerms = offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
 
         // LOAN
-        assertTrue(loan.status == 2);
-        assertTrue(loan.borrower == borrower);
-        assertTrue(loan.duration == offer.duration);
-        assertTrue(loan.expiration == currentTimestamp + offer.duration);
-        assertTrue(loan.collateral.category == offer.collateralCategory);
-        assertTrue(loan.collateral.assetAddress == offer.collateralAddress);
-        assertTrue(loan.collateral.id == offerValues.collateralId);
-        assertTrue(loan.collateral.amount == offer.collateralAmount);
-        assertTrue(loan.asset.category == MultiToken.Category.ERC20);
-        assertTrue(loan.asset.assetAddress == offer.loanAssetAddress);
-        assertTrue(loan.asset.id == 0);
-        assertTrue(loan.asset.amount == offer.loanAmount);
-        assertTrue(loan.loanRepayAmount ==offer.loanAmount + offer.loanYield);
-        // Lender
-        assertTrue(_lender == offer.lender);
-        // Borrower
-        assertTrue(_borrower == borrower);
+        assertTrue(loanTerms.lender == offer.lender);
+        assertTrue(loanTerms.borrower == borrower);
+        assertTrue(loanTerms.expiration == currentTimestamp + offer.duration);
+        assertTrue(loanTerms.collateral.category == offer.collateralCategory);
+        assertTrue(loanTerms.collateral.assetAddress == offer.collateralAddress);
+        assertTrue(loanTerms.collateral.id == offerValues.collateralId);
+        assertTrue(loanTerms.collateral.amount == offer.collateralAmount);
+        assertTrue(loanTerms.asset.category == MultiToken.Category.ERC20);
+        assertTrue(loanTerms.asset.assetAddress == offer.loanAssetAddress);
+        assertTrue(loanTerms.asset.id == 0);
+        assertTrue(loanTerms.asset.amount == offer.loanAmount);
+        assertTrue(loanTerms.loanRepayAmount == offer.loanAmount + offer.loanYield);
     }
 
 }

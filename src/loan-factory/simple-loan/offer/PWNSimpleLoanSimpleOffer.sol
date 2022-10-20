@@ -94,16 +94,13 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         address caller,
         bytes calldata loanFactoryData,
         bytes calldata signature
-    ) external override onlyActiveLoan returns (
-        PWNSimpleLoan.LOAN memory loan,
-        address lender,
-        address borrower
-    ) {
+    ) external override onlyActiveLoan returns (PWNSimpleLoan.LOANTerms memory loanTerms) {
+
         Offer memory offer = abi.decode(loanFactoryData, (Offer));
         bytes32 offerHash = getOfferHash(offer);
 
-        lender = offer.lender;
-        borrower = caller;
+        address lender = offer.lender;
+        address borrower = caller;
 
         // Check that offer has been made via on-chain tx, EIP-1271 or signed off-chain
         if (offersMade[offerHash] == false)
@@ -136,10 +133,9 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         });
 
         // Create loan object
-        loan = PWNSimpleLoan.LOAN({
-            status: 2,
+        loanTerms = PWNSimpleLoan.LOANTerms({
+            lender: lender,
             borrower: borrower,
-            duration: offer.duration,
             expiration: uint40(block.timestamp) + offer.duration,
             collateral: collateral,
             asset: loanAsset,

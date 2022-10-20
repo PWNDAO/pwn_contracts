@@ -47,12 +47,8 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      *      The function assumes a prior token approval was made to a vault address.
      * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
      * @param origin Borrower address that is transferring collateral to Vault or repaying a loan.
-     * @param permit Data about permit deadline (uint256) and permit signature (64/65 bytes).
-     *               Deadline and signature should be pack encoded together.
-     *               Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
      */
-    function _pull(MultiToken.Asset memory asset, address origin, bytes memory permit) internal {
-        _handlePermit(asset, origin, address(this), permit);
+    function _pull(MultiToken.Asset memory asset, address origin) internal {
         asset.transferAssetFrom(origin, address(this));
         emit VaultPull(asset, origin);
     }
@@ -76,20 +72,29 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
      * @param origin An address of a lender who is providing a loan asset.
      * @param beneficiary An address of the recipient of an asset.
-     * @param permit Data about permit deadline (uint256) and permit signature (64/65 bytes).
-     *               Deadline and signature should be pack encoded together.
-     *               Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
      */
-    function _pushFrom(MultiToken.Asset memory asset, address origin, address beneficiary, bytes memory permit) internal {
-        _handlePermit(asset, origin, beneficiary, permit);
+    function _pushFrom(MultiToken.Asset memory asset, address origin, address beneficiary) internal {
         asset.safeTransferAssetFrom(origin, beneficiary);
         emit VaultPushFrom(asset, origin, beneficiary);
     }
 
-    function _handlePermit(MultiToken.Asset memory asset, address origin, address beneficiary, bytes memory permit) private {
-        if (permit.length > 0) {
-            asset.permit(origin, beneficiary, permit);
-        }
+
+    /*----------------------------------------------------------*|
+    |*  # PERMIT                                                *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * permit
+     * @dev Function uses signed permit data to set vaults allowance for an asset.
+     * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
+     * @param origin An address who is approving an asset.
+     * @param permit Data about permit deadline (uint256) and permit signature (64/65 bytes).
+     *               Deadline and signature should be pack encoded together.
+     *               Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
+     */
+    function _permit(MultiToken.Asset memory asset, address origin, bytes memory permit) internal {
+        if (permit.length > 0)
+            asset.permit(origin, address(this), permit);
     }
 
 

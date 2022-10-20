@@ -18,6 +18,7 @@ abstract contract PWNSimpleLoanTest is Test {
     address hub = address(0x80b);
     address loanToken = address(0x111111);
     address config = address(0xc0f1c);
+    address feeCollector = address(0xfee);
     address token = address(0x070ce2);
     address alice = address(0xa11ce);
     address loanFactory = address(0x1001);
@@ -25,6 +26,7 @@ abstract contract PWNSimpleLoanTest is Test {
     address lender = address(0x1001);
     address borrower = address(0x1002);
     PWNSimpleLoan.LOAN simpleLoan;
+    PWNSimpleLoan.LOANTerms simpleLoanTerms;
 
     bytes loanFactoryData;
     bytes signature;
@@ -40,6 +42,7 @@ abstract contract PWNSimpleLoanTest is Test {
         vm.etch(loanToken, bytes("data"));
         vm.etch(loanFactory, bytes("data"));
         vm.etch(token, bytes("data"));
+        vm.etch(config, bytes("data"));
     }
 
     function setUp() virtual public {
@@ -51,9 +54,17 @@ abstract contract PWNSimpleLoanTest is Test {
         collateralPermit = "";
 
         simpleLoan = PWNSimpleLoan.LOAN({
-            status: 54,
-            borrower: address(0x4444),
-            duration: 332,
+            status: 2,
+            borrower: borrower,
+            expiration: 40039,
+            loanAssetAddress: token,
+            loanRepayAmount: 6731,
+            collateral: MultiToken.Asset(MultiToken.Category.ERC721, token, 2, 0)
+        });
+
+        simpleLoanTerms = PWNSimpleLoan.LOANTerms({
+            lender: lender,
+            borrower: borrower,
             expiration: 40039,
             collateral: MultiToken.Asset(MultiToken.Category.ERC721, token, 2, 0),
             asset: MultiToken.Asset(MultiToken.Category.ERC721, token, 0, 5),
@@ -67,22 +78,18 @@ abstract contract PWNSimpleLoanTest is Test {
             _loanId,
             LOANS_SLOT
         )));
-        // Status, borrower address, duration & expiration in one storage slot
-        _assertLOANWord(loanSlot + 0, abi.encodePacked(uint16(0), _simpleLoan.expiration, _simpleLoan.duration, _simpleLoan.borrower, _simpleLoan.status));
-        // Collateral category & collateral asset address in one storage slot
-        _assertLOANWord(loanSlot + 1, abi.encodePacked(uint88(0), _simpleLoan.collateral.assetAddress, _simpleLoan.collateral.category));
-        // Collateral id
-        _assertLOANWord(loanSlot + 2, abi.encodePacked(_simpleLoan.collateral.id));
-        // Collateral amount
-        _assertLOANWord(loanSlot + 3, abi.encodePacked(_simpleLoan.collateral.amount));
-        // Loan asset category & loan asset address in one storage slot
-        _assertLOANWord(loanSlot + 4, abi.encodePacked(uint88(0), _simpleLoan.asset.assetAddress, _simpleLoan.asset.category));
-        // Loan asset id
-        _assertLOANWord(loanSlot + 5, abi.encodePacked(_simpleLoan.asset.id));
-        // Loan asset amount
-        _assertLOANWord(loanSlot + 6, abi.encodePacked(_simpleLoan.asset.amount));
+        // Status, borrower address & expiration in one storage slot
+        _assertLOANWord(loanSlot + 0, abi.encodePacked(uint48(0), _simpleLoan.expiration, _simpleLoan.borrower, _simpleLoan.status));
+        // Loan asset address
+        _assertLOANWord(loanSlot + 1, abi.encodePacked(uint96(0), _simpleLoan.loanAssetAddress));
         // Loan repay amount
-        _assertLOANWord(loanSlot + 7, abi.encodePacked(_simpleLoan.loanRepayAmount));
+        _assertLOANWord(loanSlot + 2, abi.encodePacked(_simpleLoan.loanRepayAmount));
+        // Collateral category & collateral asset address in one storage slot
+        _assertLOANWord(loanSlot + 3, abi.encodePacked(uint88(0), _simpleLoan.collateral.assetAddress, _simpleLoan.collateral.category));
+        // Collateral id
+        _assertLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.collateral.id));
+        // Collateral amount
+        _assertLOANWord(loanSlot + 5, abi.encodePacked(_simpleLoan.collateral.amount));
     }
 
     function _mockLOAN(uint256 _loanId, PWNSimpleLoan.LOAN memory _simpleLoan) internal {
@@ -90,22 +97,18 @@ abstract contract PWNSimpleLoanTest is Test {
             _loanId,
             LOANS_SLOT
         )));
-        // Status, borrower address, duration & expiration in one storage slot
-        _storeLOANWord(loanSlot + 0, abi.encodePacked(uint16(0), _simpleLoan.expiration, _simpleLoan.duration, _simpleLoan.borrower, _simpleLoan.status));
-        // Collateral category & collateral asset address in one storage slot
-        _storeLOANWord(loanSlot + 1, abi.encodePacked(uint88(0), _simpleLoan.collateral.assetAddress, _simpleLoan.collateral.category));
-        // Collateral id
-        _storeLOANWord(loanSlot + 2, abi.encodePacked(_simpleLoan.collateral.id));
-        // Collateral amount
-        _storeLOANWord(loanSlot + 3, abi.encodePacked(_simpleLoan.collateral.amount));
-        // Loan asset category & loan asset address in one storage slot
-        _storeLOANWord(loanSlot + 4, abi.encodePacked(uint88(0), _simpleLoan.asset.assetAddress, _simpleLoan.asset.category));
-        // Loan asset id
-        _storeLOANWord(loanSlot + 5, abi.encodePacked(_simpleLoan.asset.id));
-        // Loan asset amount
-        _storeLOANWord(loanSlot + 6, abi.encodePacked(_simpleLoan.asset.amount));
+        // Status, borrower address & expiration in one storage slot
+        _storeLOANWord(loanSlot + 0, abi.encodePacked(uint48(0), _simpleLoan.expiration, _simpleLoan.borrower, _simpleLoan.status));
+        // Loan asset address
+        _storeLOANWord(loanSlot + 1, abi.encodePacked(uint96(0), _simpleLoan.loanAssetAddress));
         // Loan repay amount
-        _storeLOANWord(loanSlot + 7, abi.encodePacked(_simpleLoan.loanRepayAmount));
+        _storeLOANWord(loanSlot + 2, abi.encodePacked(_simpleLoan.loanRepayAmount));
+        // Collateral category & collateral asset address in one storage slot
+        _storeLOANWord(loanSlot + 3, abi.encodePacked(uint88(0), _simpleLoan.collateral.assetAddress, _simpleLoan.collateral.category));
+        // Collateral id
+        _storeLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.collateral.id));
+        // Collateral amount
+        _storeLOANWord(loanSlot + 5, abi.encodePacked(_simpleLoan.collateral.amount));
     }
 
 
@@ -139,6 +142,17 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         super.setUp();
 
         vm.mockCall(
+            config,
+            abi.encodeWithSignature("fee()"),
+            abi.encode(0)
+        );
+        vm.mockCall(
+            config,
+            abi.encodeWithSignature("feeCollector()"),
+            abi.encode(feeCollector)
+        );
+
+        vm.mockCall(
             hub,
             abi.encodeWithSignature("hasTag(address,bytes32)"),
             abi.encode(false)
@@ -152,7 +166,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         vm.mockCall(
             loanFactory,
             abi.encodeWithSignature("createLOAN(address,bytes,bytes)"),
-            abi.encode(simpleLoan, lender, borrower)
+            abi.encode(simpleLoanTerms)
         );
 
         vm.mockCall(
@@ -198,21 +212,21 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldTransferCollateral_fromBorrower_toVault() external {
-        simpleLoan.collateral.category = MultiToken.Category.ERC20;
-        simpleLoan.collateral.assetAddress = token;
-        simpleLoan.collateral.id = 0;
-        simpleLoan.collateral.amount = 100;
+        simpleLoanTerms.collateral.category = MultiToken.Category.ERC20;
+        simpleLoanTerms.collateral.assetAddress = token;
+        simpleLoanTerms.collateral.id = 0;
+        simpleLoanTerms.collateral.amount = 100;
 
         vm.mockCall(
             loanFactory,
             abi.encodeWithSignature("createLOAN(address,bytes,bytes)"),
-            abi.encode(simpleLoan, lender, borrower)
+            abi.encode(simpleLoanTerms)
         );
 
         collateralPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
 
         vm.mockCall(
-            simpleLoan.collateral.assetAddress,
+            simpleLoanTerms.collateral.assetAddress,
             abi.encodeWithSignature("transferFrom(address,address,uint256)"),
             abi.encode(true)
         );
@@ -220,33 +234,33 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
             token,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                borrower, address(loan), simpleLoan.collateral.amount, 1, uint8(4), uint256(2), uint256(3)
+                borrower, address(loan), simpleLoanTerms.collateral.amount, 1, uint8(4), uint256(2), uint256(3)
             )
         );
         vm.expectCall(
-            simpleLoan.collateral.assetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, address(loan), simpleLoan.collateral.amount)
+            simpleLoanTerms.collateral.assetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, address(loan), simpleLoanTerms.collateral.amount)
         );
 
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
-    function test_shouldTransferLoanAsset_fromLender_toBorrower() external {
-        simpleLoan.asset.category = MultiToken.Category.ERC20;
-        simpleLoan.asset.assetAddress = token;
-        simpleLoan.asset.id = 0;
-        simpleLoan.asset.amount = 100;
+    function test_shouldTransferLoanAsset_fromLender_toBorrower_whenZeroFees() external {
+        simpleLoanTerms.asset.category = MultiToken.Category.ERC20;
+        simpleLoanTerms.asset.assetAddress = token;
+        simpleLoanTerms.asset.id = 0;
+        simpleLoanTerms.asset.amount = 100;
 
         vm.mockCall(
             loanFactory,
             abi.encodeWithSignature("createLOAN(address,bytes,bytes)"),
-            abi.encode(simpleLoan, lender, borrower)
+            abi.encode(simpleLoanTerms, lender, borrower)
         );
 
         loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
 
         vm.mockCall(
-            simpleLoan.asset.assetAddress,
+            simpleLoanTerms.asset.assetAddress,
             abi.encodeWithSignature("transferFrom(address,address,uint256)"),
             abi.encode(true)
         );
@@ -254,12 +268,58 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
             token,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                lender, borrower, simpleLoan.asset.amount, 1, uint8(4), uint256(2), uint256(3)
+                lender, address(loan), simpleLoanTerms.asset.amount, 1, uint8(4), uint256(2), uint256(3)
             )
         );
         vm.expectCall(
-            simpleLoan.asset.assetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, simpleLoan.asset.amount)
+            simpleLoanTerms.asset.assetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, simpleLoanTerms.asset.amount)
+        );
+
+        loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
+    }
+
+    function test_shouldTransferLoanAsset_fromLender_toBorrowerAndFeeCollector_whenNonZeroFee() external {
+        simpleLoanTerms.asset.category = MultiToken.Category.ERC20;
+        simpleLoanTerms.asset.assetAddress = token;
+        simpleLoanTerms.asset.id = 0;
+        simpleLoanTerms.asset.amount = 100;
+
+        vm.mockCall(
+            config,
+            abi.encodeWithSignature("fee()"),
+            abi.encode(1000)
+        );
+
+        vm.mockCall(
+            loanFactory,
+            abi.encodeWithSignature("createLOAN(address,bytes,bytes)"),
+            abi.encode(simpleLoanTerms, lender, borrower)
+        );
+
+        loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
+
+        vm.mockCall(
+            simpleLoanTerms.asset.assetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
+            abi.encode(true)
+        );
+        vm.expectCall(
+            token,
+            abi.encodeWithSignature(
+                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+                lender, address(loan), simpleLoanTerms.asset.amount, 1, uint8(4), uint256(2), uint256(3)
+            )
+        );
+        // Fee transfer
+        vm.expectCall(
+            simpleLoanTerms.asset.assetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, feeCollector, 10)
+        );
+        // Updated amount transfer
+        vm.expectCall(
+            simpleLoanTerms.asset.assetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, 90)
         );
 
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
@@ -292,7 +352,16 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
 
         vm.warp(30039);
 
-        simpleLoan.status = 2;
+        vm.mockCall(
+            simpleLoan.loanAssetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
+            abi.encode(true)
+        );
+        vm.mockCall(
+            simpleLoan.collateral.assetAddress,
+            abi.encodeWithSignature("safeTransferFrom(address,address,uint256,bytes)"),
+            abi.encode(true)
+        );
     }
 
     function test_shouldFail_whenLoanDoesNotExist() external {
@@ -334,19 +403,9 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldTransferRepaidAmountToVault() external {
-        simpleLoan.asset.category = MultiToken.Category.ERC20;
-        simpleLoan.asset.assetAddress = token;
-        simpleLoan.asset.id = 0;
-        simpleLoan.asset.amount = 100;
-
         _mockLOAN(loanId, simpleLoan);
         loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
 
-        vm.mockCall(
-            simpleLoan.asset.assetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
-            abi.encode(true)
-        );
         vm.expectCall(
             token,
             abi.encodeWithSignature(
@@ -355,7 +414,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
             )
         );
         vm.expectCall(
-            simpleLoan.asset.assetAddress,
+            simpleLoan.loanAssetAddress,
             abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, address(loan), simpleLoan.loanRepayAmount)
         );
 
@@ -400,6 +459,16 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
             loanToken,
             abi.encodeWithSignature("ownerOf(uint256)", loanId),
             abi.encode(lender)
+        );
+        vm.mockCall(
+            token,
+            abi.encodeWithSignature("transfer(address,uint256)"),
+            abi.encode(true)
+        );
+        vm.mockCall(
+            token,
+            abi.encodeWithSignature("safeTransferFrom(address,address,uint256,bytes)"),
+            abi.encode(true)
         );
 
         simpleLoan.status = 3;
@@ -454,11 +523,10 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         PWNSimpleLoan.LOAN memory nonExistingLoan = PWNSimpleLoan.LOAN({
             status: 0,
             borrower: address(0),
-            duration: 0,
             expiration: 0,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0),
-            asset: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0),
-            loanRepayAmount: 0
+            loanAssetAddress: address(0),
+            loanRepayAmount: 0,
+            collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0)
         });
         _assertLOANEq(loanId, nonExistingLoan);
     }
@@ -476,20 +544,13 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldTransferRepaidAmountToLender_whenLoanIsRepaid() external {
-        simpleLoan.asset.category = MultiToken.Category.ERC1155;
-        simpleLoan.asset.assetAddress = token;
-        simpleLoan.asset.id = 8383;
-        simpleLoan.asset.amount = 100;
         simpleLoan.loanRepayAmount = 110;
 
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectCall(
-            simpleLoan.asset.assetAddress,
-            abi.encodeWithSignature(
-                "safeTransferFrom(address,address,uint256,uint256,bytes)",
-                address(loan), lender, simpleLoan.asset.id, simpleLoan.loanRepayAmount, ""
-            )
+            simpleLoan.loanAssetAddress,
+            abi.encodeWithSignature("transfer(address,uint256)", lender, simpleLoan.loanRepayAmount)
         );
 
         vm.prank(lender);
