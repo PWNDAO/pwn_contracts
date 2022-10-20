@@ -17,17 +17,22 @@ import "@pwn/PWNError.sol";
 // No additional logic is applied here
 contract PWNVaultExposed is PWNVault {
 
-    function pull(MultiToken.Asset memory asset, address origin, bytes memory permit) external {
-        _pull(asset, origin, permit);
+    function pull(MultiToken.Asset memory asset, address origin) external {
+        _pull(asset, origin);
     }
 
     function push(MultiToken.Asset memory asset, address beneficiary) external {
         _push(asset, beneficiary);
     }
 
-    function pushFrom(MultiToken.Asset memory asset, address origin, address beneficiary, bytes memory permit) external {
-        _pushFrom(asset, origin, beneficiary, permit);
+    function pushFrom(MultiToken.Asset memory asset, address origin, address beneficiary) external {
+        _pushFrom(asset, origin, beneficiary);
     }
+
+    function permit(MultiToken.Asset memory asset, address origin, bytes memory permit_) external {
+        _permit(asset, origin, permit_);
+    }
+
 }
 
 abstract contract PWNVaultTest is Test {
@@ -59,29 +64,6 @@ abstract contract PWNVaultTest is Test {
 
 contract PWNVault_Pull_Test is PWNVaultTest {
 
-    function test_shouldCallPermit_whenPermitNonZero() external {
-        vm.mockCall(
-            token,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
-            abi.encode(true)
-        );
-        vm.expectCall(
-            token,
-            abi.encodeWithSignature(
-                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                alice, address(vault), 100, 1, uint8(4), bytes32(uint256(2)), bytes32(uint256(3)))
-        );
-
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC20, token, 0, 100);
-        bytes memory permit = abi.encodePacked(
-            uint256(1),
-            bytes32(uint256(2)),
-            bytes32(uint256(3)),
-            uint8(4)
-        );
-        vault.pull(asset, alice, permit);
-    }
-
     function test_shouldCallTransferFrom_fromOrigin_toVault() external {
         vm.expectCall(
             token,
@@ -89,7 +71,7 @@ contract PWNVault_Pull_Test is PWNVaultTest {
         );
 
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
-        vault.pull(asset, alice, "");
+        vault.pull(asset, alice);
     }
 
     function test_shouldEmitEvent_VaultPull() external {
@@ -98,7 +80,7 @@ contract PWNVault_Pull_Test is PWNVaultTest {
         vm.expectEmit(true, true, false, false);
         emit VaultPull(asset, alice);
 
-        vault.pull(asset, alice, "");
+        vault.pull(asset, alice);
     }
 
 }
@@ -138,29 +120,6 @@ contract PWNVault_Push_Test is PWNVaultTest {
 
 contract PWNVault_PushFrom_Test is PWNVaultTest {
 
-    function test_shouldCallPermit_whenPermitNonZero() external {
-        vm.mockCall(
-            token,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
-            abi.encode(true)
-        );
-        vm.expectCall(
-            token,
-            abi.encodeWithSignature(
-                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                alice, bob, 100, 1, uint8(4), bytes32(uint256(2)), bytes32(uint256(3)))
-        );
-
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC20, token, 0, 100);
-        bytes memory permit = abi.encodePacked(
-            uint256(1),
-            bytes32(uint256(2)),
-            bytes32(uint256(3)),
-            uint8(4)
-        );
-        vault.pushFrom(asset, alice, bob, permit);
-    }
-
     function test_shouldCallSafeTransferFrom_fromOrigin_toBeneficiary() external {
         vm.expectCall(
             token,
@@ -168,7 +127,7 @@ contract PWNVault_PushFrom_Test is PWNVaultTest {
         );
 
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
-        vault.pushFrom(asset, alice, bob, "");
+        vault.pushFrom(asset, alice, bob);
     }
 
     function test_shouldEmitEvent_VaultPushFrom() external {
@@ -177,7 +136,40 @@ contract PWNVault_PushFrom_Test is PWNVaultTest {
         vm.expectEmit(true, true, true, false);
         emit VaultPushFrom(asset, alice, bob);
 
-        vault.pushFrom(asset, alice, bob, "");
+        vault.pushFrom(asset, alice, bob);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # PERMIT                                                *|
+|*----------------------------------------------------------*/
+
+contract PWNVault_Permit_Test is PWNVaultTest {
+
+    function test_shouldCallPermit_whenPermitNonZero() external {
+        vm.expectCall(
+            token,
+            abi.encodeWithSignature(
+                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+                alice, address(vault), 100, 1, uint8(4), bytes32(uint256(2)), bytes32(uint256(3)))
+        );
+
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC20, token, 0, 100);
+        bytes memory permit = abi.encodePacked(uint256(1), bytes32(uint256(2)), bytes32(uint256(3)), uint8(4));
+        vault.permit(asset, alice, permit);
+    }
+
+    function testFail_shouldNotCallPermit_whenPermitIsZero() external {
+        // Should fail, because permit is not called
+        vm.expectCall(
+            token,
+            abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)")
+        );
+
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC20, token, 0, 100);
+        vault.permit(asset, alice, "");
     }
 
 }
