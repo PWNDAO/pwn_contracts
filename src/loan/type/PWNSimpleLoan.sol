@@ -80,17 +80,17 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     /**
      * @dev Emitted when a new loan in created.
      */
-    event LOANCreated(uint256 indexed loanId, address indexed lender);
+    event LOANCreated(uint256 indexed loanId, LOANTerms terms);
 
     /**
      * @dev Emitted when a loan in paid back.
      */
-    event LOANPaidBack(uint256 loanId);
+    event LOANPaidBack(uint256 indexed loanId);
 
     /**
      * @dev Emitted when a repaid or defaulted loan in claimed.
      */
-    event LOANClaimed(uint256 loanId);
+    event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
 
 
     /*----------------------------------------------------------*|
@@ -148,7 +148,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         loan.loanRepayAmount = loanTerms.loanRepayAmount;
         loan.collateral = loanTerms.collateral;
 
-        emit LOANCreated(loanId, loanTerms.lender);
+        emit LOANCreated(loanId, loanTerms);
 
         // Transfer collateral to Vault
         _permit(loanTerms.collateral, loanTerms.borrower, collateralPermit);
@@ -260,6 +260,8 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
             // Transfer repaid loan to lender
             _push(loanAsset, msg.sender);
+
+            emit LOANClaimed(loanId, false);
         }
         // Loan is running but expired
         else if (loan.status == 2 && loan.expiration <= block.timestamp) {
@@ -270,13 +272,13 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
             // Transfer collateral to lender
             _push(collateral, msg.sender);
+
+            emit LOANClaimed(loanId, true);
         }
         // Loan is in wrong state or from a different loan contract
         else {
             revert PWNError.InvalidLoanStatus(loan.status);
         }
-
-        emit LOANClaimed(loanId);
     }
 
     function _deleteLoan(uint256 loanId) private {
