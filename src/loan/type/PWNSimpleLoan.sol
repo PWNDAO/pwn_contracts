@@ -34,16 +34,33 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
      * @notice Struct defining a loan.
      * @param status 0 == none/dead || 2 == running/accepted offer || 3 == paid back || 4 == expired.
      * @param borrower Address of a borrower.
-     * @param duration Loan duration in seconds.
      * @param expiration Unix timestamp (in seconds) setting up a default date.
-     * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
-     * @param asset Asset to be borrowed by lender to borrower. For a definition see { MultiToken dependency lib }.
+     * @param loanAssetAddress Address of an asset used as a loan credit.
      * @param loanRepayAmount Amount of a loan asset to be paid back.
+     * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
      */
     struct LOAN {
         uint8 status;
         address borrower;
-        uint32 duration;
+        uint40 expiration;
+        address loanAssetAddress;
+        uint256 loanRepayAmount;
+        MultiToken.Asset collateral;
+    }
+
+    /**
+     * @notice Struct defining a loan terms.
+     * @dev This struct is created by loan factories and never stored.
+     * @param lender Address of a lender.
+     * @param borrower Address of a borrower.
+     * @param expiration Unix timestamp (in seconds) setting up a default date.
+     * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
+     * @param asset Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
+     * @param loanRepayAmount Amount of a loan asset to be paid back.
+     */
+    struct LOANTerms {
+        address lender;
+        address borrower;
         uint40 expiration;
         MultiToken.Asset collateral;
         MultiToken.Asset asset;
@@ -112,44 +129,49 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         if (hub.hasTag(loanFactoryContract, PWNHubTags.SIMPLE_LOAN_FACTORY) == false)
             revert PWNError.CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_FACTORY);
 
-        // Build LOAN by loan factory
-        (LOAN memory loan, address lender, address borrower) = IPWNSimpleLoanFactory(loanFactoryContract).createLOAN({
+        // Build LOANTerms by loan factory
+        LOANTerms memory loanTerms = IPWNSimpleLoanFactory(loanFactoryContract).createLOAN({
             caller: msg.sender,
             loanFactoryData: loanFactoryData,
             signature: signature
         });
 
         // Mint LOAN token for lender
-        loanId = loanToken.mint(lender);
+        loanId = loanToken.mint(loanTerms.lender);
 
         // Store loan data under loan id
-        LOANs[loanId] = loan;
+        LOAN storage loan = LOANs[loanId];
+        loan.status = 2;
+        loan.borrower = loanTerms.borrower;
+        loan.expiration = loanTerms.expiration;
+        loan.loanAssetAddress = loanTerms.asset.assetAddress;
+        loan.loanRepayAmount = loanTerms.loanRepayAmount;
+        loan.collateral = loanTerms.collateral;
 
-        emit LOANCreated(loanId, lender);
+        emit LOANCreated(loanId, loanTerms.lender);
 
         // Transfer collateral to Vault
-        _permit(loan.collateral, borrower, collateralPermit);
-        _pull(loan.collateral, borrower);
+        _permit(loanTerms.collateral, loanTerms.borrower, collateralPermit);
+        _pull(loanTerms.collateral, loanTerms.borrower);
 
         // Permit spending if permit data provided
-        _permit(loan.asset, lender, loanAssetPermit);
+        _permit(loanTerms.asset, loanTerms.lender, loanAssetPermit);
 
         uint16 fee = config.fee();
         if (fee > 0) {
             // Compute fee size
-            (uint256 feeAmount, uint256 newLoanAmount) = PWNFeeCalculator.calculateFeeAmount(fee, loan.asset.amount);
+            (uint256 feeAmount, uint256 newLoanAmount) = PWNFeeCalculator.calculateFeeAmount(fee, loanTerms.asset.amount);
 
             // Transfer fee amount to fee collector
-            loan.asset.amount = feeAmount;
-            _pushFrom(loan.asset, lender, config.feeCollector());
+            loanTerms.asset.amount = feeAmount;
+            _pushFrom(loanTerms.asset, loanTerms.lender, config.feeCollector());
 
             // Set new loan amount value
-            loan.asset.amount = newLoanAmount;
+            loanTerms.asset.amount = newLoanAmount;
         }
 
         // Transfer loan asset to borrower
-        _pushFrom(loan.asset, lender, borrower);
-
+        _pushFrom(loanTerms.asset, loanTerms.lender, loanTerms.borrower);
     }
 
 
@@ -187,8 +209,12 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         loan.status = 3;
 
         // Transfer repaid amount of loan asset to Vault
-        MultiToken.Asset memory repayLoanAsset = loan.asset;
-        repayLoanAsset.amount = loan.loanRepayAmount;
+        MultiToken.Asset memory repayLoanAsset = MultiToken.Asset({
+            category: MultiToken.Category.ERC20,
+            assetAddress: loan.loanAssetAddress,
+            id: 0,
+            amount: loan.loanRepayAmount
+        });
 
         _permit(repayLoanAsset, msg.sender, loanAssetPermit);
         _pull(repayLoanAsset, msg.sender);
@@ -223,9 +249,9 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         // Loan has been paid back
         else if (loan.status == 3) {
             MultiToken.Asset memory loanAsset = MultiToken.Asset({
-                category: loan.asset.category,
-                assetAddress: loan.asset.assetAddress,
-                id: loan.asset.id,
+                category: MultiToken.Category.ERC20,
+                assetAddress: loan.loanAssetAddress,
+                id: 0,
                 amount: loan.loanRepayAmount
             });
 
