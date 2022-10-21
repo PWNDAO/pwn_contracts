@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/PWNLOAN.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 abstract contract PWNLOANTest is Test {
@@ -73,7 +73,7 @@ contract PWNLOAN_Mint_Test is PWNLOANTest {
 
     function test_shouldFail_whenCallerIsNotActiveLoanContract() external {
         vm.expectRevert(
-            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
+            abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
         );
         vm.prank(alice);
         loanToken.mint(alice);
@@ -147,7 +147,7 @@ contract PWNLOAN_Burn_Test is PWNLOANTest {
 
     function test_shouldFail_whenCallerIsNotStoredLoanContractForGivenLoanId() external {
         vm.expectRevert(
-            abi.encodeWithSelector(PWNError.InvalidLoanContractCaller.selector)
+            abi.encodeWithSelector(InvalidLoanContractCaller.selector)
         );
         vm.prank(alice);
         loanToken.burn(loanId);

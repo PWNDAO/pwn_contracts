@@ -10,7 +10,7 @@ import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
 import "@pwn/loan/PWNVault.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 // The only reason for this contract is to expose internal functions of PWNVault
@@ -188,7 +188,7 @@ contract PWNVault_ReceivedHooks_Test is PWNVaultTest {
     }
 
     function test_shouldFail_whenOperatorIsNotVault_onERC721Received() external {
-        vm.expectRevert(abi.encodeWithSelector(PWNError.UnsupportedTransferFunction.selector));
+        vm.expectRevert(abi.encodeWithSelector(UnsupportedTransferFunction.selector));
         vault.onERC721Received(address(0), address(0), 0, "");
     }
 
@@ -199,7 +199,7 @@ contract PWNVault_ReceivedHooks_Test is PWNVaultTest {
     }
 
     function test_shouldFail_whenOperatorIsNotVault_onERC1155Received() external {
-        vm.expectRevert(abi.encodeWithSelector(PWNError.UnsupportedTransferFunction.selector));
+        vm.expectRevert(abi.encodeWithSelector(UnsupportedTransferFunction.selector));
         vault.onERC1155Received(address(0), address(0), 0, 0, "");
     }
 
@@ -207,7 +207,7 @@ contract PWNVault_ReceivedHooks_Test is PWNVaultTest {
         uint256[] memory ids;
         uint256[] memory values;
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.UnsupportedTransferFunction.selector));
+        vm.expectRevert(abi.encodeWithSelector(UnsupportedTransferFunction.selector));
         vault.onERC1155BatchReceived(address(0), address(0), ids, values, "");
     }
 

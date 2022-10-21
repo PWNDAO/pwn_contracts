@@ -3,17 +3,18 @@ pragma solidity 0.8.16;
 
 import "@pwn/hub/PWNHubAccessControl.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
-import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
-import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
+import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanTermsFactory.sol";
+import "@pwn/loan-factory/PWNRevokedNonce.sol";
+import "@pwn/PWNErrors.sol";
 
 
-abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessControl {
+abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanTermsFactory, PWNHubAccessControl {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    PWNRevokedOfferNonce immutable internal revokedOfferNonce;
+    PWNRevokedNonce immutable internal revokedOfferNonce;
 
     /**
      * @dev Mapping of offers made via on-chain transactions.
@@ -37,7 +38,7 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessContr
     |*----------------------------------------------------------*/
 
     constructor(address hub, address _revokedOfferNonce) PWNHubAccessControl(hub) {
-        revokedOfferNonce = PWNRevokedOfferNonce(_revokedOfferNonce);
+        revokedOfferNonce = PWNRevokedNonce(_revokedOfferNonce);
     }
 
 
@@ -55,15 +56,15 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessContr
     function _makeOffer(bytes32 offerStructHash, address lender, bytes32 nonce) internal {
         // Check that caller is a lender
         if (msg.sender != lender)
-            revert PWNError.CallerIsNotStatedLender(lender);
+            revert CallerIsNotStatedLender(lender);
 
         // Check that offer has not been made
         if (offersMade[offerStructHash] == true)
-            revert PWNError.OfferAlreadyExists();
+            revert OfferAlreadyExists();
 
         // Check that offer has not been revoked
-        if (revokedOfferNonce.isOfferNonceRevoked(lender, nonce) == true)
-            revert PWNError.NonceRevoked();
+        if (revokedOfferNonce.isNonceRevoked(lender, nonce) == true)
+            revert NonceAlreadyRevoked();
 
         // Mark offer as made
         offersMade[offerStructHash] = true;
@@ -76,7 +77,7 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessContr
      * @param offerNonce Offer nonce to be revoked.
      */
     function revokeOfferNonce(bytes32 offerNonce) external {
-        revokedOfferNonce.revokeOfferNonce(msg.sender, offerNonce);
+        revokedOfferNonce.revokeNonce(msg.sender, offerNonce);
     }
 
 }

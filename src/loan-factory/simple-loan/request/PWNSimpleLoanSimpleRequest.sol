@@ -5,7 +5,7 @@ import "MultiToken/MultiToken.sol";
 
 import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
 import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanRequest.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 /**
@@ -88,13 +88,13 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
     /**
      * @notice See { IPWNSimpleLoanFactory.sol }.
      */
-    function createLOAN(
+    function getLOANTerms(
         address caller,
-        bytes calldata loanFactoryData,
+        bytes calldata factoryData,
         bytes calldata signature
     ) external override onlyActiveLoan returns (PWNSimpleLoan.LOANTerms memory loanTerms) {
 
-        Request memory request = abi.decode(loanFactoryData, (Request));
+        Request memory request = abi.decode(factoryData, (Request));
         bytes32 requestHash = getRequestHash(request);
 
         address lender = caller;
@@ -103,18 +103,18 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         // Check that request has been made via on-chain tx, EIP-1271 or signed off-chain
         if (requestsMade[requestHash] == false)
             if (PWNSignatureChecker.isValidSignatureNow(borrower, requestHash, signature) == false)
-                revert PWNError.InvalidSignature();
+                revert InvalidSignature();
 
         // Check valid request
         if (request.expiration != 0 && block.timestamp >= request.expiration)
-            revert PWNError.RequestExpired();
+            revert RequestExpired();
 
-        if (revokedRequestNonce.isRequestNonceRevoked(borrower, request.nonce) == true)
-            revert PWNError.NonceRevoked();
+        if (revokedRequestNonce.isNonceRevoked(borrower, request.nonce) == true)
+            revert NonceAlreadyRevoked();
 
         if (request.lender != address(0))
             if (lender != request.lender)
-                revert PWNError.CallerIsNotStatedLender(request.lender);
+                revert CallerIsNotStatedLender(request.lender);
 
         // Prepare collateral and loan asset
         MultiToken.Asset memory collateral = MultiToken.Asset({
@@ -140,7 +140,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
             loanRepayAmount: request.loanAmount + request.loanYield
         });
 
-        revokedRequestNonce.revokeRequestNonce(borrower, request.nonce);
+        revokedRequestNonce.revokeNonce(borrower, request.nonce);
     }
 
 
@@ -187,15 +187,15 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
 
 
     /*----------------------------------------------------------*|
-    |*  # LOAN FACTORY DATA ENCODING                            *|
+    |*  # LOAN TERMS FACTORY DATA ENCODING                      *|
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Return encoded input data for this loan factory.
+     * @notice Return encoded input data for this loan terms factory.
      * @param request Simple loan simple request struct to encode.
-     * @return Encoded loan factory data that can be used as an input of `createLOAN` function with this loan factory.
+     * @return Encoded loan terms factory data that can be used as an input of `getLOANTerms` function with this factory.
      */
-    function encodeLoanFactoryData(Request memory request) external pure returns (bytes memory) {
+    function encodeLoanTermsFactoryData(Request memory request) external pure returns (bytes memory) {
         return abi.encode(request);
     }
 

@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 import "@pwn-test/helper/BaseIntegrationTest.t.sol";
 
@@ -27,7 +27,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         assertEq(t20.balanceOf(borrower), 0);
         assertEq(t20.balanceOf(address(simpleLoan)), 10e18);
 
-        assertEq(revokedOfferNonce.isOfferNonceRevoked(lender, offer.nonce), true);
+        assertEq(revokedOfferNonce.isNonceRevoked(lender, offer.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -44,7 +44,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
 
         assertEq(t721.ownerOf(42), address(simpleLoan));
 
-        assertEq(revokedOfferNonce.isOfferNonceRevoked(lender, offer.nonce), true);
+        assertEq(revokedOfferNonce.isNonceRevoked(lender, offer.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -63,7 +63,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         assertEq(t1155.balanceOf(borrower, 42), 0);
         assertEq(t1155.balanceOf(address(simpleLoan), 42), 10e18);
 
-        assertEq(revokedOfferNonce.isOfferNonceRevoked(lender, nonce), true);
+        assertEq(revokedOfferNonce.isNonceRevoked(lender, nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -102,7 +102,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         vm.warp(expiration);
         _repayLoanFailing(
             loanId,
-            abi.encodeWithSelector(PWNError.LoanDefaulted.selector, uint40(expiration))
+            abi.encodeWithSelector(LoanDefaulted.selector, uint40(expiration))
         );
     }
 

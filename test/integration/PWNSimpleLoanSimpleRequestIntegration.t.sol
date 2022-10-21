@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 import "@pwn-test/helper/BaseIntegrationTest.t.sol";
 
@@ -27,8 +27,8 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         }
         vm.prank(lender);
         return simpleLoan.createLOAN({
-            loanFactoryContract: address(simpleRequest),
-            loanFactoryData: abi.encode(_request),
+            loanTermsFactoryContract: address(simpleRequest),
+            loanTermsFactoryData: abi.encode(_request),
             signature: signature,
             loanAssetPermit: "",
             collateralPermit: ""
@@ -66,7 +66,7 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         assertEq(t20.balanceOf(borrower), 0);
         assertEq(t20.balanceOf(address(simpleLoan)), 10e18);
 
-        assertEq(revokedRequestNonce.isRequestNonceRevoked(borrower, request.nonce), true);
+        assertEq(revokedRequestNonce.isNonceRevoked(borrower, request.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -96,7 +96,7 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
 
         assertEq(t721.ownerOf(42), address(simpleLoan));
 
-        assertEq(revokedRequestNonce.isRequestNonceRevoked(borrower, request.nonce), true);
+        assertEq(revokedRequestNonce.isNonceRevoked(borrower, request.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -128,7 +128,7 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         assertEq(t1155.balanceOf(borrower, 42), 0);
         assertEq(t1155.balanceOf(address(simpleLoan), 42), 10e18);
 
-        assertEq(revokedRequestNonce.isRequestNonceRevoked(borrower, request.nonce), true);
+        assertEq(revokedRequestNonce.isNonceRevoked(borrower, request.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -177,19 +177,19 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         // Create LOAN with request 2
         vm.prank(lender);
         simpleLoan.createLOAN({
-            loanFactoryContract: address(simpleRequest),
-            loanFactoryData: requestData2,
+            loanTermsFactoryContract: address(simpleRequest),
+            loanTermsFactoryData: requestData2,
             signature: signature2,
             loanAssetPermit: "",
             collateralPermit: ""
         });
 
         // Fail to accept other requests with same nonce
-        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(lender);
         simpleLoan.createLOAN({
-            loanFactoryContract: address(simpleRequest),
-            loanFactoryData: requestData1,
+            loanTermsFactoryContract: address(simpleRequest),
+            loanTermsFactoryData: requestData1,
             signature: signature1,
             loanAssetPermit: "",
             collateralPermit: ""

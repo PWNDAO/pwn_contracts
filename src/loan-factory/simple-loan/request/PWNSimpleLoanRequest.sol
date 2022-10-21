@@ -3,17 +3,18 @@ pragma solidity 0.8.16;
 
 import "@pwn/hub/PWNHubAccessControl.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
-import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
-import "@pwn/loan-factory/PWNRevokedRequestNonce.sol";
+import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanTermsFactory.sol";
+import "@pwn/loan-factory/PWNRevokedNonce.sol";
+import "@pwn/PWNErrors.sol";
 
 
-abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanFactory, PWNHubAccessControl {
+abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAccessControl {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    PWNRevokedRequestNonce immutable internal revokedRequestNonce;
+    PWNRevokedNonce immutable internal revokedRequestNonce;
 
     /**
      * @dev Mapping of requests made via on-chain transactions.
@@ -37,7 +38,7 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanFactory, PWNHubAccessCon
     |*----------------------------------------------------------*/
 
     constructor(address hub, address _revokedRequestNonce) PWNHubAccessControl(hub) {
-        revokedRequestNonce = PWNRevokedRequestNonce(_revokedRequestNonce);
+        revokedRequestNonce = PWNRevokedNonce(_revokedRequestNonce);
     }
 
 
@@ -55,15 +56,15 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanFactory, PWNHubAccessCon
     function _makeRequest(bytes32 requestStructHash, address borrower, bytes32 nonce) internal {
         // Check that caller is a borrower
         if (msg.sender != borrower)
-            revert PWNError.CallerIsNotStatedBorrower(borrower);
+            revert CallerIsNotStatedBorrower(borrower);
 
         // Check that request has not been made
         if (requestsMade[requestStructHash] == true)
-            revert PWNError.RequestAlreadyExists();
+            revert RequestAlreadyExists();
 
         // Check that request has not been revoked
-        if (revokedRequestNonce.isRequestNonceRevoked(borrower, nonce) == true)
-            revert PWNError.NonceRevoked();
+        if (revokedRequestNonce.isNonceRevoked(borrower, nonce) == true)
+            revert NonceAlreadyRevoked();
 
         // Mark request as made
         requestsMade[requestStructHash] = true;
@@ -76,7 +77,7 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanFactory, PWNHubAccessCon
      * @param requestNonce Request nonce to be revoked.
      */
     function revokeRequestNonce(bytes32 requestNonce) external {
-        revokedRequestNonce.revokeRequestNonce(msg.sender, requestNonce);
+        revokedRequestNonce.revokeNonce(msg.sender, requestNonce);
     }
 
 }

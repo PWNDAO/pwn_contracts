@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "forge-std/Test.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 import "@pwn-test/helper/BaseIntegrationTest.t.sol";
 
@@ -17,7 +17,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
         // Try to create LOAN
         _createERC1155LoanFailing(
-            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
+            abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
         );
     }
 
@@ -75,19 +75,19 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         vm.expectRevert(
-            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
+            abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
         );
         vm.prank(address(simpleLoan));
-        simpleOffer.createLOAN(borrower, "", ""); // Offer data are not important in this test
+        simpleOffer.getLOANTerms(borrower, "", ""); // Offer data are not important in this test
     }
 
     function test_shouldFail_whenPassingInvalidOfferContract() external {
-        // Remove SIMPLE_LOAN_FACTORY tag
-        hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_FACTORY, false);
+        // Remove SIMPLE_LOAN_TERMS_FACTORY tag
+        hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, false);
 
         // Try to create LOAN
         _createERC1155LoanFailing(
-            abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.SIMPLE_LOAN_FACTORY)
+            abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY)
         );
     }
 

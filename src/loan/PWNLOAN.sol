@@ -5,7 +5,7 @@ import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
 import "@pwn/hub/PWNHubAccessControl.sol";
 import "@pwn/loan/IPWNLoanMetadataProvider.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 /**
@@ -80,7 +80,7 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
      */
     function burn(uint256 loanId) external {
         if (loanContract[loanId] != msg.sender)
-            revert PWNError.InvalidLoanContractCaller();
+            revert InvalidLoanContractCaller();
 
         delete loanContract[loanId];
         _burn(loanId);

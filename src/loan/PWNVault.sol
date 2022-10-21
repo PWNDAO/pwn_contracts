@@ -6,7 +6,7 @@ import "MultiToken/MultiToken.sol";
 import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 /**
@@ -118,7 +118,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         bytes calldata /*data*/
     ) override external view returns (bytes4) {
         if (operator != address(this))
-            revert PWNError.UnsupportedTransferFunction();
+            revert UnsupportedTransferFunction();
 
         return IERC721Receiver.onERC721Received.selector;
     }
@@ -139,7 +139,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         bytes calldata /*data*/
     ) override external view returns (bytes4) {
         if (operator != address(this))
-            revert PWNError.UnsupportedTransferFunction();
+            revert UnsupportedTransferFunction();
 
         return IERC1155Receiver.onERC1155Received.selector;
     }
@@ -159,7 +159,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256[] calldata /*values*/,
         bytes calldata /*data*/
     ) override external pure returns (bytes4) {
-        revert PWNError.UnsupportedTransferFunction();
+        revert UnsupportedTransferFunction();
     }
 
 

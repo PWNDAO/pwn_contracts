@@ -8,7 +8,7 @@ import "MultiToken/MultiToken.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanOffer.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 // The only reason for this contract is to expose internal functions of PWNSimpleLoanOffer
@@ -24,9 +24,9 @@ contract PWNSimpleLoanOfferExposed is PWNSimpleLoanOffer {
     }
 
     // Dummy implementation, is not tester here
-    function createLOAN(
+    function getLOANTerms(
         address /*caller*/,
-        bytes calldata /*loanFactoryData*/,
+        bytes calldata /*factoryData*/,
         bytes calldata /*signature*/
     ) override external pure returns (PWNSimpleLoan.LOANTerms memory) {
         revert("Missing implementation");
@@ -58,7 +58,7 @@ abstract contract PWNSimpleLoanOfferTest is Test {
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
             abi.encode(false)
         );
     }
@@ -73,7 +73,7 @@ abstract contract PWNSimpleLoanOfferTest is Test {
 contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
 
     function test_shouldFail_whenCallerIsNotLender() external {
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerIsNotStatedLender.selector, lender));
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedLender.selector, lender));
         offerContract.makeOffer(offerHash, lender, nonce);
     }
 
@@ -84,7 +84,7 @@ contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
             bytes32(uint256(1))
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.OfferAlreadyExists.selector));
+        vm.expectRevert(abi.encodeWithSelector(OfferAlreadyExists.selector));
         vm.prank(lender);
         offerContract.makeOffer(offerHash, lender, nonce);
     }
@@ -92,16 +92,16 @@ contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
     function test_shouldFail_whenOfferIsRevoked() external {
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)", lender, nonce),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", lender, nonce),
             abi.encode(true)
         );
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)", lender, nonce)
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", lender, nonce)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(lender);
         offerContract.makeOffer(offerHash, lender, nonce);
     }
@@ -139,7 +139,7 @@ contract PWNSimpleLoanOffer_RevokeOfferNonce_Test is PWNSimpleLoanOfferTest {
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokeOfferNonce(address,bytes32)", lender, nonce)
+            abi.encodeWithSignature("revokeNonce(address,bytes32)", lender, nonce)
         );
 
         vm.prank(lender);

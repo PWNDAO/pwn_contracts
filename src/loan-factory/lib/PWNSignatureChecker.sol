@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 /**
@@ -66,7 +66,7 @@ library PWNSignatureChecker {
                 s = vs & bytes32(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
                 v = uint8((uint256(vs) >> 255) + 27);
             } else {
-                revert PWNError.InvalidSignatureLength(signature.length);
+                revert InvalidSignatureLength(signature.length);
             }
 
             return signer == ECDSA.recover(hash, v, r, s);

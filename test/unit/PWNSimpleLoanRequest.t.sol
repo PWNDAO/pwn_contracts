@@ -8,7 +8,7 @@ import "MultiToken/MultiToken.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanRequest.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 // The only reason for this contract is to expose internal functions of PWNSimpleLoanRequest
@@ -24,9 +24,9 @@ contract PWNSimpleLoanRequestExposed is PWNSimpleLoanRequest {
     }
 
     // Dummy implementation, is not tester here
-    function createLOAN(
+    function getLOANTerms(
         address /*caller*/,
-        bytes calldata /*loanFactoryData*/,
+        bytes calldata /*factoryData*/,
         bytes calldata /*signature*/
     ) override external pure returns (PWNSimpleLoan.LOANTerms memory) {
         revert("Missing implementation");
@@ -58,7 +58,7 @@ abstract contract PWNSimpleLoanRequestTest is Test {
 
         vm.mockCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isRequestNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
             abi.encode(false)
         );
     }
@@ -73,7 +73,7 @@ abstract contract PWNSimpleLoanRequestTest is Test {
 contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
 
     function test_shouldFail_whenCallerIsNotBorrower() external {
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerIsNotStatedBorrower.selector, borrower));
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedBorrower.selector, borrower));
         requestContract.makeRequest(requestHash, borrower, nonce);
     }
 
@@ -84,7 +84,7 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
             bytes32(uint256(1))
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.RequestAlreadyExists.selector));
+        vm.expectRevert(abi.encodeWithSelector(RequestAlreadyExists.selector));
         vm.prank(borrower);
         requestContract.makeRequest(requestHash, borrower, nonce);
     }
@@ -92,16 +92,16 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
     function test_shouldFail_whenRequestIsRevoked() external {
         vm.mockCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isRequestNonceRevoked(address,bytes32)", borrower, nonce),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", borrower, nonce),
             abi.encode(true)
         );
 
         vm.expectCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isRequestNonceRevoked(address,bytes32)", borrower, nonce)
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", borrower, nonce)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(borrower);
         requestContract.makeRequest(requestHash, borrower, nonce);
     }
@@ -139,7 +139,7 @@ contract PWNSimpleLoanRequest_RevokeRequestNonce_Test is PWNSimpleLoanRequestTes
 
         vm.expectCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("revokeRequestNonce(address,bytes32)", borrower, nonce)
+            abi.encodeWithSignature("revokeNonce(address,bytes32)", borrower, nonce)
         );
 
         vm.prank(borrower);

@@ -8,7 +8,7 @@ import "MultiToken/MultiToken.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanListOffer.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 abstract contract PWNSimpleLoanListOfferTest is Test {
@@ -57,7 +57,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
             abi.encode(false)
         );
     }
@@ -121,10 +121,10 @@ contract PWNSimpleLoanListOffer_MakeOffer_Test is PWNSimpleLoanListOfferTest {
 
 
 /*----------------------------------------------------------*|
-|*  # CREATE LOAN                                           *|
+|*  # GET LOAN TERMS                                        *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
+contract PWNSimpleLoanListOffer_GetLOANTerms_Test is PWNSimpleLoanListOfferTest {
 
     bytes signature;
     address borrower = address(0x0303030303);
@@ -162,30 +162,30 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
     // Tests
 
     function test_shouldFail_whenCallerIsNotActiveLoan() external {
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN));
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN));
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenPassingInvalidOfferData() external {
         vm.expectRevert();
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(uint16(1), uint256(3213), address(0x01320), false, "whaaaaat?"), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(uint16(1), uint256(3213), address(0x01320), false, "whaaaaat?"), signature);
     }
 
     function test_shouldFail_whenInvalidSignature_whenEOA() external {
         signature = _signOffer(1, offer);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidSignature.selector));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenInvalidSignature_whenContractAccount() external {
         vm.etch(lender, bytes("data"));
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidSignature.selector));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_whenOfferHasBeenMadeOnchain() external {
@@ -196,21 +196,21 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         );
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_withValidSignature_whenEOA_whenStandardSignature() external {
         signature = _signOffer(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_withValidSignature_whenEOA_whenCompactEIP2098Signature() external {
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_whenValidSignature_whenContractAccount() external {
@@ -223,7 +223,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         );
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenOfferIsExpired() external {
@@ -231,9 +231,9 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         offer.expiration = 30303;
         signature = _signOfferCompact(lenderPK, offer);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.OfferExpired.selector));
+        vm.expectRevert(abi.encodeWithSelector(OfferExpired.selector));
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_whenOfferHasNoExpiration() external {
@@ -242,7 +242,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_whenOfferIsNotExpired() external {
@@ -251,7 +251,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenOfferIsRevoked() external {
@@ -259,26 +259,26 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
             abi.encode(true)
         );
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", offer.lender, offer.nonce)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenCallerIsNotBorrower_whenSetBorrower() external {
         offer.borrower = address(0x50303);
         signature = _signOfferCompact(lenderPK, offer);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerIsNotStatedBorrower.selector, offer.borrower));
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedBorrower.selector, offer.borrower));
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldRevokeOffer_whenIsNotPersistent() external {
@@ -287,25 +287,25 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokeOfferNonce(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("revokeNonce(address,bytes32)", offer.lender, offer.nonce)
         );
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
-    // This test should fail because `revokeOfferNonce` is not called for persistent offer
+    // This test should fail because `revokeNonce` is not called for persistent offer
     function testFail_shouldNotRevokeOffer_whenIsPersistent() external {
         offer.isPersistent = true;
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokeOfferNonce(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("revokeNonce(address,bytes32)", offer.lender, offer.nonce)
         );
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldAcceptAnyCollateralId_whenMerkleRootIsZero() external {
@@ -314,7 +314,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldPass_whenGivenCollateralIdIsWhitelisted() external {
@@ -328,7 +328,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         offerValues.merkleInclusionProof[0] = id2Hash;
 
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldFail_whenGivenCollateralIdIsNotWhitelisted() external {
@@ -341,9 +341,9 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         offerValues.merkleInclusionProof = new bytes32[](1);
         offerValues.merkleInclusionProof[0] = id2Hash;
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CollateralIdIsNotWhitelisted.selector));
+        vm.expectRevert(abi.encodeWithSelector(CollateralIdIsNotWhitelisted.selector));
         vm.prank(activeLoanContract);
-        offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
     function test_shouldReturnCorrectValues() external {
@@ -352,7 +352,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        PWNSimpleLoan.LOANTerms memory loanTerms = offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
+        PWNSimpleLoan.LOANTerms memory loanTerms = offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
 
         // LOAN
         assertTrue(loanTerms.lender == offer.lender);
@@ -386,13 +386,13 @@ contract PWNSimpleLoanListOffer_GetOfferHash_Test is PWNSimpleLoanListOfferTest 
 
 
 /*----------------------------------------------------------*|
-|*  # LOAN FACTORY DATA ENCODING                            *|
+|*  # LOAN TERMS FACTORY DATA ENCODING                      *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanListOffer_EncodeLoanFactoryData_Test is PWNSimpleLoanListOfferTest {
+contract PWNSimpleLoanListOffer_EncodeLoanTermsFactoryData_Test is PWNSimpleLoanListOfferTest {
 
-    function test_shouldReturnEncodedLoanFactoryDate() external {
-        assertEq(abi.encode(offer, offerValues), offerContract.encodeLoanFactoryData(offer, offerValues));
+    function test_shouldReturnEncodedLoanTermsFactoryData() external {
+        assertEq(abi.encode(offer, offerValues), offerContract.encodeLoanTermsFactoryData(offer, offerValues));
     }
 
 }

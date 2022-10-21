@@ -7,7 +7,7 @@ import "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
 import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanOffer.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 /**
@@ -106,13 +106,13 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
     /**
      * @notice See { IPWNSimpleLoanFactory.sol }.
      */
-    function createLOAN(
+    function getLOANTerms(
         address caller,
-        bytes calldata loanFactoryData,
+        bytes calldata factoryData,
         bytes calldata signature
     ) external override onlyActiveLoan returns (PWNSimpleLoan.LOANTerms memory loanTerms) {
 
-        (Offer memory offer, OfferValues memory offerValues) = abi.decode(loanFactoryData, (Offer, OfferValues));
+        (Offer memory offer, OfferValues memory offerValues) = abi.decode(factoryData, (Offer, OfferValues));
         bytes32 offerHash = getOfferHash(offer);
 
         address lender = offer.lender;
@@ -121,18 +121,18 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         // Check that offer has been made via on-chain tx, EIP-1271 or signed off-chain
         if (offersMade[offerHash] == false)
             if (PWNSignatureChecker.isValidSignatureNow(lender, offerHash, signature) == false)
-                revert PWNError.InvalidSignature();
+                revert InvalidSignature();
 
         // Check valid offer
         if (offer.expiration != 0 && block.timestamp >= offer.expiration)
-            revert PWNError.OfferExpired();
+            revert OfferExpired();
 
-        if (revokedOfferNonce.isOfferNonceRevoked(lender, offer.nonce) == true)
-            revert PWNError.NonceRevoked();
+        if (revokedOfferNonce.isNonceRevoked(lender, offer.nonce) == true)
+            revert NonceAlreadyRevoked();
 
         if (offer.borrower != address(0))
             if (borrower != offer.borrower)
-                revert PWNError.CallerIsNotStatedBorrower(offer.borrower);
+                revert CallerIsNotStatedBorrower(offer.borrower);
 
         // Collateral id list
         if (offer.collateralIdsWhitelistMerkleRoot != bytes32(0)) {
@@ -143,7 +143,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
                 keccak256(abi.encodePacked(offerValues.collateralId))
             );
             if (isVerifiedId == false)
-                revert PWNError.CollateralIdIsNotWhitelisted();
+                revert CollateralIdIsNotWhitelisted();
         } // else: Any collateral id - collection offer
 
         // Prepare collateral and loan asset
@@ -172,7 +172,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
 
         // Revoke offer if not persistent
         if (!offer.isPersistent)
-            revokedOfferNonce.revokeOfferNonce(lender, offer.nonce);
+            revokedOfferNonce.revokeNonce(lender, offer.nonce);
     }
 
 
@@ -220,16 +220,16 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
 
 
     /*----------------------------------------------------------*|
-    |*  # LOAN FACTORY DATA ENCODING                            *|
+    |*  # LOAN TERMS FACTORY DATA ENCODING                      *|
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Return encoded input data for this loan factory.
+     * @notice Return encoded input data for this loan terms factory.
      * @param offer Simple loan list offer struct to encode.
      * @param offerValues Simple loan list offer concrete values from borrower.
-     * @return Encoded loan factory data that can be used as an input of `createLOAN` function with this loan factory.
+     * @return Encoded loan terms factory data that can be used as an input of `getLOANTerms` function with this factory.
      */
-    function encodeLoanFactoryData(Offer memory offer, OfferValues memory offerValues) external pure returns (bytes memory) {
+    function encodeLoanTermsFactoryData(Offer memory offer, OfferValues memory offerValues) external pure returns (bytes memory) {
         return abi.encode(offer, offerValues);
     }
 
