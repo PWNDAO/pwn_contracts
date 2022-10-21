@@ -58,7 +58,7 @@ abstract contract PWNSimpleLoanOfferTest is Test {
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
             abi.encode(false)
         );
     }
@@ -92,16 +92,16 @@ contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
     function test_shouldFail_whenOfferIsRevoked() external {
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)", lender, nonce),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", lender, nonce),
             abi.encode(true)
         );
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)", lender, nonce)
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", lender, nonce)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(lender);
         offerContract.makeOffer(offerHash, lender, nonce);
     }
@@ -139,7 +139,7 @@ contract PWNSimpleLoanOffer_RevokeOfferNonce_Test is PWNSimpleLoanOfferTest {
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokeOfferNonce(address,bytes32)", lender, nonce)
+            abi.encodeWithSignature("revokeNonce(address,bytes32)", lender, nonce)
         );
 
         vm.prank(lender);

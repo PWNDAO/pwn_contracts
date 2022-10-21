@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "@pwn/hub/PWNHubAccessControl.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanTermsFactory.sol";
-import "@pwn/loan-factory/PWNRevokedRequestNonce.sol";
+import "@pwn/loan-factory/PWNRevokedNonce.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -14,7 +14,7 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAcce
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    PWNRevokedRequestNonce immutable internal revokedRequestNonce;
+    PWNRevokedNonce immutable internal revokedRequestNonce;
 
     /**
      * @dev Mapping of requests made via on-chain transactions.
@@ -38,7 +38,7 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAcce
     |*----------------------------------------------------------*/
 
     constructor(address hub, address _revokedRequestNonce) PWNHubAccessControl(hub) {
-        revokedRequestNonce = PWNRevokedRequestNonce(_revokedRequestNonce);
+        revokedRequestNonce = PWNRevokedNonce(_revokedRequestNonce);
     }
 
 
@@ -63,8 +63,8 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAcce
             revert RequestAlreadyExists();
 
         // Check that request has not been revoked
-        if (revokedRequestNonce.isRequestNonceRevoked(borrower, nonce) == true)
-            revert NonceRevoked();
+        if (revokedRequestNonce.isNonceRevoked(borrower, nonce) == true)
+            revert NonceAlreadyRevoked();
 
         // Mark request as made
         requestsMade[requestStructHash] = true;
@@ -77,7 +77,7 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAcce
      * @param requestNonce Request nonce to be revoked.
      */
     function revokeRequestNonce(bytes32 requestNonce) external {
-        revokedRequestNonce.revokeRequestNonce(msg.sender, requestNonce);
+        revokedRequestNonce.revokeNonce(msg.sender, requestNonce);
     }
 
 }

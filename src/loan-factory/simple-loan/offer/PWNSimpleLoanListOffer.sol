@@ -127,8 +127,8 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         if (offer.expiration != 0 && block.timestamp >= offer.expiration)
             revert OfferExpired();
 
-        if (revokedOfferNonce.isOfferNonceRevoked(lender, offer.nonce) == true)
-            revert NonceRevoked();
+        if (revokedOfferNonce.isNonceRevoked(lender, offer.nonce) == true)
+            revert NonceAlreadyRevoked();
 
         if (offer.borrower != address(0))
             if (borrower != offer.borrower)
@@ -172,7 +172,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
 
         // Revoke offer if not persistent
         if (!offer.isPersistent)
-            revokedOfferNonce.revokeOfferNonce(lender, offer.nonce);
+            revokedOfferNonce.revokeNonce(lender, offer.nonce);
     }
 
 

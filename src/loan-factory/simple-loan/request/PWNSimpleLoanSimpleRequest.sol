@@ -109,8 +109,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         if (request.expiration != 0 && block.timestamp >= request.expiration)
             revert RequestExpired();
 
-        if (revokedRequestNonce.isRequestNonceRevoked(borrower, request.nonce) == true)
-            revert NonceRevoked();
+        if (revokedRequestNonce.isNonceRevoked(borrower, request.nonce) == true)
+            revert NonceAlreadyRevoked();
 
         if (request.lender != address(0))
             if (lender != request.lender)
@@ -140,7 +140,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
             loanRepayAmount: request.loanAmount + request.loanYield
         });
 
-        revokedRequestNonce.revokeRequestNonce(borrower, request.nonce);
+        revokedRequestNonce.revokeNonce(borrower, request.nonce);
     }
 
 

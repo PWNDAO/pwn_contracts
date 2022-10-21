@@ -66,7 +66,7 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         assertEq(t20.balanceOf(borrower), 0);
         assertEq(t20.balanceOf(address(simpleLoan)), 10e18);
 
-        assertEq(revokedRequestNonce.isRequestNonceRevoked(borrower, request.nonce), true);
+        assertEq(revokedRequestNonce.isNonceRevoked(borrower, request.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -96,7 +96,7 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
 
         assertEq(t721.ownerOf(42), address(simpleLoan));
 
-        assertEq(revokedRequestNonce.isRequestNonceRevoked(borrower, request.nonce), true);
+        assertEq(revokedRequestNonce.isNonceRevoked(borrower, request.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -128,7 +128,7 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         assertEq(t1155.balanceOf(borrower, 42), 0);
         assertEq(t1155.balanceOf(address(simpleLoan), 42), 10e18);
 
-        assertEq(revokedRequestNonce.isRequestNonceRevoked(borrower, request.nonce), true);
+        assertEq(revokedRequestNonce.isNonceRevoked(borrower, request.nonce), true);
         assertEq(loanToken.loanContract(loanId), address(simpleLoan));
     }
 
@@ -185,7 +185,7 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         });
 
         // Fail to accept other requests with same nonce
-        vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(lender);
         simpleLoan.createLOAN({
             loanTermsFactoryContract: address(simpleRequest),

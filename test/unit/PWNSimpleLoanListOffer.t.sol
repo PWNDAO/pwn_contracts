@@ -57,7 +57,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
             abi.encode(false)
         );
     }
@@ -259,15 +259,15 @@ contract PWNSimpleLoanListOffer_GetLOANTerms_Test is PWNSimpleLoanListOfferTest 
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
             abi.encode(true)
         );
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", offer.lender, offer.nonce)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(activeLoanContract);
         offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
@@ -287,21 +287,21 @@ contract PWNSimpleLoanListOffer_GetLOANTerms_Test is PWNSimpleLoanListOfferTest 
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokeOfferNonce(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("revokeNonce(address,bytes32)", offer.lender, offer.nonce)
         );
 
         vm.prank(activeLoanContract);
         offerContract.getLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
-    // This test should fail because `revokeOfferNonce` is not called for persistent offer
+    // This test should fail because `revokeNonce` is not called for persistent offer
     function testFail_shouldNotRevokeOffer_whenIsPersistent() external {
         offer.isPersistent = true;
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokeOfferNonce(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("revokeNonce(address,bytes32)", offer.lender, offer.nonce)
         );
 
         vm.prank(activeLoanContract);

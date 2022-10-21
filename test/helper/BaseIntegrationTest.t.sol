@@ -14,8 +14,7 @@ import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan/PWNLOAN.sol";
 import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
 import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanSimpleRequest.sol";
-import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
-import "@pwn/loan-factory/PWNRevokedRequestNonce.sol";
+import "@pwn/loan-factory/PWNRevokedNonce.sol";
 
 import "@pwn-test/helper/token/T20.sol";
 import "@pwn-test/helper/token/T721.sol";
@@ -33,8 +32,8 @@ abstract contract BaseIntegrationTest is Test {
     PWNConfig config;
     PWNLOAN loanToken;
     PWNSimpleLoan simpleLoan;
-    PWNRevokedOfferNonce revokedOfferNonce;
-    PWNRevokedRequestNonce revokedRequestNonce;
+    PWNRevokedNonce revokedOfferNonce;
+    PWNRevokedNonce revokedRequestNonce;
     PWNSimpleLoanSimpleOffer simpleOffer;
     PWNSimpleLoanSimpleRequest simpleRequest;
 
@@ -62,10 +61,10 @@ abstract contract BaseIntegrationTest is Test {
         loanToken = new PWNLOAN(address(hub));
         simpleLoan = new PWNSimpleLoan(address(hub), address(loanToken), address(config));
 
-        revokedOfferNonce = new PWNRevokedOfferNonce(address(hub));
+        revokedOfferNonce = new PWNRevokedNonce(address(hub), PWNHubTags.LOAN_OFFER);
         simpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedOfferNonce));
 
-        revokedRequestNonce = new PWNRevokedRequestNonce(address(hub));
+        revokedRequestNonce = new PWNRevokedNonce(address(hub), PWNHubTags.LOAN_REQUEST);
         simpleRequest = new PWNSimpleLoanSimpleRequest(address(hub), address(revokedRequestNonce));
 
         // Set hub tags

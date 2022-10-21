@@ -18,7 +18,7 @@ error InvalidLoanContractCaller();
 error UnsupportedTransferFunction();
 
 // Nonce
-error NonceRevoked();
+error NonceAlreadyRevoked();
 
 // Signature checks
 error InvalidSignatureLength(uint256);
