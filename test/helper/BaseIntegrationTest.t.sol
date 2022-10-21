@@ -70,9 +70,9 @@ abstract contract BaseIntegrationTest is Test {
 
         // Set hub tags
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, true);
-        hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_FACTORY, true);
+        hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, true);
         hub.setTag(address(simpleOffer), PWNHubTags.LOAN_OFFER, true);
-        hub.setTag(address(simpleRequest), PWNHubTags.SIMPLE_LOAN_FACTORY, true);
+        hub.setTag(address(simpleRequest), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, true);
         hub.setTag(address(simpleRequest), PWNHubTags.LOAN_REQUEST, true);
 
         // Deploy tokens

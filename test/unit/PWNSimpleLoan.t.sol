@@ -159,7 +159,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         );
         vm.mockCall(
             hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", loanFactory, PWNHubTags.SIMPLE_LOAN_FACTORY),
+            abi.encodeWithSignature("hasTag(address,bytes32)", loanFactory, PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY),
             abi.encode(true)
         );
 
@@ -180,7 +180,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     function test_shouldFail_whenLoanFactoryContractIsNotTaggerInPWNHub() external {
         address notLoanFactory = address(0);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.SIMPLE_LOAN_FACTORY));
+        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY));
         loan.createLOAN(notLoanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 

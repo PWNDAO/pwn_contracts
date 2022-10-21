@@ -8,8 +8,8 @@ library PWNHubTags {
     /// @dev Address can mint LOAN tokens and create LOANs via loan factory contracts.
     bytes32 internal constant ACTIVE_LOAN = keccak256("PWN_ACTIVE_LOAN");
 
-    /// @dev Address can be used as a loan factory for creating simple loans.
-    bytes32 internal constant SIMPLE_LOAN_FACTORY = keccak256("PWN_SIMPLE_LOAN_FACTORY");
+    /// @dev Address can be used as a loan terms factory for creating simple loans.
+    bytes32 internal constant SIMPLE_LOAN_TERMS_FACTORY = keccak256("PWN_SIMPLE_LOAN_TERMS_FACTORY");
 
     /// @dev Address can revoke loan request nonces.
     bytes32 internal constant LOAN_REQUEST = keccak256("PWN_LOAN_REQUEST");
