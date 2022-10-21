@@ -136,6 +136,12 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
             signature: signature
         });
 
+        // Check asset validity
+        if (MultiToken.isValid(loanTerms.asset) == false)
+            revert InvalidLoanAsset();
+        if (MultiToken.isValid(loanTerms.collateral) == false)
+            revert InvalidCollateralAsset();
+
         // Mint LOAN token for lender
         loanId = loanToken.mint(loanTerms.lender);
 

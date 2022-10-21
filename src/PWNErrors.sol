@@ -11,6 +11,10 @@ error InvalidLoanStatus(uint256);
 error NonExistingLoan();
 error CallerNotLOANTokenHolder();
 
+// Invalid asset
+error InvalidLoanAsset();
+error InvalidCollateralAsset();
+
 // LOAN token
 error InvalidLoanContractCaller();
 
