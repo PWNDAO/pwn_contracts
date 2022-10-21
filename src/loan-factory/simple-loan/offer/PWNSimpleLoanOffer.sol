@@ -29,7 +29,7 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessContr
     /**
      * @dev Emitted when an offer is made via an on-chain transaction.
      */
-    event OfferMade(bytes32 indexed offerHash);
+    event OfferMade(bytes32 indexed offerHash, address indexed lender);
 
 
     /*----------------------------------------------------------*|
@@ -68,7 +68,7 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessContr
         // Mark offer as made
         offersMade[offerStructHash] = true;
 
-        emit OfferMade(offerStructHash);
+        emit OfferMade(offerStructHash, lender);
     }
 
     /**

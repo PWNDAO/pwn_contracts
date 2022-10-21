@@ -29,7 +29,7 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanFactory, PWNHubAccessCon
     /**
      * @dev Emitted when a request is made via an on-chain transaction.
      */
-    event RequestMade(bytes32 indexed requestHash);
+    event RequestMade(bytes32 indexed requestHash, address indexed borrower);
 
 
     /*----------------------------------------------------------*|
@@ -68,7 +68,7 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanFactory, PWNHubAccessCon
         // Mark request as made
         requestsMade[requestStructHash] = true;
 
-        emit RequestMade(requestStructHash);
+        emit RequestMade(requestStructHash, borrower);
     }
 
     /**

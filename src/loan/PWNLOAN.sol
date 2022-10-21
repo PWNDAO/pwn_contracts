@@ -38,7 +38,7 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
     /**
      * @dev Emitted when a new LOAN token is minted.
      */
-    event LOANMinted(uint256 indexed loanId, address indexed owner);
+    event LOANMinted(uint256 indexed loanId, address indexed loanContract, address indexed owner);
 
     /**
      * @dev Emitted when a LOAN token is burned.
@@ -69,7 +69,7 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
         loanId = ++lastLoanId;
         loanContract[loanId] = msg.sender;
         _mint(owner, loanId);
-        emit LOANMinted(loanId, owner);
+        emit LOANMinted(loanId, msg.sender, owner);
     }
 
     /**

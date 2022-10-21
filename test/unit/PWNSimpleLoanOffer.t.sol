@@ -46,7 +46,7 @@ abstract contract PWNSimpleLoanOfferTest is Test {
     address lender = address(0x070ce3);
     bytes32 nonce = keccak256("nonce_1");
 
-    event OfferMade(bytes32 indexed offerHash);
+    event OfferMade(bytes32 indexed offerHash, address indexed lender);
 
     constructor() {
         vm.etch(hub, bytes("data"));
@@ -118,8 +118,8 @@ contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
     }
 
     function test_shouldEmitEvent_OfferMade() external {
-        vm.expectEmit(true, false, false, false);
-        emit OfferMade(offerHash);
+        vm.expectEmit(true, true, false, false);
+        emit OfferMade(offerHash, lender);
 
         vm.prank(lender);
         offerContract.makeOffer(offerHash, lender, nonce);

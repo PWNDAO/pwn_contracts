@@ -46,7 +46,7 @@ abstract contract PWNSimpleLoanRequestTest is Test {
     address borrower = address(0x070ce3);
     bytes32 nonce = keccak256("nonce_1");
 
-    event RequestMade(bytes32 indexed requestHash);
+    event RequestMade(bytes32 indexed requestHash, address indexed borrower);
 
     constructor() {
         vm.etch(hub, bytes("data"));
@@ -118,8 +118,8 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
     }
 
     function test_shouldEmitEvent_RequestMade() external {
-        vm.expectEmit(true, false, false, false);
-        emit RequestMade(requestHash);
+        vm.expectEmit(true, true, false, false);
+        emit RequestMade(requestHash, borrower);
 
         vm.prank(borrower);
         requestContract.makeRequest(requestHash, borrower, nonce);

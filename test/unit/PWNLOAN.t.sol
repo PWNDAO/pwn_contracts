@@ -18,7 +18,7 @@ abstract contract PWNLOANTest is Test {
     address alice = address(0xa11ce);
     address activeLoanContract = address(0x01);
 
-    event LOANMinted(uint256 indexed loanId, address indexed owner);
+    event LOANMinted(uint256 indexed loanId, address indexed loanContract, address indexed owner);
     event LOANBurned(uint256 indexed loanId);
 
     constructor() {
@@ -119,8 +119,8 @@ contract PWNLOAN_Mint_Test is PWNLOANTest {
         uint256 lastLoanId = 3123;
         vm.store(address(loanToken), LAST_LOAN_ID_SLOT, bytes32(lastLoanId));
 
-        vm.expectEmit(true, true, false, false);
-        emit LOANMinted(lastLoanId + 1, alice);
+        vm.expectEmit(true, true, true, false);
+        emit LOANMinted(lastLoanId + 1, activeLoanContract, alice);
 
         vm.prank(activeLoanContract);
         loanToken.mint(alice);

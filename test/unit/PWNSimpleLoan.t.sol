@@ -33,9 +33,9 @@ abstract contract PWNSimpleLoanTest is Test {
     bytes loanAssetPermit;
     bytes collateralPermit;
 
-    event LOANCreated(uint256 indexed loanId, address indexed lender);
-    event LOANPaidBack(uint256 loanId);
-    event LOANClaimed(uint256 loanId);
+    event LOANCreated(uint256 indexed loanId, PWNSimpleLoan.LOANTerms terms);
+    event LOANPaidBack(uint256 indexed loanId);
+    event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
 
     constructor() {
         vm.etch(hub, bytes("data"));
@@ -326,8 +326,8 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldEmitEvent_LOANCreated() external {
-        vm.expectEmit(true, true, false, false);
-        emit LOANCreated(loanId, lender);
+        vm.expectEmit(true, false, false, true);
+        emit LOANCreated(loanId, simpleLoanTerms);
 
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
@@ -579,11 +579,23 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         loan.claimLoan(loanId);
     }
 
-    function test_shouldEmitEvent_LOANClaimed() external {
+    function test_shouldEmitEvent_LOANClaimed_whenRepaid() external {
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectEmit(true, false, false, false);
-        emit LOANClaimed(loanId);
+        vm.expectEmit(true, true, false, false);
+        emit LOANClaimed(loanId, false);
+
+        vm.prank(lender);
+        loan.claimLoan(loanId);
+    }
+
+    function test_shouldEmitEvent_LOANClaimed_whenDefaulted() external {
+        vm.warp(50039);
+        simpleLoan.status = 2;
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.expectEmit(true, true, false, false);
+        emit LOANClaimed(loanId, true);
 
         vm.prank(lender);
         loan.claimLoan(loanId);
