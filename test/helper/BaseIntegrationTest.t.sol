@@ -94,6 +94,7 @@ abstract contract BaseIntegrationTest is Test {
             borrower: borrower,
             lender: lender,
             isPersistent: false,
+            lateRepaymentEnabled: false,
             nonce: nonce
         });
 
@@ -110,6 +111,7 @@ abstract contract BaseIntegrationTest is Test {
             expiration: 0,
             borrower: borrower,
             lender: lender,
+            lateRepaymentEnabled: false,
             nonce: nonce
         });
     }

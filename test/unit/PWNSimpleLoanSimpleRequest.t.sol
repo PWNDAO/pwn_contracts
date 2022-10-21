@@ -45,6 +45,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
             expiration: 0,
             borrower: borrower,
             lender: address(0),
+            lateRepaymentEnabled: false,
             nonce: keccak256("nonce_1")
         });
 
@@ -67,7 +68,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
                 address(requestContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bytes32 nonce)"),
+                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool lateRepaymentEnabled,bytes32 nonce)"),
                 abi.encode(
                     _request.collateralCategory,
                     _request.collateralAddress,
@@ -82,6 +83,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
                     _request.expiration,
                     _request.borrower,
                     _request.lender,
+                    _request.lateRepaymentEnabled,
                     _request.nonce
                 )
             ))
@@ -293,10 +295,10 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
         vm.prank(activeLoanContract);
         PWNSimpleLoan.LOANTerms memory loanTerms = requestContract.getLOANTerms(lender, abi.encode(request), signature);
 
-        // LOAN
         assertTrue(loanTerms.lender == lender);
         assertTrue(loanTerms.borrower == request.borrower);
         assertTrue(loanTerms.expiration == currentTimestamp + request.duration);
+        assertTrue(loanTerms.lateRepaymentEnabled == request.lateRepaymentEnabled);
         assertTrue(loanTerms.collateral.category == request.collateralCategory);
         assertTrue(loanTerms.collateral.assetAddress == request.collateralAddress);
         assertTrue(loanTerms.collateral.id == request.collateralId);
