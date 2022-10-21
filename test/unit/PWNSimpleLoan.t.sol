@@ -165,7 +165,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
         vm.mockCall(
             loanFactory,
-            abi.encodeWithSignature("createLOAN(address,bytes,bytes)"),
+            abi.encodeWithSignature("getLOANTerms(address,bytes,bytes)"),
             abi.encode(simpleLoanTerms)
         );
 
@@ -190,7 +190,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
         vm.expectCall(
             address(loanFactory),
-            abi.encodeWithSignature("createLOAN(address,bytes,bytes)", address(this), loanFactoryData, signature)
+            abi.encodeWithSignature("getLOANTerms(address,bytes,bytes)", address(this), loanFactoryData, signature)
         );
 
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
@@ -219,7 +219,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
         vm.mockCall(
             loanFactory,
-            abi.encodeWithSignature("createLOAN(address,bytes,bytes)"),
+            abi.encodeWithSignature("getLOANTerms(address,bytes,bytes)"),
             abi.encode(simpleLoanTerms)
         );
 
@@ -253,7 +253,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
         vm.mockCall(
             loanFactory,
-            abi.encodeWithSignature("createLOAN(address,bytes,bytes)"),
+            abi.encodeWithSignature("getLOANTerms(address,bytes,bytes)"),
             abi.encode(simpleLoanTerms, lender, borrower)
         );
 
@@ -293,7 +293,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
         vm.mockCall(
             loanFactory,
-            abi.encodeWithSignature("createLOAN(address,bytes,bytes)"),
+            abi.encodeWithSignature("getLOANTerms(address,bytes,bytes)"),
             abi.encode(simpleLoanTerms, lender, borrower)
         );
 

@@ -78,7 +78,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
             abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
         );
         vm.prank(address(simpleLoan));
-        simpleOffer.createLOAN(borrower, "", ""); // Offer data are not important in this test
+        simpleOffer.getLOANTerms(borrower, "", ""); // Offer data are not important in this test
     }
 
     function test_shouldFail_whenPassingInvalidOfferContract() external {
