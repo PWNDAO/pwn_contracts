@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 import "@pwn-test/helper/BaseIntegrationTest.t.sol";
 
@@ -102,7 +102,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         vm.warp(expiration);
         _repayLoanFailing(
             loanId,
-            abi.encodeWithSelector(PWNError.LoanDefaulted.selector, uint40(expiration))
+            abi.encodeWithSelector(LoanDefaulted.selector, uint40(expiration))
         );
     }
 

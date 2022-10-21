@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan-factory/PWNRevokedRequestNonce.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 abstract contract PWNRevokedRequestNonceTest is Test {
@@ -51,7 +51,7 @@ contract PWNRevokedRequestNonce_RevokeRequestNonce_Test is PWNRevokedRequestNonc
             bytes32(uint256(1))
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
         vm.prank(alice);
         revokedRequestNonce.revokeRequestNonce(nonce);
     }
@@ -103,7 +103,7 @@ contract PWNRevokedRequestNonce_RevokeRequestNonceWithOwner_Test is PWNRevokedRe
 
 
     function test_shouldFail_whenCallerIsNotLoanRequestContract() external {
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.LOAN_REQUEST));
+        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.LOAN_REQUEST));
         vm.prank(alice);
         revokedRequestNonce.revokeRequestNonce(alice, nonce);
     }
@@ -115,7 +115,7 @@ contract PWNRevokedRequestNonce_RevokeRequestNonceWithOwner_Test is PWNRevokedRe
             bytes32(uint256(1))
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
         vm.prank(loanRequest);
         revokedRequestNonce.revokeRequestNonce(alice, nonce);
     }

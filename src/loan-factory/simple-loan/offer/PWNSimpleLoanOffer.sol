@@ -5,6 +5,7 @@ import "@pwn/hub/PWNHubAccessControl.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
 import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
+import "@pwn/PWNErrors.sol";
 
 
 abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessControl {
@@ -55,15 +56,15 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessContr
     function _makeOffer(bytes32 offerStructHash, address lender, bytes32 nonce) internal {
         // Check that caller is a lender
         if (msg.sender != lender)
-            revert PWNError.CallerIsNotStatedLender(lender);
+            revert CallerIsNotStatedLender(lender);
 
         // Check that offer has not been made
         if (offersMade[offerStructHash] == true)
-            revert PWNError.OfferAlreadyExists();
+            revert OfferAlreadyExists();
 
         // Check that offer has not been revoked
         if (revokedOfferNonce.isOfferNonceRevoked(lender, nonce) == true)
-            revert PWNError.NonceRevoked();
+            revert NonceRevoked();
 
         // Mark offer as made
         offersMade[offerStructHash] = true;

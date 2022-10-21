@@ -5,6 +5,7 @@ import "@pwn/hub/PWNHubAccessControl.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
 import "@pwn/loan-factory/PWNRevokedRequestNonce.sol";
+import "@pwn/PWNErrors.sol";
 
 
 abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanFactory, PWNHubAccessControl {
@@ -55,15 +56,15 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanFactory, PWNHubAccessCon
     function _makeRequest(bytes32 requestStructHash, address borrower, bytes32 nonce) internal {
         // Check that caller is a borrower
         if (msg.sender != borrower)
-            revert PWNError.CallerIsNotStatedBorrower(borrower);
+            revert CallerIsNotStatedBorrower(borrower);
 
         // Check that request has not been made
         if (requestsMade[requestStructHash] == true)
-            revert PWNError.RequestAlreadyExists();
+            revert RequestAlreadyExists();
 
         // Check that request has not been revoked
         if (revokedRequestNonce.isRequestNonceRevoked(borrower, nonce) == true)
-            revert PWNError.NonceRevoked();
+            revert NonceRevoked();
 
         // Mark request as made
         requestsMade[requestStructHash] = true;

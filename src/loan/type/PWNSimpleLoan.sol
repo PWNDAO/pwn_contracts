@@ -10,7 +10,7 @@ import "@pwn/loan/lib/PWNFeeCalculator.sol";
 import "@pwn/loan/PWNVault.sol";
 import "@pwn/loan/PWNLOAN.sol";
 import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 /**
@@ -127,7 +127,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     ) external returns (uint256 loanId) {
         // Check that loan factory contract is tagged in PWNHub
         if (hub.hasTag(loanFactoryContract, PWNHubTags.SIMPLE_LOAN_FACTORY) == false)
-            revert PWNError.CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_FACTORY);
+            revert CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_FACTORY);
 
         // Build LOANTerms by loan factory
         LOANTerms memory loanTerms = IPWNSimpleLoanFactory(loanFactoryContract).createLOAN({
@@ -196,14 +196,14 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
         // Check that loan is not from a different loan contract
         if (status == 0)
-            revert PWNError.NonExistingLoan();
+            revert NonExistingLoan();
         // Check that loan running
         else if (status != 2)
-            revert PWNError.InvalidLoanStatus(status);
+            revert InvalidLoanStatus(status);
 
         // Check that loan is not expired
         if (loan.expiration <= block.timestamp)
-            revert PWNError.LoanDefaulted(loan.expiration);
+            revert LoanDefaulted(loan.expiration);
 
         // Move loan to repaid state
         loan.status = 3;
@@ -241,10 +241,10 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
         // Check that caller is LOAN token holder
         if (loanToken.ownerOf(loanId) != msg.sender)
-            revert PWNError.CallerNotLOANTokenHolder();
+            revert CallerNotLOANTokenHolder();
 
         if (loan.status == 0) {
-            revert PWNError.NonExistingLoan();
+            revert NonExistingLoan();
         }
         // Loan has been paid back
         else if (loan.status == 3) {
@@ -277,7 +277,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         }
         // Loan is in wrong state or from a different loan contract
         else {
-            revert PWNError.InvalidLoanStatus(loan.status);
+            revert InvalidLoanStatus(loan.status);
         }
     }
 

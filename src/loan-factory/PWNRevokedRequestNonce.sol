@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import "@pwn/hub/PWNHubAccessControl.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 /**
@@ -68,7 +68,7 @@ contract PWNRevokedRequestNonce is PWNHubAccessControl {
     function _revokeRequestNonce(address owner, bytes32 requestNonce) private {
         // Check that request nonce is not have been revoked
         if (revokedRequestNonces[owner][requestNonce] == true)
-            revert PWNError.NonceRevoked();
+            revert NonceRevoked();
 
         // Revoke nonce
         revokedRequestNonces[owner][requestNonce] = true;

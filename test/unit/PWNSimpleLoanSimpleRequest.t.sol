@@ -8,7 +8,7 @@ import "MultiToken/MultiToken.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanSimpleRequest.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 abstract contract PWNSimpleLoanSimpleRequestTest is Test {
@@ -154,7 +154,7 @@ contract PWNSimpleLoanSimpleRequest_CreateLOAN_Test is PWNSimpleLoanSimpleReques
     // Tests
 
     function test_shouldFail_whenCallerIsNotActiveLoan() external {
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN));
+        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN));
         requestContract.createLOAN(lender, abi.encode(request), signature);
     }
 
@@ -167,7 +167,7 @@ contract PWNSimpleLoanSimpleRequest_CreateLOAN_Test is PWNSimpleLoanSimpleReques
     function test_shouldFail_whenInvalidSignature_whenEOA() external {
         signature = _signRequest(1, request);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidSignature.selector));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
         vm.prank(activeLoanContract);
         requestContract.createLOAN(lender, abi.encode(request), signature);
     }
@@ -175,7 +175,7 @@ contract PWNSimpleLoanSimpleRequest_CreateLOAN_Test is PWNSimpleLoanSimpleReques
     function test_shouldFail_whenInvalidSignature_whenContractAccount() external {
         vm.etch(borrower, bytes("data"));
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidSignature.selector));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
         vm.prank(activeLoanContract);
         requestContract.createLOAN(lender, abi.encode(request), signature);
     }
@@ -223,7 +223,7 @@ contract PWNSimpleLoanSimpleRequest_CreateLOAN_Test is PWNSimpleLoanSimpleReques
         request.expiration = 30303;
         signature = _signRequestCompact(borrowerPK, request);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.RequestExpired.selector));
+        vm.expectRevert(abi.encodeWithSelector(RequestExpired.selector));
         vm.prank(activeLoanContract);
         requestContract.createLOAN(lender, abi.encode(request), signature);
     }
@@ -259,7 +259,7 @@ contract PWNSimpleLoanSimpleRequest_CreateLOAN_Test is PWNSimpleLoanSimpleReques
             abi.encodeWithSignature("isRequestNonceRevoked(address,bytes32)", request.borrower, request.nonce)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
         vm.prank(activeLoanContract);
         requestContract.createLOAN(lender, abi.encode(request), signature);
     }
@@ -268,7 +268,7 @@ contract PWNSimpleLoanSimpleRequest_CreateLOAN_Test is PWNSimpleLoanSimpleReques
         request.lender = address(0x50303);
         signature = _signRequestCompact(borrowerPK, request);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerIsNotStatedLender.selector, request.lender));
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedLender.selector, request.lender));
         vm.prank(activeLoanContract);
         requestContract.createLOAN(lender, abi.encode(request), signature);
     }

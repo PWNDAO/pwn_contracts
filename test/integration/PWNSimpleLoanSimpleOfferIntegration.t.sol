@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 import "@pwn-test/helper/BaseIntegrationTest.t.sol";
 
@@ -121,7 +121,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         });
 
         // Fail to accept other offers with same nonce
-        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
         vm.prank(borrower);
         simpleLoan.createLOAN({
             loanFactoryContract: address(simpleOffer),

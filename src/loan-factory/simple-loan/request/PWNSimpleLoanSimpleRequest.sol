@@ -5,7 +5,7 @@ import "MultiToken/MultiToken.sol";
 
 import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
 import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanRequest.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 /**
@@ -103,18 +103,18 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         // Check that request has been made via on-chain tx, EIP-1271 or signed off-chain
         if (requestsMade[requestHash] == false)
             if (PWNSignatureChecker.isValidSignatureNow(borrower, requestHash, signature) == false)
-                revert PWNError.InvalidSignature();
+                revert InvalidSignature();
 
         // Check valid request
         if (request.expiration != 0 && block.timestamp >= request.expiration)
-            revert PWNError.RequestExpired();
+            revert RequestExpired();
 
         if (revokedRequestNonce.isRequestNonceRevoked(borrower, request.nonce) == true)
-            revert PWNError.NonceRevoked();
+            revert NonceRevoked();
 
         if (request.lender != address(0))
             if (lender != request.lender)
-                revert PWNError.CallerIsNotStatedLender(request.lender);
+                revert CallerIsNotStatedLender(request.lender);
 
         // Prepare collateral and loan asset
         MultiToken.Asset memory collateral = MultiToken.Asset({

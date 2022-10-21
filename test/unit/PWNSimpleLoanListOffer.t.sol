@@ -8,7 +8,7 @@ import "MultiToken/MultiToken.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanListOffer.sol";
-import "@pwn/PWNError.sol";
+import "@pwn/PWNErrors.sol";
 
 
 abstract contract PWNSimpleLoanListOfferTest is Test {
@@ -162,7 +162,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
     // Tests
 
     function test_shouldFail_whenCallerIsNotActiveLoan() external {
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN));
+        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN));
         offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
 
@@ -175,7 +175,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
     function test_shouldFail_whenInvalidSignature_whenEOA() external {
         signature = _signOffer(1, offer);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidSignature.selector));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
         vm.prank(activeLoanContract);
         offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
@@ -183,7 +183,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
     function test_shouldFail_whenInvalidSignature_whenContractAccount() external {
         vm.etch(lender, bytes("data"));
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.InvalidSignature.selector));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
         vm.prank(activeLoanContract);
         offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
@@ -231,7 +231,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         offer.expiration = 30303;
         signature = _signOfferCompact(lenderPK, offer);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.OfferExpired.selector));
+        vm.expectRevert(abi.encodeWithSelector(OfferExpired.selector));
         vm.prank(activeLoanContract);
         offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
@@ -267,7 +267,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
             abi.encodeWithSignature("isOfferNonceRevoked(address,bytes32)", offer.lender, offer.nonce)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.NonceRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
         vm.prank(activeLoanContract);
         offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
@@ -276,7 +276,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         offer.borrower = address(0x50303);
         signature = _signOfferCompact(lenderPK, offer);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CallerIsNotStatedBorrower.selector, offer.borrower));
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedBorrower.selector, offer.borrower));
         vm.prank(activeLoanContract);
         offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
@@ -341,7 +341,7 @@ contract PWNSimpleLoanListOffer_CreateLOAN_Test is PWNSimpleLoanListOfferTest {
         offerValues.merkleInclusionProof = new bytes32[](1);
         offerValues.merkleInclusionProof[0] = id2Hash;
 
-        vm.expectRevert(abi.encodeWithSelector(PWNError.CollateralIdIsNotWhitelisted.selector));
+        vm.expectRevert(abi.encodeWithSelector(CollateralIdIsNotWhitelisted.selector));
         vm.prank(activeLoanContract);
         offerContract.createLOAN(borrower, abi.encode(offer, offerValues), signature);
     }
