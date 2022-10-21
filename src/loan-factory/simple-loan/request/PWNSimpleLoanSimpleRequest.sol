@@ -24,7 +24,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @dev EIP-712 simple request struct type hash.
      */
     bytes32 constant internal REQUEST_TYPEHASH = keccak256(
-        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bytes32 nonce)"
+        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool lateRepaymentEnabled,bytes32 nonce)"
     );
 
     /**
@@ -40,6 +40,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @param expiration Request expiration timestamp in seconds.
      * @param borrower Address of a borrower. This address has to sign a request to be valid.
      * @param lender Address of a lender. Only this address can accept a request. If the address is zero address, anybody with a loan asset can accept the request.
+     * @param lateRepaymentEnabled If true, a borrower can repay a loan even after an expiration date, but not after lender claims expired loan.
      * @param nonce Additional value to enable identical requests in time. Without it, it would be impossible to make again request, which was once revoked.
      *              Can be used to create a group of requests, where accepting one request will make other requests in the group revoked.
      */
@@ -55,6 +56,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         uint40 expiration;
         address borrower;
         address lender;
+        bool lateRepaymentEnabled;
         bytes32 nonce;
     }
 
@@ -135,6 +137,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
             lender: lender,
             borrower: borrower,
             expiration: uint40(block.timestamp) + request.duration,
+            lateRepaymentEnabled: request.lateRepaymentEnabled,
             collateral: collateral,
             asset: loanAsset,
             loanRepayAmount: request.loanAmount + request.loanYield
@@ -179,6 +182,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
                     request.expiration,
                     request.borrower,
                     request.lender,
+                    request.lateRepaymentEnabled,
                     request.nonce
                 )
             ))

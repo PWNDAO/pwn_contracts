@@ -35,6 +35,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
      * @param status 0 == none/dead || 2 == running/accepted offer || 3 == paid back || 4 == expired.
      * @param borrower Address of a borrower.
      * @param expiration Unix timestamp (in seconds) setting up a default date.
+     * @param lateRepaymentEnabled If true, a borrower can repay a loan even after an expiration date, but not after lender claims expired loan.
      * @param loanAssetAddress Address of an asset used as a loan credit.
      * @param loanRepayAmount Amount of a loan asset to be paid back.
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
@@ -43,6 +44,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         uint8 status;
         address borrower;
         uint40 expiration;
+        bool lateRepaymentEnabled;
         address loanAssetAddress;
         uint256 loanRepayAmount;
         MultiToken.Asset collateral;
@@ -54,6 +56,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
      * @param lender Address of a lender.
      * @param borrower Address of a borrower.
      * @param expiration Unix timestamp (in seconds) setting up a default date.
+     * @param lateRepaymentEnabled If true, a borrower can repay a loan even after an expiration date, but not after lender claims expired loan.
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
      * @param asset Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
      * @param loanRepayAmount Amount of a loan asset to be paid back.
@@ -62,6 +65,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         address lender;
         address borrower;
         uint40 expiration;
+        bool lateRepaymentEnabled;
         MultiToken.Asset collateral;
         MultiToken.Asset asset;
         uint256 loanRepayAmount;
@@ -91,6 +95,11 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
      * @dev Emitted when a repaid or defaulted loan in claimed.
      */
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
+
+    /**
+     * @dev Emitted when a LOAN token holder enables late repayment.
+     */
+    event LOANLateRepaymentEnabled(uint256 indexed loanId);
 
 
     /*----------------------------------------------------------*|
@@ -150,6 +159,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         loan.status = 2;
         loan.borrower = loanTerms.borrower;
         loan.expiration = loanTerms.expiration;
+        loan.lateRepaymentEnabled = loanTerms.lateRepaymentEnabled;
         loan.loanAssetAddress = loanTerms.asset.assetAddress;
         loan.loanRepayAmount = loanTerms.loanRepayAmount;
         loan.collateral = loanTerms.collateral;
@@ -203,13 +213,14 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         // Check that loan is not from a different loan contract
         if (status == 0)
             revert NonExistingLoan();
-        // Check that loan running
+        // Check that loan is running
         else if (status != 2)
             revert InvalidLoanStatus(status);
 
-        // Check that loan is not expired
+        // Check that loan is not expired or that late repayment is enabled
         if (loan.expiration <= block.timestamp)
-            revert LoanDefaulted(loan.expiration);
+            if (loan.lateRepaymentEnabled == false)
+                revert LoanDefaulted(loan.expiration);
 
         // Move loan to repaid state
         loan.status = 3;
@@ -290,6 +301,37 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     function _deleteLoan(uint256 loanId) private {
         loanToken.burn(loanId);
         delete LOANs[loanId];
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # LOAN LATE REPAYMENT                                   *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Enable borrower to repay loan after expiration date, but not after lender claims expired loan.
+     * @dev Only LOAN token holder can call this function. Late repayment cannot be later disabled.
+     * @param loanId Id of a loan that enables late repayment.
+     */
+    function enableLoanLateRepayment(uint256 loanId) external {
+        // Check that caller is LOAN token holder
+        if (loanToken.ownerOf(loanId) != msg.sender)
+            revert CallerNotLOANTokenHolder();
+
+        LOAN storage loan = LOANs[loanId];
+
+        // Check that late repayment is not already enabled
+        if (loan.lateRepaymentEnabled == true)
+            revert LateRepaymentIsAlreadyEnabled();
+
+        // Check that loan is running or expired
+        if (loan.status != 2)
+            revert InvalidLoanStatus(loan.status);
+
+        // Enable late repayment
+        loan.lateRepaymentEnabled = true;
+
+        emit LOANLateRepaymentEnabled(loanId);
     }
 
 
