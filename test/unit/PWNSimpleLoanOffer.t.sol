@@ -26,7 +26,7 @@ contract PWNSimpleLoanOfferExposed is PWNSimpleLoanOffer {
     // Dummy implementation, is not tester here
     function getLOANTerms(
         address /*caller*/,
-        bytes calldata /*loanFactoryData*/,
+        bytes calldata /*factoryData*/,
         bytes calldata /*signature*/
     ) override external pure returns (PWNSimpleLoan.LOANTerms memory) {
         revert("Missing implementation");

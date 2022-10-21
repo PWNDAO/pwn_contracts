@@ -108,11 +108,11 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      */
     function getLOANTerms(
         address caller,
-        bytes calldata loanFactoryData,
+        bytes calldata factoryData,
         bytes calldata signature
     ) external override onlyActiveLoan returns (PWNSimpleLoan.LOANTerms memory loanTerms) {
 
-        (Offer memory offer, OfferValues memory offerValues) = abi.decode(loanFactoryData, (Offer, OfferValues));
+        (Offer memory offer, OfferValues memory offerValues) = abi.decode(factoryData, (Offer, OfferValues));
         bytes32 offerHash = getOfferHash(offer);
 
         address lender = offer.lender;
@@ -220,16 +220,16 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
 
 
     /*----------------------------------------------------------*|
-    |*  # LOAN FACTORY DATA ENCODING                            *|
+    |*  # LOAN TERMS FACTORY DATA ENCODING                      *|
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Return encoded input data for this loan factory.
+     * @notice Return encoded input data for this loan terms factory.
      * @param offer Simple loan list offer struct to encode.
      * @param offerValues Simple loan list offer concrete values from borrower.
-     * @return Encoded loan factory data that can be used as an input of `getLOANTerms` function with this loan factory.
+     * @return Encoded loan terms factory data that can be used as an input of `getLOANTerms` function with this factory.
      */
-    function encodeLoanFactoryData(Offer memory offer, OfferValues memory offerValues) external pure returns (bytes memory) {
+    function encodeLoanTermsFactoryData(Offer memory offer, OfferValues memory offerValues) external pure returns (bytes memory) {
         return abi.encode(offer, offerValues);
     }
 

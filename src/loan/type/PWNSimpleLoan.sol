@@ -9,7 +9,7 @@ import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/lib/PWNFeeCalculator.sol";
 import "@pwn/loan/PWNVault.sol";
 import "@pwn/loan/PWNLOAN.sol";
-import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
+import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanTermsFactory.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -31,7 +31,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     PWNConfig immutable internal config;
 
     /**
-     * @notice Struct defining a loan.
+     * @notice Struct defining a simple loan.
      * @param status 0 == none/dead || 2 == running/accepted offer || 3 == paid back || 4 == expired.
      * @param borrower Address of a borrower.
      * @param expiration Unix timestamp (in seconds) setting up a default date.
@@ -49,7 +49,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     }
 
     /**
-     * @notice Struct defining a loan terms.
+     * @notice Struct defining a simple loan terms.
      * @dev This struct is created by loan factories and never stored.
      * @param lender Address of a lender.
      * @param borrower Address of a borrower.
@@ -111,28 +111,28 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     /**
      * @notice Create a new loan by minting LOAN token for lender, transferring loan asset to borrower and collateral to a vault.
      * @dev The function assumes a prior token approval to a vault address or permits.
-     * @param loanFactoryContract Address of a loan factory contract. Need to have `SIMPLE_LOAN_FACTORY` tag in PWN Hub.
-     * @param loanFactoryData Encoded data for a loan factory.
+     * @param loanTermsFactoryContract Address of a loan terms factory contract. Need to have `SIMPLE_LOAN_FACTORY` tag in PWN Hub.
+     * @param loanTermsFactoryData Encoded data for a loan terms factory.
      * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
      * @param loanAssetPermit Permit data for a loan asset signed by a lender.
      * @param collateralPermit Permit data for a collateral signed by a borrower.
      * @return loanId Id of a newly minted LOAN token.
      */
     function createLOAN(
-        address loanFactoryContract,
-        bytes calldata loanFactoryData,
+        address loanTermsFactoryContract,
+        bytes calldata loanTermsFactoryData,
         bytes calldata signature,
         bytes calldata loanAssetPermit,
         bytes calldata collateralPermit
     ) external returns (uint256 loanId) {
         // Check that loan factory contract is tagged in PWNHub
-        if (hub.hasTag(loanFactoryContract, PWNHubTags.SIMPLE_LOAN_FACTORY) == false)
+        if (hub.hasTag(loanTermsFactoryContract, PWNHubTags.SIMPLE_LOAN_FACTORY) == false)
             revert CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_FACTORY);
 
         // Build LOANTerms by loan factory
-        LOANTerms memory loanTerms = IPWNSimpleLoanFactory(loanFactoryContract).getLOANTerms({
+        LOANTerms memory loanTerms = IPWNSimpleLoanTermsFactory(loanTermsFactoryContract).getLOANTerms({
             caller: msg.sender,
-            loanFactoryData: loanFactoryData,
+            factoryData: loanTermsFactoryData,
             signature: signature
         });
 

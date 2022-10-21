@@ -5,22 +5,22 @@ import "@pwn/loan/type/PWNSimpleLoan.sol";
 
 
 /**
- * @title PWN Simple Loan Factory Interface
+ * @title PWN Simple Loan Terms Factory Interface
  * @notice Interface of a loan factory contract that builds a simple loan terms.
  */
-interface IPWNSimpleLoanFactory {
+interface IPWNSimpleLoanTermsFactory {
 
     /**
      * @notice Build a simple loan terms from given data.
      * @dev This function should be called only by contracts working with simple loan terms.
      * @param caller Caller of a create loan function on a loan contract.
-     * @param loanFactoryData Encoded data for a loan factory.
+     * @param factoryData Encoded data for a loan terms factory.
      * @param signature Signed loan factory data.
      * @return loanTerms Simple loan terms struct created from a loan factory data.
      */
     function getLOANTerms(
         address caller,
-        bytes calldata loanFactoryData,
+        bytes calldata factoryData,
         bytes calldata signature
     ) external returns (PWNSimpleLoan.LOANTerms memory loanTerms);
 

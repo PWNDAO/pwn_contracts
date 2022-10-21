@@ -27,8 +27,8 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         }
         vm.prank(lender);
         return simpleLoan.createLOAN({
-            loanFactoryContract: address(simpleRequest),
-            loanFactoryData: abi.encode(_request),
+            loanTermsFactoryContract: address(simpleRequest),
+            loanTermsFactoryData: abi.encode(_request),
             signature: signature,
             loanAssetPermit: "",
             collateralPermit: ""
@@ -177,8 +177,8 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         // Create LOAN with request 2
         vm.prank(lender);
         simpleLoan.createLOAN({
-            loanFactoryContract: address(simpleRequest),
-            loanFactoryData: requestData2,
+            loanTermsFactoryContract: address(simpleRequest),
+            loanTermsFactoryData: requestData2,
             signature: signature2,
             loanAssetPermit: "",
             collateralPermit: ""
@@ -188,8 +188,8 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
         vm.prank(lender);
         simpleLoan.createLOAN({
-            loanFactoryContract: address(simpleRequest),
-            loanFactoryData: requestData1,
+            loanTermsFactoryContract: address(simpleRequest),
+            loanTermsFactoryData: requestData1,
             signature: signature1,
             loanAssetPermit: "",
             collateralPermit: ""

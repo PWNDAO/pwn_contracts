@@ -325,13 +325,13 @@ contract PWNSimpleLoanSimpleRequest_GetRequestHash_Test is PWNSimpleLoanSimpleRe
 
 
 /*----------------------------------------------------------*|
-|*  # LOAN FACTORY DATA ENCODING                            *|
+|*  # LOAN TERMS FACTORY DATA ENCODING                      *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanSimpleRequest_EncodeLoanFactoryData_Test is PWNSimpleLoanSimpleRequestTest {
+contract PWNSimpleLoanSimpleRequest_EncodeLoanTermsFactoryData_Test is PWNSimpleLoanSimpleRequestTest {
 
-    function test_shouldReturnEncodedLoanFactoryDate() external {
-        assertEq(abi.encode(request), requestContract.encodeLoanFactoryData(request));
+    function test_shouldReturnEncodedLoanTermsFactoryData() external {
+        assertEq(abi.encode(request), requestContract.encodeLoanTermsFactoryData(request));
     }
 
 }

@@ -3,12 +3,12 @@ pragma solidity 0.8.16;
 
 import "@pwn/hub/PWNHubAccessControl.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
-import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanFactory.sol";
+import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanTermsFactory.sol";
 import "@pwn/loan-factory/PWNRevokedOfferNonce.sol";
 import "@pwn/PWNErrors.sol";
 
 
-abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanFactory, PWNHubAccessControl {
+abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanTermsFactory, PWNHubAccessControl {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|

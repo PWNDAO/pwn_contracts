@@ -113,8 +113,8 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         // Create LOAN with offer 2
         vm.prank(borrower);
         simpleLoan.createLOAN({
-            loanFactoryContract: address(simpleOffer),
-            loanFactoryData: offerData2,
+            loanTermsFactoryContract: address(simpleOffer),
+            loanTermsFactoryData: offerData2,
             signature: signature2,
             loanAssetPermit: "",
             collateralPermit: ""
@@ -124,8 +124,8 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         vm.expectRevert(abi.encodeWithSelector(NonceRevoked.selector));
         vm.prank(borrower);
         simpleLoan.createLOAN({
-            loanFactoryContract: address(simpleOffer),
-            loanFactoryData: offerData1,
+            loanTermsFactoryContract: address(simpleOffer),
+            loanTermsFactoryData: offerData1,
             signature: signature1,
             loanAssetPermit: "",
             collateralPermit: ""

@@ -197,8 +197,8 @@ abstract contract BaseIntegrationTest is Test {
         }
         vm.prank(borrower);
         return simpleLoan.createLOAN({
-            loanFactoryContract: address(simpleOffer),
-            loanFactoryData: abi.encode(_offer),
+            loanTermsFactoryContract: address(simpleOffer),
+            loanTermsFactoryData: abi.encode(_offer),
             signature: signature,
             loanAssetPermit: "",
             collateralPermit: ""
