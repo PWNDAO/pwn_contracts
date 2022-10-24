@@ -56,7 +56,7 @@ abstract contract BaseIntegrationTest is Test {
             abi.encodeWithSignature("initialize(address,uint16,address)", address(this), 0, feeCollector)
         );
         config = PWNConfig(address(proxy));
-        hub = new PWNHub();
+        hub = new PWNHub(address(this));
 
         loanToken = new PWNLOAN(address(hub));
         simpleLoan = new PWNSimpleLoan(address(hub), address(loanToken), address(config));

@@ -25,8 +25,7 @@ abstract contract PWNHubTest is Test {
     }
 
     function setUp() external {
-        vm.prank(owner);
-        hub = new PWNHub();
+        hub = new PWNHub(owner);
     }
 
 
@@ -48,8 +47,7 @@ contract PWNHub_Constructor_Test is PWNHubTest {
     function test_shouldSetHubOwner() external {
         address otherOwner = address(0x4321);
 
-        vm.prank(otherOwner);
-        hub = new PWNHub();
+        hub = new PWNHub(otherOwner);
 
         assertTrue(hub.owner() == otherOwner);
     }

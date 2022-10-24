@@ -34,8 +34,8 @@ contract PWNHub is Ownable {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor() Ownable() {
-
+    constructor(address owner) Ownable() {
+        _transferOwnership(owner);
     }
 
 
