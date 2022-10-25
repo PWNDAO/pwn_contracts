@@ -32,7 +32,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
     /**
      * @notice Struct defining a simple loan.
-     * @param status 0 == none/dead || 2 == running/accepted offer || 3 == paid back || 4 == expired.
+     * @param status 0 == none/dead || 2 == running/accepted offer/accepted request || 3 == paid back || 4 == expired.
      * @param borrower Address of a borrower.
      * @param expiration Unix timestamp (in seconds) setting up a default date.
      * @param lateRepaymentEnabled If true, a borrower can repay a loan even after an expiration date, but not after lender claims expired loan.

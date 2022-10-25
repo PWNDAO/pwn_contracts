@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 import "forge-std/Test.sol";
 
 import "@pwn/hub/PWNHub.sol";
+import "@pwn/PWNErrors.sol";
 
 
 abstract contract PWNHubTest is Test {
@@ -14,19 +15,11 @@ abstract contract PWNHubTest is Test {
     address owner = address(0x1001);
     address addr = address(0x01);
     bytes32 tag = keccak256("tag_1");
-    bytes32[] tags;
 
     event TagSet(address indexed _address, bytes32 indexed tag, bool hasTag);
 
-    constructor() {
-        tags = new bytes32[](2);
-        tags[0] = keccak256("tags_0");
-        tags[1] = keccak256("tags_1");
-    }
-
     function setUp() external {
-        vm.prank(owner);
-        hub = new PWNHub();
+        hub = new PWNHub(owner);
     }
 
 
@@ -43,18 +36,26 @@ abstract contract PWNHubTest is Test {
 }
 
 
+/*----------------------------------------------------------*|
+|*  # CONSTRUCTOR                                           *|
+|*----------------------------------------------------------*/
+
 contract PWNHub_Constructor_Test is PWNHubTest {
 
     function test_shouldSetHubOwner() external {
         address otherOwner = address(0x4321);
 
-        vm.prank(otherOwner);
-        hub = new PWNHub();
+        hub = new PWNHub(otherOwner);
 
         assertTrue(hub.owner() == otherOwner);
     }
 
 }
+
+
+/*----------------------------------------------------------*|
+|*  # SET TAG                                               *|
+|*----------------------------------------------------------*/
 
 contract PWNHub_SetTag_Test is PWNHubTest {
 
@@ -104,24 +105,50 @@ contract PWNHub_SetTag_Test is PWNHubTest {
 
 }
 
+
+/*----------------------------------------------------------*|
+|*  # SET TAGS                                              *|
+|*----------------------------------------------------------*/
+
 contract PWNHub_SetTags_Test is PWNHubTest {
+
+    address[] addrs;
+    bytes32[] tags;
+
+    constructor() {
+        addrs = new address[](2);
+        addrs[0] = address(0x1001);
+        addrs[1] = address(0x1002);
+
+        tags = new bytes32[](2);
+        tags[0] = keccak256("tags_0");
+        tags[1] = keccak256("tags_1");
+    }
 
     function test_shouldFail_whenCallerIsNotOwner() external {
         address other = address(0x123);
 
         vm.expectRevert("Ownable: caller is not the owner");
         vm.prank(other);
-        hub.setTags(addr, tags, true);
+        hub.setTags(addrs, tags, true);
+    }
+
+    function test_shouldFail_whenInvalidInputData() external {
+        address[] memory addrs_ = new address[](3);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidInputData.selector));
+        vm.prank(owner);
+        hub.setTags(addrs_, tags, true);
     }
 
     function test_shouldAddTagsToAddress() external {
         vm.prank(owner);
-        hub.setTags(addr, tags, true);
+        hub.setTags(addrs, tags, true);
 
         for (uint256 i; i < tags.length; ++i) {
             bytes32 hasTagValue = vm.load(
                 address(hub),
-                _addressTagSlot(addr, tags[i])
+                _addressTagSlot(addrs[i], tags[i])
             );
             assertTrue(uint256(hasTagValue) == 1);
         }
@@ -131,18 +158,18 @@ contract PWNHub_SetTags_Test is PWNHubTest {
         for (uint256 i; i < tags.length; ++i) {
             vm.store(
                 address(hub),
-                _addressTagSlot(addr, tags[i]),
+                _addressTagSlot(addrs[i], tags[i]),
                 bytes32(uint256(1))
             );
         }
 
         vm.prank(owner);
-        hub.setTags(addr, tags, false);
+        hub.setTags(addrs, tags, false);
 
         for (uint256 i; i < tags.length; ++i) {
             bytes32 hasTagValue = vm.load(
                 address(hub),
-                _addressTagSlot(addr, tags[i])
+                _addressTagSlot(addrs[i], tags[i])
             );
             assertTrue(uint256(hasTagValue) == 0);
         }
@@ -151,14 +178,19 @@ contract PWNHub_SetTags_Test is PWNHubTest {
     function test_shouldEmitEvent_TagSet_forEverySet() external {
         for (uint256 i; i < tags.length; ++i) {
             vm.expectEmit(true, true, false, true);
-            emit TagSet(addr, tags[i], true);
+            emit TagSet(addrs[i], tags[i], true);
         }
 
         vm.prank(owner);
-        hub.setTags(addr, tags, true);
+        hub.setTags(addrs, tags, true);
     }
 
 }
+
+
+/*----------------------------------------------------------*|
+|*  # HAS TAG                                               *|
+|*----------------------------------------------------------*/
 
 contract PWNHub_HasTag_Test is PWNHubTest {
 
