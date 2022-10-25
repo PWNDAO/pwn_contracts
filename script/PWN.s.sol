@@ -22,14 +22,14 @@ import "@pwn/loan-factory/PWNRevokedNonce.sol";
 
 // Deployer
 forge script script/PWN.s.sol:Deploy \
---sig "deployDeployer(address)" $ADMIN_ADDRESS \
+--sig "deployDeployerBroadcast(address)" $ADMIN \
 --rpc-url $GOERLI_URL \
 --private-key $PRIVATE_KEY_TESTNET \
 --broadcast
 
 // Protocol
 forge script script/PWN.s.sol:Deploy \
---sig "deployProtocol(address,address,address,address)" $PWN_DEPLOYER $ADMIN_ADDRESS $OWNER_ADDRESS $FEE_COLLECTOR_ADDRESS \
+--sig "deployProtocolBroadcast(address,address,address,address)" $PWN_DEPLOYER $ADMIN $DAO $FEE_COLLECTOR \
 --rpc-url $GOERLI_URL \
 --private-key $PRIVATE_KEY_TESTNET \
 --broadcast
@@ -38,20 +38,30 @@ forge script script/PWN.s.sol:Deploy \
 
 contract Deploy is Script {
 
-    function deployDeployer(address owner) external {
+    function deployDeployerBroadcast(address admin) external {
         vm.startBroadcast();
-        new PWNDeployer(owner);
+        new PWNDeployer(admin);
         vm.stopBroadcast();
     }
+
+    function deployProtocolBroadcast(
+        address deployer,
+        address admin,
+        address dao,
+        address feeCollector
+    ) external {
+        vm.startBroadcast();
+        deployProtocol(deployer, admin, dao, feeCollector);
+        vm.stopBroadcast();
+    }
+
 
     function deployProtocol(
         address deployer_,
         address admin,
-        address owner,
+        address dao,
         address feeCollector
-    ) external {
-        vm.startBroadcast();
-
+    ) public {
         PWNDeployer deployer = PWNDeployer(deployer_);
 
         // Deploy realm
@@ -65,7 +75,7 @@ contract Deploy is Script {
                 abi.encode(
                     address(configSingleton),
                     admin,
-                    abi.encodeWithSignature("initialize(address,uint16,address)", owner, 0, feeCollector)
+                    abi.encodeWithSignature("initialize(address,uint16,address)", dao, 0, feeCollector)
                 )
             )
         }));
@@ -139,23 +149,25 @@ contract Deploy is Script {
         }));
 
         // Set hub tags
-        hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, true);
+        address[] memory addrs = new address[](7);
+        addrs[0] = address(simpleLoan);
+        addrs[1] = address(simpleOffer);
+        addrs[2] = address(simpleOffer);
+        addrs[3] = address(listOffer);
+        addrs[4] = address(listOffer);
+        addrs[5] = address(simpleRequest);
+        addrs[6] = address(simpleRequest);
 
-        hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, true);
-        hub.setTag(address(simpleOffer), PWNHubTags.LOAN_OFFER, true);
+        bytes32[] memory tags = new bytes32[](7);
+        tags[0] = PWNHubTags.ACTIVE_LOAN;
+        tags[1] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[2] = PWNHubTags.LOAN_OFFER;
+        tags[3] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[4] = PWNHubTags.LOAN_OFFER;
+        tags[5] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[6] = PWNHubTags.LOAN_REQUEST;
 
-        hub.setTag(address(listOffer), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, true);
-        hub.setTag(address(listOffer), PWNHubTags.LOAN_OFFER, true);
-
-        hub.setTag(address(simpleRequest), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, true);
-        hub.setTag(address(simpleRequest), PWNHubTags.LOAN_REQUEST, true);
-
-
-        vm.stopBroadcast();
+        hub.setTags(addrs, tags, true);
     }
-
-}
-
-contract Scripts {
 
 }

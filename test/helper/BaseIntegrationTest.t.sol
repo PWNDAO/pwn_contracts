@@ -68,11 +68,21 @@ abstract contract BaseIntegrationTest is Test {
         simpleRequest = new PWNSimpleLoanSimpleRequest(address(hub), address(revokedRequestNonce));
 
         // Set hub tags
-        hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, true);
-        hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, true);
-        hub.setTag(address(simpleOffer), PWNHubTags.LOAN_OFFER, true);
-        hub.setTag(address(simpleRequest), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, true);
-        hub.setTag(address(simpleRequest), PWNHubTags.LOAN_REQUEST, true);
+        address[] memory addrs = new address[](5);
+        addrs[0] = address(simpleLoan);
+        addrs[1] = address(simpleOffer);
+        addrs[2] = address(simpleOffer);
+        addrs[3] = address(simpleRequest);
+        addrs[4] = address(simpleRequest);
+
+        bytes32[] memory tags = new bytes32[](5);
+        tags[0] = PWNHubTags.ACTIVE_LOAN;
+        tags[1] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[2] = PWNHubTags.LOAN_OFFER;
+        tags[3] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[4] = PWNHubTags.LOAN_REQUEST;
+
+        hub.setTags(addrs, tags, true);
 
         // Deploy tokens
         t20 = new T20();

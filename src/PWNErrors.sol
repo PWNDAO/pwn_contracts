@@ -39,3 +39,6 @@ error CollateralIdIsNotWhitelisted();
 // Request
 error RequestAlreadyExists();
 error RequestExpired();
+
+// Input data
+error InvalidInputData();

@@ -3,6 +3,8 @@ pragma solidity 0.8.16;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 
+import "@pwn/PWNErrors.sol";
+
 
 /**
  * @title PWN Hub
@@ -58,14 +60,17 @@ contract PWNHub is Ownable {
     /**
      * @notice Set list of tags to an address.
      * @dev Tags can be addedd or removed via this functions. Only callable by contract owner.
-     * @param _address Address to which tags are set.
+     * @param _addresses List of addresses to which tags are set.
      * @param _tags List of tags that are set to an `_address`.
      * @param _hasTag Bool value if tags are added or removed.
      */
-    function setTags(address _address, bytes32[] memory _tags, bool _hasTag) external onlyOwner {
+    function setTags(address[] memory _addresses, bytes32[] memory _tags, bool _hasTag) external onlyOwner {
+        if (_addresses.length != _tags.length)
+            revert InvalidInputData();
+
         uint256 length = _tags.length;
         for (uint256 i; i < length;) {
-            setTag(_address, _tags[i], _hasTag);
+            setTag(_addresses[i], _tags[i], _hasTag);
             unchecked { ++i; }
         }
     }
