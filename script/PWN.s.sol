@@ -40,7 +40,7 @@ contract Deploy is Script {
 
     function deployDeployerBroadcast(address admin) external {
         vm.startBroadcast();
-        new PWNDeployer(admin);
+        deployDeployer(admin);
         vm.stopBroadcast();
     }
 
@@ -55,6 +55,10 @@ contract Deploy is Script {
         vm.stopBroadcast();
     }
 
+
+    function deployDeployer(address admin) public returns (PWNDeployer) {
+        return new PWNDeployer(admin);
+    }
 
     function deployProtocol(
         address deployer_,
