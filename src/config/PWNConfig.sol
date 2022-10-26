@@ -12,7 +12,7 @@ import "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
  */
 contract PWNConfig is Ownable, Initializable {
 
-    string internal constant VERSION = "0.1.0";
+    string internal constant VERSION = "1.0";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|

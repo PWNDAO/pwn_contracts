@@ -21,7 +21,7 @@ import "@pwn/PWNErrors.sol";
  */
 contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
-    string internal constant VERSION = "0.1.0";
+    string internal constant VERSION = "1.0";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|

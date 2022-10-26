@@ -8,6 +8,8 @@ pragma solidity 0.8.16;
  */
 library PWNFeeCalculator {
 
+    string internal constant VERSION = "1.0";
+
     /**
      * @notice Compute fee amount.
      * @param fee Fee value in basis points. Value of 100 is 1% fee.

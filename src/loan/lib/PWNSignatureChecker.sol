@@ -14,7 +14,7 @@ import "@pwn/PWNErrors.sol";
  */
 library PWNSignatureChecker {
 
-    string internal constant VERSION = "0.1.0";
+    string internal constant VERSION = "1.0";
 
     /**
      * @dev Function will try to recover a signer of a given signature and check if is the same as given signer address.

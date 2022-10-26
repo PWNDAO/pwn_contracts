@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 
 library PWNContractDeployerSalt {
 
-    string internal constant VERSION = "0.1.0";
+    string internal constant VERSION = "1.0";
 
     // Singletons
     bytes32 constant internal CONFIG = keccak256("PWNConfig");

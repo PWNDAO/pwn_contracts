@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 library PWNHubTags {
 
-    string internal constant VERSION = "0.1.0";
+    string internal constant VERSION = "1.0";
 
     /// @dev Address can mint LOAN tokens and create LOANs via loan factory contracts.
     bytes32 internal constant ACTIVE_LOAN = keccak256("PWN_ACTIVE_LOAN");
