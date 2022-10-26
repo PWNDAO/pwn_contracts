@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "forge-std/Test.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/loan-factory/PWNRevokedNonce.sol";
+import "@pwn/nonce/PWNRevokedNonce.sol";
 import "@pwn/PWNErrors.sol";
 
 

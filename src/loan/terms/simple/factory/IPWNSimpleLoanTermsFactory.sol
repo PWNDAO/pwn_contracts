@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "@pwn/loan/lib/PWNLOANTerms.sol";
+import "@pwn/loan/terms/PWNLOANTerms.sol";
 
 
 /**

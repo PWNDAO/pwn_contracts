@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
 import "@pwn/hub/PWNHubAccessControl.sol";
-import "@pwn/loan/IPWNLoanMetadataProvider.sol";
+import "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
 import "@pwn/PWNErrors.sol";
 
 

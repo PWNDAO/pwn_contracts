@@ -7,10 +7,10 @@ import "@pwn/config/PWNConfig.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/lib/PWNFeeCalculator.sol";
-import "@pwn/loan/lib/PWNLOANTerms.sol";
+import "@pwn/loan/terms/PWNLOANTerms.sol";
+import "@pwn/loan/terms/simple/factory/IPWNSimpleLoanTermsFactory.sol";
+import "@pwn/loan/token/PWNLOAN.sol";
 import "@pwn/loan/PWNVault.sol";
-import "@pwn/loan/PWNLOAN.sol";
-import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanTermsFactory.sol";
 import "@pwn/PWNErrors.sol";
 
 

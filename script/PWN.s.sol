@@ -10,12 +10,12 @@ import "@pwn/deployer/PWNContractDeployerSalt.sol";
 import "@pwn/deployer/PWNDeployer.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/loan/type/PWNSimpleLoan.sol";
-import "@pwn/loan/PWNLOAN.sol";
-import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanListOffer.sol";
-import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanSimpleOffer.sol";
-import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanSimpleRequest.sol";
-import "@pwn/loan-factory/PWNRevokedNonce.sol";
+import "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import "@pwn/loan/terms/simple/factory/offer/PWNSimpleLoanListOffer.sol";
+import "@pwn/loan/terms/simple/factory/offer/PWNSimpleLoanSimpleOffer.sol";
+import "@pwn/loan/terms/simple/factory/request/PWNSimpleLoanSimpleRequest.sol";
+import "@pwn/loan/token/PWNLOAN.sol";
+import "@pwn/nonce/PWNRevokedNonce.sol";
 
 
 /*

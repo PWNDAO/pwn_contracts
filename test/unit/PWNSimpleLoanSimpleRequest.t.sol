@@ -6,8 +6,8 @@ import "forge-std/Test.sol";
 import "MultiToken/MultiToken.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/loan/lib/PWNLOANTerms.sol";
-import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanSimpleRequest.sol";
+import "@pwn/loan/terms/simple/factory/request/PWNSimpleLoanSimpleRequest.sol";
+import "@pwn/loan/terms/PWNLOANTerms.sol";
 import "@pwn/PWNErrors.sol";
 
 
