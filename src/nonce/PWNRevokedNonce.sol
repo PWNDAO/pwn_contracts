@@ -85,7 +85,7 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     |*----------------------------------------------------------*/
 
     /**
-     * @nonce Get information if owners nonce is revoked or not.
+     * @notice Get information if owners nonce is revoked or not.
      * @param owner Address of a nonce owner.
      * @param nonce Nonce in question.
      * @return True if owners nonce is revoked.
