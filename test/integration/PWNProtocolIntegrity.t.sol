@@ -55,7 +55,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
         // Claim loan
         vm.prank(lender);
-        simpleLoan.claimLoan(loanId);
+        simpleLoan.claimLOAN(loanId);
 
         // Assert final state
         vm.expectRevert("ERC721: invalid token ID");

@@ -183,7 +183,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
      * @param loanId Id of a loan that is being repaid.
      * @param loanAssetPermit Permit data for a loan asset signed by a borrower.
      */
-    function repayLoan(
+    function repayLOAN(
         uint256 loanId,
         bytes calldata loanAssetPermit
     ) external {
@@ -233,7 +233,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
      *      Claim will transfer the repaid loan asset or collateral to a LOAN token holder address and burn the LOAN token.
      * @param loanId Id of a loan that is being claimed.
      */
-    function claimLoan(uint256 loanId) external {
+    function claimLOAN(uint256 loanId) external {
         LOAN storage loan = LOANs[loanId];
 
         // Check that caller is LOAN token holder
@@ -290,10 +290,10 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
 
     /**
      * @notice Enable borrower to repay loan after expiration date, but not after lender claims expired loan.
-     * @dev Only LOAN token holder can call this function. Late repayment cannot be later disabled.
-     * @param loanId Id of a loan that enables late repayment.
+     * @dev Only LOAN token holder can call this function. Late repayment cannot be disabled later.
+     * @param loanId Id of a LOAN on which to enable late repayment.
      */
-    function enableLoanLateRepayment(uint256 loanId) external {
+    function enableLOANLateRepayment(uint256 loanId) external {
         // Check that caller is LOAN token holder
         if (loanToken.ownerOf(loanId) != msg.sender)
             revert CallerNotLOANTokenHolder();

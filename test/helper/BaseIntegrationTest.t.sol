@@ -235,7 +235,7 @@ abstract contract BaseIntegrationTest is Test {
             vm.expectRevert(revertData);
         }
         vm.prank(borrower);
-        simpleLoan.repayLoan(loanId, "");
+        simpleLoan.repayLOAN(loanId, "");
     }
 
 }

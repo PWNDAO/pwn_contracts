@@ -385,7 +385,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 |*  # REPAY LOAN                                            *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
+contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
 
     function setUp() override public {
         super.setUp();
@@ -409,7 +409,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectRevert(abi.encodeWithSelector(NonExistingLoan.selector));
-        loan.repayLoan(loanId, loanAssetPermit);
+        loan.repayLOAN(loanId, loanAssetPermit);
     }
 
     function test_shouldFail_whenLoanIsNotRunning() external {
@@ -417,7 +417,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidLoanStatus.selector, 3));
-        loan.repayLoan(loanId, loanAssetPermit);
+        loan.repayLOAN(loanId, loanAssetPermit);
     }
 
     function test_shouldFail_whenLoanIsExpired_whenLateRepaymentDisable() external {
@@ -425,7 +425,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.expiration));
-        loan.repayLoan(loanId, loanAssetPermit);
+        loan.repayLOAN(loanId, loanAssetPermit);
     }
 
     function test_shouldPass_whenLoanIsExpired_whenLateRepaymentEnable() external {
@@ -433,13 +433,13 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         simpleLoan.lateRepaymentEnabled = true;
         _mockLOAN(loanId, simpleLoan);
 
-        loan.repayLoan(loanId, loanAssetPermit);
+        loan.repayLOAN(loanId, loanAssetPermit);
     }
 
     function test_shouldMoveLoanToRepaidState() external {
         _mockLOAN(loanId, simpleLoan);
 
-        loan.repayLoan(loanId, loanAssetPermit);
+        loan.repayLOAN(loanId, loanAssetPermit);
 
         bytes32 loanSlot = keccak256(abi.encode(
             loanId,
@@ -467,7 +467,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         );
 
         vm.prank(borrower);
-        loan.repayLoan(loanId, loanAssetPermit);
+        loan.repayLOAN(loanId, loanAssetPermit);
     }
 
     function test_shouldTransferCollateralToBorrower() external {
@@ -478,7 +478,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
             abi.encodeWithSignature("safeTransferFrom(address,address,uint256,bytes)", address(loan), simpleLoan.borrower, simpleLoan.collateral.id)
         );
 
-        loan.repayLoan(loanId, loanAssetPermit);
+        loan.repayLOAN(loanId, loanAssetPermit);
     }
 
     function test_shouldEmitEvent_LOANPaidBack() external {
@@ -487,7 +487,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
         vm.expectEmit(true, false, false, false);
         emit LOANPaidBack(loanId);
 
-        loan.repayLoan(loanId, loanAssetPermit);
+        loan.repayLOAN(loanId, loanAssetPermit);
     }
 
 }
@@ -497,7 +497,7 @@ contract PWNSimpleLoan_RepayLoan_Test is PWNSimpleLoanTest {
 |*  # CLAIM LOAN                                            *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
+contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
 
     function setUp() override public {
         super.setUp();
@@ -528,13 +528,13 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(CallerNotLOANTokenHolder.selector));
         vm.prank(borrower);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldFail_whenLoanDoesNotExist() external {
         vm.expectRevert(abi.encodeWithSelector(NonExistingLoan.selector));
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldFail_whenLoanIsNotRepaidNorExpired() external {
@@ -543,14 +543,14 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(InvalidLoanStatus.selector, 2));
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldPass_whenLoanIsRepaid() external {
         _mockLOAN(loanId, simpleLoan);
 
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldPass_whenLoanIsExpired_whenLateRepaymentDisable() external {
@@ -559,7 +559,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         _mockLOAN(loanId, simpleLoan);
 
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldPass_whenLoanIsExpired_whenLateRepaymentEnable() external {
@@ -569,14 +569,14 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         _mockLOAN(loanId, simpleLoan);
 
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldDeleteLoanData() external {
         _mockLOAN(loanId, simpleLoan);
 
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
 
         PWNSimpleLoan.LOAN memory nonExistingLoan = PWNSimpleLoan.LOAN({
             status: 0,
@@ -599,7 +599,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         );
 
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldTransferRepaidAmountToLender_whenLoanIsRepaid() external {
@@ -613,7 +613,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         );
 
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldTransferCollateralToLender_whenLoanIsExpired() external {
@@ -635,7 +635,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         );
 
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldEmitEvent_LOANClaimed_whenRepaid() external {
@@ -645,7 +645,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         emit LOANClaimed(loanId, false);
 
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
     function test_shouldEmitEvent_LOANClaimed_whenDefaulted() external {
@@ -657,7 +657,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
         emit LOANClaimed(loanId, true);
 
         vm.prank(lender);
-        loan.claimLoan(loanId);
+        loan.claimLOAN(loanId);
     }
 
 }
@@ -667,7 +667,7 @@ contract PWNSimpleLoan_ClaimLoan_Test is PWNSimpleLoanTest {
 |*  # LOAN LATE REPAYMENT                                   *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoan_EnableLoanLateRepayment_Test is PWNSimpleLoanTest {
+contract PWNSimpleLoan_EnableLOANLateRepayment_Test is PWNSimpleLoanTest {
 
     function setUp() override public {
         super.setUp();
@@ -686,7 +686,7 @@ contract PWNSimpleLoan_EnableLoanLateRepayment_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(CallerNotLOANTokenHolder.selector));
         vm.prank(borrower);
-        loan.enableLoanLateRepayment(loanId);
+        loan.enableLOANLateRepayment(loanId);
     }
 
     function test_shouldFail_whenLateRepaymentIsAlreadyEnabled() external {
@@ -695,7 +695,7 @@ contract PWNSimpleLoan_EnableLoanLateRepayment_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(LateRepaymentIsAlreadyEnabled.selector));
         vm.prank(lender);
-        loan.enableLoanLateRepayment(loanId);
+        loan.enableLOANLateRepayment(loanId);
     }
 
     function test_shouldFail_whenLoanIsNotRunning() external {
@@ -704,7 +704,7 @@ contract PWNSimpleLoan_EnableLoanLateRepayment_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(InvalidLoanStatus.selector, 3));
         vm.prank(lender);
-        loan.enableLoanLateRepayment(loanId);
+        loan.enableLOANLateRepayment(loanId);
     }
 
     function test_shouldPass_whenLoanIsExpired() external {
@@ -712,14 +712,14 @@ contract PWNSimpleLoan_EnableLoanLateRepayment_Test is PWNSimpleLoanTest {
         _mockLOAN(loanId, simpleLoan);
 
         vm.prank(lender);
-        loan.enableLoanLateRepayment(loanId);
+        loan.enableLOANLateRepayment(loanId);
     }
 
     function test_shouldStoreThatLateRepaymentIsEnabled() external {
         _mockLOAN(loanId, simpleLoan);
 
         vm.prank(lender);
-        loan.enableLoanLateRepayment(loanId);
+        loan.enableLOANLateRepayment(loanId);
 
         bytes32 loanFirstSlot = keccak256(abi.encode(loanId, LOANS_SLOT));
         bytes32 firstSlotValue = vm.load(address(loan), loanFirstSlot);
@@ -734,7 +734,7 @@ contract PWNSimpleLoan_EnableLoanLateRepayment_Test is PWNSimpleLoanTest {
         emit LOANLateRepaymentEnabled(loanId);
 
         vm.prank(lender);
-        loan.enableLoanLateRepayment(loanId);
+        loan.enableLOANLateRepayment(loanId);
     }
 
 }
