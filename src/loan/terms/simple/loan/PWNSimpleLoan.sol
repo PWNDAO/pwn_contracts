@@ -67,12 +67,12 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     event LOANCreated(uint256 indexed loanId, PWNLOANTerms.Simple terms);
 
     /**
-     * @dev Emitted when a loan in paid back.
+     * @dev Emitted when a loan is paid back.
      */
     event LOANPaidBack(uint256 indexed loanId);
 
     /**
-     * @dev Emitted when a repaid or defaulted loan in claimed.
+     * @dev Emitted when a repaid or defaulted loan is claimed.
      */
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
 
@@ -98,8 +98,8 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Create a new loan by minting LOAN token for lender, transferring loan asset to borrower and collateral to a vault.
-     * @dev The function assumes a prior token approval to a vault address or permits.
+     * @notice Create a new loan by minting LOAN token for lender, transferring loan asset to a borrower and a collateral to a vault.
+     * @dev The function assumes a prior token approval to a contract address or signed permits.
      * @param loanTermsFactoryContract Address of a loan terms factory contract. Need to have `SIMPLE_LOAN_TERMS_FACTORY` tag in PWN Hub.
      * @param loanTermsFactoryData Encoded data for a loan terms factory.
      * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
@@ -179,7 +179,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
      * @notice Repay running loan.
      * @dev Any address can repay a running loan, but a collateral will be transferred to a borrower address associated with the loan.
      *      Repay will transfer a loan asset to a vault, waiting on a LOAN token holder to claim it.
-     *      The function assumes a prior token approval to a vault address or a permit.
+     *      The function assumes a prior token approval to a contract address or a signed  permit.
      * @param loanId Id of a loan that is being repaid.
      * @param loanAssetPermit Permit data for a loan asset signed by a borrower.
      */
@@ -289,7 +289,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Enable borrower to repay loan after expiration date, but not after lender claims expired loan.
+     * @notice Enable borrower to repay loan after expiration date, but not if lender already claimed expired loan.
      * @dev Only LOAN token holder can call this function. Late repayment cannot be disabled later.
      * @param loanId Id of a LOAN on which to enable late repayment.
      */

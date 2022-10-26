@@ -11,7 +11,7 @@ import "@pwn/PWNErrors.sol";
 
 /**
  * @title PWN Simple Loan Simple Offer
- * @notice Loan factory contract creating a simple loan from a simple offer.
+ * @notice Loan terms factory contract creating a simple loan terms from a simple offer.
  */
 contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
 

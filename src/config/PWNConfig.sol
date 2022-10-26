@@ -25,7 +25,7 @@ contract PWNConfig is Ownable, Initializable {
     uint16 public fee;
 
     /**
-     * @notice Address which collects protocol fees.
+     * @notice Address that collects protocol fees.
      */
     address public feeCollector;
 
@@ -103,7 +103,7 @@ contract PWNConfig is Ownable, Initializable {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Set a LOAN token metadta uri for a specific loan contract.
+     * @notice Set a LOAN token metadata uri for a specific loan contract.
      * @param loanContract Address of a loan contract.
      * @param metadataUri New value of LOAN token metadata uri for given `loanContract`.
      */

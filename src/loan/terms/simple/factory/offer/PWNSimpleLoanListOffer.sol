@@ -13,7 +13,7 @@ import "@pwn/PWNErrors.sol";
 
 /**
  * @title PWN Simple Loan List Offer
- * @notice Loan factory contract creating a simple loan from a list offer.
+ * @notice Loan terms factory contract creating a simple loan terms from a list offer.
  * @dev This offer can be used as a collection offer or define a list of acceptable ids from a collection.
  */
 contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {

@@ -30,7 +30,7 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     |*----------------------------------------------------------*/
 
     /**
-     * @dev Emitted when an nonce is revoked.
+     * @dev Emitted when a nonce is revoked.
      */
     event NonceRevoked(address indexed owner, bytes32 indexed nonce);
 
@@ -84,6 +84,12 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     |*  # IS NONCE REVOKED                                      *|
     |*----------------------------------------------------------*/
 
+    /**
+     * @nonce Get information if owners nonce is revoked or not.
+     * @param owner Address of a nonce owner.
+     * @param nonce Nonce in question.
+     * @return True if owners nonce is revoked.
+     */
     function isNonceRevoked(address owner, bytes32 nonce) external view returns (bool) {
         return revokedNonces[owner][nonce];
     }

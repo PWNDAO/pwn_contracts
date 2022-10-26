@@ -61,7 +61,7 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
 
     /**
      * @notice Mint a new LOAN token.
-     * @dev Only an addresse with associated `ACTIVE_LOAN` tag in PWN Hub can call this function.
+     * @dev Only an address with associated `ACTIVE_LOAN` tag in PWN Hub can call this function.
      * @param owner Address of a LOAN token receiver.
      * @return loanId Id of a newly minted LOAN token.
      */
