@@ -3,6 +3,7 @@ pragma solidity 0.8.16;
 
 import "MultiToken/MultiToken.sol";
 
+import "@pwn/loan/lib/PWNLOANTerms.sol";
 import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
 import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanRequest.sol";
 import "@pwn/PWNErrors.sol";
@@ -94,7 +95,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         address caller,
         bytes calldata factoryData,
         bytes calldata signature
-    ) external override onlyActiveLoan returns (PWNSimpleLoan.LOANTerms memory loanTerms) {
+    ) external override onlyActiveLoan returns (PWNLOANTerms.Simple memory loanTerms) {
 
         Request memory request = abi.decode(factoryData, (Request));
         bytes32 requestHash = getRequestHash(request);
@@ -133,7 +134,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         });
 
         // Create loan object
-        loanTerms = PWNSimpleLoan.LOANTerms({
+        loanTerms = PWNLOANTerms.Simple({
             lender: lender,
             borrower: borrower,
             expiration: uint40(block.timestamp) + request.duration,

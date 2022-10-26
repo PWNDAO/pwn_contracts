@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 import "MultiToken/MultiToken.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/loan/type/PWNSimpleLoan.sol";
+import "@pwn/loan/lib/PWNLOANTerms.sol";
 import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanRequest.sol";
 import "@pwn/PWNErrors.sol";
 
@@ -28,7 +28,7 @@ contract PWNSimpleLoanRequestExposed is PWNSimpleLoanRequest {
         address /*caller*/,
         bytes calldata /*factoryData*/,
         bytes calldata /*signature*/
-    ) override external pure returns (PWNSimpleLoan.LOANTerms memory) {
+    ) override external pure returns (PWNLOANTerms.Simple memory) {
         revert("Missing implementation");
     }
 

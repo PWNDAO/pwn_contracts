@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import "MultiToken/MultiToken.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/loan/lib/PWNLOANTerms.sol";
 import "@pwn/loan/type/PWNSimpleLoan.sol";
 import "@pwn/PWNErrors.sol";
 
@@ -26,14 +27,14 @@ abstract contract PWNSimpleLoanTest is Test {
     address lender = address(0x1001);
     address borrower = address(0x1002);
     PWNSimpleLoan.LOAN simpleLoan;
-    PWNSimpleLoan.LOANTerms simpleLoanTerms;
+    PWNLOANTerms.Simple simpleLoanTerms;
 
     bytes loanFactoryData;
     bytes signature;
     bytes loanAssetPermit;
     bytes collateralPermit;
 
-    event LOANCreated(uint256 indexed loanId, PWNSimpleLoan.LOANTerms terms);
+    event LOANCreated(uint256 indexed loanId, PWNLOANTerms.Simple terms);
     event LOANPaidBack(uint256 indexed loanId);
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
     event LOANLateRepaymentEnabled(uint256 indexed loanId);
@@ -64,7 +65,7 @@ abstract contract PWNSimpleLoanTest is Test {
             collateral: MultiToken.Asset(MultiToken.Category.ERC721, token, 2, 1)
         });
 
-        simpleLoanTerms = PWNSimpleLoan.LOANTerms({
+        simpleLoanTerms = PWNLOANTerms.Simple({
             lender: lender,
             borrower: borrower,
             expiration: 40039,

@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 import "MultiToken/MultiToken.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/loan/type/PWNSimpleLoan.sol";
+import "@pwn/loan/lib/PWNLOANTerms.sol";
 import "@pwn/loan-factory/simple-loan/request/PWNSimpleLoanSimpleRequest.sol";
 import "@pwn/PWNErrors.sol";
 
@@ -293,7 +293,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.prank(activeLoanContract);
-        PWNSimpleLoan.LOANTerms memory loanTerms = requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        PWNLOANTerms.Simple memory loanTerms = requestContract.getLOANTerms(lender, abi.encode(request), signature);
 
         assertTrue(loanTerms.lender == lender);
         assertTrue(loanTerms.borrower == request.borrower);

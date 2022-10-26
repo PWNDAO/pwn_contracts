@@ -7,6 +7,7 @@ import "@pwn/config/PWNConfig.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/lib/PWNFeeCalculator.sol";
+import "@pwn/loan/lib/PWNLOANTerms.sol";
 import "@pwn/loan/PWNVault.sol";
 import "@pwn/loan/PWNLOAN.sol";
 import "@pwn/loan-factory/simple-loan/IPWNSimpleLoanTermsFactory.sol";
@@ -51,27 +52,6 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     }
 
     /**
-     * @notice Struct defining a simple loan terms.
-     * @dev This struct is created by loan factories and never stored.
-     * @param lender Address of a lender.
-     * @param borrower Address of a borrower.
-     * @param expiration Unix timestamp (in seconds) setting up a default date.
-     * @param lateRepaymentEnabled If true, a borrower can repay a loan even after an expiration date, but not after lender claims expired loan.
-     * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
-     * @param asset Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
-     * @param loanRepayAmount Amount of a loan asset to be paid back.
-     */
-    struct LOANTerms {
-        address lender;
-        address borrower;
-        uint40 expiration;
-        bool lateRepaymentEnabled;
-        MultiToken.Asset collateral;
-        MultiToken.Asset asset;
-        uint256 loanRepayAmount;
-    }
-
-    /**
      * Mapping of all LOAN data by loan id.
      */
     mapping (uint256 => LOAN) public LOANs;
@@ -84,7 +64,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     /**
      * @dev Emitted when a new loan in created.
      */
-    event LOANCreated(uint256 indexed loanId, LOANTerms terms);
+    event LOANCreated(uint256 indexed loanId, PWNLOANTerms.Simple terms);
 
     /**
      * @dev Emitted when a loan in paid back.
@@ -138,8 +118,8 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         if (hub.hasTag(loanTermsFactoryContract, PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY) == false)
             revert CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY);
 
-        // Build LOANTerms by loan factory
-        LOANTerms memory loanTerms = IPWNSimpleLoanTermsFactory(loanTermsFactoryContract).getLOANTerms({
+        // Build PWNLOANTerms.Simple by loan factory
+        PWNLOANTerms.Simple memory loanTerms = IPWNSimpleLoanTermsFactory(loanTermsFactoryContract).getLOANTerms({
             caller: msg.sender,
             factoryData: loanTermsFactoryData,
             signature: signature

@@ -5,6 +5,7 @@ import "MultiToken/MultiToken.sol";
 
 import "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
+import "@pwn/loan/lib/PWNLOANTerms.sol";
 import "@pwn/loan-factory/lib/PWNSignatureChecker.sol";
 import "@pwn/loan-factory/simple-loan/offer/PWNSimpleLoanOffer.sol";
 import "@pwn/PWNErrors.sol";
@@ -112,7 +113,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         address caller,
         bytes calldata factoryData,
         bytes calldata signature
-    ) external override onlyActiveLoan returns (PWNSimpleLoan.LOANTerms memory loanTerms) {
+    ) external override onlyActiveLoan returns (PWNLOANTerms.Simple memory loanTerms) {
 
         (Offer memory offer, OfferValues memory offerValues) = abi.decode(factoryData, (Offer, OfferValues));
         bytes32 offerHash = getOfferHash(offer);
@@ -163,7 +164,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         });
 
         // Create loan object
-        loanTerms = PWNSimpleLoan.LOANTerms({
+        loanTerms = PWNLOANTerms.Simple({
             lender: lender,
             borrower: borrower,
             expiration: uint40(block.timestamp) + offer.duration,

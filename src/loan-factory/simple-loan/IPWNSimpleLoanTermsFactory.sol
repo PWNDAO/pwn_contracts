@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "@pwn/loan/type/PWNSimpleLoan.sol";
+import "@pwn/loan/lib/PWNLOANTerms.sol";
 
 
 /**
@@ -22,6 +22,6 @@ interface IPWNSimpleLoanTermsFactory {
         address caller,
         bytes calldata factoryData,
         bytes calldata signature
-    ) external returns (PWNSimpleLoan.LOANTerms memory loanTerms);
+    ) external returns (PWNLOANTerms.Simple memory loanTerms);
 
 }
