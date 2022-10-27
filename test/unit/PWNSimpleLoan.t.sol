@@ -27,6 +27,7 @@ abstract contract PWNSimpleLoanTest is Test {
     address lender = address(0x1001);
     address borrower = address(0x1002);
     PWNSimpleLoan.LOAN simpleLoan;
+    PWNSimpleLoan.LOAN nonExistingLoan;
     PWNLOANTerms.Simple simpleLoanTerms;
 
     bytes loanFactoryData;
@@ -74,8 +75,31 @@ abstract contract PWNSimpleLoanTest is Test {
             asset: MultiToken.Asset(MultiToken.Category.ERC20, token, 0, 5),
             loanRepayAmount: 6731
         });
+
+        nonExistingLoan = PWNSimpleLoan.LOAN({
+            status: 0,
+            borrower: address(0),
+            expiration: 0,
+            lateRepaymentEnabled: false,
+            loanAssetAddress: address(0),
+            loanRepayAmount: 0,
+            collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0)
+        });
     }
 
+
+    function _assertLOANEq(PWNSimpleLoan.LOAN memory _simpleLoan1, PWNSimpleLoan.LOAN memory _simpleLoan2) internal {
+        assertEq(_simpleLoan1.status, _simpleLoan2.status);
+        assertEq(_simpleLoan1.borrower, _simpleLoan2.borrower);
+        assertEq(_simpleLoan1.expiration, _simpleLoan2.expiration);
+        assertEq(_simpleLoan1.lateRepaymentEnabled, _simpleLoan2.lateRepaymentEnabled);
+        assertEq(_simpleLoan1.loanAssetAddress, _simpleLoan2.loanAssetAddress);
+        assertEq(_simpleLoan1.loanRepayAmount, _simpleLoan2.loanRepayAmount);
+        assertEq(uint8(_simpleLoan1.collateral.category), uint8(_simpleLoan2.collateral.category));
+        assertEq(_simpleLoan1.collateral.assetAddress, _simpleLoan2.collateral.assetAddress);
+        assertEq(_simpleLoan1.collateral.id, _simpleLoan2.collateral.id);
+        assertEq(_simpleLoan1.collateral.amount, _simpleLoan2.collateral.amount);
+    }
 
     function _assertLOANEq(uint256 _loanId, PWNSimpleLoan.LOAN memory _simpleLoan) internal {
         uint256 loanSlot = uint256(keccak256(abi.encode(
@@ -578,15 +602,6 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         vm.prank(lender);
         loan.claimLOAN(loanId);
 
-        PWNSimpleLoan.LOAN memory nonExistingLoan = PWNSimpleLoan.LOAN({
-            status: 0,
-            borrower: address(0),
-            expiration: 0,
-            lateRepaymentEnabled: false,
-            loanAssetAddress: address(0),
-            loanRepayAmount: 0,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0)
-        });
         _assertLOANEq(loanId, nonExistingLoan);
     }
 
@@ -735,6 +750,25 @@ contract PWNSimpleLoan_EnableLOANLateRepayment_Test is PWNSimpleLoanTest {
 
         vm.prank(lender);
         loan.enableLOANLateRepayment(loanId);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # GET LOAN                                              *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
+
+    function test_shouldReturnLOANData() external {
+        _mockLOAN(loanId, simpleLoan);
+
+        _assertLOANEq(loan.getLOAN(loanId), simpleLoan);
+    }
+
+    function test_shouldReturnEmptyLOANDataForNonExistingLoan() external {
+        _assertLOANEq(loan.getLOAN(loanId), nonExistingLoan);
     }
 
 }

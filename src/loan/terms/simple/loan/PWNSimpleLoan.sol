@@ -54,7 +54,7 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
     /**
      * Mapping of all LOAN data by loan id.
      */
-    mapping (uint256 => LOAN) public LOANs;
+    mapping (uint256 => LOAN) private LOANs;
 
 
     /*----------------------------------------------------------*|
@@ -312,6 +312,20 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
         loan.lateRepaymentEnabled = true;
 
         emit LOANLateRepaymentEnabled(loanId);
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # GET LOAN                                              *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Return a LOAN data struct associated with a loan id.
+     * @param loanId Id of a loan in question.
+     * @return LOAN data struct or empty struct if the LOAN doesn't exist.
+     */
+    function getLOAN(uint256 loanId) external view returns (LOAN memory) {
+        return LOANs[loanId];
     }
 
 
