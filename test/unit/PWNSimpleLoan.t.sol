@@ -811,3 +811,33 @@ contract PWNSimpleLoan_LoanMetadataUri_Test is PWNSimpleLoanTest {
     }
 
 }
+
+
+/*----------------------------------------------------------*|
+|*  # ERC5646                                               *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoan_GetStateFingerprint_Test is PWNSimpleLoanTest {
+
+    function test_shouldReturnZeroIfLoanDoesNotExist() external {
+        bytes32 fingerprint = loan.getStateFingerprint(loanId);
+
+        assertEq(fingerprint, bytes32(0));
+    }
+
+    function test_shouldReturnCorrectStateFingerprint() external {
+        _mockLOAN(loanId, simpleLoan);
+        vm.warp(30039);
+        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(2, false, false)));
+
+        simpleLoan.lateRepaymentEnabled = true;
+        _mockLOAN(loanId, simpleLoan);
+        vm.warp(50039);
+        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(2, true, true)));
+
+        simpleLoan.status = 5;
+        _mockLOAN(loanId, simpleLoan);
+        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(5, false, true)));
+    }
+
+}
