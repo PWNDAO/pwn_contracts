@@ -113,7 +113,12 @@ contract PWNLOAN is PWNHubAccessControl, IERC5646, ERC721 {
      * @dev See {IERC5646-getStateFingerprint}.
      */
     function getStateFingerprint(uint256 tokenId) external view virtual override returns (bytes32) {
-        return IERC5646(loanContract[tokenId]).getStateFingerprint(tokenId);
+        address _loanContract = loanContract[tokenId];
+
+        if (_loanContract == address(0))
+            return bytes32(0);
+
+        return IERC5646(_loanContract).getStateFingerprint(tokenId);
     }
 
 

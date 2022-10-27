@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 import "forge-std/Test.sol";
 
 import "@pwn/hub/PWNHubTags.sol";
+import "@pwn/loan/token/IERC5646.sol";
 import "@pwn/loan/token/PWNLOAN.sol";
 import "@pwn/PWNErrors.sol";
 
@@ -218,6 +219,58 @@ contract PWNLOAN_TokenUri_Test is PWNLOANTest {
         string memory _tokenUri = loanToken.tokenURI(loanId);
 
         assertEq(tokenUri, _tokenUri);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # ERC5646                                               *|
+|*----------------------------------------------------------*/
+
+contract PWNLOAN_GetStateFingerprint_Test is PWNLOANTest {
+
+    uint256 loanId = 42;
+
+    function test_shouldReturnZeroIfLoanDoesNotExist() external {
+        bytes32 fingerprint = loanToken.getStateFingerprint(loanId);
+
+        assertEq(fingerprint, bytes32(0));
+    }
+
+    function test_shouldCallLoanContract() external {
+        vm.store(
+            address(loanToken),
+            _loanContractSlot(loanId),
+            bytes32(uint256(uint160(activeLoanContract)))
+        );
+        bytes32 mockFingerprint = keccak256("mock fingerprint");
+        vm.mockCall(
+            activeLoanContract,
+            abi.encodeWithSignature("getStateFingerprint(uint256)"),
+            abi.encode(mockFingerprint)
+        );
+
+        vm.expectCall(
+            activeLoanContract,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", loanId)
+        );
+        bytes32 fingerprint = loanToken.getStateFingerprint(loanId);
+
+        assertEq(fingerprint, mockFingerprint);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # ERC165                                                *|
+|*----------------------------------------------------------*/
+
+contract PWNLOAN_SupportsInterface_Test is PWNLOANTest {
+
+    function test_shouldSupportERC5646() external {
+        assertTrue(loanToken.supportsInterface(type(IERC5646).interfaceId));
     }
 
 }
