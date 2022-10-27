@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
 import "@pwn/hub/PWNHubAccessControl.sol";
+import "@pwn/loan/token/IERC5646.sol";
 import "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
 import "@pwn/PWNErrors.sol";
 
@@ -14,7 +15,7 @@ import "@pwn/PWNErrors.sol";
  * @dev Token doesn't hold any loan logic, just an address of a loan contract that minted the LOAN token.
  *      PWN LOAN token is shared between all loan contracts.
  */
-contract PWNLOAN is PWNHubAccessControl, ERC721 {
+contract PWNLOAN is PWNHubAccessControl, IERC5646, ERC721 {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -101,6 +102,31 @@ contract PWNLOAN is PWNHubAccessControl, ERC721 {
         _requireMinted(tokenId);
 
         return IPWNLoanMetadataProvider(loanContract[tokenId]).loanMetadataUri();
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERC5646                                               *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @dev See {IERC5646-getStateFingerprint}.
+     */
+    function getStateFingerprint(uint256 tokenId) external view virtual override returns (bytes32) {
+        return IERC5646(loanContract[tokenId]).getStateFingerprint(tokenId);
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERC165                                                *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return super.supportsInterface(interfaceId) ||
+            interfaceId == type(IERC5646).interfaceId;
     }
 
 }

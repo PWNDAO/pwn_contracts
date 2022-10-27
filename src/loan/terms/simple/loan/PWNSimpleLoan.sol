@@ -9,6 +9,7 @@ import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/lib/PWNFeeCalculator.sol";
 import "@pwn/loan/terms/PWNLOANTerms.sol";
 import "@pwn/loan/terms/simple/factory/IPWNSimpleLoanTermsFactory.sol";
+import "@pwn/loan/token/IERC5646.sol";
 import "@pwn/loan/token/PWNLOAN.sol";
 import "@pwn/loan/PWNVault.sol";
 import "@pwn/PWNErrors.sol";
@@ -19,7 +20,7 @@ import "@pwn/PWNErrors.sol";
  * @notice Contract managing a simple loan in PWN protocol.
  * @dev Acts as a vault for every loan created by this contract.
  */
-contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
+contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     string internal constant VERSION = "1.0";
 
@@ -338,6 +339,30 @@ contract PWNSimpleLoan is PWNVault, IPWNLoanMetadataProvider {
      */
     function loanMetadataUri() override external view returns (string memory) {
         return config.loanMetadataUri(address(this));
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERC5646                                               *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @dev See {IERC5646-getStateFingerprint}.
+     */
+    function getStateFingerprint(uint256 tokenId) external view virtual override returns (bytes32) {
+        LOAN memory loan = LOANs[tokenId];
+
+        if (loan.status == 0)
+            return bytes32(0);
+
+        // The only mutable state properties are:
+        // - status, lateRepaymentEnabled, and if loan is expired (based on block.timestamp)
+        // Others don't have to be part of the state fingerprint as it does not act as a token identification.
+        return keccak256(abi.encode(
+            loan.status,
+            loan.status == 2 && loan.expiration <= block.timestamp, // is expired
+            loan.lateRepaymentEnabled
+        ));
     }
 
 }
