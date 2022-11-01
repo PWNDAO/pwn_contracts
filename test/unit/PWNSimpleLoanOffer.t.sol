@@ -24,7 +24,7 @@ contract PWNSimpleLoanOfferExposed is PWNSimpleLoanOffer {
     }
 
     // Dummy implementation, is not tester here
-    function getLOANTerms(
+    function createLOANTerms(
         address /*caller*/,
         bytes calldata /*factoryData*/,
         bytes calldata /*signature*/

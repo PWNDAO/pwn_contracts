@@ -115,10 +115,10 @@ contract PWNSimpleLoanSimpleRequest_MakeRequest_Test is PWNSimpleLoanSimpleReque
 
 
 /*----------------------------------------------------------*|
-|*  # GET LOAN TERMS                                        *|
+|*  # CREATE LOAN TERMS                                     *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequestTest {
+contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleRequestTest {
 
     bytes signature;
     address lender = address(0x0303030303);
@@ -157,13 +157,13 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
 
     function test_shouldFail_whenCallerIsNotActiveLoan() external {
         vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN));
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldFail_whenPassingInvalidRequestData() external {
         vm.expectRevert();
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(uint16(1), uint256(3213), address(0x01320), false, "whaaaaat?"), signature);
+        requestContract.createLOANTerms(lender, abi.encode(uint16(1), uint256(3213), address(0x01320), false, "whaaaaat?"), signature);
     }
 
     function test_shouldFail_whenInvalidSignature_whenEOA() external {
@@ -171,7 +171,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
 
         vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldFail_whenInvalidSignature_whenContractAccount() external {
@@ -179,7 +179,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
 
         vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldPass_whenRequestHasBeenMadeOnchain() external {
@@ -190,21 +190,21 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
         );
 
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldPass_withValidSignature_whenEOA_whenStandardSignature() external {
         signature = _signRequest(borrowerPK, request);
 
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldPass_withValidSignature_whenEOA_whenCompactEIP2098Signature() external {
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldPass_whenValidSignature_whenContractAccount() external {
@@ -217,7 +217,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
         );
 
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldFail_whenRequestIsExpired() external {
@@ -227,7 +227,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
 
         vm.expectRevert(abi.encodeWithSelector(RequestExpired.selector));
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldPass_whenRequestHasNoExpiration() external {
@@ -236,7 +236,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldPass_whenRequestIsNotExpired() external {
@@ -245,7 +245,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldFail_whenRequestIsRevoked() external {
@@ -263,7 +263,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
 
         vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldFail_whenCallerIsNotLender_whenSetLender() external {
@@ -272,7 +272,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
 
         vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedLender.selector, request.lender));
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldRevokeRequest() external {
@@ -284,7 +284,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
         );
 
         vm.prank(activeLoanContract);
-        requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
     function test_shouldReturnCorrectValues() external {
@@ -293,7 +293,7 @@ contract PWNSimpleLoanSimpleRequest_GetLOANTerms_Test is PWNSimpleLoanSimpleRequ
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.prank(activeLoanContract);
-        PWNLOANTerms.Simple memory loanTerms = requestContract.getLOANTerms(lender, abi.encode(request), signature);
+        PWNLOANTerms.Simple memory loanTerms = requestContract.createLOANTerms(lender, abi.encode(request), signature);
 
         assertTrue(loanTerms.lender == lender);
         assertTrue(loanTerms.borrower == request.borrower);

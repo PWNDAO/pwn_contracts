@@ -120,7 +120,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             revert CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY);
 
         // Build PWNLOANTerms.Simple by loan factory
-        PWNLOANTerms.Simple memory loanTerms = IPWNSimpleLoanTermsFactory(loanTermsFactoryContract).getLOANTerms({
+        PWNLOANTerms.Simple memory loanTerms = IPWNSimpleLoanTermsFactory(loanTermsFactoryContract).createLOANTerms({
             caller: msg.sender,
             factoryData: loanTermsFactoryData,
             signature: signature

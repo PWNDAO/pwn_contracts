@@ -18,7 +18,7 @@ interface IPWNSimpleLoanTermsFactory {
      * @param signature Signed loan factory data.
      * @return loanTerms Simple loan terms struct created from a loan factory data.
      */
-    function getLOANTerms(
+    function createLOANTerms(
         address caller,
         bytes calldata factoryData,
         bytes calldata signature

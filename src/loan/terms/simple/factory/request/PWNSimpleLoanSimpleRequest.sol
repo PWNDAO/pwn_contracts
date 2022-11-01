@@ -91,7 +91,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
     /**
      * @notice See { IPWNSimpleLoanFactory.sol }.
      */
-    function getLOANTerms(
+    function createLOANTerms(
         address caller,
         bytes calldata factoryData,
         bytes calldata signature
@@ -198,7 +198,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
     /**
      * @notice Return encoded input data for this loan terms factory.
      * @param request Simple loan simple request struct to encode.
-     * @return Encoded loan terms factory data that can be used as an input of `getLOANTerms` function with this factory.
+     * @return Encoded loan terms factory data that can be used as an input of `createLOANTerms` function with this factory.
      */
     function encodeLoanTermsFactoryData(Request memory request) external pure returns (bytes memory) {
         return abi.encode(request);
