@@ -34,8 +34,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @param collateralAddress Address of an asset used as a collateral.
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1.
-     * @param loanAssetAddress Address of an asset which is lended to a borrower.
-     * @param loanAmount Amount of tokens which is requested as a loan to a borrower
+     * @param loanAssetAddress Address of an asset which is lender to a borrower.
+     * @param loanAmount Amount of tokens which is requested as a loan to a borrower.
      * @param loanYield Amount of tokens which acts as a lenders loan interest. Borrower has to pay back a borrowed amount + yield.
      * @param duration Loan duration in seconds.
      * @param expiration Request expiration timestamp in seconds.
