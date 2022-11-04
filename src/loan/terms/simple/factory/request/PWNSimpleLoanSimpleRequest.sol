@@ -25,7 +25,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @dev EIP-712 simple request struct type hash.
      */
     bytes32 constant internal REQUEST_TYPEHASH = keccak256(
-        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool lateRepaymentEnabled,bytes32 nonce)"
+        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool lateRepaymentEnabled,uint256 nonce)"
     );
 
     /**
@@ -58,7 +58,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         address borrower;
         address lender;
         bool lateRepaymentEnabled;
-        bytes32 nonce;
+        uint256 nonce;
     }
 
     /*----------------------------------------------------------*|

@@ -19,7 +19,7 @@ contract PWNSimpleLoanRequestExposed is PWNSimpleLoanRequest {
 
     }
 
-    function makeRequest(bytes32 requestHash, address borrower, bytes32 nonce) external {
+    function makeRequest(bytes32 requestHash, address borrower, uint256 nonce) external {
         _makeRequest(requestHash, borrower, nonce);
     }
 
@@ -44,7 +44,7 @@ abstract contract PWNSimpleLoanRequestTest is Test {
 
     bytes32 requestHash = keccak256("request_hash_1");
     address borrower = address(0x070ce3);
-    bytes32 nonce = keccak256("nonce_1");
+    uint256 nonce = uint256(keccak256("nonce_1"));
 
     event RequestMade(bytes32 indexed requestHash, address indexed borrower);
 
@@ -58,7 +58,7 @@ abstract contract PWNSimpleLoanRequestTest is Test {
 
         vm.mockCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)"),
             abi.encode(false)
         );
     }
@@ -92,13 +92,13 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
     function test_shouldFail_whenRequestIsRevoked() external {
         vm.mockCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", borrower, nonce),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)", borrower, nonce),
             abi.encode(true)
         );
 
         vm.expectCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", borrower, nonce)
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)", borrower, nonce)
         );
 
         vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
@@ -135,11 +135,11 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
 contract PWNSimpleLoanRequest_RevokeRequestNonce_Test is PWNSimpleLoanRequestTest {
 
     function test_shouldCallRevokeRequestNonce() external {
-        bytes32 nonce = keccak256("its my monkey");
+        uint256 nonce = uint256(keccak256("its my monkey"));
 
         vm.expectCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("revokeNonce(address,bytes32)", borrower, nonce)
+            abi.encodeWithSignature("revokeNonce(address,uint256)", borrower, nonce)
         );
 
         vm.prank(borrower);

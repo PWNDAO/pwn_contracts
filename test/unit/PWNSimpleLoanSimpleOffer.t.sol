@@ -47,12 +47,12 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
             lender: lender,
             isPersistent: false,
             lateRepaymentEnabled: false,
-            nonce: keccak256("nonce_1")
+            nonce: uint256(keccak256("nonce_1"))
         });
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)"),
             abi.encode(false)
         );
     }
@@ -69,7 +69,7 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
                 address(offerContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bool lateRepaymentEnabled,bytes32 nonce)"),
+                keccak256("Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bool lateRepaymentEnabled,uint256 nonce)"),
                 abi.encode(
                     _offer.collateralCategory,
                     _offer.collateralAddress,
@@ -255,12 +255,12 @@ contract PWNSimpleLoanSimpleOffer_CreateLOANTerms_Test is PWNSimpleLoanSimpleOff
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)"),
             abi.encode(true)
         );
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)", offer.lender, offer.nonce)
         );
 
         vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
@@ -283,7 +283,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOANTerms_Test is PWNSimpleLoanSimpleOff
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokeNonce(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("revokeNonce(address,uint256)", offer.lender, offer.nonce)
         );
 
         vm.prank(activeLoanContract);
@@ -297,7 +297,7 @@ contract PWNSimpleLoanSimpleOffer_CreateLOANTerms_Test is PWNSimpleLoanSimpleOff
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokeNonce(address,bytes32)", offer.lender, offer.nonce)
+            abi.encodeWithSignature("revokeNonce(address,uint256)", offer.lender, offer.nonce)
         );
 
         vm.prank(activeLoanContract);

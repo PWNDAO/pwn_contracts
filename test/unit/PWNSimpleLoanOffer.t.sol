@@ -19,7 +19,7 @@ contract PWNSimpleLoanOfferExposed is PWNSimpleLoanOffer {
 
     }
 
-    function makeOffer(bytes32 offerHash, address lender, bytes32 nonce) external {
+    function makeOffer(bytes32 offerHash, address lender, uint256 nonce) external {
         _makeOffer(offerHash, lender, nonce);
     }
 
@@ -44,7 +44,7 @@ abstract contract PWNSimpleLoanOfferTest is Test {
 
     bytes32 offerHash = keccak256("offer_hash_1");
     address lender = address(0x070ce3);
-    bytes32 nonce = keccak256("nonce_1");
+    uint256 nonce = uint256(keccak256("nonce_1"));
 
     event OfferMade(bytes32 indexed offerHash, address indexed lender);
 
@@ -58,7 +58,7 @@ abstract contract PWNSimpleLoanOfferTest is Test {
 
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)"),
             abi.encode(false)
         );
     }
@@ -92,13 +92,13 @@ contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
     function test_shouldFail_whenOfferIsRevoked() external {
         vm.mockCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", lender, nonce),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)", lender, nonce),
             abi.encode(true)
         );
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", lender, nonce)
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)", lender, nonce)
         );
 
         vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
@@ -135,11 +135,11 @@ contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
 contract PWNSimpleLoanOffer_RevokeOfferNonce_Test is PWNSimpleLoanOfferTest {
 
     function test_shouldCallRevokeOfferNonce() external {
-        bytes32 nonce = keccak256("its my monkey");
+        uint256 nonce = uint256(keccak256("its my monkey"));
 
         vm.expectCall(
             revokedOfferNonce,
-            abi.encodeWithSignature("revokeNonce(address,bytes32)", lender, nonce)
+            abi.encodeWithSignature("revokeNonce(address,uint256)", lender, nonce)
         );
 
         vm.prank(lender);

@@ -52,7 +52,7 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanTermsFactory, PWNHubAccess
      * @param lender Address of an offer proposer (lender).
      * @param nonce Nonce used in an offer.
      */
-    function _makeOffer(bytes32 offerStructHash, address lender, bytes32 nonce) internal {
+    function _makeOffer(bytes32 offerStructHash, address lender, uint256 nonce) internal {
         // Check that caller is a lender
         if (msg.sender != lender)
             revert CallerIsNotStatedLender(lender);
@@ -75,7 +75,7 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanTermsFactory, PWNHubAccess
      * @notice Helper function for revoking an offer nonce on behalf of a caller.
      * @param offerNonce Offer nonce to be revoked.
      */
-    function revokeOfferNonce(bytes32 offerNonce) external {
+    function revokeOfferNonce(uint256 offerNonce) external {
         revokedOfferNonce.revokeNonce(msg.sender, offerNonce);
     }
 

@@ -24,6 +24,7 @@ error UnsupportedTransferFunction();
 
 // Nonce
 error NonceAlreadyRevoked();
+error InvalidMinNonce();
 
 // Signature checks
 error InvalidSignatureLength(uint256);

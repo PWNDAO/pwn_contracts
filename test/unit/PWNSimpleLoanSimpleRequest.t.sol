@@ -46,12 +46,12 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
             borrower: borrower,
             lender: address(0),
             lateRepaymentEnabled: false,
-            nonce: keccak256("nonce_1")
+            nonce: uint256(keccak256("nonce_1"))
         });
 
         vm.mockCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)"),
             abi.encode(false)
         );
     }
@@ -68,7 +68,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
                 address(requestContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool lateRepaymentEnabled,bytes32 nonce)"),
+                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool lateRepaymentEnabled,uint256 nonce)"),
                 abi.encode(
                     _request.collateralCategory,
                     _request.collateralAddress,
@@ -253,12 +253,12 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
 
         vm.mockCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)"),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)"),
             abi.encode(true)
         );
         vm.expectCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,bytes32)", request.borrower, request.nonce)
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)", request.borrower, request.nonce)
         );
 
         vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
@@ -280,7 +280,7 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
 
         vm.expectCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("revokeNonce(address,bytes32)", request.borrower, request.nonce)
+            abi.encodeWithSignature("revokeNonce(address,uint256)", request.borrower, request.nonce)
         );
 
         vm.prank(activeLoanContract);

@@ -22,7 +22,13 @@ contract PWNRevokedNonce is PWNHubAccessControl {
      *      Every address has its own nonce space.
      *      (owner => nonce => is revoked)
      */
-    mapping (address => mapping (bytes32 => bool)) private revokedNonces;
+    mapping (address => mapping (uint256 => bool)) private revokedNonces;
+
+    /**
+     * @dev Mapping of minimal nonce value per address.
+     *      (owner => minimal nonce value)
+     */
+    mapping (address => uint256) private minNonces;
 
 
     /*----------------------------------------------------------*|
@@ -32,7 +38,13 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     /**
      * @dev Emitted when a nonce is revoked.
      */
-    event NonceRevoked(address indexed owner, bytes32 indexed nonce);
+    event NonceRevoked(address indexed owner, uint256 indexed nonce);
+
+
+    /**
+     * @dev Emitted when a new min nonce value is set.
+     */
+    event MinNonceSet(address indexed owner, uint256 indexed minNonce);
 
 
     /*----------------------------------------------------------*|
@@ -53,7 +65,7 @@ contract PWNRevokedNonce is PWNHubAccessControl {
      * @dev Caller is used as a nonce owner.
      * @param nonce Nonce to be revoked.
      */
-    function revokeNonce(bytes32 nonce) external {
+    function revokeNonce(uint256 nonce) external {
         _revokeNonce(msg.sender, nonce);
     }
 
@@ -63,11 +75,11 @@ contract PWNRevokedNonce is PWNHubAccessControl {
      * @param owner Owner address of a revoking nonce.
      * @param nonce Nonce to be revoked.
      */
-    function revokeNonce(address owner, bytes32 nonce) external onlyWithTag(accessTag) {
+    function revokeNonce(address owner, uint256 nonce) external onlyWithTag(accessTag) {
         _revokeNonce(owner, nonce);
     }
 
-    function _revokeNonce(address owner, bytes32 nonce) private {
+    function _revokeNonce(address owner, uint256 nonce) private {
         // Check that nonce is not have been revoked
         if (revokedNonces[owner][nonce] == true)
             revert NonceAlreadyRevoked();
@@ -81,16 +93,43 @@ contract PWNRevokedNonce is PWNHubAccessControl {
 
 
     /*----------------------------------------------------------*|
+    |*  # SET MIN NONCE                                         *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Set a minimal nonce.
+     * @dev Nonce is considered revoked when smaller than minimal nonce.
+     * @param minNonce New value of a minimal nonce.
+     */
+    function setMinNonce(uint256 minNonce) external {
+        // Check that nonce is greater than current min nonce
+        uint256 currentMinNonce = minNonces[msg.sender];
+        if (currentMinNonce >= minNonce)
+            revert InvalidMinNonce();
+
+        // Set new min nonce value
+        minNonces[msg.sender] = minNonce;
+
+        // Emit event
+        emit MinNonceSet(msg.sender, minNonce);
+    }
+
+
+    /*----------------------------------------------------------*|
     |*  # IS NONCE REVOKED                                      *|
     |*----------------------------------------------------------*/
 
     /**
      * @notice Get information if owners nonce is revoked or not.
+     * @dev Nonce is considered revoked if is smaller than owners min nonce value or if is explicitly revoked.
      * @param owner Address of a nonce owner.
      * @param nonce Nonce in question.
      * @return True if owners nonce is revoked.
      */
-    function isNonceRevoked(address owner, bytes32 nonce) external view returns (bool) {
+    function isNonceRevoked(address owner, uint256 nonce) external view returns (bool) {
+        if (nonce < minNonces[owner])
+            return true;
+
         return revokedNonces[owner][nonce];
     }
 

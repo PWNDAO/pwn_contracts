@@ -52,7 +52,7 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAcce
      * @param borrower Address of a request proposer (borrower).
      * @param nonce Nonce used in a request.
      */
-    function _makeRequest(bytes32 requestStructHash, address borrower, bytes32 nonce) internal {
+    function _makeRequest(bytes32 requestStructHash, address borrower, uint256 nonce) internal {
         // Check that caller is a borrower
         if (msg.sender != borrower)
             revert CallerIsNotStatedBorrower(borrower);
@@ -75,7 +75,7 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAcce
      * @notice Helper function for revoking a request nonce on behalf of a caller.
      * @param requestNonce Request nonce to be revoked.
      */
-    function revokeRequestNonce(bytes32 requestNonce) external {
+    function revokeRequestNonce(uint256 requestNonce) external {
         revokedRequestNonce.revokeNonce(msg.sender, requestNonce);
     }
 

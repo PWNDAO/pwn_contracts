@@ -43,7 +43,7 @@ abstract contract BaseIntegrationTest is Test {
     address lender = vm.addr(lenderPK);
     uint256 borrowerPK = uint256(888);
     address borrower = vm.addr(borrowerPK);
-    bytes32 nonce = keccak256("nonce_1");
+    uint256 nonce = uint256(keccak256("nonce_1"));
     PWNSimpleLoanSimpleOffer.Offer offer;
     PWNSimpleLoanSimpleRequest.Request request;
 

@@ -25,7 +25,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
      * @dev EIP-712 simple offer struct type hash.
      */
     bytes32 constant internal OFFER_TYPEHASH = keccak256(
-        "Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bool lateRepaymentEnabled,bytes32 nonce)"
+        "Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bool lateRepaymentEnabled,uint256 nonce)"
     );
 
     /**
@@ -60,7 +60,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         address lender;
         bool isPersistent;
         bool lateRepaymentEnabled;
-        bytes32 nonce;
+        uint256 nonce;
     }
 
     /*----------------------------------------------------------*|
