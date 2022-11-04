@@ -17,6 +17,10 @@ import "@pwn/loan/terms/simple/factory/request/PWNSimpleLoanSimpleRequest.sol";
 import "@pwn/loan/token/PWNLOAN.sol";
 import "@pwn/nonce/PWNRevokedNonce.sol";
 
+import "@pwn-test/helper/token/T20.sol";
+import "@pwn-test/helper/token/T721.sol";
+import "@pwn-test/helper/token/T1155.sol";
+
 
 /*
 
@@ -30,6 +34,12 @@ forge script script/PWN.s.sol:Deploy \
 // Protocol
 forge script script/PWN.s.sol:Deploy \
 --sig "deployProtocolBroadcast(address,address,address,address)" $PWN_DEPLOYER $ADMIN $DAO $FEE_COLLECTOR \
+--rpc-url $GOERLI_URL \
+--private-key $PRIVATE_KEY_TESTNET \
+--broadcast
+
+forge script script/PWN.s.sol:Deploy \
+--sig "deployTestTokensBroadcast()" \
 --rpc-url $GOERLI_URL \
 --private-key $PRIVATE_KEY_TESTNET \
 --broadcast
@@ -52,6 +62,12 @@ contract Deploy is Script {
     ) external {
         vm.startBroadcast();
         deployProtocol(deployer, admin, dao, feeCollector);
+        vm.stopBroadcast();
+    }
+
+    function deployTestTokensBroadcast() external {
+        vm.startBroadcast();
+        deployTestTokens();
         vm.stopBroadcast();
     }
 
@@ -172,6 +188,18 @@ contract Deploy is Script {
         tags[6] = PWNHubTags.LOAN_REQUEST;
 
         hub.setTags(addrs, tags, true);
+    }
+
+    function deployTestTokens() public {
+        T20 t20 = new T20();
+        T721 t721 = new T721();
+        T1155 t1155 = new T1155();
+        T20 loanAsset = new T20();
+
+        console2.log("T20:", address(t20));
+        console2.log("T721:", address(t721));
+        console2.log("T1155:", address(t1155));
+        console2.log("Loan asset:", address(loanAsset));
     }
 
 }
