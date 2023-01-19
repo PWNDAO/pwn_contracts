@@ -77,18 +77,6 @@ contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
         offerContract.makeOffer(offerHash, lender, nonce);
     }
 
-    function test_shouldFail_whenOfferHasBeenMadeAlready() external {
-        vm.store(
-            address(offerContract),
-            keccak256(abi.encode(offerHash, OFFERS_MADE_SLOT)),
-            bytes32(uint256(1))
-        );
-
-        vm.expectRevert(abi.encodeWithSelector(OfferAlreadyExists.selector));
-        vm.prank(lender);
-        offerContract.makeOffer(offerHash, lender, nonce);
-    }
-
     function test_shouldFail_whenOfferIsRevoked() external {
         vm.mockCall(
             revokedOfferNonce,

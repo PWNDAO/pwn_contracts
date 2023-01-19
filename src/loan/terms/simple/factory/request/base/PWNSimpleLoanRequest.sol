@@ -57,10 +57,6 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAcce
         if (msg.sender != borrower)
             revert CallerIsNotStatedBorrower(borrower);
 
-        // Check that request has not been made
-        if (requestsMade[requestStructHash] == true)
-            revert RequestAlreadyExists();
-
         // Check that request has not been revoked
         if (revokedRequestNonce.isNonceRevoked(borrower, nonce) == true)
             revert NonceAlreadyRevoked();

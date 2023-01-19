@@ -77,18 +77,6 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
         requestContract.makeRequest(requestHash, borrower, nonce);
     }
 
-    function test_shouldFail_whenRequestHasBeenMadeAlready() external {
-        vm.store(
-            address(requestContract),
-            keccak256(abi.encode(requestHash, REQUESTS_MADE_SLOT)),
-            bytes32(uint256(1))
-        );
-
-        vm.expectRevert(abi.encodeWithSelector(RequestAlreadyExists.selector));
-        vm.prank(borrower);
-        requestContract.makeRequest(requestHash, borrower, nonce);
-    }
-
     function test_shouldFail_whenRequestIsRevoked() external {
         vm.mockCall(
             revokedRequestNonce,

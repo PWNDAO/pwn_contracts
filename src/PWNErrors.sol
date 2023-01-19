@@ -33,12 +33,10 @@ error InvalidSignature();
 // Offer
 error CallerIsNotStatedLender(address);
 error CallerIsNotStatedBorrower(address);
-error OfferAlreadyExists();
 error OfferExpired();
 error CollateralIdIsNotWhitelisted();
 
 // Request
-error RequestAlreadyExists();
 error RequestExpired();
 
 // Input data

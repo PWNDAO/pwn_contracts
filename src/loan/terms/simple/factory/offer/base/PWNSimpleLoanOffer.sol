@@ -57,10 +57,6 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanTermsFactory, PWNHubAccess
         if (msg.sender != lender)
             revert CallerIsNotStatedLender(lender);
 
-        // Check that offer has not been made
-        if (offersMade[offerStructHash] == true)
-            revert OfferAlreadyExists();
-
         // Check that offer has not been revoked
         if (revokedOfferNonce.isNonceRevoked(lender, nonce) == true)
             revert NonceAlreadyRevoked();
