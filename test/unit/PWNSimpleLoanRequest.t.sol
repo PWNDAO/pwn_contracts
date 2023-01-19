@@ -19,8 +19,8 @@ contract PWNSimpleLoanRequestExposed is PWNSimpleLoanRequest {
 
     }
 
-    function makeRequest(bytes32 requestHash, address borrower, uint256 nonce) external {
-        _makeRequest(requestHash, borrower, nonce);
+    function makeRequest(bytes32 requestHash, address borrower) external {
+        _makeRequest(requestHash, borrower);
     }
 
     // Dummy implementation, is not tester here
@@ -74,29 +74,12 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
 
     function test_shouldFail_whenCallerIsNotBorrower() external {
         vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedBorrower.selector, borrower));
-        requestContract.makeRequest(requestHash, borrower, nonce);
-    }
-
-    function test_shouldFail_whenRequestIsRevoked() external {
-        vm.mockCall(
-            revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256)", borrower, nonce),
-            abi.encode(true)
-        );
-
-        vm.expectCall(
-            revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256)", borrower, nonce)
-        );
-
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
-        vm.prank(borrower);
-        requestContract.makeRequest(requestHash, borrower, nonce);
+        requestContract.makeRequest(requestHash, borrower);
     }
 
     function test_shouldMarkRequestAsMade() external {
         vm.prank(borrower);
-        requestContract.makeRequest(requestHash, borrower, nonce);
+        requestContract.makeRequest(requestHash, borrower);
 
         bytes32 isMadeValue = vm.load(
             address(requestContract),
@@ -110,7 +93,7 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
         emit RequestMade(requestHash, borrower);
 
         vm.prank(borrower);
-        requestContract.makeRequest(requestHash, borrower, nonce);
+        requestContract.makeRequest(requestHash, borrower);
     }
 
 }

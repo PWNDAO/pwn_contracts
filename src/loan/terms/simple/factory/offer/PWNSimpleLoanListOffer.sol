@@ -98,7 +98,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      * @param offer Offer struct containing all needed offer data.
      */
     function makeOffer(Offer calldata offer) external {
-        _makeOffer(getOfferHash(offer), offer.lender, offer.nonce);
+        _makeOffer(getOfferHash(offer), offer.lender);
     }
 
 

@@ -80,10 +80,6 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     }
 
     function _revokeNonce(address owner, uint256 nonce) private {
-        // Check that nonce is not have been revoked
-        if (revokedNonces[owner][nonce] == true)
-            revert NonceAlreadyRevoked();
-
         // Revoke nonce
         revokedNonces[owner][nonce] = true;
 

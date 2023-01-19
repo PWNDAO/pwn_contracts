@@ -50,16 +50,11 @@ abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAcce
      * @dev Function will mark a request hash as proposed. Request will become acceptable by a borrower without a request signature.
      * @param requestStructHash Hash of a proposed request.
      * @param borrower Address of a request proposer (borrower).
-     * @param nonce Nonce used in a request.
      */
-    function _makeRequest(bytes32 requestStructHash, address borrower, uint256 nonce) internal {
+    function _makeRequest(bytes32 requestStructHash, address borrower) internal {
         // Check that caller is a borrower
         if (msg.sender != borrower)
             revert CallerIsNotStatedBorrower(borrower);
-
-        // Check that request has not been revoked
-        if (revokedRequestNonce.isNonceRevoked(borrower, nonce) == true)
-            revert NonceAlreadyRevoked();
 
         // Mark request as made
         requestsMade[requestStructHash] = true;

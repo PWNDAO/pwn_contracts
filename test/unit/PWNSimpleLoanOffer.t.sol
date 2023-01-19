@@ -19,8 +19,8 @@ contract PWNSimpleLoanOfferExposed is PWNSimpleLoanOffer {
 
     }
 
-    function makeOffer(bytes32 offerHash, address lender, uint256 nonce) external {
-        _makeOffer(offerHash, lender, nonce);
+    function makeOffer(bytes32 offerHash, address lender) external {
+        _makeOffer(offerHash, lender);
     }
 
     // Dummy implementation, is not tester here
@@ -74,29 +74,12 @@ contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
 
     function test_shouldFail_whenCallerIsNotLender() external {
         vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedLender.selector, lender));
-        offerContract.makeOffer(offerHash, lender, nonce);
-    }
-
-    function test_shouldFail_whenOfferIsRevoked() external {
-        vm.mockCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256)", lender, nonce),
-            abi.encode(true)
-        );
-
-        vm.expectCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256)", lender, nonce)
-        );
-
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
-        vm.prank(lender);
-        offerContract.makeOffer(offerHash, lender, nonce);
+        offerContract.makeOffer(offerHash, lender);
     }
 
     function test_shouldMarkOfferAsMade() external {
         vm.prank(lender);
-        offerContract.makeOffer(offerHash, lender, nonce);
+        offerContract.makeOffer(offerHash, lender);
 
         bytes32 isMadeValue = vm.load(
             address(offerContract),
@@ -110,7 +93,7 @@ contract PWNSimpleLoanOffer_MakeOffer_Test is PWNSimpleLoanOfferTest {
         emit OfferMade(offerHash, lender);
 
         vm.prank(lender);
-        offerContract.makeOffer(offerHash, lender, nonce);
+        offerContract.makeOffer(offerHash, lender);
     }
 
 }

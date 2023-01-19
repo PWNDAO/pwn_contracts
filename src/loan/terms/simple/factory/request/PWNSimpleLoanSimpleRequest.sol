@@ -80,7 +80,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @param request Request struct containing all needed request data.
      */
     function makeRequest(Request calldata request) external {
-        _makeRequest(getRequestHash(request), request.borrower, request.nonce);
+        _makeRequest(getRequestHash(request), request.borrower);
     }
 
 

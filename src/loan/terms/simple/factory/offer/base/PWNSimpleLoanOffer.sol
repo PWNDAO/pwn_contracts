@@ -50,16 +50,11 @@ abstract contract PWNSimpleLoanOffer is IPWNSimpleLoanTermsFactory, PWNHubAccess
      * @dev Function will mark an offer hash as proposed. Offer will become acceptable by a borrower without an offer signature.
      * @param offerStructHash Hash of a proposed offer.
      * @param lender Address of an offer proposer (lender).
-     * @param nonce Nonce used in an offer.
      */
-    function _makeOffer(bytes32 offerStructHash, address lender, uint256 nonce) internal {
+    function _makeOffer(bytes32 offerStructHash, address lender) internal {
         // Check that caller is a lender
         if (msg.sender != lender)
             revert CallerIsNotStatedLender(lender);
-
-        // Check that offer has not been revoked
-        if (revokedOfferNonce.isNonceRevoked(lender, nonce) == true)
-            revert NonceAlreadyRevoked();
 
         // Mark offer as made
         offersMade[offerStructHash] = true;

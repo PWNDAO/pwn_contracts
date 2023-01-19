@@ -54,18 +54,6 @@ abstract contract PWNRevokedNonceTest is Test {
 
 contract PWNRevokedNonce_RevokeNonceByOwner_Test is PWNRevokedNonceTest {
 
-    function test_shouldFail_whenNonceIsRevoked() external {
-        vm.store(
-            address(revokedNonce),
-            _revokedNonceSlot(alice, nonce),
-            bytes32(uint256(1))
-        );
-
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
-        vm.prank(alice);
-        revokedNonce.revokeNonce(nonce);
-    }
-
     function test_shouldStoreNonceAsRevoked() external {
         vm.prank(alice);
         revokedNonce.revokeNonce(nonce);
@@ -115,18 +103,6 @@ contract PWNRevokedNonce_RevokeNonceWithOwner_Test is PWNRevokedNonceTest {
     function test_shouldFail_whenCallerIsDoesNotHaveAccessTag() external {
         vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, accessTag));
         vm.prank(alice);
-        revokedNonce.revokeNonce(alice, nonce);
-    }
-
-    function test_shouldFail_whenNonceIsRevoked() external {
-        vm.store(
-            address(revokedNonce),
-            _revokedNonceSlot(alice, nonce),
-            bytes32(uint256(1))
-        );
-
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
-        vm.prank(accessEnabledAddress);
         revokedNonce.revokeNonce(alice, nonce);
     }
 

@@ -13,12 +13,12 @@ abstract contract PWNSignatureCheckerTest is Test {
     bytes32 digest = keccak256("Hey, anybody know a good tailor?");
     bytes signature;
 
-    function _sign(uint256 pk, bytes32 _digest) internal view returns (bytes memory) {
+    function _sign(uint256 pk, bytes32 _digest) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _digest);
         return abi.encodePacked(r, s, v);
     }
 
-    function _signCompact(uint256 pk, bytes32 _digest) internal view returns (bytes memory) {
+    function _signCompact(uint256 pk, bytes32 _digest) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _digest);
         return abi.encodePacked(r, bytes32(uint256(v) - 27) << 255 | s);
     }
