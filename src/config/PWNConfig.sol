@@ -61,9 +61,13 @@ contract PWNConfig is Ownable, Initializable {
     |*----------------------------------------------------------*/
 
     function initialize(address _owner, uint16 _fee, address _feeCollector) initializer public {
+        require(_owner != address(0), "Owner is zero address");
         _transferOwnership(_owner);
-        _setFee(_fee);
+
+        require(_feeCollector != address(0), "Fee collector is zero address");
         feeCollector = _feeCollector;
+
+        _setFee(_fee);
     }
 
 

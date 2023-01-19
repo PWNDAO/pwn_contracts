@@ -126,7 +126,7 @@ abstract contract BaseIntegrationTest is Test {
         });
     }
 
-    function _sign(uint256 pk, bytes32 digest) internal returns (bytes memory) {
+    function _sign(uint256 pk, bytes32 digest) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
         return abi.encodePacked(r, s, v);
     }

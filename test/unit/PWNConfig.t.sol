@@ -47,6 +47,16 @@ contract PWNConfig_Initialize_Test is PWNConfigTest {
         config.initialize(owner, fee, feeCollector);
     }
 
+    function test_shouldFail_whenOwnerIsZeroAddress() external {
+        vm.expectRevert("Owner is zero address");
+        config.initialize(address(0), fee, feeCollector);
+    }
+
+    function test_shouldFail_whenFeeCollectorIsZeroAddress() external {
+        vm.expectRevert("Fee collector is zero address");
+        config.initialize(owner, fee, address(0));
+    }
+
 }
 
 
