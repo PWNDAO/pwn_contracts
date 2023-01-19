@@ -150,12 +150,12 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
 
     // Helpers
 
-    function _signOffer(uint256 pk, PWNSimpleLoanListOffer.Offer memory _offer) private returns (bytes memory) {
+    function _signOffer(uint256 pk, PWNSimpleLoanListOffer.Offer memory _offer) private view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _offerHash(_offer));
         return abi.encodePacked(r, s, v);
     }
 
-    function _signOfferCompact(uint256 pk, PWNSimpleLoanListOffer.Offer memory _offer) private returns (bytes memory) {
+    function _signOfferCompact(uint256 pk, PWNSimpleLoanListOffer.Offer memory _offer) private view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _offerHash(_offer));
         return abi.encodePacked(r, bytes32(uint256(v) - 27) << 255 | s);
     }

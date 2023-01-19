@@ -169,23 +169,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
             )),
             keccak256(abi.encodePacked(
                 REQUEST_TYPEHASH,
-                abi.encode(
-                    request.collateralCategory,
-                    request.collateralAddress,
-                    request.collateralId,
-                    request.collateralAmount
-                ), // Need to prevent `slot(s) too deep inside the stack` error
-                abi.encode(
-                    request.loanAssetAddress,
-                    request.loanAmount,
-                    request.loanYield,
-                    request.duration,
-                    request.expiration,
-                    request.borrower,
-                    request.lender,
-                    request.lateRepaymentEnabled,
-                    request.nonce
-                )
+                abi.encode(request)
             ))
         ));
     }

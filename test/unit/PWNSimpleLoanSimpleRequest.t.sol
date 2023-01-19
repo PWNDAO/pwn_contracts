@@ -142,12 +142,12 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
 
     // Helpers
 
-    function _signRequest(uint256 pk, PWNSimpleLoanSimpleRequest.Request memory _request) private returns (bytes memory) {
+    function _signRequest(uint256 pk, PWNSimpleLoanSimpleRequest.Request memory _request) private view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _requestHash(_request));
         return abi.encodePacked(r, s, v);
     }
 
-    function _signRequestCompact(uint256 pk, PWNSimpleLoanSimpleRequest.Request memory _request) private returns (bytes memory) {
+    function _signRequestCompact(uint256 pk, PWNSimpleLoanSimpleRequest.Request memory _request) private view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _requestHash(_request));
         return abi.encodePacked(r, bytes32(uint256(v) - 27) << 255 | s);
     }

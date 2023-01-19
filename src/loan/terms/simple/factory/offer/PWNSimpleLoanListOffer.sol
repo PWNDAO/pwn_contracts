@@ -201,24 +201,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
             )),
             keccak256(abi.encodePacked(
                 OFFER_TYPEHASH,
-                abi.encode(
-                    offer.collateralCategory,
-                    offer.collateralAddress,
-                    offer.collateralIdsWhitelistMerkleRoot,
-                    offer.collateralAmount
-                ), // Need to prevent `slot(s) too deep inside the stack` error
-                abi.encode(
-                    offer.loanAssetAddress,
-                    offer.loanAmount,
-                    offer.loanYield,
-                    offer.duration,
-                    offer.expiration,
-                    offer.borrower,
-                    offer.lender,
-                    offer.isPersistent,
-                    offer.lateRepaymentEnabled,
-                    offer.nonce
-                )
+                abi.encode(offer)
             ))
         ));
     }
