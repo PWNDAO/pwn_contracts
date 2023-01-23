@@ -156,7 +156,7 @@ abstract contract BaseIntegrationTest is Test {
         offer.collateralCategory = MultiToken.Category.ERC721;
         offer.collateralAddress = address(t721);
         offer.collateralId = 42;
-        offer.collateralAmount = 1;
+        offer.collateralAmount = 0;
 
         // Mint initial state
         t721.mint(borrower, 42);

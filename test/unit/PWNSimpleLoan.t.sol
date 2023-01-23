@@ -63,7 +63,7 @@ abstract contract PWNSimpleLoanTest is Test {
             lateRepaymentEnabled: false,
             loanAssetAddress: token,
             loanRepayAmount: 6731,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC721, token, 2, 1)
+            collateral: MultiToken.Asset(MultiToken.Category.ERC721, token, 2, 0)
         });
 
         simpleLoanTerms = PWNLOANTerms.Simple({
@@ -71,7 +71,7 @@ abstract contract PWNSimpleLoanTest is Test {
             borrower: borrower,
             expiration: 40039,
             lateRepaymentEnabled: false,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC721, token, 2, 1),
+            collateral: MultiToken.Asset(MultiToken.Category.ERC721, token, 2, 0),
             asset: MultiToken.Asset(MultiToken.Category.ERC20, token, 0, 5),
             loanRepayAmount: 6731
         });
@@ -230,27 +230,11 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
-    function test_shouldFailWhenLoanAssetIsInvalid() external {
-        simpleLoanTerms.asset.category = MultiToken.Category.ERC20;
-        simpleLoanTerms.asset.assetAddress = token;
-        simpleLoanTerms.asset.id = 1; // Invalid, ERC20 has to have id = 0
-        simpleLoanTerms.asset.amount = 100;
-
-        vm.mockCall(
-            loanFactory,
-            abi.encodeWithSignature("createLOANTerms(address,bytes,bytes)"),
-            abi.encode(simpleLoanTerms)
-        );
-
-        vm.expectRevert(InvalidLoanAsset.selector);
-        loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
-    }
-
     function test_shouldFailWhenCollateralAssetIsInvalid() external {
         simpleLoanTerms.collateral.category = MultiToken.Category.ERC721;
         simpleLoanTerms.collateral.assetAddress = token;
         simpleLoanTerms.collateral.id = 123;
-        simpleLoanTerms.collateral.amount = 100; // Invalid, ERC721 has to have amount = 1
+        simpleLoanTerms.collateral.amount = 100; // Invalid, ERC721 has to have amount = 0
 
         vm.mockCall(
             loanFactory,

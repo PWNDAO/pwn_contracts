@@ -75,7 +75,7 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         request.collateralCategory = MultiToken.Category.ERC721;
         request.collateralAddress = address(t721);
         request.collateralId = 42;
-        request.collateralAmount = 1;
+        request.collateralAmount = 0;
 
         // Mint initial state
         t721.mint(borrower, 42);
