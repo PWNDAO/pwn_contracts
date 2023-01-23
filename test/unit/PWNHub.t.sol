@@ -133,12 +133,20 @@ contract PWNHub_SetTags_Test is PWNHubTest {
         hub.setTags(addrs, tags, true);
     }
 
-    function test_shouldFail_whenInvalidInputData() external {
+    function test_shouldFail_whenDiffInputLengths() external {
         address[] memory addrs_ = new address[](3);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidInputData.selector));
         vm.prank(owner);
         hub.setTags(addrs_, tags, true);
+    }
+
+    function test_shouldNotFail_whenEmptyList() external {
+        address[] memory emptyAddrs;
+        bytes32[] memory emptyTags;
+
+        vm.prank(owner);
+        hub.setTags(emptyAddrs, emptyTags, true);
     }
 
     function test_shouldAddTagsToAddress() external {
