@@ -69,23 +69,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
             )),
             keccak256(abi.encodePacked(
                 keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool lateRepaymentEnabled,uint256 nonce)"),
-                abi.encode(
-                    _request.collateralCategory,
-                    _request.collateralAddress,
-                    _request.collateralId,
-                    _request.collateralAmount
-                ), // Need to prevent `slot(s) too deep inside the stack` error
-                abi.encode(
-                    _request.loanAssetAddress,
-                    _request.loanAmount,
-                    _request.loanYield,
-                    _request.duration,
-                    _request.expiration,
-                    _request.borrower,
-                    _request.lender,
-                    _request.lateRepaymentEnabled,
-                    _request.nonce
-                )
+                abi.encode(_request)
             ))
         ));
     }

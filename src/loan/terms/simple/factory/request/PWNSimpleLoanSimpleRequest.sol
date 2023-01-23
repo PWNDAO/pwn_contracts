@@ -28,6 +28,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool lateRepaymentEnabled,uint256 nonce)"
     );
 
+    bytes32 immutable internal DOMAIN_SEPARATOR;
+
     /**
      * @notice Construct defining a simple request.
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
@@ -66,7 +68,13 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
     |*----------------------------------------------------------*/
 
     constructor(address hub, address revokedRequestNonce) PWNSimpleLoanRequest(hub, revokedRequestNonce) {
-
+        DOMAIN_SEPARATOR = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256("PWNSimpleLoanSimpleRequest"),
+            keccak256("1"),
+            block.chainid,
+            address(this)
+        ));
     }
 
 
@@ -159,14 +167,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      */
     function getRequestHash(Request memory request) public view returns (bytes32) {
         return keccak256(abi.encodePacked(
-            "\x19\x01",
-            keccak256(abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("PWNSimpleLoanSimpleRequest"),
-                keccak256("1"),
-                block.chainid,
-                address(this)
-            )),
+            hex"1901",
+            DOMAIN_SEPARATOR,
             keccak256(abi.encodePacked(
                 REQUEST_TYPEHASH,
                 abi.encode(request)

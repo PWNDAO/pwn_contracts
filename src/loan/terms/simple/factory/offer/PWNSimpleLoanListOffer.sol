@@ -31,6 +31,8 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bool lateRepaymentEnabled,uint256 nonce)"
     );
 
+    bytes32 immutable internal DOMAIN_SEPARATOR;
+
     /**
      * @notice Construct defining a list offer.
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
@@ -84,7 +86,13 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
     |*----------------------------------------------------------*/
 
     constructor(address hub, address _revokedOfferNonce) PWNSimpleLoanOffer(hub, _revokedOfferNonce) {
-
+        DOMAIN_SEPARATOR = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256("PWNSimpleLoanListOffer"),
+            keccak256("1"),
+            block.chainid,
+            address(this)
+        ));
     }
 
 
@@ -191,14 +199,8 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      */
     function getOfferHash(Offer memory offer) public view returns (bytes32) {
         return keccak256(abi.encodePacked(
-            "\x19\x01",
-            keccak256(abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("PWNSimpleLoanListOffer"),
-                keccak256("1"),
-                block.chainid,
-                address(this)
-            )),
+            hex"1901",
+            DOMAIN_SEPARATOR,
             keccak256(abi.encodePacked(
                 OFFER_TYPEHASH,
                 abi.encode(offer)

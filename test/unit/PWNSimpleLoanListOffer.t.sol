@@ -76,24 +76,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
             )),
             keccak256(abi.encodePacked(
                 keccak256("Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bool lateRepaymentEnabled,uint256 nonce)"),
-                abi.encode(
-                    _offer.collateralCategory,
-                    _offer.collateralAddress,
-                    _offer.collateralIdsWhitelistMerkleRoot,
-                    _offer.collateralAmount
-                ), // Need to prevent `slot(s) too deep inside the stack` error
-                abi.encode(
-                    _offer.loanAssetAddress,
-                    _offer.loanAmount,
-                    _offer.loanYield,
-                    _offer.duration,
-                    _offer.expiration,
-                    _offer.borrower,
-                    _offer.lender,
-                    _offer.isPersistent,
-                    _offer.lateRepaymentEnabled,
-                    _offer.nonce
-                )
+                abi.encode(_offer)
             ))
         ));
     }
