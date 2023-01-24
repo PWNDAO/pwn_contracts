@@ -168,6 +168,17 @@ contract Deploy is Script {
             )
         }));
 
+        console2.log("PWNConfig - singleton:", address(configSingleton));
+        console2.log("PWNConfig - proxy:", address(config));
+        console2.log("PWNHub:", address(hub));
+        console2.log("PWNLOAN:", address(loanToken));
+        console2.log("PWNRevokedNonce (offer):", address(revokedOfferNonce));
+        console2.log("PWNRevokedNonce (request):", address(revokedRequestNonce));
+        console2.log("PWNSimpleLoan:", address(simpleLoan));
+        console2.log("PWNSimpleLoanSimpleOffer:", address(simpleOffer));
+        console2.log("PWNSimpleLoanListOffer:", address(listOffer));
+        console2.log("PWNSimpleLoanSimpleRequest:", address(simpleRequest));
+
         // Set hub tags
         address[] memory addrs = new address[](7);
         addrs[0] = address(simpleLoan);
