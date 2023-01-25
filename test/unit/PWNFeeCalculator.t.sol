@@ -22,4 +22,18 @@ contract PWNFeeCalculator_CalculateFeeAmount_Test is Test {
         assertEq(newLoanAmount, 5346);
     }
 
+    function test_shouldHandleZeroAmount() external {
+        (uint256 feeAmount, uint256 newLoanAmount) = PWNFeeCalculator.calculateFeeAmount(0, 0);
+
+        assertEq(feeAmount, 0);
+        assertEq(newLoanAmount, 0);
+    }
+
+    function test_shouldHandleSmallAmount() external {
+        (uint256 feeAmount, uint256 newLoanAmount) = PWNFeeCalculator.calculateFeeAmount(100, 10);
+
+        assertEq(feeAmount, 0);
+        assertEq(newLoanAmount, 10);
+    }
+
 }
