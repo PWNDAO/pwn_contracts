@@ -10,68 +10,6 @@ import "@pwn-test/helper/BaseIntegrationTest.t.sol";
 
 contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
 
-    // Create LOAN
-
-    function test_shouldCreateLOAN_withERC20Collateral() external {
-        // Create LOAN
-        uint256 loanId = _createERC20Loan();
-
-        // Assert final state
-        assertEq(loanToken.ownerOf(loanId), lender);
-
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(simpleLoan)), 0);
-
-        assertEq(t20.balanceOf(lender), 0);
-        assertEq(t20.balanceOf(borrower), 0);
-        assertEq(t20.balanceOf(address(simpleLoan)), 10e18);
-
-        assertEq(revokedOfferNonce.isNonceRevoked(lender, offer.nonce), true);
-        assertEq(loanToken.loanContract(loanId), address(simpleLoan));
-    }
-
-    function test_shouldCreateLOAN_withERC721Collateral() external {
-        // Create LOAN
-        uint256 loanId = _createERC721Loan();
-
-        // Assert final state
-        assertEq(loanToken.ownerOf(loanId), lender);
-
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(simpleLoan)), 0);
-
-        assertEq(t721.ownerOf(42), address(simpleLoan));
-
-        assertEq(revokedOfferNonce.isNonceRevoked(lender, offer.nonce), true);
-        assertEq(loanToken.loanContract(loanId), address(simpleLoan));
-    }
-
-    function test_shouldCreateLOAN_withERC1155Collateral() external {
-        // Create LOAN
-        uint256 loanId = _createERC1155Loan();
-
-        // Assert final state
-        assertEq(loanToken.ownerOf(loanId), lender);
-
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(simpleLoan)), 0);
-
-        assertEq(t1155.balanceOf(lender, 42), 0);
-        assertEq(t1155.balanceOf(borrower, 42), 0);
-        assertEq(t1155.balanceOf(address(simpleLoan), 42), 10e18);
-
-        assertEq(revokedOfferNonce.isNonceRevoked(lender, nonce), true);
-        assertEq(loanToken.loanContract(loanId), address(simpleLoan));
-    }
-
-    function test_shouldCreateLOAN_withCryptoKittiesCollateral() external {
-        // TODO:
-    }
-
-
     // Group of offers
 
     function test_shouldRevokeOffersInGroup_whenAcceptingOneFromGroup() external {
@@ -80,7 +18,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         t1155.mint(borrower, 42, 10e18);
 
         // Sign offers
-        offer = PWNSimpleLoanSimpleOffer.Offer({
+        PWNSimpleLoanSimpleOffer.Offer memory offer = PWNSimpleLoanSimpleOffer.Offer({
             collateralCategory: MultiToken.Category.ERC1155,
             collateralAddress: address(t1155),
             collateralId: 42,

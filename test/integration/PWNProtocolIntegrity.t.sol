@@ -81,7 +81,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         simpleOffer.createLOANTerms(borrower, "", ""); // Offer data are not important in this test
     }
 
-    function test_shouldFail_whenPassingInvalidOfferContract() external {
+    function test_shouldFail_whenPassingInvalidTermsFactoryContract() external {
         // Remove SIMPLE_LOAN_TERMS_FACTORY tag
         hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, false);
 
