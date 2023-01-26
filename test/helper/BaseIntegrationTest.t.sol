@@ -94,9 +94,11 @@ abstract contract BaseIntegrationTest is Test {
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(configSingleton),
             admin,
-            abi.encodeWithSignature("initialize(address,uint16,address)", address(this), 0, feeCollector)
+            abi.encodeWithSignature("initialize(address)", address(this))
         );
         config = PWNConfig(address(proxy));
+        config.reinitialize(address(this), 0, feeCollector);
+
         hub = new PWNHub();
         hub.transferOwnership(admin);
 

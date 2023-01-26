@@ -60,12 +60,21 @@ contract PWNConfig is Ownable, Initializable {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    function initialize(address _owner, uint16 _fee, address _feeCollector) initializer public {
+    constructor() Ownable() {
+
+    }
+
+    function initialize(address _owner) initializer external {
+        require(_owner != address(0), "Owner is zero address");
+        _transferOwnership(_owner);
+    }
+
+    function reinitialize(address _owner, uint16 _fee, address _feeCollector) reinitializer(2) onlyOwner external {
         require(_owner != address(0), "Owner is zero address");
         _transferOwnership(_owner);
 
         require(_feeCollector != address(0), "Fee collector is zero address");
-        feeCollector = _feeCollector;
+        _setFeeCollector(_feeCollector);
 
         _setFee(_fee);
     }
@@ -84,21 +93,25 @@ contract PWNConfig is Ownable, Initializable {
         _setFee(_fee);
     }
 
+    function _setFee(uint16 _fee) private {
+        uint16 oldFee = fee;
+        fee = _fee;
+        emit FeeUpdated(oldFee, _fee);
+    }
+
     /**
      * @notice Set new fee collector address.
      * @dev Only contract owner can call this function.
      * @param _feeCollector New fee collector address.
      */
     function setFeeCollector(address _feeCollector) external onlyOwner {
+        _setFeeCollector(_feeCollector);
+    }
+
+    function _setFeeCollector(address _feeCollector) private {
         address oldFeeCollector = feeCollector;
         feeCollector = _feeCollector;
         emit FeeCollectorUpdated(oldFeeCollector, _feeCollector);
-    }
-
-    function _setFee(uint16 _fee) private {
-        uint16 oldFee = fee;
-        fee = _fee;
-        emit FeeUpdated(oldFee, _fee);
     }
 
 

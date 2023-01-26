@@ -29,32 +29,78 @@ abstract contract PWNConfigTest is Test {
 
 contract PWNConfig_Initialize_Test is PWNConfigTest {
 
-    uint16 fee = 32;
+    function test_shouldSetOwner() external {
+        config.initialize(owner);
 
-
-    function test_shouldSetParameters() external {
-        config.initialize(owner, fee, feeCollector);
-
-        bytes32 firstSlotValue = vm.load(address(config), bytes32(0));
-        assertEq(address(uint160(uint256(firstSlotValue))), owner);
-        assertEq(uint16(uint256(firstSlotValue >> 176)), fee);
+        bytes32 ownerValue = vm.load(address(config), bytes32(0));
+        assertEq(address(uint160(uint256(ownerValue))), owner);
     }
 
     function test_shouldFail_whenCalledSecondTime() external {
-        config.initialize(owner, fee, feeCollector);
+        config.initialize(owner);
 
         vm.expectRevert("Initializable: contract is already initialized");
-        config.initialize(owner, fee, feeCollector);
+        config.initialize(owner);
     }
 
     function test_shouldFail_whenOwnerIsZeroAddress() external {
         vm.expectRevert("Owner is zero address");
-        config.initialize(address(0), fee, feeCollector);
+        config.initialize(address(0));
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # REINITIALIZE                                          *|
+|*----------------------------------------------------------*/
+
+contract PWNConfig_Reinitialize_Test is PWNConfigTest {
+
+    uint16 fee = 32;
+
+
+    function test_shouldSetParameters() external {
+        config.reinitialize(owner, fee, feeCollector);
+
+        bytes32 firstSlotValue = vm.load(address(config), bytes32(0));
+        assertEq(address(uint160(uint256(firstSlotValue))), owner);
+        assertEq(uint16(uint256(firstSlotValue >> 176)), fee);
+
+        bytes32 feeCollectorValue = vm.load(address(config), bytes32(uint256(1)));
+        assertEq(address(uint160(uint256(feeCollectorValue))), feeCollector);
+    }
+
+    function test_shouldFail_whenCallerIsNotOwner() external {
+        address notOwner = makeAddr("notOwner");
+
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(notOwner);
+        config.reinitialize(owner, fee, feeCollector);
+    }
+
+    function test_shouldFail_whenCalledSecondTime() external {
+        config.reinitialize(owner, fee, feeCollector);
+
+        vm.expectRevert("Initializable: contract is already initialized");
+        config.reinitialize(owner, fee, feeCollector);
+    }
+
+    function test_shouldFail_whenInitializeCalledAfterReinitialize() external {
+        config.reinitialize(owner, fee, feeCollector);
+
+        vm.expectRevert("Initializable: contract is already initialized");
+        config.initialize(owner);
+    }
+
+    function test_shouldFail_whenOwnerIsZeroAddress() external {
+        vm.expectRevert("Owner is zero address");
+        config.reinitialize(address(0), fee, feeCollector);
     }
 
     function test_shouldFail_whenFeeCollectorIsZeroAddress() external {
         vm.expectRevert("Fee collector is zero address");
-        config.initialize(owner, fee, address(0));
+        config.reinitialize(owner, fee, address(0));
     }
 
 }
@@ -69,7 +115,7 @@ contract PWNConfig_SetFee_Test is PWNConfigTest {
     function setUp() override public {
         super.setUp();
 
-        config.initialize(owner, 0, feeCollector);
+        config.reinitialize(owner, 0, feeCollector);
     }
 
 
@@ -111,7 +157,7 @@ contract PWNConfig_SetFeeCollector_Test is PWNConfigTest {
     function setUp() override public {
         super.setUp();
 
-        config.initialize(owner, 0, feeCollector);
+        config.reinitialize(owner, 0, feeCollector);
     }
 
 
@@ -151,7 +197,7 @@ contract PWNConfig_SetLoanMetadataUri_Test is PWNConfigTest {
     function setUp() override public {
         super.setUp();
 
-        config.initialize(owner, 0, feeCollector);
+        config.reinitialize(owner, 0, feeCollector);
     }
 
 
