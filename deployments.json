@@ -1,0 +1,17 @@
+{
+    "5": {
+        "admin": "0x1Eaa0f4D9b62611032Fa75B8f109fC5ef1A5AC79",
+        "dao": "0x8ea42a3334E2AaB7d144990FDa6afE67a85E2a5c",
+        "feeCollector": "0x8ea42a3334E2AaB7d144990FDa6afE67a85E2a5c",
+        "deployer": "0x542ae8dc0e94c60b2aa2c3bcf94151ececbe342a",
+        "config": "0x2adA1d4F43021A5786393E7C62bE6A8efF766b1C",
+        "hub": "0xd31b4cfee06B8a662F522CaBC2D925038Be0aAC5",
+        "loanToken": "0xa0A4886398e509250d5734B31F7323019774B5e5",
+        "revokedOfferNonce": "0xF5A49a2f6d9E03e152dDCDEaaC6d479AC8eB92A7",
+        "revokedRequestNonce": "0x70aDA3E22E755593Db05B5342062eB849B8E8ccd",
+        "simpleLoan": "0x05397F372130bE1Ab43dF72c896278Bff2Db8A9E",
+        "simpleLoanSimpleOffer": "0xaff389b04AC4D42Ff0d497d2a3C305ab4A5d629D",
+        "simpleLoanListOffer": "0xC0d64e5cc29a7FE91a82C40b71E46f69F0fFFBdd",
+        "simpleLoanSimpleRequest": "0x6f3E641DA9201B6C60bb7964Ac4d55EE27af24C3"
+    }
+}
