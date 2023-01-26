@@ -1,6 +1,5 @@
 [profile.default]
 solc_version = '0.8.16'
-
 remappings = [
     "@pwn/=src/",
     "@pwn-test/=test/",
@@ -8,5 +7,24 @@ remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
     "openzeppelin-contracts/contracts/=lib/openzeppelin-contracts/contracts/"
 ]
+no_match_path = "test/deployed/*"
+
+
+[profile.deployed]
+match_path = "test/deployed/*"
+no_match_path = ""
+fs_permissions = [{ access = "read", path = "./deployments.json"}]
+
+
+[rpc_endpoints]
+# Mainnets
+mainnet = "${ETHEREUM_URL}"
+polygon = "${POLYGON_URL}"
+
+# Testnets
+goerli = "${GOERLI_URL}"
+mumbai = "${MUMBAI_URL}"
+local = "${LOCAL_URL}"
+
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
