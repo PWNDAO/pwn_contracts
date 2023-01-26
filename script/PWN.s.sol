@@ -48,32 +48,13 @@ forge script script/PWN.s.sol:Deploy \
 
 contract Deploy is Script {
 
-    function deployDeployerBroadcast(address admin) external {
+    function deployDeployer(address admin) external {
         vm.startBroadcast();
-        deployDeployer(admin);
+
+        PWNDeployer deployer = new PWNDeployer();
+        deployer.transferOwnership(admin);
+
         vm.stopBroadcast();
-    }
-
-    function deployProtocolBroadcast(
-        address deployer,
-        address admin,
-        address dao,
-        address feeCollector
-    ) external {
-        vm.startBroadcast();
-        deployProtocol(deployer, admin, dao, feeCollector);
-        vm.stopBroadcast();
-    }
-
-    function deployTestTokensBroadcast() external {
-        vm.startBroadcast();
-        deployTestTokens();
-        vm.stopBroadcast();
-    }
-
-
-    function deployDeployer(address admin) public returns (PWNDeployer) {
-        return new PWNDeployer(admin);
     }
 
     function deployProtocol(
@@ -82,6 +63,8 @@ contract Deploy is Script {
         address dao,
         address feeCollector
     ) public {
+        vm.startBroadcast();
+
         PWNDeployer deployer = PWNDeployer(deployer_);
 
         // Deploy realm
@@ -199,9 +182,13 @@ contract Deploy is Script {
         tags[6] = PWNHubTags.LOAN_REQUEST;
 
         hub.setTags(addrs, tags, true);
+
+        vm.stopBroadcast();
     }
 
     function deployTestTokens() public {
+        vm.startBroadcast();
+
         T20 t20 = new T20();
         T721 t721 = new T721();
         T1155 t1155 = new T1155();
@@ -211,6 +198,8 @@ contract Deploy is Script {
         console2.log("T721:", address(t721));
         console2.log("T1155:", address(t1155));
         console2.log("Loan asset:", address(loanAsset));
+
+        vm.stopBroadcast();
     }
 
 }

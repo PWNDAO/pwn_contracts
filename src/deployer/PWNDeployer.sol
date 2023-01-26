@@ -7,12 +7,12 @@ import "openzeppelin-contracts/contracts/utils/Create2.sol";
 
 /**
  * @title PWN Deployer
- * @notice Contract that deploy other PWN protocol contracst with `CREATE2` opcode, to have the same address on a different chains.
+ * @notice Contract that deploys other PWN protocol contracst with `CREATE2` opcode, to have same addresses on different chains.
  */
 contract PWNDeployer is Ownable {
 
-    constructor(address owner) Ownable() {
-        _transferOwnership(owner);
+    constructor() Ownable() {
+
     }
 
 

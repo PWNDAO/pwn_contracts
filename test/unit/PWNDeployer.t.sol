@@ -15,7 +15,8 @@ abstract contract PWNDeployerTest is Test {
     PWNDeployer deployer;
 
     function setUp() external {
-        deployer = new PWNDeployer(owner);
+        deployer = new PWNDeployer();
+        deployer.transferOwnership(owner);
     }
 
 }
@@ -28,7 +29,8 @@ abstract contract PWNDeployerTest is Test {
 contract PWNDeployer_Constructor_Test is PWNDeployerTest {
 
     function test_shouldSetParameters(address owner_) external {
-        deployer = new PWNDeployer(owner_);
+        vm.prank(owner_);
+        deployer = new PWNDeployer();
 
         assertEq(deployer.owner(), owner_);
     }
