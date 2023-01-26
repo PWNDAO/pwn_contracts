@@ -97,7 +97,8 @@ abstract contract BaseIntegrationTest is Test {
             abi.encodeWithSignature("initialize(address,uint16,address)", address(this), 0, feeCollector)
         );
         config = PWNConfig(address(proxy));
-        hub = new PWNHub(address(this));
+        hub = new PWNHub();
+        hub.transferOwnership(admin);
 
         loanToken = new PWNLOAN(address(hub));
         simpleLoan = new PWNSimpleLoan(address(hub), address(loanToken), address(config));
@@ -128,6 +129,7 @@ abstract contract BaseIntegrationTest is Test {
         tags[5] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
         tags[6] = PWNHubTags.LOAN_REQUEST;
 
+        vm.prank(admin);
         hub.setTags(addrs, tags, true);
     }
 

@@ -13,6 +13,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
     function test_shouldFailCreatingLOANOnNotActiveLoanContract() external {
         // Remove ACTIVE_LOAN tag
+        vm.prank(admin);
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Try to create LOAN
@@ -26,6 +27,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         uint256 loanId = _createERC1155Loan();
 
         // Remove ACTIVE_LOAN tag
+        vm.prank(admin);
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Repay loan
@@ -51,6 +53,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         _repayLoan(loanId);
 
         // Remove ACTIVE_LOAN tag
+        vm.prank(admin);
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Claim loan
@@ -72,6 +75,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
     function test_shouldFail_whenCallerIsNotActiveLoan() external {
         // Remove ACTIVE_LOAN tag
+        vm.prank(admin);
         hub.setTag(address(simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         vm.expectRevert(
@@ -83,6 +87,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
     function test_shouldFail_whenPassingInvalidTermsFactoryContract() external {
         // Remove SIMPLE_LOAN_TERMS_FACTORY tag
+        vm.prank(admin);
         hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, false);
 
         // Try to create LOAN

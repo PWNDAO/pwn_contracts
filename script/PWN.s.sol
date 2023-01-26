@@ -86,11 +86,9 @@ contract Deploy is Script {
         // - Hub
         PWNHub hub = PWNHub(deployer.deploy({
             salt: PWNContractDeployerSalt.HUB,
-            bytecode: abi.encodePacked(
-                type(PWNHub).creationCode,
-                abi.encode(admin)
-            )
+            bytecode: type(PWNHub).creationCode
         }));
+        hub.transferOwnership(admin);
 
         // - LOAN token
         PWNLOAN loanToken = PWNLOAN(deployer.deploy({

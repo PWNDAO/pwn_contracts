@@ -19,7 +19,8 @@ abstract contract PWNHubTest is Test {
     event TagSet(address indexed _address, bytes32 indexed tag, bool hasTag);
 
     function setUp() external {
-        hub = new PWNHub(owner);
+        hub = new PWNHub();
+        hub.transferOwnership(owner);
     }
 
 
@@ -45,7 +46,8 @@ contract PWNHub_Constructor_Test is PWNHubTest {
     function test_shouldSetHubOwner() external {
         address otherOwner = address(0x4321);
 
-        hub = new PWNHub(otherOwner);
+        vm.prank(otherOwner);
+        hub = new PWNHub();
 
         assertTrue(hub.owner() == otherOwner);
     }
