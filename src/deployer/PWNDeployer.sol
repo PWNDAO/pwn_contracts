@@ -11,10 +11,20 @@ import "openzeppelin-contracts/contracts/utils/Create2.sol";
  */
 contract PWNDeployer is Ownable {
 
+    string internal constant VERSION = "1.0";
+
+    /*----------------------------------------------------------*|
+    |*  # CONSTRUCTOR                                           *|
+    |*----------------------------------------------------------*/
+
     constructor() Ownable() {
 
     }
 
+
+    /*----------------------------------------------------------*|
+    |*  # DEPLOY FUNCTIONS                                      *|
+    |*----------------------------------------------------------*/
 
     /**
      * @notice Deploy new contract with salt.
