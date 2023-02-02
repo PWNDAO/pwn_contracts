@@ -26,26 +26,29 @@ import "@pwn-test/helper/token/T1155.sol";
 
 // Deployer
 forge script script/PWN.s.sol:Deploy \
---sig "deployDeployerBroadcast(address)" $ADMIN \
---rpc-url $GOERLI_URL \
---private-key $PRIVATE_KEY_TESTNET \
+--sig "deployDeployer(address)" $ADMIN \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 
 // Protocol
 forge script script/PWN.s.sol:Deploy \
---sig "deployProtocolBroadcast(address,address,address,address)" $PWN_DEPLOYER $ADMIN $DAO $FEE_COLLECTOR \
---rpc-url $GOERLI_URL \
---private-key $PRIVATE_KEY_TESTNET \
+--sig "deployProtocol(address,address,address,address)" $PWN_DEPLOYER $ADMIN $DAO $FEE_COLLECTOR \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 
+// Test tokens
 forge script script/PWN.s.sol:Deploy \
---sig "deployTestTokensBroadcast()" \
---rpc-url $GOERLI_URL \
---private-key $PRIVATE_KEY_TESTNET \
+--sig "deployTestTokens()" \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 
 */
-
 contract Deploy is Script {
 
     function deployDeployer(address admin) external {
@@ -62,7 +65,7 @@ contract Deploy is Script {
         address admin,
         address dao,
         address feeCollector
-    ) public {
+    ) external {
         vm.startBroadcast();
 
         PWNDeployer deployer = PWNDeployer(deployer_);
@@ -70,25 +73,32 @@ contract Deploy is Script {
         // Deploy realm
 
         // - Config
-        PWNConfig configSingleton = new PWNConfig();
+        address configSingleton = deployer.deploy({
+            salt: PWNContractDeployerSalt.CONFIG_V1,
+            bytecode: type(PWNConfig).creationCode
+        });
+        // Using this initialization madness to have a deterministic config address
+        // in the case where `admin`, `dao`, or `feeCollector` address varies per chain.
         PWNConfig config = PWNConfig(deployer.deploy({
-            salt: PWNContractDeployerSalt.CONFIG,
+            salt: PWNContractDeployerSalt.CONFIG_PROXY,
             bytecode: abi.encodePacked(
                 type(TransparentUpgradeableProxy).creationCode,
                 abi.encode(
-                    address(configSingleton),
-                    admin,
-                    abi.encodeWithSignature("initialize(address,uint16,address)", dao, 0, feeCollector)
+                    configSingleton,
+                    msg.sender, // To have the same deployment address regardless variables parameters
+                    abi.encodeWithSignature("initialize(address)", msg.sender)
                 )
             )
         }));
+        TransparentUpgradeableProxy(payable(address(config))).changeAdmin(admin);
+        config.reinitialize(dao, 0, feeCollector);
 
         // - Hub
-        PWNHub hub = PWNHub(deployer.deploy({
+        PWNHub hub = PWNHub(deployer.deployAndTransferOwnership({
             salt: PWNContractDeployerSalt.HUB,
+            owner: msg.sender, // To be able to set tags at the end of this script
             bytecode: type(PWNHub).creationCode
         }));
-        hub.transferOwnership(admin);
 
         // - LOAN token
         PWNLOAN loanToken = PWNLOAN(deployer.deploy({
@@ -149,7 +159,7 @@ contract Deploy is Script {
             )
         }));
 
-        console2.log("PWNConfig - singleton:", address(configSingleton));
+        console2.log("PWNConfig - singleton:", configSingleton);
         console2.log("PWNConfig - proxy:", address(config));
         console2.log("PWNHub:", address(hub));
         console2.log("PWNLOAN:", address(loanToken));
@@ -161,30 +171,34 @@ contract Deploy is Script {
         console2.log("PWNSimpleLoanSimpleRequest:", address(simpleRequest));
 
         // Set hub tags
-        address[] memory addrs = new address[](7);
-        addrs[0] = address(simpleLoan);
-        addrs[1] = address(simpleOffer);
-        addrs[2] = address(simpleOffer);
-        addrs[3] = address(listOffer);
-        addrs[4] = address(listOffer);
-        addrs[5] = address(simpleRequest);
-        addrs[6] = address(simpleRequest);
+        {
+            address[] memory addrs = new address[](7);
+            addrs[0] = address(simpleLoan);
+            addrs[1] = address(simpleOffer);
+            addrs[2] = address(simpleOffer);
+            addrs[3] = address(listOffer);
+            addrs[4] = address(listOffer);
+            addrs[5] = address(simpleRequest);
+            addrs[6] = address(simpleRequest);
 
-        bytes32[] memory tags = new bytes32[](7);
-        tags[0] = PWNHubTags.ACTIVE_LOAN;
-        tags[1] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
-        tags[2] = PWNHubTags.LOAN_OFFER;
-        tags[3] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
-        tags[4] = PWNHubTags.LOAN_OFFER;
-        tags[5] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
-        tags[6] = PWNHubTags.LOAN_REQUEST;
+            bytes32[] memory tags = new bytes32[](7);
+            tags[0] = PWNHubTags.ACTIVE_LOAN;
+            tags[1] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+            tags[2] = PWNHubTags.LOAN_OFFER;
+            tags[3] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+            tags[4] = PWNHubTags.LOAN_OFFER;
+            tags[5] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+            tags[6] = PWNHubTags.LOAN_REQUEST;
 
-        hub.setTags(addrs, tags, true);
+            hub.setTags(addrs, tags, true);
+        }
+
+        hub.transferOwnership(admin);
 
         vm.stopBroadcast();
     }
 
-    function deployTestTokens() public {
+    function deployTestTokens() external {
         vm.startBroadcast();
 
         T20 t20 = new T20();
