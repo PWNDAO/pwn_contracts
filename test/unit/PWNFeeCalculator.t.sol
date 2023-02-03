@@ -36,4 +36,11 @@ contract PWNFeeCalculator_CalculateFeeAmount_Test is Test {
         assertEq(newLoanAmount, 10);
     }
 
+    function testFuzz_feeAndNewLoanAmountAreEqToOriginalLoanAmount(uint16 fee, uint256 loanAmount) external {
+        vm.assume(fee < 10001);
+
+        (uint256 feeAmount, uint256 newLoanAmount) = PWNFeeCalculator.calculateFeeAmount(fee, loanAmount);
+        assertEq(loanAmount, feeAmount + newLoanAmount);
+    }
+
 }

@@ -18,7 +18,11 @@ library PWNFeeCalculator {
      * @return newLoanAmount New amount of a loan credit asset, after deducting protocol fee.
      */
     function calculateFeeAmount(uint16 fee, uint256 loanAmount) internal pure returns (uint256 feeAmount, uint256 newLoanAmount) {
-        feeAmount = loanAmount * uint256(fee) / 10000;
+        if (loanAmount < 1e4)
+            feeAmount = loanAmount * uint256(fee) / 1e4;
+        else
+            feeAmount = loanAmount / 1e4 * uint256(fee);
+
         newLoanAmount = loanAmount - feeAmount;
     }
 
