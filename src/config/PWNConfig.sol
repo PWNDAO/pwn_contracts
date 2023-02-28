@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
 
@@ -10,7 +10,7 @@ import "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
  * @notice Contract holding configurable values of PWN protocol.
  * @dev Is intendet to be used as a proxy via `TransparentUpgradeableProxy`.
  */
-contract PWNConfig is Ownable, Initializable {
+contract PWNConfig is Ownable2Step, Initializable {
 
     string internal constant VERSION = "1.0";
 
@@ -60,7 +60,7 @@ contract PWNConfig is Ownable, Initializable {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor() Ownable() {
+    constructor() Ownable2Step() {
 
     }
 
