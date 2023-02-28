@@ -157,12 +157,14 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             // Compute fee size
             (uint256 feeAmount, uint256 newLoanAmount) = PWNFeeCalculator.calculateFeeAmount(fee, loanTerms.asset.amount);
 
-            // Transfer fee amount to fee collector
-            loanTerms.asset.amount = feeAmount;
-            _pushFrom(loanTerms.asset, loanTerms.lender, config.feeCollector());
+            if (feeAmount > 0) {
+                // Transfer fee amount to fee collector
+                loanTerms.asset.amount = feeAmount;
+                _pushFrom(loanTerms.asset, loanTerms.lender, config.feeCollector());
 
-            // Set new loan amount value
-            loanTerms.asset.amount = newLoanAmount;
+                // Set new loan amount value
+                loanTerms.asset.amount = newLoanAmount;
+            }
         }
 
         // Transfer loan asset to borrower
