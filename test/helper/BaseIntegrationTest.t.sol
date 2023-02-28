@@ -99,8 +99,8 @@ abstract contract BaseIntegrationTest is Test {
         config = PWNConfig(address(proxy));
         config.reinitialize(address(this), 0, feeCollector);
 
+        vm.prank(admin);
         hub = new PWNHub();
-        hub.transferOwnership(admin);
 
         loanToken = new PWNLOAN(address(hub));
         simpleLoan = new PWNSimpleLoan(address(hub), address(loanToken), address(config));

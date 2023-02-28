@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 
 import "@pwn/PWNErrors.sol";
 
@@ -10,7 +10,7 @@ import "@pwn/PWNErrors.sol";
  * @title PWN Hub
  * @notice Connects PWN contracts together into protocol via tags.
  */
-contract PWNHub is Ownable {
+contract PWNHub is Ownable2Step {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -36,7 +36,7 @@ contract PWNHub is Ownable {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor() Ownable() {
+    constructor() Ownable2Step() {
 
     }
 
