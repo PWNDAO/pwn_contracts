@@ -127,6 +127,9 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
             if (lender != request.lender)
                 revert CallerIsNotStatedLender(request.lender);
 
+        if (request.duration == 0)
+            revert InvalidDuration();
+
         // Prepare collateral and loan asset
         MultiToken.Asset memory collateral = MultiToken.Asset({
             category: request.collateralCategory,

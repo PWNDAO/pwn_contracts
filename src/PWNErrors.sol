@@ -31,13 +31,16 @@ error InvalidSignatureLength(uint256);
 error InvalidSignature();
 
 // Offer
-error CallerIsNotStatedLender(address);
 error CallerIsNotStatedBorrower(address);
 error OfferExpired();
 error CollateralIdIsNotWhitelisted();
 
 // Request
+error CallerIsNotStatedLender(address);
 error RequestExpired();
+
+// Request & Offer
+error InvalidDuration();
 
 // Input data
 error InvalidInputData();

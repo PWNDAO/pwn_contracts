@@ -259,6 +259,15 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
+    function test_shouldFail_whenZeroDuration() external {
+        request.duration = 0;
+        signature = _signRequestCompact(borrowerPK, request);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidDuration.selector));
+        vm.prank(activeLoanContract);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
+    }
+
     function test_shouldRevokeRequest() external {
         signature = _signRequestCompact(borrowerPK, request);
 

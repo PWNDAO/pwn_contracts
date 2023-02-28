@@ -145,6 +145,9 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
             if (borrower != offer.borrower)
                 revert CallerIsNotStatedBorrower(offer.borrower);
 
+        if (offer.duration == 0)
+            revert InvalidDuration();
+
         // Collateral id list
         if (offer.collateralIdsWhitelistMerkleRoot != bytes32(0)) {
             // Verify whitelisted collateral id
