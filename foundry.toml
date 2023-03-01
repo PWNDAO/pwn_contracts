@@ -8,12 +8,12 @@ remappings = [
     "openzeppelin-contracts/contracts/=lib/openzeppelin-contracts/contracts/"
 ]
 no_match_path = "test/deployed/*"
+fs_permissions = [{ access = "read", path = "./deployments.json"}]
 
 
 [profile.deployed]
 match_path = "test/deployed/*"
 no_match_path = ""
-fs_permissions = [{ access = "read", path = "./deployments.json"}]
 
 
 [rpc_endpoints]

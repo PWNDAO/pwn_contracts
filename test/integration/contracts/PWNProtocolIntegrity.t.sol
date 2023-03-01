@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/PWNErrors.sol";
 
-import "@pwn-test/helper/BaseIntegrationTest.t.sol";
+import "@pwn-test/integration/contracts/BaseIntegrationTest.t.sol";
 
 
 contract PWNProtocolIntegrityTest is BaseIntegrationTest {
@@ -82,13 +82,13 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
             abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN)
         );
         vm.prank(address(simpleLoan));
-        simpleOffer.createLOANTerms(borrower, "", ""); // Offer data are not important in this test
+        simpleLoanSimpleOffer.createLOANTerms(borrower, "", ""); // Offer data are not important in this test
     }
 
     function test_shouldFail_whenPassingInvalidTermsFactoryContract() external {
         // Remove SIMPLE_LOAN_TERMS_FACTORY tag
         vm.prank(admin);
-        hub.setTag(address(simpleOffer), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, false);
+        hub.setTag(address(simpleLoanSimpleOffer), PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY, false);
 
         // Try to create LOAN
         _createERC1155LoanFailing(

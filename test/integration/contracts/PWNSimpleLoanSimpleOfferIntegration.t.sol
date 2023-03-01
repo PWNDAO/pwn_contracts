@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import "@pwn/PWNErrors.sol";
 
-import "@pwn-test/helper/BaseIntegrationTest.t.sol";
+import "@pwn-test/integration/contracts/BaseIntegrationTest.t.sol";
 
 
 contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
@@ -34,11 +34,11 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
             lateRepaymentEnabled: false,
             nonce: nonce
         });
-        bytes memory signature1 = _sign(lenderPK, simpleOffer.getOfferHash(offer));
+        bytes memory signature1 = _sign(lenderPK, simpleLoanSimpleOffer.getOfferHash(offer));
         bytes memory offerData1 = abi.encode(offer);
 
         offer.loanYield = 20e18;
-        bytes memory signature2 = _sign(lenderPK, simpleOffer.getOfferHash(offer));
+        bytes memory signature2 = _sign(lenderPK, simpleLoanSimpleOffer.getOfferHash(offer));
         bytes memory offerData2 = abi.encode(offer);
 
         // Approve loan asset
@@ -52,7 +52,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         // Create LOAN with offer 2
         vm.prank(borrower);
         simpleLoan.createLOAN({
-            loanTermsFactoryContract: address(simpleOffer),
+            loanTermsFactoryContract: address(simpleLoanSimpleOffer),
             loanTermsFactoryData: offerData2,
             signature: signature2,
             loanAssetPermit: "",
@@ -63,7 +63,7 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
         vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(borrower);
         simpleLoan.createLOAN({
-            loanTermsFactoryContract: address(simpleOffer),
+            loanTermsFactoryContract: address(simpleLoanSimpleOffer),
             loanTermsFactoryData: offerData1,
             signature: signature1,
             loanAssetPermit: "",
