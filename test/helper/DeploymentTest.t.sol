@@ -57,8 +57,7 @@ abstract contract DeploymentTest is Test {
     PWNSimpleLoanSimpleRequest simpleLoanSimpleRequest;
 
     constructor() {
-        // skip for local devnet
-        if (block.chainid != 31337) {
+        if (block.chainid == 5 /*|| block.chainid == 1*/) {
             string memory root = vm.projectRoot();
             string memory path = string.concat(root, "/deployments.json");
             string memory json = vm.readFile(path);
@@ -69,13 +68,7 @@ abstract contract DeploymentTest is Test {
 
 
     function setUp() public virtual {
-        if (block.chainid == 31337) { // local devnet
-            admin = makeAddr("admin");
-            dao = makeAddr("dao");
-            feeCollector = makeAddr("feeCollector");
-
-            _deployProtocol();
-        } else {
+        if (block.chainid == 5 /*|| block.chainid == 1*/) {
             admin = deployment.admin;
             dao = deployment.dao;
             feeCollector = deployment.feeCollector;
@@ -89,12 +82,18 @@ abstract contract DeploymentTest is Test {
             simpleLoanSimpleOffer = deployment.simpleLoanSimpleOffer;
             simpleLoanListOffer = deployment.simpleLoanListOffer;
             simpleLoanSimpleRequest = deployment.simpleLoanSimpleRequest;
+        } else {
+            _deployProtocol();
         }
     }
 
 
-    function _deployProtocol() private {
-        // Deploy realm
+    function _deployProtocol() internal {
+        admin = makeAddr("admin");
+        dao = makeAddr("dao");
+        feeCollector = makeAddr("feeCollector");
+
+        // Deploy protocol
         PWNConfig configSingleton = new PWNConfig();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(configSingleton),
