@@ -4,8 +4,7 @@ remappings = [
     "@pwn/=src/",
     "@pwn-test/=test/",
 
-    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
-    "openzeppelin-contracts/contracts/=lib/openzeppelin-contracts/contracts/"
+    "@openzeppelin/=lib/openzeppelin-contracts/contracts/"
 ]
 no_match_path = "test/deployed/*"
 fs_permissions = [{ access = "read", path = "./deployments.json"}]
