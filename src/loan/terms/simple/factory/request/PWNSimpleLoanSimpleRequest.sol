@@ -127,7 +127,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
             if (lender != request.lender)
                 revert CallerIsNotStatedLender(request.lender);
 
-        if (request.duration == 0)
+        if (request.duration < MIN_LOAN_DURATION)
             revert InvalidDuration();
 
         // Prepare collateral and loan asset

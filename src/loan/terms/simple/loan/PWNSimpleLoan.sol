@@ -8,7 +8,7 @@ import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/lib/PWNFeeCalculator.sol";
 import "@pwn/loan/terms/PWNLOANTerms.sol";
-import "@pwn/loan/terms/simple/factory/IPWNSimpleLoanTermsFactory.sol";
+import "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
 import "@pwn/loan/token/IERC5646.sol";
 import "@pwn/loan/token/PWNLOAN.sol";
 import "@pwn/loan/PWNVault.sol";
@@ -120,7 +120,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             revert CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY);
 
         // Build PWNLOANTerms.Simple by loan factory
-        PWNLOANTerms.Simple memory loanTerms = IPWNSimpleLoanTermsFactory(loanTermsFactoryContract).createLOANTerms({
+        PWNLOANTerms.Simple memory loanTerms = PWNSimpleLoanTermsFactory(loanTermsFactoryContract).createLOANTerms({
             caller: msg.sender,
             factoryData: loanTermsFactoryData,
             signature: signature

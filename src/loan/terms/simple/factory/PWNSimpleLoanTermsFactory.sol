@@ -8,7 +8,9 @@ import "@pwn/loan/terms/PWNLOANTerms.sol";
  * @title PWN Simple Loan Terms Factory Interface
  * @notice Interface of a loan factory contract that builds a simple loan terms.
  */
-interface IPWNSimpleLoanTermsFactory {
+abstract contract PWNSimpleLoanTermsFactory {
+
+    uint32 public constant MIN_LOAN_DURATION = 600; // 10 min
 
     /**
      * @notice Build a simple loan terms from given data.
@@ -22,6 +24,6 @@ interface IPWNSimpleLoanTermsFactory {
         address caller,
         bytes calldata factoryData,
         bytes calldata signature
-    ) external returns (PWNLOANTerms.Simple memory loanTerms);
+    ) external virtual returns (PWNLOANTerms.Simple memory loanTerms);
 
 }
