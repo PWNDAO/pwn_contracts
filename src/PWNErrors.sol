@@ -21,6 +21,7 @@ error InvalidLoanContractCaller();
 
 // Vault
 error UnsupportedTransferFunction();
+error IncompleteTransfer();
 
 // Nonce
 error NonceAlreadyRevoked();

@@ -49,7 +49,11 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @param origin Borrower address that is transferring collateral to Vault or repaying a loan.
      */
     function _pull(MultiToken.Asset memory asset, address origin) internal {
+        uint256 originalBalance = asset.balanceOf(address(this));
+
         asset.transferAssetFrom(origin, address(this));
+        _checkTransfer(asset, originalBalance, address(this));
+
         emit VaultPull(asset, origin);
     }
 
@@ -61,7 +65,11 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @param beneficiary An address of a recipient of an asset.
      */
     function _push(MultiToken.Asset memory asset, address beneficiary) internal {
+        uint256 originalBalance = asset.balanceOf(beneficiary);
+
         asset.safeTransferAssetFrom(address(this), beneficiary);
+        _checkTransfer(asset, originalBalance, beneficiary);
+
         emit VaultPush(asset, beneficiary);
     }
 
@@ -74,8 +82,17 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @param beneficiary An address of the recipient of an asset.
      */
     function _pushFrom(MultiToken.Asset memory asset, address origin, address beneficiary) internal {
+        uint256 originalBalance = asset.balanceOf(beneficiary);
+
         asset.safeTransferAssetFrom(origin, beneficiary);
+        _checkTransfer(asset, originalBalance, beneficiary);
+
         emit VaultPushFrom(asset, origin, beneficiary);
+    }
+
+    function _checkTransfer(MultiToken.Asset memory asset, uint256 originalBalance, address recipient) private view {
+        if (originalBalance + asset.getTransferAmount() != asset.balanceOf(recipient))
+            revert IncompleteTransfer();
     }
 
 

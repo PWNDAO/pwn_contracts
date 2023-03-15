@@ -205,7 +205,7 @@ contract TaxTokensTest is UseCasesTest {
         offer.collateralAmount = 10e18;
 
         // Create loan
-        _createLoanRevertWith("TODO");
+        _createLoanRevertWith(abi.encodeWithSelector(IncompleteTransfer.selector));
     }
 
     // Fee-on-transfer tokens can be locked in the vault
@@ -222,13 +222,12 @@ contract TaxTokensTest is UseCasesTest {
         offer.loanAmount = 10e18;
 
         // Create loan
-        _createLoanRevertWith("TODO");
+        _createLoanRevertWith(abi.encodeWithSelector(IncompleteTransfer.selector));
     }
 
 }
 
 
-// Some common ERC20 tokens can’t be used in the protocol
 contract IncompleteERC20TokensTest is UseCasesTest {
 
     function testUseCase_shouldPass_when20TokenTransferNotReturnsBool_whenUsedAsCollateral() external {

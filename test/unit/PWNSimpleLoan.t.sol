@@ -10,6 +10,9 @@ import "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import "@pwn/loan/terms/PWNLOANTerms.sol";
 import "@pwn/PWNErrors.sol";
 
+import "@pwn-test/helper/token/T20.sol";
+import "@pwn-test/helper/token/T721.sol";
+
 
 abstract contract PWNSimpleLoanTest is Test {
 
@@ -20,8 +23,6 @@ abstract contract PWNSimpleLoanTest is Test {
     address loanToken = makeAddr("loanToken");
     address config = makeAddr("config");
     address feeCollector = makeAddr("feeCollector");
-    address fungibleAsset = makeAddr("fungibleAsset");
-    address nonFungibleAsset = makeAddr("nonFungibleAsset");
     address alice = makeAddr("alice");
     address loanFactory = makeAddr("loanFactory");
     uint256 loanId = 42;
@@ -30,6 +31,8 @@ abstract contract PWNSimpleLoanTest is Test {
     PWNSimpleLoan.LOAN simpleLoan;
     PWNSimpleLoan.LOAN nonExistingLoan;
     PWNLOANTerms.Simple simpleLoanTerms;
+    T20 fungibleAsset;
+    T721 nonFungibleAsset;
 
     bytes loanFactoryData;
     bytes signature;
@@ -45,13 +48,31 @@ abstract contract PWNSimpleLoanTest is Test {
         vm.etch(hub, bytes("data"));
         vm.etch(loanToken, bytes("data"));
         vm.etch(loanFactory, bytes("data"));
-        vm.etch(fungibleAsset, bytes("data"));
-        vm.etch(nonFungibleAsset, bytes("data"));
         vm.etch(config, bytes("data"));
     }
 
     function setUp() virtual public {
         loan = new PWNSimpleLoan(hub, loanToken, config);
+        fungibleAsset = new T20();
+        nonFungibleAsset = new T721();
+
+        fungibleAsset.mint(lender, 6831);
+        fungibleAsset.mint(borrower, 6831);
+        fungibleAsset.mint(address(this), 6831);
+        fungibleAsset.mint(address(loan), 6831);
+        nonFungibleAsset.mint(borrower, 2);
+
+        vm.prank(lender);
+        fungibleAsset.approve(address(loan), type(uint256).max);
+
+        vm.prank(borrower);
+        fungibleAsset.approve(address(loan), type(uint256).max);
+
+        vm.prank(address(this));
+        fungibleAsset.approve(address(loan), type(uint256).max);
+
+        vm.prank(borrower);
+        nonFungibleAsset.approve(address(loan), 2);
 
         loanFactoryData = "";
         signature = "";
@@ -63,9 +84,9 @@ abstract contract PWNSimpleLoanTest is Test {
             borrower: borrower,
             expiration: 40039,
             lateRepaymentEnabled: false,
-            loanAssetAddress: fungibleAsset,
+            loanAssetAddress: address(fungibleAsset),
             loanRepayAmount: 6731,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC721, nonFungibleAsset, 2, 0)
+            collateral: MultiToken.Asset(MultiToken.Category.ERC721, address(nonFungibleAsset), 2, 0)
         });
 
         simpleLoanTerms = PWNLOANTerms.Simple({
@@ -73,8 +94,8 @@ abstract contract PWNSimpleLoanTest is Test {
             borrower: borrower,
             expiration: 40039,
             lateRepaymentEnabled: false,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC721, nonFungibleAsset, 2, 0),
-            asset: MultiToken.Asset(MultiToken.Category.ERC20, fungibleAsset, 0, 100),
+            collateral: MultiToken.Asset(MultiToken.Category.ERC721, address(nonFungibleAsset), 2, 0),
+            asset: MultiToken.Asset(MultiToken.Category.ERC20, address(fungibleAsset), 0, 100),
             loanRepayAmount: 6731
         });
 
@@ -89,30 +110,9 @@ abstract contract PWNSimpleLoanTest is Test {
         });
 
         vm.mockCall(
-            fungibleAsset,
-            abi.encodeWithSignature("transfer(address,uint256)"),
-            abi.encode(true)
-        );
-        vm.mockCall(
-            fungibleAsset,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
-            abi.encode(true)
-        );
-
-        vm.mockCall(
-            nonFungibleAsset,
-            abi.encodeWithSignature("supportsInterface(bytes4)", bytes4(0x01ffc9a7)), // ERC165 interface id
-            abi.encode(true)
-        );
-        vm.mockCall(
-            nonFungibleAsset,
-            abi.encodeWithSignature("supportsInterface(bytes4)", bytes4(0xffffffff)),
-            abi.encode(false)
-        );
-        vm.mockCall(
-            nonFungibleAsset,
-            abi.encodeWithSignature("supportsInterface(bytes4)", bytes4(0x80ac58cd)), // ERC721 interface id
-            abi.encode(true)
+            address(fungibleAsset),
+            abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)"),
+            abi.encode()
         );
     }
 
@@ -254,7 +254,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldFailWhenLoanAssetIsInvalid() external {
-        simpleLoanTerms.asset.assetAddress = nonFungibleAsset;
+        simpleLoanTerms.asset.assetAddress = address(nonFungibleAsset);
         simpleLoanTerms.asset.amount = 100;
 
         vm.mockCall(
@@ -269,7 +269,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
     function test_shouldFailWhenCollateralAssetIsInvalid() external {
         simpleLoanTerms.collateral.category = MultiToken.Category.ERC721;
-        simpleLoanTerms.collateral.assetAddress = nonFungibleAsset;
+        simpleLoanTerms.collateral.assetAddress = address(nonFungibleAsset);
         simpleLoanTerms.collateral.id = 123;
         simpleLoanTerms.collateral.amount = 100; // Invalid, ERC721 has to have amount = 0
 
@@ -308,7 +308,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
     function test_shouldTransferCollateral_fromBorrower_toVault() external {
         simpleLoanTerms.collateral.category = MultiToken.Category.ERC20;
-        simpleLoanTerms.collateral.assetAddress = fungibleAsset;
+        simpleLoanTerms.collateral.assetAddress = address(fungibleAsset);
         simpleLoanTerms.collateral.id = 0;
         simpleLoanTerms.collateral.amount = 100;
 
@@ -409,6 +409,10 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         super.setUp();
 
         vm.warp(30039);
+
+        // Move collateral to vault
+        vm.prank(borrower);
+        nonFungibleAsset.transferFrom(borrower, address(loan), 2);
     }
 
     function test_shouldFail_whenLoanDoesNotExist() external {
@@ -517,6 +521,10 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         );
 
         simpleLoan.status = 3;
+
+        // Move collateral to vault
+        vm.prank(borrower);
+        nonFungibleAsset.transferFrom(borrower, address(loan), 2);
     }
 
 
