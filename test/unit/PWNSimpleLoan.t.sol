@@ -16,16 +16,17 @@ abstract contract PWNSimpleLoanTest is Test {
     bytes32 internal constant LOANS_SLOT = bytes32(uint256(0)); // `LOANs` mapping position
 
     PWNSimpleLoan loan;
-    address hub = address(0x80b);
-    address loanToken = address(0x111111);
-    address config = address(0xc0f1c);
-    address feeCollector = address(0xfee);
-    address token = address(0x070ce2);
-    address alice = address(0xa11ce);
-    address loanFactory = address(0x1001);
+    address hub = makeAddr("hub");
+    address loanToken = makeAddr("loanToken");
+    address config = makeAddr("config");
+    address feeCollector = makeAddr("feeCollector");
+    address fungibleAsset = makeAddr("fungibleAsset");
+    address nonFungibleAsset = makeAddr("nonFungibleAsset");
+    address alice = makeAddr("alice");
+    address loanFactory = makeAddr("loanFactory");
     uint256 loanId = 42;
-    address lender = address(0x1001);
-    address borrower = address(0x1002);
+    address lender = makeAddr("lender");
+    address borrower = makeAddr("borrower");
     PWNSimpleLoan.LOAN simpleLoan;
     PWNSimpleLoan.LOAN nonExistingLoan;
     PWNLOANTerms.Simple simpleLoanTerms;
@@ -44,7 +45,8 @@ abstract contract PWNSimpleLoanTest is Test {
         vm.etch(hub, bytes("data"));
         vm.etch(loanToken, bytes("data"));
         vm.etch(loanFactory, bytes("data"));
-        vm.etch(token, bytes("data"));
+        vm.etch(fungibleAsset, bytes("data"));
+        vm.etch(nonFungibleAsset, bytes("data"));
         vm.etch(config, bytes("data"));
     }
 
@@ -61,9 +63,9 @@ abstract contract PWNSimpleLoanTest is Test {
             borrower: borrower,
             expiration: 40039,
             lateRepaymentEnabled: false,
-            loanAssetAddress: token,
+            loanAssetAddress: fungibleAsset,
             loanRepayAmount: 6731,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC721, token, 2, 0)
+            collateral: MultiToken.Asset(MultiToken.Category.ERC721, nonFungibleAsset, 2, 0)
         });
 
         simpleLoanTerms = PWNLOANTerms.Simple({
@@ -71,8 +73,8 @@ abstract contract PWNSimpleLoanTest is Test {
             borrower: borrower,
             expiration: 40039,
             lateRepaymentEnabled: false,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC721, token, 2, 0),
-            asset: MultiToken.Asset(MultiToken.Category.ERC20, token, 0, 5),
+            collateral: MultiToken.Asset(MultiToken.Category.ERC721, nonFungibleAsset, 2, 0),
+            asset: MultiToken.Asset(MultiToken.Category.ERC20, fungibleAsset, 0, 100),
             loanRepayAmount: 6731
         });
 
@@ -85,6 +87,33 @@ abstract contract PWNSimpleLoanTest is Test {
             loanRepayAmount: 0,
             collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0)
         });
+
+        vm.mockCall(
+            fungibleAsset,
+            abi.encodeWithSignature("transfer(address,uint256)"),
+            abi.encode(true)
+        );
+        vm.mockCall(
+            fungibleAsset,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
+            abi.encode(true)
+        );
+
+        vm.mockCall(
+            nonFungibleAsset,
+            abi.encodeWithSignature("supportsInterface(bytes4)", bytes4(0x01ffc9a7)), // ERC165 interface id
+            abi.encode(true)
+        );
+        vm.mockCall(
+            nonFungibleAsset,
+            abi.encodeWithSignature("supportsInterface(bytes4)", bytes4(0xffffffff)),
+            abi.encode(false)
+        );
+        vm.mockCall(
+            nonFungibleAsset,
+            abi.encodeWithSignature("supportsInterface(bytes4)", bytes4(0x80ac58cd)), // ERC721 interface id
+            abi.encode(true)
+        );
     }
 
 
@@ -202,12 +231,6 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
             abi.encodeWithSignature("mint(address)"),
             abi.encode(loanId)
         );
-
-        vm.mockCall(
-            token,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
-            abi.encode(true)
-        );
     }
 
 
@@ -230,9 +253,23 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
+    function test_shouldFailWhenLoanAssetIsInvalid() external {
+        simpleLoanTerms.asset.assetAddress = nonFungibleAsset;
+        simpleLoanTerms.asset.amount = 100;
+
+        vm.mockCall(
+            loanFactory,
+            abi.encodeWithSignature("createLOANTerms(address,bytes,bytes)"),
+            abi.encode(simpleLoanTerms)
+        );
+
+        vm.expectRevert(InvalidLoanAsset.selector);
+        loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
+    }
+
     function test_shouldFailWhenCollateralAssetIsInvalid() external {
         simpleLoanTerms.collateral.category = MultiToken.Category.ERC721;
-        simpleLoanTerms.collateral.assetAddress = token;
+        simpleLoanTerms.collateral.assetAddress = nonFungibleAsset;
         simpleLoanTerms.collateral.id = 123;
         simpleLoanTerms.collateral.amount = 100; // Invalid, ERC721 has to have amount = 0
 
@@ -271,7 +308,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
     function test_shouldTransferCollateral_fromBorrower_toVault() external {
         simpleLoanTerms.collateral.category = MultiToken.Category.ERC20;
-        simpleLoanTerms.collateral.assetAddress = token;
+        simpleLoanTerms.collateral.assetAddress = fungibleAsset;
         simpleLoanTerms.collateral.id = 0;
         simpleLoanTerms.collateral.amount = 100;
 
@@ -283,13 +320,8 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
         collateralPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
 
-        vm.mockCall(
-            simpleLoanTerms.collateral.assetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
-            abi.encode(true)
-        );
         vm.expectCall(
-            token,
+            simpleLoanTerms.collateral.assetAddress,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
                 borrower, address(loan), simpleLoanTerms.collateral.amount, 1, uint8(4), uint256(2), uint256(3)
@@ -304,21 +336,10 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldTransferLoanAsset_fromLender_toBorrower_whenZeroFees() external {
-        simpleLoanTerms.asset.category = MultiToken.Category.ERC20;
-        simpleLoanTerms.asset.assetAddress = token;
-        simpleLoanTerms.asset.id = 0;
-        simpleLoanTerms.asset.amount = 100;
-
-        vm.mockCall(
-            loanFactory,
-            abi.encodeWithSignature("createLOANTerms(address,bytes,bytes)"),
-            abi.encode(simpleLoanTerms, lender, borrower)
-        );
-
         loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
 
         vm.expectCall(
-            token,
+            simpleLoanTerms.asset.assetAddress,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
                 lender, address(loan), simpleLoanTerms.asset.amount, 1, uint8(4), uint256(2), uint256(3)
@@ -333,27 +354,16 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldTransferLoanAsset_fromLender_toBorrowerAndFeeCollector_whenNonZeroFee() external {
-        simpleLoanTerms.asset.category = MultiToken.Category.ERC20;
-        simpleLoanTerms.asset.assetAddress = token;
-        simpleLoanTerms.asset.id = 0;
-        simpleLoanTerms.asset.amount = 100;
-
         vm.mockCall(
             config,
             abi.encodeWithSignature("fee()"),
             abi.encode(1000)
         );
 
-        vm.mockCall(
-            loanFactory,
-            abi.encodeWithSignature("createLOANTerms(address,bytes,bytes)"),
-            abi.encode(simpleLoanTerms, lender, borrower)
-        );
-
         loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
 
         vm.expectCall(
-            token,
+            simpleLoanTerms.asset.assetAddress,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
                 lender, address(loan), simpleLoanTerms.asset.amount, 1, uint8(4), uint256(2), uint256(3)
@@ -399,17 +409,6 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         super.setUp();
 
         vm.warp(30039);
-
-        vm.mockCall(
-            simpleLoan.loanAssetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)"),
-            abi.encode(true)
-        );
-        vm.mockCall(
-            simpleLoan.collateral.assetAddress,
-            abi.encodeWithSignature("safeTransferFrom(address,address,uint256,bytes)"),
-            abi.encode(true)
-        );
     }
 
     function test_shouldFail_whenLoanDoesNotExist() external {
@@ -463,7 +462,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
 
         vm.expectCall(
-            token,
+            simpleLoan.loanAssetAddress,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
                 borrower, address(loan), simpleLoan.loanRepayAmount, 1, uint8(4), uint256(2), uint256(3)
@@ -515,16 +514,6 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
             loanToken,
             abi.encodeWithSignature("ownerOf(uint256)", loanId),
             abi.encode(lender)
-        );
-        vm.mockCall(
-            token,
-            abi.encodeWithSignature("transfer(address,uint256)"),
-            abi.encode(true)
-        );
-        vm.mockCall(
-            token,
-            abi.encodeWithSignature("safeTransferFrom(address,address,uint256,bytes)"),
-            abi.encode(true)
         );
 
         simpleLoan.status = 3;
@@ -616,11 +605,6 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldTransferCollateralToLender_whenLoanIsExpired() external {
-        simpleLoan.collateral.category = MultiToken.Category.ERC721;
-        simpleLoan.collateral.assetAddress = token;
-        simpleLoan.collateral.id = 8383;
-        simpleLoan.collateral.amount = 100;
-
         vm.warp(50039);
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);

@@ -9,13 +9,6 @@ import "@pwn-test/helper/token/T20.sol";
 import "@pwn-test/helper/DeploymentTest.t.sol";
 
 
-/*
-
-Run tests with this command:
-
-forge t -f mainnet --mp test/integration/use-cases/UseCases.t.sol
-
-*/
 abstract contract UseCasesTest is DeploymentTest {
 
     // Token mainnet addresses
@@ -25,6 +18,7 @@ abstract contract UseCasesTest is DeploymentTest {
     address CK = 0x06012c8cf97BEaD5deAe237070F9587f8E7A266d; // CryptoKitties
     address USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // no bool return on transfer(From)
     address BNB = 0xB8c77482e45F1F44dE1745F52C74426C631bDD52; // bool return only on transfer
+    address DOODLE = 0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e;
 
     T20 loanAsset;
     address lender = makeAddr("lender");
@@ -34,6 +28,8 @@ abstract contract UseCasesTest is DeploymentTest {
 
 
     function setUp() public override {
+        vm.createSelectFork("mainnet");
+
         super.setUp();
 
         loanAsset = new T20();
@@ -143,6 +139,49 @@ contract InvalidCollateralAssetCategoryTest is UseCasesTest {
 
         // Create loan
         _createLoanRevertWith(abi.encodeWithSelector(InvalidCollateralAsset.selector));
+    }
+
+}
+
+
+contract InvalidLoanAssetTest is UseCasesTest {
+
+    function testUseCase_shouldFail_whenUsingERC721AsLoanAsset() external {
+        uint256 doodleId = 42;
+
+        // Mock DOODLE
+        address originalDoodleOwner = IERC721(DOODLE).ownerOf(doodleId);
+        vm.prank(originalDoodleOwner);
+        IERC721(DOODLE).transferFrom(originalDoodleOwner, lender, doodleId);
+
+        vm.prank(lender);
+        IERC721(DOODLE).approve(address(simpleLoan), doodleId);
+
+        // Define offer
+        offer.loanAssetAddress = DOODLE;
+        offer.loanAmount = doodleId;
+
+        // Create loan
+        _createLoanRevertWith(abi.encodeWithSelector(InvalidLoanAsset.selector));
+    }
+
+    function testUseCase_shouldFail_whenUsingCryptoKittiesAsLoanAsset() external {
+        uint256 ckId = 42;
+
+        // Mock CK
+        address originalCkOwner = ICryptoKitties(CK).ownerOf(ckId);
+        vm.prank(originalCkOwner);
+        ICryptoKitties(CK).transfer(lender, ckId);
+
+        vm.prank(lender);
+        ICryptoKitties(CK).approve(address(simpleLoan), ckId);
+
+        // Define offer
+        offer.loanAssetAddress = CK;
+        offer.loanAmount = ckId;
+
+        // Create loan
+        _createLoanRevertWith(abi.encodeWithSelector(InvalidLoanAsset.selector));
     }
 
 }

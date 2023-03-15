@@ -126,6 +126,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             signature: signature
         });
 
+        // Check loan asset validity
+        if (MultiToken.isValid(loanTerms.asset) == false)
+            revert InvalidLoanAsset();
+
         // Check collateral validity
         if (MultiToken.isValid(loanTerms.collateral) == false)
             revert InvalidCollateralAsset();
