@@ -4,6 +4,8 @@ pragma solidity 0.8.16;
 import "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
+import "@pwn/PWNErrors.sol";
+
 
 /**
  * @title PWN Config
@@ -17,6 +19,8 @@ contract PWNConfig is Ownable2Step, Initializable {
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
+
+    uint16 public constant MAX_FEE = 1000; // 10%
 
     /**
      * @notice Protocol fee value in basis points.
@@ -94,6 +98,9 @@ contract PWNConfig is Ownable2Step, Initializable {
     }
 
     function _setFee(uint16 _fee) private {
+        if (_fee > MAX_FEE)
+            revert InvalidFeeValue();
+
         uint16 oldFee = fee;
         fee = _fee;
         emit FeeUpdated(oldFee, _fee);

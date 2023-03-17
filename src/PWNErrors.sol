@@ -45,3 +45,6 @@ error InvalidDuration();
 
 // Input data
 error InvalidInputData();
+
+// Config
+error InvalidFeeValue();

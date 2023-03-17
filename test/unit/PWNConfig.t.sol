@@ -132,6 +132,14 @@ contract PWNConfig_SetFee_Test is PWNConfigTest {
         config.setFee(9);
     }
 
+    function test_shouldFaile_whenNewValueBiggerThanMaxFee() external {
+        uint16 maxFee = config.MAX_FEE();
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidFeeValue.selector));
+        vm.prank(owner);
+        config.setFee(maxFee + 1);
+    }
+
     function test_shouldSetFeeValue() external {
         uint16 fee = 9;
 
