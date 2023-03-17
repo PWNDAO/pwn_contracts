@@ -48,3 +48,4 @@ error InvalidInputData();
 
 // Config
 error InvalidFeeValue();
+error InvalidFeeCollector();

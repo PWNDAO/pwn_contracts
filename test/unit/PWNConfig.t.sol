@@ -182,6 +182,12 @@ contract PWNConfig_SetFeeCollector_Test is PWNConfigTest {
         config.setFeeCollector(newFeeCollector);
     }
 
+    function test_shouldFail_whenSettingZeroAddress() external {
+        vm.expectRevert(abi.encodeWithSelector(InvalidFeeCollector.selector));
+        vm.prank(owner);
+        config.setFeeCollector(address(0));
+    }
+
     function test_shouldSetFeeCollectorAddress() external {
         vm.prank(owner);
         config.setFeeCollector(newFeeCollector);

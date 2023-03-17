@@ -116,6 +116,9 @@ contract PWNConfig is Ownable2Step, Initializable {
     }
 
     function _setFeeCollector(address _feeCollector) private {
+        if (_feeCollector == address(0))
+            revert InvalidFeeCollector();
+
         address oldFeeCollector = feeCollector;
         feeCollector = _feeCollector;
         emit FeeCollectorUpdated(oldFeeCollector, _feeCollector);
