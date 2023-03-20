@@ -31,7 +31,6 @@ contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
             borrower: borrower,
             lender: lender,
             isPersistent: false,
-            lateRepaymentEnabled: false,
             nonce: nonce
         });
         bytes memory signature1 = _sign(lenderPK, simpleLoanSimpleOffer.getOfferHash(offer));

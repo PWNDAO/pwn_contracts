@@ -26,7 +26,6 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             borrower: borrower,
             lender: lender,
             isPersistent: false,
-            lateRepaymentEnabled: false,
             nonce: nonce
         });
 
@@ -93,7 +92,6 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             borrower: borrower,
             lender: lender,
             isPersistent: false,
-            lateRepaymentEnabled: false,
             nonce: nonce
         });
 
@@ -161,7 +159,6 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             expiration: 0,
             borrower: borrower,
             lender: lender,
-            lateRepaymentEnabled: false,
             nonce: nonce
         });
 
@@ -307,33 +304,6 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             loanId,
             abi.encodeWithSelector(LoanDefaulted.selector, uint40(expiration))
         );
-    }
-
-    function test_shouldRepayLoan_whenExpired_withLateRepaymentEnabled() external {
-        // Create LOAN
-        uint256 loanId = _createERC1155Loan();
-
-        // Default on a loan
-        uint256 expiration = block.timestamp + uint256(defaultOffer.duration);
-        vm.warp(expiration);
-
-        // Enable late repayment
-        vm.prank(lender);
-        simpleLoan.enableLOANLateRepayment(loanId);
-
-        // Repay loan
-        _repayLoan(loanId);
-
-        // Assert final state
-        assertEq(loanToken.ownerOf(loanId), lender);
-
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(simpleLoan)), 110e18);
-
-        assertEq(t1155.balanceOf(lender, 42), 0);
-        assertEq(t1155.balanceOf(borrower, 42), 10e18);
-        assertEq(t1155.balanceOf(address(simpleLoan), 42), 0);
     }
 
 

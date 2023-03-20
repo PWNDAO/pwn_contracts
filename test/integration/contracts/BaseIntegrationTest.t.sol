@@ -48,7 +48,6 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             borrower: borrower,
             lender: lender,
             isPersistent: false,
-            lateRepaymentEnabled: false,
             nonce: nonce
         });
     }

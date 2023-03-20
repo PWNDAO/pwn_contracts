@@ -23,6 +23,7 @@ import "@pwn/PWNErrors.sol";
 contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     string internal constant VERSION = "1.0";
+    uint256 public constant MAX_EXPIRATION_EXTENSION = 2_592_000; // 30 days
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -39,14 +40,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param expiration Unix timestamp (in seconds) setting up a default date.
      * @param lateRepaymentEnabled If true, a borrower can repay a loan even after an expiration date, but not after lender claims expired loan.
      * @param loanAssetAddress Address of an asset used as a loan credit.
-     * @param loanRepayAmount Amount of a loan asset to be paid back.
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
      */
     struct LOAN {
         uint8 status;
         address borrower;
         uint40 expiration;
-        bool lateRepaymentEnabled;
         address loanAssetAddress;
         uint256 loanRepayAmount;
         MultiToken.Asset collateral;
@@ -78,9 +77,9 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
 
     /**
-     * @dev Emitted when a LOAN token holder enables late repayment.
+     * @dev Emitted when a LOAN token holder extends loan expiration date.
      */
-    event LOANLateRepaymentEnabled(uint256 indexed loanId);
+    event LOANExpirationDateExtended(uint256 indexed loanId, uint40 extendedExpirationDate);
 
 
     /*----------------------------------------------------------*|
@@ -142,7 +141,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         loan.status = 2;
         loan.borrower = loanTerms.borrower;
         loan.expiration = loanTerms.expiration;
-        loan.lateRepaymentEnabled = loanTerms.lateRepaymentEnabled;
         loan.loanAssetAddress = loanTerms.asset.assetAddress;
         loan.loanRepayAmount = loanTerms.loanRepayAmount;
         loan.collateral = loanTerms.collateral;
@@ -202,10 +200,9 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         else if (status != 2)
             revert InvalidLoanStatus(status);
 
-        // Check that loan is not expired or that late repayment is enabled
+        // Check that loan is not expired
         if (loan.expiration <= block.timestamp)
-            if (loan.lateRepaymentEnabled == false)
-                revert LoanDefaulted(loan.expiration);
+            revert LoanDefaulted(loan.expiration);
 
         // Move loan to repaid state
         loan.status = 3;
@@ -290,33 +287,37 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
 
     /*----------------------------------------------------------*|
-    |*  # LOAN LATE REPAYMENT                                   *|
+    |*  # EXTEND LOAN EXPIRATION DATE                           *|
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Enable borrower to repay loan after expiration date, but not if lender already claimed expired loan.
-     * @dev Only LOAN token holder can call this function. Late repayment cannot be disabled later.
-     * @param loanId Id of a LOAN on which to enable late repayment.
+     * @notice Enable lender to extend loans expiration date.
+     * @dev Only LOAN token holder can call this function.
+     *      Extending the expiration date of a repaid loan is allowed, but considered a lender mistake.
+     *      The extended expiration date has to be in the future, be later than the current expiration date, and cannot be extending the date by more than `MAX_EXPIRATION_EXTENSION`.
+     * @param loanId Id of a LOAN to extend its expiration date.
+     * @param extendedExpirationDate New LOAN expiration date.
      */
-    function enableLOANLateRepayment(uint256 loanId) external {
+    function extendLOANExpirationDate(uint256 loanId, uint40 extendedExpirationDate) external {
         // Check that caller is LOAN token holder
+        // This prevents from extending non-existing loans
         if (loanToken.ownerOf(loanId) != msg.sender)
             revert CallerNotLOANTokenHolder();
 
         LOAN storage loan = LOANs[loanId];
 
-        // Check that late repayment is not already enabled
-        if (loan.lateRepaymentEnabled == true)
-            revert LateRepaymentIsAlreadyEnabled();
+        // Check extended expiration date
+        if (extendedExpirationDate > uint40(block.timestamp + MAX_EXPIRATION_EXTENSION)) // to protect lender
+            revert InvalidExtendedExpirationDate();
+        if (extendedExpirationDate <= uint40(block.timestamp)) // have to extend expiration futher in time
+            revert InvalidExtendedExpirationDate();
+        if (extendedExpirationDate <= loan.expiration) // have to be later than current expiration date
+            revert InvalidExtendedExpirationDate();
 
-        // Check that loan is running or expired
-        if (loan.status != 2)
-            revert InvalidLoanStatus(loan.status);
+        // Extend expiration date
+        loan.expiration = extendedExpirationDate;
 
-        // Enable late repayment
-        loan.lateRepaymentEnabled = true;
-
-        emit LOANLateRepaymentEnabled(loanId);
+        emit LOANExpirationDateExtended(loanId, extendedExpirationDate);
     }
 
 
@@ -360,12 +361,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             return bytes32(0);
 
         // The only mutable state properties are:
-        // - status, lateRepaymentEnabled, and if loan is expired (based on block.timestamp)
+        // - status, expiration, and if loan is expired (based on block.timestamp)
         // Others don't have to be part of the state fingerprint as it does not act as a token identification.
         return keccak256(abi.encode(
             loan.status,
-            loan.status == 2 && loan.expiration <= block.timestamp, // is expired
-            loan.lateRepaymentEnabled
+            loan.expiration,
+            loan.status == 2 && loan.expiration <= block.timestamp // is expired
         ));
     }
 

@@ -55,7 +55,6 @@ abstract contract UseCasesTest is DeploymentTest {
             borrower: address(0),
             lender: lender,
             isPersistent: false,
-            lateRepaymentEnabled: false,
             nonce: 0
         });
     }

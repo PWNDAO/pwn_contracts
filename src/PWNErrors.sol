@@ -10,7 +10,7 @@ error LoanDefaulted(uint40);
 error InvalidLoanStatus(uint256);
 error NonExistingLoan();
 error CallerNotLOANTokenHolder();
-error LateRepaymentIsAlreadyEnabled();
+error InvalidExtendedExpirationDate();
 
 // Invalid asset
 error InvalidLoanAsset();

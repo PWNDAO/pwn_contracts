@@ -30,7 +30,6 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
             expiration: 0,
             borrower: borrower,
             lender: lender,
-            lateRepaymentEnabled: false,
             nonce: nonce
         });
         bytes memory signature1 = _sign(borrowerPK, simpleLoanSimpleRequest.getRequestHash(request));
