@@ -361,18 +361,18 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @dev See {IERC5646-getStateFingerprint}.
      */
     function getStateFingerprint(uint256 tokenId) external view virtual override returns (bytes32) {
-        LOAN memory loan = LOANs[tokenId];
+        LOAN storage loan = LOANs[tokenId];
 
         if (loan.status == 0)
             return bytes32(0);
 
         // The only mutable state properties are:
-        // - status, expiration, and if loan is expired (based on block.timestamp)
+        // - status, expiration
+        // Status is updated for expired loans based on block.timestamp.
         // Others don't have to be part of the state fingerprint as it does not act as a token identification.
         return keccak256(abi.encode(
-            loan.status,
-            loan.expiration,
-            loan.status == 2 && loan.expiration <= block.timestamp // is expired
+            _getLOANStatus(tokenId),
+            loan.expiration
         ));
     }
 

@@ -786,19 +786,15 @@ contract PWNSimpleLoan_GetStateFingerprint_Test is PWNSimpleLoanTest {
     function test_shouldReturnCorrectStateFingerprint() external {
         _mockLOAN(loanId, simpleLoan);
         vm.warp(30039);
-        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(2, 40039, false)));
+        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(2, 40039)));
 
         vm.warp(50039);
-        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(2, 40039, true)));
+        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(4, 40039)));
 
-        simpleLoan.status = 5;
-        _mockLOAN(loanId, simpleLoan);
-        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(5, 40039, false)));
-
-        simpleLoan.status = 2;
+        simpleLoan.status = 3;
         simpleLoan.expiration = 60039;
         _mockLOAN(loanId, simpleLoan);
-        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(2, 60039, false)));
+        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(3, 60039)));
     }
 
 }
