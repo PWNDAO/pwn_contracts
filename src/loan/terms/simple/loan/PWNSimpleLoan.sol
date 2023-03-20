@@ -328,10 +328,16 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Return a LOAN data struct associated with a loan id.
      * @param loanId Id of a loan in question.
-     * @return LOAN data struct or empty struct if the LOAN doesn't exist.
+     * @return loan LOAN data struct or empty struct if the LOAN doesn't exist.
      */
-    function getLOAN(uint256 loanId) external view returns (LOAN memory) {
-        return LOANs[loanId];
+    function getLOAN(uint256 loanId) external view returns (LOAN memory loan) {
+        loan = LOANs[loanId];
+        loan.status = _getLOANStatus(loanId);
+    }
+
+    function _getLOANStatus(uint256 loanId) private view returns (uint8) {
+        LOAN storage loan = LOANs[loanId];
+        return (loan.status == 2 && loan.expiration <= block.timestamp) ? 4 : loan.status;
     }
 
 

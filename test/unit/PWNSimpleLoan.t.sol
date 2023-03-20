@@ -717,6 +717,14 @@ contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
         _assertLOANEq(loan.getLOAN(loanId), simpleLoan);
     }
 
+    function test_shouldReturnExpiredStatus_whenLOANExpired() external {
+        vm.warp(50039);
+        _mockLOAN(loanId, simpleLoan);
+
+        simpleLoan.status = 4;
+        _assertLOANEq(loan.getLOAN(loanId), simpleLoan);
+    }
+
     function test_shouldReturnEmptyLOANDataForNonExistingLoan() external {
         _assertLOANEq(loan.getLOAN(loanId), nonExistingLoan);
     }
