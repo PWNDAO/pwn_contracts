@@ -38,8 +38,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param status 0 == none/dead || 2 == running/accepted offer/accepted request || 3 == paid back || 4 == expired.
      * @param borrower Address of a borrower.
      * @param expiration Unix timestamp (in seconds) setting up a default date.
-     * @param lateRepaymentEnabled If true, a borrower can repay a loan even after an expiration date, but not after lender claims expired loan.
      * @param loanAssetAddress Address of an asset used as a loan credit.
+     * @param loanRepayAmount Amount of a loan asset to be paid back.
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
      */
     struct LOAN {
