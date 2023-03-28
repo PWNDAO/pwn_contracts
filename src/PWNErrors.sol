@@ -10,7 +10,7 @@ error LoanDefaulted(uint40);
 error InvalidLoanStatus(uint256);
 error NonExistingLoan();
 error CallerNotLOANTokenHolder();
-error LateRepaymentIsAlreadyEnabled();
+error InvalidExtendedExpirationDate();
 
 // Invalid asset
 error InvalidLoanAsset();
@@ -21,6 +21,7 @@ error InvalidLoanContractCaller();
 
 // Vault
 error UnsupportedTransferFunction();
+error IncompleteTransfer();
 
 // Nonce
 error NonceAlreadyRevoked();
@@ -31,13 +32,20 @@ error InvalidSignatureLength(uint256);
 error InvalidSignature();
 
 // Offer
-error CallerIsNotStatedLender(address);
 error CallerIsNotStatedBorrower(address);
 error OfferExpired();
 error CollateralIdIsNotWhitelisted();
 
 // Request
+error CallerIsNotStatedLender(address);
 error RequestExpired();
+
+// Request & Offer
+error InvalidDuration();
 
 // Input data
 error InvalidInputData();
+
+// Config
+error InvalidFeeValue();
+error InvalidFeeCollector();

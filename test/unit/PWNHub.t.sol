@@ -9,7 +9,7 @@ import "@pwn/PWNErrors.sol";
 
 abstract contract PWNHubTest is Test {
 
-    bytes32 internal constant TAGS_SLOT = bytes32(uint256(1)); // `tags` mapping position
+    bytes32 internal constant TAGS_SLOT = bytes32(uint256(2)); // `tags` mapping position
 
     PWNHub hub;
     address owner = address(0x1001);
@@ -19,8 +19,8 @@ abstract contract PWNHubTest is Test {
     event TagSet(address indexed _address, bytes32 indexed tag, bool hasTag);
 
     function setUp() external {
+        vm.prank(owner);
         hub = new PWNHub();
-        hub.transferOwnership(owner);
     }
 
 

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
+
+import "@pwn/PWNErrors.sol";
 
 
 /**
@@ -10,13 +12,15 @@ import "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
  * @notice Contract holding configurable values of PWN protocol.
  * @dev Is intendet to be used as a proxy via `TransparentUpgradeableProxy`.
  */
-contract PWNConfig is Ownable, Initializable {
+contract PWNConfig is Ownable2Step, Initializable {
 
     string internal constant VERSION = "1.0";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
+
+    uint16 public constant MAX_FEE = 1000; // 10%
 
     /**
      * @notice Protocol fee value in basis points.
@@ -60,7 +64,7 @@ contract PWNConfig is Ownable, Initializable {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor() Ownable() {
+    constructor() Ownable2Step() {
 
     }
 
@@ -94,6 +98,9 @@ contract PWNConfig is Ownable, Initializable {
     }
 
     function _setFee(uint16 _fee) private {
+        if (_fee > MAX_FEE)
+            revert InvalidFeeValue();
+
         uint16 oldFee = fee;
         fee = _fee;
         emit FeeUpdated(oldFee, _fee);
@@ -109,6 +116,9 @@ contract PWNConfig is Ownable, Initializable {
     }
 
     function _setFeeCollector(address _feeCollector) private {
+        if (_feeCollector == address(0))
+            revert InvalidFeeCollector();
+
         address oldFeeCollector = feeCollector;
         feeCollector = _feeCollector;
         emit FeeCollectorUpdated(oldFeeCollector, _feeCollector);

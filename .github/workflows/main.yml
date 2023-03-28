@@ -4,7 +4,10 @@ on: push
 
 jobs:
   build:
-    name: Unit tests
+    name: Unit & Integration tests
+
+    env:
+      ETHEREUM_URL: ${{ secrets.ETHEREUM_URL }}
 
     runs-on: ubuntu-latest
 
@@ -20,4 +23,7 @@ jobs:
         run: forge install
 
       - name: Run unit tests
-        run: forge test
+        run: forge test --match-path "test/unit/*" --force
+
+      - name: Run integration tests
+        run: forge test --match-path "test/integration/*"

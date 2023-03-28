@@ -12,6 +12,8 @@ import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@pwn/loan/PWNVault.sol";
 import "@pwn/PWNErrors.sol";
 
+import "@pwn-test/helper/token/T721.sol";
+
 
 // The only reason for this contract is to expose internal functions of PWNVault
 // No additional logic is applied here
@@ -38,9 +40,11 @@ contract PWNVaultExposed is PWNVault {
 abstract contract PWNVaultTest is Test {
 
     PWNVaultExposed vault;
-    address token = address(0x070ce2);
-    address alice = address(0xa11ce);
-    address bob = address(0xb0b);
+    address token = makeAddr("token");
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
+
+    T721 t721;
 
     event VaultPull(MultiToken.Asset asset, address indexed origin);
     event VaultPush(MultiToken.Asset asset, address indexed beneficiary);
@@ -53,6 +57,7 @@ abstract contract PWNVaultTest is Test {
 
     function setUp() external {
         vault = new PWNVaultExposed();
+        t721 = new T721();
     }
 
 }
@@ -65,19 +70,39 @@ abstract contract PWNVaultTest is Test {
 contract PWNVault_Pull_Test is PWNVaultTest {
 
     function test_shouldCallTransferFrom_fromOrigin_toVault() external {
+        t721.mint(alice, 42);
+        vm.prank(alice);
+        t721.approve(address(vault), 42);
+
         vm.expectCall(
-            token,
+            address(t721),
             abi.encodeWithSignature("transferFrom(address,address,uint256)", alice, address(vault), 42)
         );
 
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 0);
+        vault.pull(asset, alice);
+    }
+
+    function test_shouldFail_whenIncompleteTransaction() external {
+        vm.mockCall(
+            token,
+            abi.encodeWithSignature("ownerOf(uint256)"),
+            abi.encode(alice)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 0);
         vault.pull(asset, alice);
     }
 
     function test_shouldEmitEvent_VaultPull() external {
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
+        t721.mint(alice, 42);
+        vm.prank(alice);
+        t721.approve(address(vault), 42);
 
-        vm.expectEmit(true, true, false, false);
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 0);
+
+        vm.expectEmit(true, true, true, true);
         emit VaultPull(asset, alice);
 
         vault.pull(asset, alice);
@@ -93,19 +118,35 @@ contract PWNVault_Pull_Test is PWNVaultTest {
 contract PWNVault_Push_Test is PWNVaultTest {
 
     function test_shouldCallSafeTransferFrom_fromVault_toBeneficiary() external {
+        t721.mint(address(vault), 42);
+
         vm.expectCall(
-            token,
+            address(t721),
             abi.encodeWithSignature("safeTransferFrom(address,address,uint256,bytes)", address(vault), alice, 42, "")
         );
 
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 1);
+        vault.push(asset, alice);
+    }
+
+    function test_shouldFail_whenIncompleteTransaction() external {
+        vm.mockCall(
+            token,
+            abi.encodeWithSignature("ownerOf(uint256)"),
+            abi.encode(address(vault))
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 0);
         vault.push(asset, alice);
     }
 
     function test_shouldEmitEvent_VaultPush() external {
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
+        t721.mint(address(vault), 42);
 
-        vm.expectEmit(true, true, false, false);
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 1);
+
+        vm.expectEmit(true, true, true, true);
         emit VaultPush(asset, alice);
 
         vault.push(asset, alice);
@@ -121,17 +162,37 @@ contract PWNVault_Push_Test is PWNVaultTest {
 contract PWNVault_PushFrom_Test is PWNVaultTest {
 
     function test_shouldCallSafeTransferFrom_fromOrigin_toBeneficiary() external {
+        t721.mint(alice, 42);
+        vm.prank(alice);
+        t721.approve(address(vault), 42);
+
         vm.expectCall(
-            token,
+            address(t721),
             abi.encodeWithSignature("safeTransferFrom(address,address,uint256,bytes)", alice, bob, 42, "")
         );
 
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 1);
+        vault.pushFrom(asset, alice, bob);
+    }
+
+    function test_shouldFail_whenIncompleteTransaction() external {
+        vm.mockCall(
+            token,
+            abi.encodeWithSignature("ownerOf(uint256)"),
+            abi.encode(alice)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 0);
         vault.pushFrom(asset, alice, bob);
     }
 
     function test_shouldEmitEvent_VaultPushFrom() external {
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 1);
+        t721.mint(alice, 42);
+        vm.prank(alice);
+        t721.approve(address(vault), 42);
+
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 1);
 
         vm.expectEmit(true, true, true, false);
         emit VaultPushFrom(asset, alice, bob);

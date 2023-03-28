@@ -47,7 +47,6 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
             borrower: address(0),
             lender: lender,
             isPersistent: false,
-            lateRepaymentEnabled: false,
             nonce: uint256(keccak256("nonce_1"))
         });
 
@@ -75,7 +74,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
                 address(offerContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,bool lateRepaymentEnabled,uint256 nonce)"),
+                keccak256("Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,uint256 nonce)"),
                 abi.encode(_offer)
             ))
         ));
@@ -266,6 +265,17 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
+    function testFuzz_shouldFail_whenLessThanMinDuration(uint32 duration) external {
+        vm.assume(duration < offerContract.MIN_LOAN_DURATION());
+
+        offer.duration = duration;
+        signature = _signOfferCompact(lenderPK, offer);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidDuration.selector));
+        vm.prank(activeLoanContract);
+        offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
+    }
+
     function test_shouldRevokeOffer_whenIsNotPersistent() external {
         offer.isPersistent = false;
         signature = _signOfferCompact(lenderPK, offer);
@@ -342,7 +352,6 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         assertTrue(loanTerms.lender == offer.lender);
         assertTrue(loanTerms.borrower == borrower);
         assertTrue(loanTerms.expiration == currentTimestamp + offer.duration);
-        assertTrue(loanTerms.lateRepaymentEnabled == offer.lateRepaymentEnabled);
         assertTrue(loanTerms.collateral.category == offer.collateralCategory);
         assertTrue(loanTerms.collateral.assetAddress == offer.collateralAddress);
         assertTrue(loanTerms.collateral.id == offerValues.collateralId);

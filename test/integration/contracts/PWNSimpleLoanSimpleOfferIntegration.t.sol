@@ -5,20 +5,20 @@ import "forge-std/Test.sol";
 
 import "@pwn/PWNErrors.sol";
 
-import "@pwn-test/helper/BaseIntegrationTest.t.sol";
+import "@pwn-test/integration/contracts/BaseIntegrationTest.t.sol";
 
 
-contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
+contract PWNSimpleLoanSimpleOfferIntegrationTest is BaseIntegrationTest {
 
-    // Group of requests
+    // Group of offers
 
-    function test_shouldRevokeRequestsInGroup_whenAcceptingOneFromGroup() external {
+    function test_shouldRevokeOffersInGroup_whenAcceptingOneFromGroup() external {
         // Mint initial state
         loanAsset.mint(lender, 100e18);
         t1155.mint(borrower, 42, 10e18);
 
-        // Sign requests
-        PWNSimpleLoanSimpleRequest.Request memory request = PWNSimpleLoanSimpleRequest.Request({
+        // Sign offers
+        PWNSimpleLoanSimpleOffer.Offer memory offer = PWNSimpleLoanSimpleOffer.Offer({
             collateralCategory: MultiToken.Category.ERC1155,
             collateralAddress: address(t1155),
             collateralId: 42,
@@ -30,15 +30,15 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
             expiration: 0,
             borrower: borrower,
             lender: lender,
-            lateRepaymentEnabled: false,
+            isPersistent: false,
             nonce: nonce
         });
-        bytes memory signature1 = _sign(borrowerPK, simpleRequest.getRequestHash(request));
-        bytes memory requestData1 = abi.encode(request);
+        bytes memory signature1 = _sign(lenderPK, simpleLoanSimpleOffer.getOfferHash(offer));
+        bytes memory offerData1 = abi.encode(offer);
 
-        request.loanYield = 20e18;
-        bytes memory signature2 = _sign(borrowerPK, simpleRequest.getRequestHash(request));
-        bytes memory requestData2 = abi.encode(request);
+        offer.loanYield = 20e18;
+        bytes memory signature2 = _sign(lenderPK, simpleLoanSimpleOffer.getOfferHash(offer));
+        bytes memory offerData2 = abi.encode(offer);
 
         // Approve loan asset
         vm.prank(lender);
@@ -48,22 +48,22 @@ contract PWNSimpleLoanSimpleRequestIntegrationTest is BaseIntegrationTest {
         vm.prank(borrower);
         t1155.setApprovalForAll(address(simpleLoan), true);
 
-        // Create LOAN with request 2
-        vm.prank(lender);
+        // Create LOAN with offer 2
+        vm.prank(borrower);
         simpleLoan.createLOAN({
-            loanTermsFactoryContract: address(simpleRequest),
-            loanTermsFactoryData: requestData2,
+            loanTermsFactoryContract: address(simpleLoanSimpleOffer),
+            loanTermsFactoryData: offerData2,
             signature: signature2,
             loanAssetPermit: "",
             collateralPermit: ""
         });
 
-        // Fail to accept other requests with same nonce
+        // Fail to accept other offers with same nonce
         vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
-        vm.prank(lender);
+        vm.prank(borrower);
         simpleLoan.createLOAN({
-            loanTermsFactoryContract: address(simpleRequest),
-            loanTermsFactoryData: requestData1,
+            loanTermsFactoryContract: address(simpleLoanSimpleOffer),
+            loanTermsFactoryData: offerData1,
             signature: signature1,
             loanAssetPermit: "",
             collateralPermit: ""

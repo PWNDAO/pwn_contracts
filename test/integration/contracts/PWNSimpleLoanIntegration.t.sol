@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import "@pwn/PWNErrors.sol";
 
-import "@pwn-test/helper/BaseIntegrationTest.t.sol";
+import "@pwn-test/integration/contracts/BaseIntegrationTest.t.sol";
 
 
 contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
@@ -26,7 +26,6 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             borrower: borrower,
             lender: lender,
             isPersistent: false,
-            lateRepaymentEnabled: false,
             nonce: nonce
         });
 
@@ -38,7 +37,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         t1155.setApprovalForAll(address(simpleLoan), true);
 
         // Sign offer
-        bytes memory signature = _sign(lenderPK, simpleOffer.getOfferHash(offer));
+        bytes memory signature = _sign(lenderPK, simpleLoanSimpleOffer.getOfferHash(offer));
 
         // Mint initial state
         loanAsset.mint(lender, 100e18);
@@ -48,12 +47,12 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         loanAsset.approve(address(simpleLoan), 100e18);
 
         // Loan factory data (need for vm.prank to work properly when creating a loan)
-        bytes memory loanTermsFactoryData = simpleOffer.encodeLoanTermsFactoryData(offer);
+        bytes memory loanTermsFactoryData = simpleLoanSimpleOffer.encodeLoanTermsFactoryData(offer);
 
         // Create LOAN
         vm.prank(borrower);
         uint256 loanId = simpleLoan.createLOAN({
-            loanTermsFactoryContract: address(simpleOffer),
+            loanTermsFactoryContract: address(simpleLoanSimpleOffer),
             loanTermsFactoryData: loanTermsFactoryData,
             signature: signature,
             loanAssetPermit: "",
@@ -93,7 +92,6 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             borrower: borrower,
             lender: lender,
             isPersistent: false,
-            lateRepaymentEnabled: false,
             nonce: nonce
         });
 
@@ -111,7 +109,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         t1155.setApprovalForAll(address(simpleLoan), true);
 
         // Sign offer
-        bytes memory signature = _sign(lenderPK, listOffer.getOfferHash(offer));
+        bytes memory signature = _sign(lenderPK, simpleLoanListOffer.getOfferHash(offer));
 
         // Mint initial state
         loanAsset.mint(lender, 100e18);
@@ -121,12 +119,12 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         loanAsset.approve(address(simpleLoan), 100e18);
 
         // Loan factory data (need for vm.prank to work properly when creating a loan)
-        bytes memory loanTermsFactoryData = listOffer.encodeLoanTermsFactoryData(offer, offerValues);
+        bytes memory loanTermsFactoryData = simpleLoanListOffer.encodeLoanTermsFactoryData(offer, offerValues);
 
         // Create LOAN
         vm.prank(borrower);
         uint256 loanId = simpleLoan.createLOAN({
-            loanTermsFactoryContract: address(listOffer),
+            loanTermsFactoryContract: address(simpleLoanListOffer),
             loanTermsFactoryData: loanTermsFactoryData,
             signature: signature,
             loanAssetPermit: "",
@@ -161,7 +159,6 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             expiration: 0,
             borrower: borrower,
             lender: lender,
-            lateRepaymentEnabled: false,
             nonce: nonce
         });
 
@@ -173,7 +170,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         t1155.setApprovalForAll(address(simpleLoan), true);
 
         // Sign request
-        bytes memory signature = _sign(borrowerPK, simpleRequest.getRequestHash(request));
+        bytes memory signature = _sign(borrowerPK, simpleLoanSimpleRequest.getRequestHash(request));
 
         // Mint initial state
         loanAsset.mint(lender, 100e18);
@@ -183,12 +180,12 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         loanAsset.approve(address(simpleLoan), 100e18);
 
         // Loan factory data (need for vm.prank to work properly when creating a loan)
-        bytes memory loanTermsFactoryData = simpleRequest.encodeLoanTermsFactoryData(request);
+        bytes memory loanTermsFactoryData = simpleLoanSimpleRequest.encodeLoanTermsFactoryData(request);
 
         // Create LOAN
         vm.prank(lender);
         uint256 loanId = simpleLoan.createLOAN({
-            loanTermsFactoryContract: address(simpleRequest),
+            loanTermsFactoryContract: address(simpleLoanSimpleRequest),
             loanTermsFactoryData: loanTermsFactoryData,
             signature: signature,
             loanAssetPermit: "",
@@ -307,33 +304,6 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             loanId,
             abi.encodeWithSelector(LoanDefaulted.selector, uint40(expiration))
         );
-    }
-
-    function test_shouldRepayLoan_whenExpired_withLateRepaymentEnabled() external {
-        // Create LOAN
-        uint256 loanId = _createERC1155Loan();
-
-        // Default on a loan
-        uint256 expiration = block.timestamp + uint256(defaultOffer.duration);
-        vm.warp(expiration);
-
-        // Enable late repayment
-        vm.prank(lender);
-        simpleLoan.enableLOANLateRepayment(loanId);
-
-        // Repay loan
-        _repayLoan(loanId);
-
-        // Assert final state
-        assertEq(loanToken.ownerOf(loanId), lender);
-
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(simpleLoan)), 110e18);
-
-        assertEq(t1155.balanceOf(lender, 42), 0);
-        assertEq(t1155.balanceOf(borrower, 42), 10e18);
-        assertEq(t1155.balanceOf(address(simpleLoan), 42), 0);
     }
 
 

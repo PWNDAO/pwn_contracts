@@ -12,7 +12,6 @@ library PWNLOANTerms {
      * @param lender Address of a lender.
      * @param borrower Address of a borrower.
      * @param expiration Unix timestamp (in seconds) setting up a default date.
-     * @param lateRepaymentEnabled If true, a borrower can repay a loan even after an expiration date, but not after lender claims expired loan.
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
      * @param asset Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
      * @param loanRepayAmount Amount of a loan asset to be paid back.
@@ -21,7 +20,6 @@ library PWNLOANTerms {
         address lender;
         address borrower;
         uint40 expiration;
-        bool lateRepaymentEnabled;
         MultiToken.Asset collateral;
         MultiToken.Asset asset;
         uint256 loanRepayAmount;

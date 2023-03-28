@@ -2,18 +2,18 @@
 pragma solidity 0.8.16;
 
 import "@pwn/hub/PWNHubAccessControl.sol";
-import "@pwn/loan/terms/simple/factory/IPWNSimpleLoanTermsFactory.sol";
+import "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
 import "@pwn/nonce/PWNRevokedNonce.sol";
 import "@pwn/PWNErrors.sol";
 
 
-abstract contract PWNSimpleLoanRequest is IPWNSimpleLoanTermsFactory, PWNHubAccessControl {
+abstract contract PWNSimpleLoanRequest is PWNSimpleLoanTermsFactory, PWNHubAccessControl {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    PWNRevokedNonce immutable internal revokedRequestNonce;
+    PWNRevokedNonce internal immutable revokedRequestNonce;
 
     /**
      * @dev Mapping of requests made via on-chain transactions.

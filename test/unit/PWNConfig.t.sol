@@ -8,6 +8,12 @@ import "@pwn/config/PWNConfig.sol";
 
 abstract contract PWNConfigTest is Test {
 
+    bytes32 internal constant OWNER_SLOT = bytes32(uint256(0)); // `_owner` property position
+    bytes32 internal constant PENDING_OWNER_SLOT = bytes32(uint256(1)); // `_pendingOwner` property position
+    bytes32 internal constant FEE_SLOT = bytes32(uint256(1)); // `fee` property position
+    bytes32 internal constant FEE_COLLECTOR_SLOT = bytes32(uint256(2)); // `feeCollector` property position
+    bytes32 internal constant LOAN_METADATA_URI_SLOT = bytes32(uint256(3)); // `loanMetadataUri` mapping position
+
     PWNConfig config;
     address owner = address(0x43);
     address feeCollector = address(0xfeeC001ec704);
@@ -32,7 +38,7 @@ contract PWNConfig_Initialize_Test is PWNConfigTest {
     function test_shouldSetOwner() external {
         config.initialize(owner);
 
-        bytes32 ownerValue = vm.load(address(config), bytes32(0));
+        bytes32 ownerValue = vm.load(address(config), OWNER_SLOT);
         assertEq(address(uint160(uint256(ownerValue))), owner);
     }
 
@@ -63,11 +69,13 @@ contract PWNConfig_Reinitialize_Test is PWNConfigTest {
     function test_shouldSetParameters() external {
         config.reinitialize(owner, fee, feeCollector);
 
-        bytes32 firstSlotValue = vm.load(address(config), bytes32(0));
-        assertEq(address(uint160(uint256(firstSlotValue))), owner);
-        assertEq(uint16(uint256(firstSlotValue >> 176)), fee);
+        bytes32 ownerValue = vm.load(address(config), OWNER_SLOT);
+        assertEq(address(uint160(uint256(ownerValue))), owner);
 
-        bytes32 feeCollectorValue = vm.load(address(config), bytes32(uint256(1)));
+        bytes32 feeSlotValue = vm.load(address(config), FEE_SLOT);
+        assertEq(uint16(uint256(feeSlotValue >> 176)), fee);
+
+        bytes32 feeCollectorValue = vm.load(address(config), FEE_COLLECTOR_SLOT);
         assertEq(address(uint160(uint256(feeCollectorValue))), feeCollector);
     }
 
@@ -124,14 +132,22 @@ contract PWNConfig_SetFee_Test is PWNConfigTest {
         config.setFee(9);
     }
 
+    function test_shouldFaile_whenNewValueBiggerThanMaxFee() external {
+        uint16 maxFee = config.MAX_FEE();
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidFeeValue.selector));
+        vm.prank(owner);
+        config.setFee(maxFee + 1);
+    }
+
     function test_shouldSetFeeValue() external {
         uint16 fee = 9;
 
         vm.prank(owner);
         config.setFee(fee);
 
-        bytes32 firstSlotValue = vm.load(address(config), bytes32(0));
-        assertEq(uint16(uint256(firstSlotValue >> 176)), fee);
+        bytes32 feeSlotValue = vm.load(address(config), FEE_SLOT);
+        assertEq(uint16(uint256(feeSlotValue >> 176)), fee);
     }
 
     function test_shouldEmitEvent_FeeUpdated() external {
@@ -166,11 +182,17 @@ contract PWNConfig_SetFeeCollector_Test is PWNConfigTest {
         config.setFeeCollector(newFeeCollector);
     }
 
+    function test_shouldFail_whenSettingZeroAddress() external {
+        vm.expectRevert(abi.encodeWithSelector(InvalidFeeCollector.selector));
+        vm.prank(owner);
+        config.setFeeCollector(address(0));
+    }
+
     function test_shouldSetFeeCollectorAddress() external {
         vm.prank(owner);
         config.setFeeCollector(newFeeCollector);
 
-        bytes32 feeCollectorValue = vm.load(address(config), bytes32(uint256(1)));
+        bytes32 feeCollectorValue = vm.load(address(config), FEE_COLLECTOR_SLOT);
         assertEq(uint160(uint256(feeCollectorValue)), uint160(newFeeCollector));
     }
 
@@ -212,7 +234,7 @@ contract PWNConfig_SetLoanMetadataUri_Test is PWNConfigTest {
 
         bytes32 tokenUriValue = vm.load(
             address(config),
-            keccak256(abi.encode(loanContract, uint256(2)))
+            keccak256(abi.encode(loanContract, LOAN_METADATA_URI_SLOT))
         );
         bytes memory memoryTokenUri = bytes(tokenUri);
         bytes32 _tokenUri;
