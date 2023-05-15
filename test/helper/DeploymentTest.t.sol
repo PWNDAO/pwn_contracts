@@ -22,6 +22,7 @@ abstract contract DeploymentTest is Test {
     using stdJson for string;
     using Strings for uint256;
 
+    uint256[] deployedChains;
     Deployment deployment;
 
     // Properties need to be in alphabetical order
@@ -36,8 +37,8 @@ abstract contract DeploymentTest is Test {
         PWNRevokedNonce revokedOfferNonce;
         PWNRevokedNonce revokedRequestNonce;
         PWNSimpleLoan simpleLoan;
-        PWNSimpleLoanSimpleOffer simpleLoanSimpleOffer;
         PWNSimpleLoanListOffer simpleLoanListOffer;
+        PWNSimpleLoanSimpleOffer simpleLoanSimpleOffer;
         PWNSimpleLoanSimpleRequest simpleLoanSimpleRequest;
     }
 
@@ -56,19 +57,18 @@ abstract contract DeploymentTest is Test {
     PWNSimpleLoanListOffer simpleLoanListOffer;
     PWNSimpleLoanSimpleRequest simpleLoanSimpleRequest;
 
-    constructor() {
-        if (block.chainid == 5 /*|| block.chainid == 1*/) {
-            string memory root = vm.projectRoot();
-            string memory path = string.concat(root, "/deployments.json");
-            string memory json = vm.readFile(path);
-            bytes memory rawDeployment = json.parseRaw(string.concat(".", block.chainid.toString()));
-            deployment = abi.decode(rawDeployment, (Deployment));
-        }
-    }
-
 
     function setUp() public virtual {
-        if (block.chainid == 5 /*|| block.chainid == 1*/) {
+        string memory root = vm.projectRoot();
+        string memory path = string.concat(root, "/deployments.json");
+        string memory json = vm.readFile(path);
+        bytes memory rawDeployedChains = json.parseRaw(".deployedChains");
+        deployedChains = abi.decode(rawDeployedChains, (uint256[]));
+
+        if (_contains(deployedChains, block.chainid)) {
+            bytes memory rawDeployment = json.parseRaw(string.concat(".chains.", block.chainid.toString()));
+            deployment = abi.decode(rawDeployment, (Deployment));
+
             admin = deployment.admin;
             dao = deployment.dao;
             feeCollector = deployment.feeCollector;
@@ -87,6 +87,13 @@ abstract contract DeploymentTest is Test {
         }
     }
 
+    function _contains(uint256[] storage array, uint256 value) private view returns (bool) {
+        for (uint256 i; i < array.length; ++i)
+            if (array[i] == value)
+                return true;
+
+        return false;
+    }
 
     function _deployProtocol() internal {
         admin = makeAddr("admin");
