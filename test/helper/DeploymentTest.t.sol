@@ -98,10 +98,9 @@ abstract contract DeploymentTest is Test {
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(configSingleton),
             admin,
-            abi.encodeWithSignature("initialize(address)", address(this))
+            abi.encodeWithSignature("initialize(address,uint16,address)", address(this), 0, feeCollector)
         );
         config = PWNConfig(address(proxy));
-        config.reinitialize(address(this), 0, feeCollector);
 
         vm.prank(admin);
         hub = new PWNHub();

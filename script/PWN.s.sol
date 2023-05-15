@@ -70,35 +70,32 @@ contract Deploy is Script {
 
         PWNDeployer deployer = PWNDeployer(deployer_);
 
-        // Deploy realm
+        // Deploy protocol
 
         // - Config
         address configSingleton = deployer.deploy({
             salt: PWNContractDeployerSalt.CONFIG_V1,
             bytecode: type(PWNConfig).creationCode
         });
-        // Using this initialization madness to have a deterministic config address
-        // in the case where `admin`, `dao`, or `feeCollector` address varies per chain.
         PWNConfig config = PWNConfig(deployer.deploy({
             salt: PWNContractDeployerSalt.CONFIG_PROXY,
             bytecode: abi.encodePacked(
                 type(TransparentUpgradeableProxy).creationCode,
                 abi.encode(
                     configSingleton,
-                    msg.sender, // To have the same deployment address regardless variables parameters
-                    abi.encodeWithSignature("initialize(address)", msg.sender)
+                    admin,
+                    abi.encodeWithSignature("initialize(address,uint16,address)", dao, 0, feeCollector)
                 )
             )
         }));
-        TransparentUpgradeableProxy(payable(address(config))).changeAdmin(admin);
-        config.reinitialize(dao, 0, feeCollector);
 
         // - Hub
         PWNHub hub = PWNHub(deployer.deployAndTransferOwnership({
             salt: PWNContractDeployerSalt.HUB,
-            owner: msg.sender, // To be able to set tags at the end of this script
+            owner: msg.sender, // To be able to set tags at the end of this script, otherwise `admin`
             bytecode: type(PWNHub).creationCode
         }));
+        hub.acceptOwnership(); // Because PWNHub is Ownable2Step contract
 
         // - LOAN token
         PWNLOAN loanToken = PWNLOAN(deployer.deploy({

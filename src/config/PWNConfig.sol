@@ -68,12 +68,7 @@ contract PWNConfig is Ownable2Step, Initializable {
 
     }
 
-    function initialize(address _owner) initializer external {
-        require(_owner != address(0), "Owner is zero address");
-        _transferOwnership(_owner);
-    }
-
-    function reinitialize(address _owner, uint16 _fee, address _feeCollector) reinitializer(2) onlyOwner external {
+    function initialize(address _owner, uint16 _fee, address _feeCollector) initializer external {
         require(_owner != address(0), "Owner is zero address");
         _transferOwnership(_owner);
 
