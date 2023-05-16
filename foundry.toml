@@ -1,12 +1,6 @@
 [profile.default]
 solc_version = '0.8.16'
-no_match_path = "test/deployed/*"
 fs_permissions = [{ access = "read", path = "./deployments.json"}]
-
-
-[profile.deployed]
-match_path = "test/deployed/*"
-no_match_path = ""
 
 
 [rpc_endpoints]
