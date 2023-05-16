@@ -5,21 +5,17 @@ Smart contracts enabling P2P loans using arbitrary collateral (supporting ERC20,
 For in-depth documentation about PWN contracts see [PWN Developer Docs](https://dev-docs.pwn.xyz/).
 
 ## Deployed addresses
-_Final mainnet and testnet addresses will differ from these as we will dedicate a new EOA for deploying the `PWNDeployer`. These are for testing purposes and are meant to be redeployed several times._
-
 | Name | Address | Mainnets | Testnets |
 | --- | --- | --- | --- |
-| PWNDeployer | 0x542aE8dc0E94C60B2AA2c3Bcf94151ECeCbe342a | `TBD` | [Goerli](https://goerli.etherscan.io/address/0x542ae8dc0e94c60b2aa2c3bcf94151ececbe342a)
-| PWNConfig - singleton | 0x15Bcc545605D4376784cfCF1ccF120c42ED32082 | `TBD` | [Goerli](https://goerli.etherscan.io/address/0x15Bcc545605D4376784cfCF1ccF120c42ED32082)
-| PWNConfig - proxy | 0x2adA1d4F43021A5786393E7C62bE6A8efF766b1C | `TBD` | [Goerli](https://goerli.etherscan.io/address/0x2adA1d4F43021A5786393E7C62bE6A8efF766b1C)
-| PWNHub | 0xd31b4cfee06B8a662F522CaBC2D925038Be0aAC5 | `TBD` | [Goerli](https://goerli.etherscan.io/address/0xd31b4cfee06B8a662F522CaBC2D925038Be0aAC5)
-| PWNLOAN | 0xa0A4886398e509250d5734B31F7323019774B5e5 | `TBD` | [Goerli](https://goerli.etherscan.io/address/0xa0A4886398e509250d5734B31F7323019774B5e5)
-| PWNRevokedNonce (offer) | 0xF5A49a2f6d9E03e152dDCDEaaC6d479AC8eB92A7 | `TBD` | [Goerli](https://goerli.etherscan.io/address/0xF5A49a2f6d9E03e152dDCDEaaC6d479AC8eB92A7)
-| PWNRevokedNonce (request) | 0x70aDA3E22E755593Db05B5342062eB849B8E8ccd | `TBD` | [Goerli](https://goerli.etherscan.io/address/0x70aDA3E22E755593Db05B5342062eB849B8E8ccd)
-| PWNSimpleLoan | 0x05397F372130bE1Ab43dF72c896278Bff2Db8A9E | `TBD` | [Goerli](https://goerli.etherscan.io/address/0x05397F372130bE1Ab43dF72c896278Bff2Db8A9E)
-| PWNSimpleLoanSimpleOffer | 0xaff389b04AC4D42Ff0d497d2a3C305ab4A5d629D | `TBD` | [Goerli](https://goerli.etherscan.io/address/0xaff389b04AC4D42Ff0d497d2a3C305ab4A5d629D)
-| PWNSimpleLoanListOffer | 0xC0d64e5cc29a7FE91a82C40b71E46f69F0fFFBdd | `TBD` | [Goerli](https://goerli.etherscan.io/address/0xC0d64e5cc29a7FE91a82C40b71E46f69F0fFFBdd)
-| PWNSimpleLoanSimpleRequest | 0x6f3E641DA9201B6C60bb7964Ac4d55EE27af24C3 | `TBD` | [Goerli](https://goerli.etherscan.io/address/0x6f3E641DA9201B6C60bb7964Ac4d55EE27af24C3)
+| PWNConfig | 0x03DeAfC9678ab25F059df59Be3B20875018e1d46 | [Polygon](https://polygonscan.com/address/0x03DeAfC9678ab25F059df59Be3B20875018e1d46) | [Goerli](https://goerli.etherscan.io/address/0x03DeAfC9678ab25F059df59Be3B20875018e1d46)
+| PWNHub | 0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5 | [Polygon](https://polygonscan.com/address/0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5) | [Goerli](https://goerli.etherscan.io/address/0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5)
+| PWNLOAN | 0x4440C069272cC34b80C7B11bEE657D0349Ba9C23 | [Polygon](https://polygonscan.com/address/0x4440C069272cC34b80C7B11bEE657D0349Ba9C23) | [Goerli](https://goerli.etherscan.io/address/0x4440C069272cC34b80C7B11bEE657D0349Ba9C23)
+| PWNRevokedNonce (offer) | 0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e | [Polygon](https://polygonscan.com/address/0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e) | [Goerli](https://goerli.etherscan.io/address/0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e)
+| PWNRevokedNonce (request) | 0x472361E75d28597b0a7F86146fbB4a86f173d10D | [Polygon](https://polygonscan.com/address/0x472361E75d28597b0a7F86146fbB4a86f173d10D) | [Goerli](https://goerli.etherscan.io/address/0x472361E75d28597b0a7F86146fbB4a86f173d10D)
+| PWNSimpleLoan | 0x50160ff9c19fbE2B5643449e1A321cAc15af2b2C | [Polygon](https://polygonscan.com/address/0x50160ff9c19fbE2B5643449e1A321cAc15af2b2C) | [Goerli](https://goerli.etherscan.io/address/0x50160ff9c19fbE2B5643449e1A321cAc15af2b2C)
+| PWNSimpleLoanSimpleOffer | 0xAbA34804D2aDE17dd5064Ac7183e7929E4F940BD | [Polygon](https://polygonscan.com/address/0xAbA34804D2aDE17dd5064Ac7183e7929E4F940BD) | [Goerli](https://goerli.etherscan.io/address/0xAbA34804D2aDE17dd5064Ac7183e7929E4F940BD)
+| PWNSimpleLoanListOffer | 0x6F831783954a9fd8A7243814841F43A2E2C9Ec15 | [Polygon](https://polygonscan.com/address/0x6F831783954a9fd8A7243814841F43A2E2C9Ec15) | [Goerli](https://goerli.etherscan.io/address/0x6F831783954a9fd8A7243814841F43A2E2C9Ec15)
+| PWNSimpleLoanSimpleRequest | 0xcf600646707e525C2d031b9d1ab3C28b0fF97096 | [Polygon](https://polygonscan.com/address/0xcf600646707e525C2d031b9d1ab3C28b0fF97096) | [Goerli](https://goerli.etherscan.io/address/0xcf600646707e525C2d031b9d1ab3C28b0fF97096)
 
 
 # PWN is hiring!
