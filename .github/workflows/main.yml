@@ -8,6 +8,9 @@ jobs:
 
     env:
       ETHEREUM_URL: ${{ secrets.ETHEREUM_URL }}
+      POLYGON_URL: ${{ secrets.POLYGON_URL }}
+      GOERLI_URL: ${{ secrets.GOERLI_URL }}
+      MUMBAI_URL: ${{ secrets.MUMBAI_URL }}
 
     runs-on: ubuntu-latest
 
