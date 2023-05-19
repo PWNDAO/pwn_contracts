@@ -1,0 +1,14 @@
+[profile.default]
+solc_version = '0.8.16'
+fs_permissions = [{ access = "read", path = "./deployments.json"}]
+
+
+[rpc_endpoints]
+# Mainnets
+mainnet = "${ETHEREUM_URL}"
+polygon = "${POLYGON_URL}"
+
+# Testnets
+goerli = "${GOERLI_URL}"
+mumbai = "${MUMBAI_URL}"
+local = "${LOCAL_URL}"

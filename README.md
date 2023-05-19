@@ -5,30 +5,17 @@ Smart contracts enabling P2P loans using arbitrary collateral (supporting ERC20,
 For in-depth documentation about PWN contracts see [PWN Developer Docs](https://dev-docs.pwn.xyz/).
 
 ## Deployed addresses
-### Ethereum
-- PWN: [`0x0709b8e46e26b45d76CC5C744CAF5dE70a82578B`](https://etherscan.io/address/0x0709b8e46e26b45d76CC5C744CAF5dE70a82578B)
-- PWNLOAN: [`0xcFe385287200F0c10a54100e9b22855A73664156`](https://etherscan.io/address/0xcFe385287200F0c10a54100e9b22855A73664156)
-- PWNVault: [`0xb98efe56decceb1bec9faeeaf62500deb0953474`](https://etherscan.io/address/0xb98efe56decceb1bec9faeeaf62500deb0953474)
-
-### Polygon
-- PWN: [`0xBCdE56e9FB8c30aBB2D19Fb33D7DeD5031102da2`](https://polygonscan.com/address/0xBCdE56e9FB8c30aBB2D19Fb33D7DeD5031102da2)
-- PWNLOAN: [`0x8680AEE63E48AACB51Ddc5Ad15979FC169C1cf2B`](https://polygonscan.com/address/0x8680AEE63E48AACB51Ddc5Ad15979FC169C1cf2B)
-- PWNVault: [`0xaF0d978275a2e7e3109F8C6307Ffd281774C623E`](https://polygonscan.com/address/0xaF0d978275a2e7e3109F8C6307Ffd281774C623E)
-
-### Goerli testnet
-- PWN: [`0xd65404695a101B4FD476f4F2222F68917f96b911`](https://goerli.etherscan.io/address/0xd65404695a101B4FD476f4F2222F68917f96b911)
-- PWNLOAN: [`0xc9E94453d182c50984A2a4afdD60796D25B027Aa`](https://goerli.etherscan.io/address/0xc9E94453d182c50984A2a4afdD60796D25B027Aa)
-- PWNVault: [`0xDBdb041842407c109F65b23eA86D99c1E0D94522`](https://goerli.etherscan.io/address/0xDBdb041842407c109F65b23eA86D99c1E0D94522)
-
-### Mumbai (Polygon) testnet
-- PWN: [`0x47C0A4614ec7ac0467D215dA3B215e4f536DF33F`](https://mumbai.polygonscan.com/address/0x47C0A4614ec7ac0467D215dA3B215e4f536DF33F)
-- PWNLOAN: [`0x43aFBD2a20dbfFA5228a2f13cA116aFACaAF4233`](https://mumbai.polygonscan.com/address/0x43aFBD2a20dbfFA5228a2f13cA116aFACaAF4233)
-- PWNVault: [`0xCF66F4841a4bB91d145DDF555B7d4e8adD086253`](https://mumbai.polygonscan.com/address/0xCF66F4841a4bB91d145DDF555B7d4e8adD086253)
-
-### Rinkeby testnet (deprecated)
-- PWN: [`0x34fCA53BbCbc2a4E2fF5D7F704b7143133dfaCF7`](https://rinkeby.etherscan.io/address/0x34fCA53BbCbc2a4E2fF5D7F704b7143133dfaCF7)
-- PWNLOAN: [`0xC33B746Ac85703178D5a796f960b5e855172e7F7`](https://rinkeby.etherscan.io/address/0xC33B746Ac85703178D5a796f960b5e855172e7F7)
-- PWNVault: [`0x2f705615E25D705813cC0E29f4225Db0EDB82eCa`](https://rinkeby.etherscan.io/address/0x2f705615E25D705813cC0E29f4225Db0EDB82eCa)
+| Name | Address | Mainnets | Testnets |
+| --- | --- | --- | --- |
+| PWNConfig | 0x03DeAfC9678ab25F059df59Be3B20875018e1d46 | [Ethereum](https://etherscan.io/address/0x03DeAfC9678ab25F059df59Be3B20875018e1d46) [Polygon](https://polygonscan.com/address/0x03DeAfC9678ab25F059df59Be3B20875018e1d46) | [Goerli](https://goerli.etherscan.io/address/0x03DeAfC9678ab25F059df59Be3B20875018e1d46) [Mumbai](https://mumbai.polygonscan.com/address/0x03DeAfC9678ab25F059df59Be3B20875018e1d46)
+| PWNHub | 0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5 | [Ethereum](https://etherscan.io/address/0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5) [Polygon](https://polygonscan.com/address/0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5) | [Goerli](https://goerli.etherscan.io/address/0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5) [Mumbai](https://mumbai.polygonscan.com/address/0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5)
+| PWNLOAN | 0x4440C069272cC34b80C7B11bEE657D0349Ba9C23 | [Ethereum](https://etherscan.io/address/0x4440C069272cC34b80C7B11bEE657D0349Ba9C23) [Polygon](https://polygonscan.com/address/0x4440C069272cC34b80C7B11bEE657D0349Ba9C23) | [Goerli](https://goerli.etherscan.io/address/0x4440C069272cC34b80C7B11bEE657D0349Ba9C23) [Mumbai](https://mumbai.polygonscan.com/address/0x4440C069272cC34b80C7B11bEE657D0349Ba9C23)
+| PWNRevokedNonce (offer) | 0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e | [Ethereum](https://etherscan.io/address/0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e) [Polygon](https://polygonscan.com/address/0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e) | [Goerli](https://goerli.etherscan.io/address/0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e) [Mumbai](https://mumbai.polygonscan.com/address/0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e)
+| PWNRevokedNonce (request) | 0x472361E75d28597b0a7F86146fbB4a86f173d10D | [Ethereum](https://etherscan.io/address/0x472361E75d28597b0a7F86146fbB4a86f173d10D) [Polygon](https://polygonscan.com/address/0x472361E75d28597b0a7F86146fbB4a86f173d10D) | [Goerli](https://goerli.etherscan.io/address/0x472361E75d28597b0a7F86146fbB4a86f173d10D) [Mumbai](https://mumbai.polygonscan.com/address/0x472361E75d28597b0a7F86146fbB4a86f173d10D)
+| PWNSimpleLoan | 0x50160ff9c19fbE2B5643449e1A321cAc15af2b2C | [Ethereum](https://etherscan.io/address/0x50160ff9c19fbE2B5643449e1A321cAc15af2b2C) [Polygon](https://polygonscan.com/address/0x50160ff9c19fbE2B5643449e1A321cAc15af2b2C) | [Goerli](https://goerli.etherscan.io/address/0x50160ff9c19fbE2B5643449e1A321cAc15af2b2C) [Mumbai](https://mumbai.polygonscan.com/address/0x50160ff9c19fbE2B5643449e1A321cAc15af2b2C)
+| PWNSimpleLoanSimpleOffer | 0xAbA34804D2aDE17dd5064Ac7183e7929E4F940BD | [Ethereum](https://etherscan.io/address/0xAbA34804D2aDE17dd5064Ac7183e7929E4F940BD) [Polygon](https://polygonscan.com/address/0xAbA34804D2aDE17dd5064Ac7183e7929E4F940BD) | [Goerli](https://goerli.etherscan.io/address/0xAbA34804D2aDE17dd5064Ac7183e7929E4F940BD) [Mumbai](https://mumbai.polygonscan.com/address/0xAbA34804D2aDE17dd5064Ac7183e7929E4F940BD)
+| PWNSimpleLoanListOffer | 0x6F831783954a9fd8A7243814841F43A2E2C9Ec15 | [Ethereum](https://etherscan.io/address/0x6F831783954a9fd8A7243814841F43A2E2C9Ec15) [Polygon](https://polygonscan.com/address/0x6F831783954a9fd8A7243814841F43A2E2C9Ec15) | [Goerli](https://goerli.etherscan.io/address/0x6F831783954a9fd8A7243814841F43A2E2C9Ec15) [Mumbai](https://mumbai.polygonscan.com/address/0x6F831783954a9fd8A7243814841F43A2E2C9Ec15)
+| PWNSimpleLoanSimpleRequest | 0xcf600646707e525C2d031b9d1ab3C28b0fF97096 | [Ethereum](https://etherscan.io/address/0xcf600646707e525C2d031b9d1ab3C28b0fF97096) [Polygon](https://polygonscan.com/address/0xcf600646707e525C2d031b9d1ab3C28b0fF97096) | [Goerli](https://goerli.etherscan.io/address/0xcf600646707e525C2d031b9d1ab3C28b0fF97096) [Mumbai](https://mumbai.polygonscan.com/address/0xcf600646707e525C2d031b9d1ab3C28b0fF97096)
 
 
 # PWN is hiring!
