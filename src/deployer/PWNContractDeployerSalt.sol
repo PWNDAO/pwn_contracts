@@ -24,4 +24,8 @@ library PWNContractDeployerSalt {
     // Request types
     bytes32 constant internal SIMPLE_LOAN_SIMPLE_REQUEST_V1 = keccak256("PWNSimpleLoanSimpleRequestV1");
 
+    // Timelock controllers
+    bytes32 constant internal PROTOCOL_TEAM_TIMELOCK_CONTROLLER = keccak256("PWNProtocolTeamTimelockController");
+    bytes32 constant internal PRODUCT_TEAM_TIMELOCK_CONTROLLER = keccak256("PWNProductTeamTimelockController");
+
 }

@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 import "forge-std/Script.sol";
 
 import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "openzeppelin-contracts/contracts/governance/TimelockController.sol";
 
 import "@pwn/config/PWNConfig.sol";
 import "@pwn/deployer/PWNContractDeployerSalt.sol";
@@ -47,6 +48,10 @@ forge script script/PWN.s.sol:Deploy \
 --private-key $PRIVATE_KEY \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
+
+// Timelocks
+forge script script/PWN.s.sol:Deploy --sig "timelockControllerProtocol()"
+forge script script/PWN.s.sol:Deploy --sig "timelockControllerProduct()"
 
 */
 contract Deploy is Script {
@@ -209,6 +214,40 @@ contract Deploy is Script {
         console2.log("Loan asset:", address(loanAsset));
 
         vm.stopBroadcast();
+    }
+
+    function timelockControllerProtocol() external view {
+        address[] memory proposers = new address[](1);
+        proposers[0] = 0x61a77B19b7F4dB82222625D7a969698894d77473; // protocol safe
+        address[] memory executors = new address[](1);
+
+        bytes32 salt = PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER;
+        bytes memory deployProtocolTimelockData = abi.encodePacked(
+            type(TimelockController).creationCode,
+            abi.encode(type(uint256).max, proposers, executors, address(0))
+        );
+
+        console2.log("Deploy protocol timelock controller salt:");
+        console2.logBytes32(salt);
+        console2.log("Deploy protocol timelock controller data:");
+        console2.logBytes(deployProtocolTimelockData);
+    }
+
+    function timelockControllerProduct() external view {
+        address[] memory proposers = new address[](1);
+        proposers[0] = 0xd56635c0E91D31F88B89F195D3993a9e34516e59; // product safe
+        address[] memory executors = new address[](1);
+
+        bytes32 salt = PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER;
+        bytes memory deployProductTimelockData = abi.encodePacked(
+            type(TimelockController).creationCode,
+            abi.encode(uint256(0), proposers, executors, address(0))
+        );
+
+        console2.log("Deploy product timelock controller salt:");
+        console2.logBytes32(salt);
+        console2.log("Deploy product timelock controller data:");
+        console2.logBytes(deployProductTimelockData);
     }
 
 }

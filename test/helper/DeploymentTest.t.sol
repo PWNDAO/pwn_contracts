@@ -27,13 +27,15 @@ abstract contract DeploymentTest is Test {
 
     // Properties need to be in alphabetical order
     struct Deployment {
-        address admin;
         PWNConfig config;
-        address dao;
+        address daoSafe;
         PWNDeployer deployer;
         address feeCollector;
         PWNHub hub;
         PWNLOAN loanToken;
+        address productTimelock;
+        address protocolSafe;
+        address protocolTimelock;
         PWNRevokedNonce revokedOfferNonce;
         PWNRevokedNonce revokedRequestNonce;
         PWNSimpleLoan simpleLoan;
@@ -42,8 +44,11 @@ abstract contract DeploymentTest is Test {
         PWNSimpleLoanSimpleRequest simpleLoanSimpleRequest;
     }
 
-    address admin;
-    address dao;
+    address productTimelock;
+    address protocolTimelock;
+
+    address protocolSafe;
+    address daoSafe;
     address feeCollector;
 
     PWNDeployer deployer;
@@ -69,8 +74,10 @@ abstract contract DeploymentTest is Test {
             bytes memory rawDeployment = json.parseRaw(string.concat(".chains.", block.chainid.toString()));
             deployment = abi.decode(rawDeployment, (Deployment));
 
-            admin = deployment.admin;
-            dao = deployment.dao;
+            productTimelock = deployment.productTimelock;
+            protocolTimelock = deployment.protocolTimelock;
+            protocolSafe = deployment.protocolSafe;
+            daoSafe = deployment.daoSafe;
             feeCollector = deployment.feeCollector;
             deployer = deployment.deployer;
             hub = deployment.hub;
@@ -96,20 +103,20 @@ abstract contract DeploymentTest is Test {
     }
 
     function _deployProtocol() internal {
-        admin = makeAddr("admin");
-        dao = makeAddr("dao");
+        protocolSafe = makeAddr("protocolSafe");
+        daoSafe = makeAddr("daoSafe");
         feeCollector = makeAddr("feeCollector");
 
         // Deploy protocol
         PWNConfig configSingleton = new PWNConfig();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(configSingleton),
-            admin,
+            protocolSafe,
             abi.encodeWithSignature("initialize(address,uint16,address)", address(this), 0, feeCollector)
         );
         config = PWNConfig(address(proxy));
 
-        vm.prank(admin);
+        vm.prank(protocolSafe);
         hub = new PWNHub();
 
         loanToken = new PWNLOAN(address(hub));
@@ -141,7 +148,7 @@ abstract contract DeploymentTest is Test {
         tags[5] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
         tags[6] = PWNHubTags.LOAN_REQUEST;
 
-        vm.prank(admin);
+        vm.prank(protocolSafe);
         hub.setTags(addrs, tags, true);
     }
 
