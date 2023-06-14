@@ -64,7 +64,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @dev Emitted when a new loan in created.
      */
-    event LOANCreated(uint256 indexed loanId, PWNLOANTerms.Simple terms);
+    event LOANCreated(uint256 indexed loanId, PWNLOANTerms.Simple terms, bytes32 indexed factoryDataHash, address indexed factoryAddress);
 
     /**
      * @dev Emitted when a loan is paid back.
@@ -119,7 +119,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             revert CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY);
 
         // Build PWNLOANTerms.Simple by loan factory
-        PWNLOANTerms.Simple memory loanTerms = PWNSimpleLoanTermsFactory(loanTermsFactoryContract).createLOANTerms({
+        (PWNLOANTerms.Simple memory loanTerms, bytes32 factoryDataHash) = PWNSimpleLoanTermsFactory(loanTermsFactoryContract).createLOANTerms({
             caller: msg.sender,
             factoryData: loanTermsFactoryData,
             signature: signature
@@ -145,7 +145,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         loan.loanRepayAmount = loanTerms.loanRepayAmount;
         loan.collateral = loanTerms.collateral;
 
-        emit LOANCreated(loanId, loanTerms);
+        emit LOANCreated(loanId, loanTerms, factoryDataHash, loanTermsFactoryContract);
 
         // Transfer collateral to Vault
         _permit(loanTerms.collateral, loanTerms.borrower, collateralPermit);

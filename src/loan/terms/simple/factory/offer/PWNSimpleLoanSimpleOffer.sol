@@ -103,10 +103,10 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         address caller,
         bytes calldata factoryData,
         bytes calldata signature
-    ) external override onlyActiveLoan returns (PWNLOANTerms.Simple memory loanTerms) {
+    ) external override onlyActiveLoan returns (PWNLOANTerms.Simple memory loanTerms, bytes32 offerHash) {
 
         Offer memory offer = abi.decode(factoryData, (Offer));
-        bytes32 offerHash = getOfferHash(offer);
+        offerHash = getOfferHash(offer);
 
         address lender = offer.lender;
         address borrower = caller;

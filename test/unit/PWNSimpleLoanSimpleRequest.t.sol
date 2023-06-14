@@ -287,7 +287,7 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.prank(activeLoanContract);
-        PWNLOANTerms.Simple memory loanTerms = requestContract.createLOANTerms(lender, abi.encode(request), signature);
+        (PWNLOANTerms.Simple memory loanTerms, bytes32 requestHash) = requestContract.createLOANTerms(lender, abi.encode(request), signature);
 
         assertTrue(loanTerms.lender == lender);
         assertTrue(loanTerms.borrower == request.borrower);
@@ -301,6 +301,8 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         assertTrue(loanTerms.asset.id == 0);
         assertTrue(loanTerms.asset.amount == request.loanAmount);
         assertTrue(loanTerms.loanRepayAmount == request.loanAmount + request.loanYield);
+
+        assertTrue(requestHash == _requestHash(request));
     }
 
 }

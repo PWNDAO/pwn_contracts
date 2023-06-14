@@ -19,11 +19,12 @@ abstract contract PWNSimpleLoanTermsFactory {
      * @param factoryData Encoded data for a loan terms factory.
      * @param signature Signed loan factory data.
      * @return loanTerms Simple loan terms struct created from a loan factory data.
+     * @return factoryDataHash Hash of a loan offer / request that is signed by a lender / borrower. Used to uniquely identify a loan offer / request.
      */
     function createLOANTerms(
         address caller,
         bytes calldata factoryData,
         bytes calldata signature
-    ) external virtual returns (PWNLOANTerms.Simple memory loanTerms);
+    ) external virtual returns (PWNLOANTerms.Simple memory loanTerms, bytes32 factoryDataHash);
 
 }

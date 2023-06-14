@@ -347,7 +347,7 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        PWNLOANTerms.Simple memory loanTerms = offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
+        (PWNLOANTerms.Simple memory loanTerms, bytes32 offerHash) = offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
 
         assertTrue(loanTerms.lender == offer.lender);
         assertTrue(loanTerms.borrower == borrower);
@@ -361,6 +361,8 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         assertTrue(loanTerms.asset.id == 0);
         assertTrue(loanTerms.asset.amount == offer.loanAmount);
         assertTrue(loanTerms.loanRepayAmount == offer.loanAmount + offer.loanYield);
+
+        assertTrue(offerHash == _offerHash(offer));
     }
 
 }

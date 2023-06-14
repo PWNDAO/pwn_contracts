@@ -101,10 +101,10 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         address caller,
         bytes calldata factoryData,
         bytes calldata signature
-    ) external override onlyActiveLoan returns (PWNLOANTerms.Simple memory loanTerms) {
+    ) external override onlyActiveLoan returns (PWNLOANTerms.Simple memory loanTerms, bytes32 requestHash) {
 
         Request memory request = abi.decode(factoryData, (Request));
-        bytes32 requestHash = getRequestHash(request);
+        requestHash = getRequestHash(request);
 
         address lender = caller;
         address borrower = request.borrower;
