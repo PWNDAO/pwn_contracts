@@ -22,7 +22,7 @@ import "@pwn/PWNErrors.sol";
  */
 contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
-    string internal constant VERSION = "1.0";
+    string internal constant VERSION = "1.1";
     uint256 public constant MAX_EXPIRATION_EXTENSION = 2_592_000; // 30 days
 
     /*----------------------------------------------------------*|

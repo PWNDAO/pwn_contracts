@@ -15,7 +15,7 @@ import "@pwn/PWNErrors.sol";
  */
 contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
 
-    string internal constant VERSION = "1.0";
+    string internal constant VERSION = "1.1";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -62,6 +62,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         bool isPersistent;
         uint256 nonce;
     }
+
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
