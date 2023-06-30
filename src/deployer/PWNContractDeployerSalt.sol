@@ -4,10 +4,10 @@ pragma solidity 0.8.16;
 
 library PWNContractDeployerSalt {
 
-    string internal constant VERSION = "1.0";
+    string internal constant VERSION = "1.1";
 
     // Singletons
-    bytes32 constant internal CONFIG_V1 = keccak256("PWNConfigV1");
+    bytes32 constant internal CONFIG = keccak256("PWNConfig");
     bytes32 constant internal CONFIG_PROXY = keccak256("PWNConfigProxy");
     bytes32 constant internal HUB = keccak256("PWNHub");
     bytes32 constant internal LOAN = keccak256("PWNLOAN");
@@ -15,14 +15,14 @@ library PWNContractDeployerSalt {
     bytes32 constant internal REVOKED_REQUEST_NONCE = keccak256("PWNRevokedRequestNonce");
 
     // Loan types
-    bytes32 constant internal SIMPLE_LOAN_V1 = keccak256("PWNSimpleLoanV1");
+    bytes32 constant internal SIMPLE_LOAN = keccak256("PWNSimpleLoan");
 
     // Offer types
-    bytes32 constant internal SIMPLE_LOAN_SIMPLE_OFFER_V1 = keccak256("PWNSimpleLoanSimpleOfferV1");
-    bytes32 constant internal SIMPLE_LOAN_LIST_OFFER_V1 = keccak256("PWNSimpleLoanListOfferV1");
+    bytes32 constant internal SIMPLE_LOAN_SIMPLE_OFFER = keccak256("PWNSimpleLoanSimpleOffer");
+    bytes32 constant internal SIMPLE_LOAN_LIST_OFFER = keccak256("PWNSimpleLoanListOffer");
 
     // Request types
-    bytes32 constant internal SIMPLE_LOAN_SIMPLE_REQUEST_V1 = keccak256("PWNSimpleLoanSimpleRequestV1");
+    bytes32 constant internal SIMPLE_LOAN_SIMPLE_REQUEST = keccak256("PWNSimpleLoanSimpleRequest");
 
     // Timelock controllers
     bytes32 constant internal PROTOCOL_TEAM_TIMELOCK_CONTROLLER = keccak256("PWNProtocolTeamTimelockController");
