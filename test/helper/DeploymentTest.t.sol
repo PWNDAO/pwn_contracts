@@ -7,7 +7,7 @@ import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeabl
 import "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 import "@pwn/config/PWNConfig.sol";
-import "@pwn/deployer/PWNDeployer.sol";
+import "@pwn/deployer/IPWNDeployer.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
@@ -29,7 +29,7 @@ abstract contract DeploymentTest is Test {
     struct Deployment {
         PWNConfig config;
         address daoSafe;
-        PWNDeployer deployer;
+        IPWNDeployer deployer;
         address feeCollector;
         PWNHub hub;
         PWNLOAN loanToken;
@@ -51,7 +51,7 @@ abstract contract DeploymentTest is Test {
     address daoSafe;
     address feeCollector;
 
-    PWNDeployer deployer;
+    IPWNDeployer deployer;
     PWNHub hub;
     PWNConfig config;
     PWNLOAN loanToken;

@@ -7,8 +7,8 @@ import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeabl
 import "openzeppelin-contracts/contracts/governance/TimelockController.sol";
 
 import "@pwn/config/PWNConfig.sol";
+import "@pwn/deployer/IPWNDeployer.sol";
 import "@pwn/deployer/PWNContractDeployerSalt.sol";
-import "@pwn/deployer/PWNDeployer.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
@@ -73,7 +73,7 @@ contract Deploy is Script {
     ) external {
         vm.startBroadcast();
 
-        PWNDeployer deployer = PWNDeployer(deployer_);
+        IPWNDeployer deployer = IPWNDeployer(deployer_);
 
         // Deploy protocol
 
