@@ -7,7 +7,7 @@ library PWNContractDeployerSalt {
     string internal constant VERSION = "1.1";
 
     // Singletons
-    bytes32 constant internal CONFIG = keccak256("PWNConfig");
+    bytes32 constant internal CONFIG_V1 = keccak256("PWNConfigV1");
     bytes32 constant internal CONFIG_PROXY = keccak256("PWNConfigProxy");
     bytes32 constant internal HUB = keccak256("PWNHub");
     bytes32 constant internal LOAN = keccak256("PWNLOAN");
