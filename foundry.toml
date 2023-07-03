@@ -7,8 +7,13 @@ fs_permissions = [{ access = "read", path = "./deployments.json"}]
 # Mainnets
 mainnet = "${ETHEREUM_URL}"
 polygon = "${POLYGON_URL}"
+cronos = "${CRONOS_URL}"
+mantle = "${MANTLE_URL}"
 
 # Testnets
 goerli = "${GOERLI_URL}"
 mumbai = "${MUMBAI_URL}"
+cronos_testnet = "${CRONOS_TESTNET_URL}"
+mantle_testnet = "${MANTLE_TESTNET_URL}"
+
 local = "${LOCAL_URL}"
