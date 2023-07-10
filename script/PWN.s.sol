@@ -80,14 +80,14 @@ forge script script/PWN.s.sol:Deploy \
             )
         }));
 
-        // // - Hub
+        // - Hub
         hub = PWNHub(deployer.deployAndTransferOwnership({
             salt: PWNContractDeployerSalt.HUB,
             owner: protocolSafe,
             bytecode: type(PWNHub).creationCode
         }));
 
-        // // - LOAN token
+        // - LOAN token
         loanToken = PWNLOAN(deployer.deploy({
             salt: PWNContractDeployerSalt.LOAN,
             bytecode: abi.encodePacked(
