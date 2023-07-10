@@ -94,6 +94,8 @@ contract DeployedProtocolTest is DeploymentTest {
 
     function test_deployedProtocol_ethereum() external { _test_deployedProtocol("mainnet"); }
     function test_deployedProtocol_polygon() external { _test_deployedProtocol("polygon"); }
+    function test_deployedProtocol_cronos() external { _test_deployedProtocol("cronos"); }
+
     function test_deployedProtocol_goerli() external { _test_deployedProtocol("goerli"); }
     function test_deployedProtocol_mumbai() external { _test_deployedProtocol("mumbai"); }
     function test_deployedProtocol_cronos_testnet() external { _test_deployedProtocol("cronos_testnet"); }

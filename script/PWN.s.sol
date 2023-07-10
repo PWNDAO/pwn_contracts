@@ -55,7 +55,7 @@ forge script script/PWN.s.sol:Deploy \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
-    /// @dev Expecting to have protocolSafe, daoSafe & feeCollector addresses set in the `deployments.json`
+    /// @dev Expecting to have deployer, protocolSafe, daoSafe & feeCollector addresses set in the `deployments.json`
     function deployProtocol() external {
         _loadDeployedAddresses();
 
@@ -270,7 +270,7 @@ contract Setup is Deployments, Script {
 forge script script/PWN.s.sol:Setup \
 --sig "setTags()" \
 --rpc-url $LOCAL_URL \
---private-key $PRIVATE_KEY_DEVNET \
+--private-key $PRIVATE_KEY \
 --broadcast
 */
     /// @dev Expecting to have protocol addresses set in the `deployments.json`
@@ -324,11 +324,15 @@ forge script script/PWN.s.sol:Setup \
     function acceptOwnership(address safe, address contract_) external {
         vm.startBroadcast();
 
-        _gnosisSafeTx({
+        bool success = _gnosisSafeTx({
             safe: safe,
             to: contract_,
             data: abi.encodeWithSignature("acceptOwnership()")
         });
+        if (success)
+            console2.log("Accept ownership tx succeeded");
+        else
+            console2.log("Accept ownership tx failed");
 
         vm.stopBroadcast();
     }
