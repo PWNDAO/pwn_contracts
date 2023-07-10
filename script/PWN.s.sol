@@ -162,52 +162,64 @@ forge script script/PWN.s.sol:Deploy \
 
 /*
 forge script script/PWN.s.sol:Deploy \
---sig "timelockControllerProtocol()"
---rpc-url $RPC_URL
+--sig "deployProtocolTimelockController()" \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--verify --etherscan-api-key $ETHERSCAN_API_KEY \
+--broadcast
 */
-    /// @dev Expecting to have protocolSafe address set in the `deployments.json`
-    function timelockControllerProtocol() external {
+    /// @dev Expecting to have deployer & protocolSafe addresses set in the `deployments.json`
+    function deployProtocolTimelockController() external {
         _loadDeployedAddresses();
+
+        vm.startBroadcast();
 
         address[] memory proposers = new address[](1);
         proposers[0] = protocolSafe;
         address[] memory executors = new address[](1);
 
-        bytes32 salt = PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER;
-        bytes memory deployProtocolTimelockData = abi.encodePacked(
-            type(TimelockController).creationCode,
-            abi.encode(type(uint256).max, proposers, executors, address(0))
-        );
+        address timelock = deployer.deploy({
+            salt: PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER,
+            bytecode: abi.encodePacked(
+                type(TimelockController).creationCode,
+                abi.encode(type(uint256).max, proposers, executors, address(0))
+            )
+        });
 
-        console2.log("Deploy protocol timelock controller salt:");
-        console2.logBytes32(salt);
-        console2.log("Deploy protocol timelock controller data:");
-        console2.logBytes(deployProtocolTimelockData);
+        console2.log("Deployed protocol timelock controller:", timelock);
+
+        vm.stopBroadcast();
     }
 
 /*
 forge script script/PWN.s.sol:Deploy \
- --sig "timelockControllerProduct()" \
- --rpc-url $RPC_URL
+--sig "deployProductTimelockController()" \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--verify --etherscan-api-key $ETHERSCAN_API_KEY \
+--broadcast
 */
-    /// @dev Expecting to have daoSafe address set in the `deployments.json`
-    function timelockControllerProduct() external {
+    /// @dev Expecting to have deployer & daoSafe addresses set in the `deployments.json`
+    function deployProductTimelockController() external {
         _loadDeployedAddresses();
+
+        vm.startBroadcast();
 
         address[] memory proposers = new address[](1);
         proposers[0] = daoSafe;
         address[] memory executors = new address[](1);
 
-        bytes32 salt = PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER;
-        bytes memory deployProductTimelockData = abi.encodePacked(
-            type(TimelockController).creationCode,
-            abi.encode(uint256(0), proposers, executors, address(0))
-        );
+        address timelock = deployer.deploy({
+            salt: PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER,
+            bytecode: abi.encodePacked(
+                type(TimelockController).creationCode,
+                abi.encode(type(uint256).max, proposers, executors, address(0))
+            )
+        });
 
-        console2.log("Deploy product timelock controller salt:");
-        console2.logBytes32(salt);
-        console2.log("Deploy product timelock controller data:");
-        console2.logBytes(deployProductTimelockData);
+        console2.log("Deployed product timelock controller:", timelock);
+
+        vm.stopBroadcast();
     }
 
 /*
