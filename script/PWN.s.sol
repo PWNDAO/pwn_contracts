@@ -182,7 +182,7 @@ forge script script/PWN.s.sol:Deploy \
             salt: PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER,
             bytecode: abi.encodePacked(
                 type(TimelockController).creationCode,
-                abi.encode(type(uint256).max, proposers, executors, address(0))
+                abi.encode(uint256(0), proposers, executors, address(0))
             )
         });
 
@@ -213,7 +213,7 @@ forge script script/PWN.s.sol:Deploy \
             salt: PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER,
             bytecode: abi.encodePacked(
                 type(TimelockController).creationCode,
-                abi.encode(type(uint256).max, proposers, executors, address(0))
+                abi.encode(uint256(0), proposers, executors, address(0))
             )
         });
 
