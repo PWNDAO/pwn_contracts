@@ -15,7 +15,7 @@ import "@pwn/PWNErrors.sol";
  */
 contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
 
-    string internal constant VERSION = "1.0";
+    string internal constant VERSION = "1.1";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -35,7 +35,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
-     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 1.
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0.
      * @param loanAssetAddress Address of an asset which is lender to a borrower.
      * @param loanAmount Amount of tokens which is offered as a loan to a borrower.
      * @param loanYield Amount of tokens which acts as a lenders loan interest. Borrower has to pay back a borrowed amount + yield.
@@ -62,6 +62,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         bool isPersistent;
         uint256 nonce;
     }
+
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
@@ -103,10 +104,10 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         address caller,
         bytes calldata factoryData,
         bytes calldata signature
-    ) external override onlyActiveLoan returns (PWNLOANTerms.Simple memory loanTerms) {
+    ) external override onlyActiveLoan returns (PWNLOANTerms.Simple memory loanTerms, bytes32 offerHash) {
 
         Offer memory offer = abi.decode(factoryData, (Offer));
-        bytes32 offerHash = getOfferHash(offer);
+        offerHash = getOfferHash(offer);
 
         address lender = offer.lender;
         address borrower = caller;

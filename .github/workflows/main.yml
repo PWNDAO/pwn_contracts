@@ -9,8 +9,11 @@ jobs:
     env:
       ETHEREUM_URL: ${{ secrets.ETHEREUM_URL }}
       POLYGON_URL: ${{ secrets.POLYGON_URL }}
+      CRONOS_URL: ${{ secrets.CRONOS_URL }}
       GOERLI_URL: ${{ secrets.GOERLI_URL }}
       MUMBAI_URL: ${{ secrets.MUMBAI_URL }}
+      CRONOS_TESTNET_URL: ${{ secrets.CRONOS_TESTNET_URL }}
+      MANTLE_TESTNET_URL: ${{ secrets.MANTLE_TESTNET_URL }}
 
     runs-on: ubuntu-latest
 
@@ -26,7 +29,7 @@ jobs:
         run: forge install
 
       - name: Run unit tests
-        run: forge test --match-path "test/unit/*" --force
+        run: forge test --match-path "test/unit/*" --force -vvv
 
       - name: Run integration tests
-        run: forge test --match-path "test/integration/*"
+        run: forge test --match-path "test/integration/*" -vvv

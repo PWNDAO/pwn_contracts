@@ -28,7 +28,7 @@ contract PWNSimpleLoanRequestExposed is PWNSimpleLoanRequest {
         address /*caller*/,
         bytes calldata /*factoryData*/,
         bytes calldata /*signature*/
-    ) override external pure returns (PWNLOANTerms.Simple memory) {
+    ) override external pure returns (PWNLOANTerms.Simple memory, bytes32) {
         revert("Missing implementation");
     }
 

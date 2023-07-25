@@ -40,8 +40,9 @@ abstract contract PWNSimpleLoanTest is Test {
     bytes signature;
     bytes loanAssetPermit;
     bytes collateralPermit;
+    bytes32 loanFactoryDataHash;
 
-    event LOANCreated(uint256 indexed loanId, PWNLOANTerms.Simple terms);
+    event LOANCreated(uint256 indexed loanId, PWNLOANTerms.Simple terms, bytes32 indexed factoryDataHash, address indexed factoryAddress);
     event LOANPaidBack(uint256 indexed loanId);
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
     event LOANExpirationDateExtended(uint256 indexed loanId, uint40 extendedExpirationDate);
@@ -107,6 +108,8 @@ abstract contract PWNSimpleLoanTest is Test {
             loanRepayAmount: 0,
             collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0)
         });
+
+        loanFactoryDataHash = keccak256("factoryData");
 
         vm.mockCall(
             address(fungibleAsset),
@@ -221,7 +224,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         vm.mockCall(
             loanFactory,
             abi.encodeWithSignature("createLOANTerms(address,bytes,bytes)"),
-            abi.encode(simpleLoanTerms)
+            abi.encode(simpleLoanTerms, loanFactoryDataHash)
         );
 
         vm.mockCall(
@@ -258,7 +261,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         vm.mockCall(
             loanFactory,
             abi.encodeWithSignature("createLOANTerms(address,bytes,bytes)"),
-            abi.encode(simpleLoanTerms)
+            abi.encode(simpleLoanTerms, loanFactoryDataHash)
         );
 
         vm.expectRevert(InvalidLoanAsset.selector);
@@ -274,7 +277,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         vm.mockCall(
             loanFactory,
             abi.encodeWithSignature("createLOANTerms(address,bytes,bytes)"),
-            abi.encode(simpleLoanTerms)
+            abi.encode(simpleLoanTerms, loanFactoryDataHash)
         );
 
         vm.expectRevert(InvalidCollateralAsset.selector);
@@ -305,7 +308,7 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         vm.mockCall(
             loanFactory,
             abi.encodeWithSignature("createLOANTerms(address,bytes,bytes)"),
-            abi.encode(simpleLoanTerms)
+            abi.encode(simpleLoanTerms, loanFactoryDataHash)
         );
 
         collateralPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
@@ -374,8 +377,8 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldEmitEvent_LOANCreated() external {
-        vm.expectEmit(true, false, false, true);
-        emit LOANCreated(loanId, simpleLoanTerms);
+        vm.expectEmit(true, true, true, true);
+        emit LOANCreated(loanId, simpleLoanTerms, loanFactoryDataHash, loanFactory);
 
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
