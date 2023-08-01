@@ -12,7 +12,6 @@ mantle = "${MANTLE_URL}"
 
 # Testnets
 goerli = "${GOERLI_URL}"
-mumbai = "${MUMBAI_URL}"
 cronos_testnet = "${CRONOS_TESTNET_URL}"
 mantle_testnet = "${MANTLE_TESTNET_URL}"
 
