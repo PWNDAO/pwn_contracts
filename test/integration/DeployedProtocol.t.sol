@@ -37,8 +37,8 @@ contract DeployedProtocolTest is DeploymentTest {
             assertTrue(protocolTimelockController.hasRole(EXECUTOR_ROLE, address(0)));
 
             TimelockController productTimelockController = TimelockController(payable(productTimelock));
-            // - product timelock has min delay of 7 days
-            assertEq(productTimelockController.getMinDelay(), 604_800);
+            // - product timelock has min delay of 4 days
+            assertEq(productTimelockController.getMinDelay(), 345_600);
             // - dao safe has PROPOSER role in product timelock
             assertTrue(productTimelockController.hasRole(PROPOSER_ROLE, daoSafe));
             // - dao safe has CANCELLER role in product timelock
