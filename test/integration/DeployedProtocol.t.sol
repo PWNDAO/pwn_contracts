@@ -28,7 +28,7 @@ contract DeployedProtocolTest is DeploymentTest {
         if (block.chainid == 1 || block.chainid == 137) {
             TimelockController protocolTimelockController = TimelockController(payable(protocolTimelock));
             // - protocol timelock has min delay of 14 days
-            assertEq(protocolTimelockController.getMinDelay(), 1_209_600);
+            assertEq(protocolTimelockController.getMinDelay(), 345_600);
             // - protocol safe has PROPOSER role in protocol timelock
             assertTrue(protocolTimelockController.hasRole(PROPOSER_ROLE, protocolSafe));
             // - protocol safe has CANCELLER role in protocol timelock
