@@ -98,6 +98,7 @@ contract DeployedProtocolTest is DeploymentTest {
     function test_deployedProtocol_cronos() external { _test_deployedProtocol("cronos"); }
 
     function test_deployedProtocol_goerli() external { _test_deployedProtocol("goerli"); }
+    function test_deployedProtocol_base_goerli() external { _test_deployedProtocol("base_goerli"); }
     function test_deployedProtocol_cronos_testnet() external { _test_deployedProtocol("cronos_testnet"); }
     function test_deployedProtocol_mantle_testnet() external { _test_deployedProtocol("mantle_testnet"); }
 
