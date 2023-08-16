@@ -1,9 +1,26 @@
 {
-    "deployedChains": [1, 25, 137, 5, 338, 5001],
+    "deployedChains": [1, 5, 25, 137, 338, 5001, 8453],
     "chains": {
         "1": {
             "productTimelock": "0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12",
             "protocolTimelock": "0x9b1ec4bc634db130ab7310d4e585338888030623",
+            "protocolSafe": "0x61a77B19b7F4dB82222625D7a969698894d77473",
+            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
+            "feeCollector": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
+            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
+            "config": "0x03DeAfC9678ab25F059df59Be3B20875018e1d46",
+            "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+            "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+            "revokedOfferNonce": "0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e",
+            "revokedRequestNonce": "0x472361E75d28597b0a7F86146fbB4a86f173d10D",
+            "simpleLoan": "0x57c88D78f6D08b5c88b4A3b7BbB0C1AA34c3280A",
+            "simpleLoanSimpleOffer": "0x5E551f09b8d1353075A1FF3B484Ee688aCAc02F6",
+            "simpleLoanListOffer": "0xDA027058708961Be3676daEB68Fde1758B210065",
+            "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
+        },
+        "5": {
+            "productTimelock": "0x0000000000000000000000000000000000000000",
+            "protocolTimelock": "0x0000000000000000000000000000000000000000",
             "protocolSafe": "0x61a77B19b7F4dB82222625D7a969698894d77473",
             "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
             "feeCollector": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
@@ -52,23 +69,6 @@
             "simpleLoanListOffer": "0xDA027058708961Be3676daEB68Fde1758B210065",
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
-        "5": {
-            "productTimelock": "0x0000000000000000000000000000000000000000",
-            "protocolTimelock": "0x0000000000000000000000000000000000000000",
-            "protocolSafe": "0x61a77B19b7F4dB82222625D7a969698894d77473",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "feeCollector": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
-            "config": "0x03DeAfC9678ab25F059df59Be3B20875018e1d46",
-            "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
-            "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
-            "revokedOfferNonce": "0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e",
-            "revokedRequestNonce": "0x472361E75d28597b0a7F86146fbB4a86f173d10D",
-            "simpleLoan": "0x57c88D78f6D08b5c88b4A3b7BbB0C1AA34c3280A",
-            "simpleLoanSimpleOffer": "0x5E551f09b8d1353075A1FF3B484Ee688aCAc02F6",
-            "simpleLoanListOffer": "0xDA027058708961Be3676daEB68Fde1758B210065",
-            "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
-        },
         "338": {
             "productTimelock": "0x0000000000000000000000000000000000000000",
             "protocolTimelock": "0x0000000000000000000000000000000000000000",
@@ -87,6 +87,23 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "5001": {
+            "productTimelock": "0x0000000000000000000000000000000000000000",
+            "protocolTimelock": "0x0000000000000000000000000000000000000000",
+            "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
+            "daoSafe": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
+            "feeCollector": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
+            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
+            "config": "0x55e6A9F4183CFC01ecE8f2258FC13b93e1B6c140",
+            "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+            "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+            "revokedOfferNonce": "0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e",
+            "revokedRequestNonce": "0x472361E75d28597b0a7F86146fbB4a86f173d10D",
+            "simpleLoan": "0x4188C513fd94B0458715287570c832d9560bc08a",
+            "simpleLoanSimpleOffer": "0x5E551f09b8d1353075A1FF3B484Ee688aCAc02F6",
+            "simpleLoanListOffer": "0xDA027058708961Be3676daEB68Fde1758B210065",
+            "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
+        },
+        "8453": {
             "productTimelock": "0x0000000000000000000000000000000000000000",
             "protocolTimelock": "0x0000000000000000000000000000000000000000",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
