@@ -9,8 +9,10 @@ jobs:
     env:
       ETHEREUM_URL: ${{ secrets.ETHEREUM_URL }}
       POLYGON_URL: ${{ secrets.POLYGON_URL }}
+      BASE_URL: ${{ secrets.BASE_URL }}
       CRONOS_URL: ${{ secrets.CRONOS_URL }}
       GOERLI_URL: ${{ secrets.GOERLI_URL }}
+      BASE_GOERLI_URL: ${{ secrets.BASE_GOERLI_URL }}
       CRONOS_TESTNET_URL: ${{ secrets.CRONOS_TESTNET_URL }}
       MANTLE_TESTNET_URL: ${{ secrets.MANTLE_TESTNET_URL }}
 
