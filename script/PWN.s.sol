@@ -281,7 +281,7 @@ contract Setup is Deployments, Script {
 /*
 forge script script/PWN.s.sol:Setup \
 --sig "setTags()" \
---rpc-url $LOCAL_URL \
+--rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
 --broadcast
 */
@@ -406,6 +406,3 @@ forge script script/PWN.s.sol:Setup \
     }
 
 }
-
-// Tags
-// [0x9e56ea094d7a53440eef11fa42b63159fbf703b4ee579494a6ae85afc5603594, 0xad7661817597136ce476ebc3173f62ce62c618f21c1809bd506e6dee26b217be, 0xe28f844deb305d6f42bccd9495572366ffc5df5d7ae8aca8b455248373c4ecfb, 0xad7661817597136ce476ebc3173f62ce62c618f21c1809bd506e6dee26b217be, 0xe28f844deb305d6f42bccd9495572366ffc5df5d7ae8aca8b455248373c4ecfb, 0xad7661817597136ce476ebc3173f62ce62c618f21c1809bd506e6dee26b217be, 0xcc3e8039ebc82cf2dfc85f5e6f3b220fb59b5b4077418e8b935c7113f42bd229]
