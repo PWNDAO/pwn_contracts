@@ -36,8 +36,8 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "25": {
-            "productTimelock": "0x0000000000000000000000000000000000000000",
-            "protocolTimelock": "0x0000000000000000000000000000000000000000",
+            "productTimelock": "0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39",
+            "protocolTimelock": "0x744B83343a86F87Ed05a5f3A92939D6d81520F27",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
             "daoSafe": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
             "feeCollector": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
@@ -104,8 +104,8 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "8453": {
-            "productTimelock": "0x0000000000000000000000000000000000000000",
-            "protocolTimelock": "0x0000000000000000000000000000000000000000",
+            "productTimelock": "0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39",
+            "protocolTimelock": "0x744B83343a86F87Ed05a5f3A92939D6d81520F27",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
             "daoSafe": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
             "feeCollector": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",

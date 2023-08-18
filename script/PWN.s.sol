@@ -405,4 +405,141 @@ forge script script/PWN.s.sol:Setup \
         vm.stopBroadcast();
     }
 
+
+/*
+forge script script/PWN.s.sol:Setup \
+--sig "setProtocolTimelock()" \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--broadcast
+*/
+    function setProtocolTimelock() external {
+        _loadDeployedAddresses();
+
+        vm.startBroadcast();
+
+        // set PWNConfig admin
+        bool success;
+        success = _gnosisSafeTx({
+            safe: protocolSafe,
+            to: address(config),
+            data: abi.encodeWithSignature("changeAdmin(address)", protocolTimelock)
+        });
+        require(success, "PWN: change admin failed");
+
+        // transfer PWNHub owner
+        success = _gnosisSafeTx({
+            safe: protocolSafe,
+            to: address(hub),
+            data: abi.encodeWithSignature("transferOwnership(address)", protocolTimelock)
+        });
+        require(success, "PWN: change owner failed");
+
+        // accept PWNHub owner
+        success = _gnosisSafeTx({
+            safe: protocolSafe,
+            to: address(protocolTimelock),
+            data: abi.encodeWithSignature(
+                "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+                address(hub), 0, abi.encodeWithSignature("acceptOwnership()"), 0, 0, 0
+            )
+        });
+        require(success, "PWN: schedule failed");
+
+        TimelockController(payable(protocolTimelock)).execute({
+            target: address(hub),
+            value: 0,
+            payload: abi.encodeWithSignature("acceptOwnership()"),
+            predecessor: 0,
+            salt: 0
+        });
+
+        // Set min delay
+        success = _gnosisSafeTx({
+            safe: protocolSafe,
+            to: address(protocolTimelock),
+            data: abi.encodeWithSignature(
+                "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+                address(protocolTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", 345_600), 0, 0, 0
+            )
+        });
+        require(success, "PWN: update delay failed");
+
+        TimelockController(payable(protocolTimelock)).execute({
+            target: protocolTimelock,
+            value: 0,
+            payload: abi.encodeWithSignature("updateDelay(uint256)", 345_600),
+            predecessor: 0,
+            salt: 0
+        });
+
+        console2.log("Protocol timelock set");
+
+        vm.stopBroadcast();
+    }
+
+/*
+forge script script/PWN.s.sol:Setup \
+--sig "setProductTimelock()" \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--broadcast
+*/
+    function setProductTimelock() external {
+        _loadDeployedAddresses();
+
+        vm.startBroadcast();
+
+        // transfer PWNConfig owner
+        bool success;
+        success = _gnosisSafeTx({
+            safe: daoSafe,
+            to: address(config),
+            data: abi.encodeWithSignature("transferOwnership(address)", productTimelock)
+        });
+        require(success, "PWN: change owner failed");
+
+        // accept PWNConfig owner
+        success = _gnosisSafeTx({
+            safe: daoSafe,
+            to: address(productTimelock),
+            data: abi.encodeWithSignature(
+                "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+                address(config), 0, abi.encodeWithSignature("acceptOwnership()"), 0, 0, 0
+            )
+        });
+        require(success, "PWN: schedule failed");
+
+        TimelockController(payable(productTimelock)).execute({
+            target: address(config),
+            value: 0,
+            payload: abi.encodeWithSignature("acceptOwnership()"),
+            predecessor: 0,
+            salt: 0
+        });
+
+        // Set min delay
+        success = _gnosisSafeTx({
+            safe: daoSafe,
+            to: address(productTimelock),
+            data: abi.encodeWithSignature(
+                "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+                address(productTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", 345_600), 0, 0, 0
+            )
+        });
+        require(success, "PWN: update delay failed");
+
+        TimelockController(payable(productTimelock)).execute({
+            target: productTimelock,
+            value: 0,
+            payload: abi.encodeWithSignature("updateDelay(uint256)", 345_600),
+            predecessor: 0,
+            salt: 0
+        });
+
+        console2.log("Product timelock set");
+
+        vm.stopBroadcast();
+    }
+
 }

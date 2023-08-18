@@ -25,7 +25,8 @@ contract DeployedProtocolTest is DeploymentTest {
         assertEq(deployer.owner(), protocolSafe);
 
         // TIMELOCK CONTROLLERS
-        if (block.chainid == 1 || block.chainid == 137) {
+        bool hasTimelock = protocolTimelock != address(0) && productTimelock != address(0);
+        if (hasTimelock) {
             TimelockController protocolTimelockController = TimelockController(payable(protocolTimelock));
             // - protocol timelock has min delay of 14 days
             assertEq(protocolTimelockController.getMinDelay(), 345_600);
@@ -48,7 +49,7 @@ contract DeployedProtocolTest is DeploymentTest {
         }
 
         // CONFIG
-        if (block.chainid == 1 || block.chainid == 137) {
+        if (hasTimelock) {
             // - admin is protocol timelock
             assertEq(vm.load(address(config), PROXY_ADMIN_SLOT), bytes32(uint256(uint160(protocolTimelock))));
             // - owner is product timelock
@@ -68,7 +69,7 @@ contract DeployedProtocolTest is DeploymentTest {
         assertEq(vm.load(configImplementation, bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(1)));
 
         // HUB
-        if (block.chainid == 1 || block.chainid == 137) {
+        if (hasTimelock) {
             // - owner is protocol timelock
             assertEq(hub.owner(), protocolTimelock);
         } else {
