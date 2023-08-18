@@ -43,10 +43,18 @@ For in-depth documentation about PWN contracts see [PWN Developer Docs](https://
         <td>PWNSimpleLoanSimpleRequest</td><td>0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D</td><td><a href="https://etherscan.io/address/0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D">Ethereum</a> <a href="https://polygonscan.com/address/0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D">Polygon</a> <a href="https://basescan.org/address/0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D">Base</a> <a href="https://cronoscan.com/address/0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D">Cronos</a> <a href="https://goerli.etherscan.io/address/0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D">Goerli</a></td>
     </tr>
     <tr>
-        <td>Product TimelockController</td><td>0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12</td><td><a href="https://etherscan.io/address/0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12">Ethereum</a> <a href="https://polygonscan.com/address/0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12">Polygon</a></td>
+        <td rowspan=2>Product TimelockController</td>
+        <td>0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12</td><td><a href="https://etherscan.io/address/0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12">Ethereum</a> <a href="https://polygonscan.com/address/0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12">Polygon</a></td>
     </tr>
     <tr>
-        <td>Protocol TimelockController</td><td>0x9b1ec4bc634db130ab7310d4e585338888030623</td><td><a href="https://etherscan.io/address/0x9b1ec4bc634db130ab7310d4e585338888030623">Ethereum</a> <a href="https://polygonscan.com/address/0x9b1ec4bc634db130ab7310d4e585338888030623">Polygon</a></td>
+        <td>0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39</td><td><a href="https://basescan.org/address/0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39">Base</a> <a href="https://cronoscan.com/address/0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39">Cronos</a></td>
+    </tr>
+    <tr>
+        <td rowspan=2>Protocol TimelockController</td>
+        <td>0x9b1ec4bc634db130ab7310d4e585338888030623</td><td><a href="https://etherscan.io/address/0x9b1ec4bc634db130ab7310d4e585338888030623">Ethereum</a> <a href="https://polygonscan.com/address/0x9b1ec4bc634db130ab7310d4e585338888030623">Polygon</a></td>
+    </tr>
+    <tr>
+        <td>0x744B83343a86F87Ed05a5f3A92939D6d81520F27</td><td><a href="https://basescan.org/address/0x744B83343a86F87Ed05a5f3A92939D6d81520F27">Base</a> <a href="https://cronoscan.com/address/0x744B83343a86F87Ed05a5f3A92939D6d81520F27">Cronos</a></td>
     </tr>
 </table>
 
