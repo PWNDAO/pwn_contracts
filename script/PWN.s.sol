@@ -41,7 +41,29 @@ interface GnosisSafeLike {
 }
 
 
+library GnosisSafeUtils {
+
+    function _gnosisSafeTx(address safe, address to, bytes memory data) internal returns (bool) {
+        uint256 ownerValue = uint256(uint160(msg.sender));
+        return GnosisSafeLike(safe).execTransaction({
+            to: to,
+            value: 0,
+            data: data,
+            operation: 0,
+            safeTxGas: 0,
+            baseGas: 0,
+            gasPrice: 0,
+            gasToken: address(0),
+            refundReceiver: payable(0),
+            signatures: abi.encodePacked(ownerValue, bytes32(0), uint8(1))
+        });
+    }
+
+}
+
+
 contract Deploy is Deployments, Script {
+    using GnosisSafeUtils for address;
 
     function _protocolNotDeployedOnSelectedChain() internal pure override {
         revert("PWN: selected chain is not set in deployments.json");
@@ -178,15 +200,19 @@ forge script script/PWN.s.sol:Deploy \
         proposers[0] = protocolSafe;
         address[] memory executors = new address[](1);
 
-        address timelock = deployer.deploy({
-            salt: PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER,
-            bytecode: abi.encodePacked(
-                type(TimelockController).creationCode,
-                abi.encode(uint256(0), proposers, executors, address(0))
+        bool success = protocolSafe._gnosisSafeTx({
+            to: address(deployer),
+            data: abi.encodeWithSignature("deploy(bytes32,bytes)",
+                PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER,
+                abi.encodePacked(
+                    type(TimelockController).creationCode,
+                    abi.encode(uint256(0), proposers, executors, address(0))
+                )
             )
         });
 
-        console2.log("Deployed protocol timelock controller:", timelock);
+        require(success, "Protocol timelock deployment failed");
+        console2.log("Protocol timelock deployed");
 
         vm.stopBroadcast();
     }
@@ -209,15 +235,19 @@ forge script script/PWN.s.sol:Deploy \
         proposers[0] = daoSafe;
         address[] memory executors = new address[](1);
 
-        address timelock = deployer.deploy({
-            salt: PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER,
-            bytecode: abi.encodePacked(
-                type(TimelockController).creationCode,
-                abi.encode(uint256(0), proposers, executors, address(0))
+        bool success = protocolSafe._gnosisSafeTx({
+            to: address(deployer),
+            data: abi.encodeWithSignature("deploy(bytes32,bytes)",
+                PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER,
+                abi.encodePacked(
+                    type(TimelockController).creationCode,
+                    abi.encode(uint256(0), proposers, executors, address(0))
+                )
             )
         });
 
-        console2.log("Deployed product timelock controller:", timelock);
+        require(success, "Product timelock deployment failed");
+        console2.log("Product timelock deployed");
 
         vm.stopBroadcast();
     }
@@ -251,25 +281,10 @@ forge script script/PWN.s.sol:Deploy \
 
 
 contract Setup is Deployments, Script {
+    using GnosisSafeUtils for address;
 
     function _protocolNotDeployedOnSelectedChain() internal pure override {
         revert("PWN: selected chain is not set in deployments.json");
-    }
-
-    function _gnosisSafeTx(address safe, address to, bytes memory data) private returns (bool) {
-        uint256 ownerValue = uint256(uint160(msg.sender));
-        return GnosisSafeLike(safe).execTransaction({
-            to: to,
-            value: 0,
-            data: data,
-            operation: 0,
-            safeTxGas: 0,
-            baseGas: 0,
-            gasPrice: 0,
-            gasToken: address(0),
-            refundReceiver: payable(0),
-            signatures: abi.encodePacked(ownerValue, bytes32(0), uint8(1))
-        });
     }
 
 
@@ -309,18 +324,15 @@ forge script script/PWN.s.sol:Setup \
         tags[5] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
         tags[6] = PWNHubTags.LOAN_REQUEST;
 
-        bool success = _gnosisSafeTx({
-            safe: protocolSafe,
+        bool success = protocolSafe._gnosisSafeTx({
             to: address(hub),
             data: abi.encodeWithSignature(
                 "setTags(address[],bytes32[],bool)", addrs, tags, true
             )
         });
 
-        if (success)
-            console2.log("Tags set succeeded");
-        else
-            console2.log("Tags set failed");
+        require(success, "Tags set failed");
+        console2.log("Tags set succeeded");
 
         vm.stopBroadcast();
     }
@@ -336,15 +348,13 @@ forge script script/PWN.s.sol:Setup \
     function acceptOwnership(address safe, address contract_) external {
         vm.startBroadcast();
 
-        bool success = _gnosisSafeTx({
-            safe: safe,
+        bool success = safe._gnosisSafeTx({
             to: contract_,
             data: abi.encodeWithSignature("acceptOwnership()")
         });
-        if (success)
-            console2.log("Accept ownership tx succeeded");
-        else
-            console2.log("Accept ownership tx failed");
+
+        require(success, "Accept ownership tx failed");
+        console2.log("Accept ownership tx succeeded");
 
         vm.stopBroadcast();
     }
@@ -360,18 +370,15 @@ forge script script/PWN.s.sol:Setup \
     function swapSafeOwner(address safe, address newOwner) external {
         vm.startBroadcast();
 
-        bool success = _gnosisSafeTx({
-            safe: safe,
+        bool success = safe._gnosisSafeTx({
             to: safe,
             data: abi.encodeWithSignature(
                 "swapOwner(address,address,address)", address(0x1), msg.sender, newOwner
             )
         });
 
-        if (success && GnosisSafeLike(safe).isOwner(newOwner))
-            console2.log("Swap owner tx succeeded");
-        else
-            console2.log("Swap owner tx failed");
+        require(success && GnosisSafeLike(safe).isOwner(newOwner), "Swap owner tx failed");
+        console2.log("Swap owner tx succeeded");
 
         vm.stopBroadcast();
     }
@@ -389,18 +396,15 @@ forge script script/PWN.s.sol:Setup \
 
         vm.startBroadcast();
 
-        bool success = _gnosisSafeTx({
-            safe: daoSafe,
+        bool success = daoSafe._gnosisSafeTx({
             to: address(config),
             data: abi.encodeWithSignature(
                 "setLoanMetadataUri(address,string)", address_, metadata
             )
         });
 
-        if (success)
-            console2.log("Set metadata tx succeeded");
-        else
-            console2.log("Set metadata tx failed");
+        require(success, "Set metadata tx failed");
+        console2.log("Set metadata tx succeeded");
 
         vm.stopBroadcast();
     }
@@ -413,6 +417,7 @@ forge script script/PWN.s.sol:Setup \
 --private-key $PRIVATE_KEY \
 --broadcast
 */
+    /// @dev Expecting to have protocol, protocolSafe & protocolTimelock addresses set in the `deployments.json`
     function setProtocolTimelock() external {
         _loadDeployedAddresses();
 
@@ -420,24 +425,21 @@ forge script script/PWN.s.sol:Setup \
 
         // set PWNConfig admin
         bool success;
-        success = _gnosisSafeTx({
-            safe: protocolSafe,
+        success = protocolSafe._gnosisSafeTx({
             to: address(config),
             data: abi.encodeWithSignature("changeAdmin(address)", protocolTimelock)
         });
         require(success, "PWN: change admin failed");
 
         // transfer PWNHub owner
-        success = _gnosisSafeTx({
-            safe: protocolSafe,
+        success = protocolSafe._gnosisSafeTx({
             to: address(hub),
             data: abi.encodeWithSignature("transferOwnership(address)", protocolTimelock)
         });
         require(success, "PWN: change owner failed");
 
         // accept PWNHub owner
-        success = _gnosisSafeTx({
-            safe: protocolSafe,
+        success = protocolSafe._gnosisSafeTx({
             to: address(protocolTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
@@ -455,8 +457,7 @@ forge script script/PWN.s.sol:Setup \
         });
 
         // Set min delay
-        success = _gnosisSafeTx({
-            safe: protocolSafe,
+        success = protocolSafe._gnosisSafeTx({
             to: address(protocolTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
@@ -485,6 +486,7 @@ forge script script/PWN.s.sol:Setup \
 --private-key $PRIVATE_KEY \
 --broadcast
 */
+    /// @dev Expecting to have protocol, daoSafe & productTimelock addresses set in the `deployments.json`
     function setProductTimelock() external {
         _loadDeployedAddresses();
 
@@ -492,16 +494,14 @@ forge script script/PWN.s.sol:Setup \
 
         // transfer PWNConfig owner
         bool success;
-        success = _gnosisSafeTx({
-            safe: daoSafe,
+        success = daoSafe._gnosisSafeTx({
             to: address(config),
             data: abi.encodeWithSignature("transferOwnership(address)", productTimelock)
         });
         require(success, "PWN: change owner failed");
 
         // accept PWNConfig owner
-        success = _gnosisSafeTx({
-            safe: daoSafe,
+        success = daoSafe._gnosisSafeTx({
             to: address(productTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
@@ -519,8 +519,7 @@ forge script script/PWN.s.sol:Setup \
         });
 
         // Set min delay
-        success = _gnosisSafeTx({
-            safe: daoSafe,
+        success = daoSafe._gnosisSafeTx({
             to: address(productTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
