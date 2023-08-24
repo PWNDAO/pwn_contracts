@@ -11,6 +11,7 @@ jobs:
       POLYGON_URL: ${{ secrets.POLYGON_URL }}
       BASE_URL: ${{ secrets.BASE_URL }}
       CRONOS_URL: ${{ secrets.CRONOS_URL }}
+      MANTLE_URL: ${{ secrets.MANTLE_URL }}
       GOERLI_URL: ${{ secrets.GOERLI_URL }}
       BASE_GOERLI_URL: ${{ secrets.BASE_GOERLI_URL }}
       CRONOS_TESTNET_URL: ${{ secrets.CRONOS_TESTNET_URL }}
