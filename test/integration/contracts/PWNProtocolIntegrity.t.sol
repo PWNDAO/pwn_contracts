@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/PWNErrors.sol";
 
-import "@pwn-test/integration/contracts/BaseIntegrationTest.t.sol";
+import "@pwn-test/integration/BaseIntegrationTest.t.sol";
 
 
 contract PWNProtocolIntegrityTest is BaseIntegrationTest {
