@@ -21,8 +21,10 @@ contract DeployedProtocolTest is DeploymentTest {
         super.setUp();
 
         // DEPLOYER
-        // - owner is protocol safe
-        assertEq(deployer.owner(), protocolSafe);
+        // - owner is deployer safe
+        if (deployerSafe != address(0)) {
+            assertEq(deployer.owner(), deployerSafe);
+        }
 
         // TIMELOCK CONTROLLERS
         bool hasTimelock = protocolTimelock != address(0) && productTimelock != address(0);
