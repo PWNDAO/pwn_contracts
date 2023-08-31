@@ -30,6 +30,7 @@ abstract contract Deployments is CommonBase {
         PWNConfig config;
         address daoSafe;
         IPWNDeployer deployer;
+        address deployerSafe;
         address feeCollector;
         PWNHub hub;
         PWNLOAN loanToken;
@@ -47,6 +48,7 @@ abstract contract Deployments is CommonBase {
     address productTimelock;
     address protocolTimelock;
 
+    address deployerSafe;
     address protocolSafe;
     address daoSafe;
     address feeCollector;
@@ -76,6 +78,7 @@ abstract contract Deployments is CommonBase {
 
             productTimelock = deployment.productTimelock;
             protocolTimelock = deployment.protocolTimelock;
+            deployerSafe = deployment.deployerSafe;
             protocolSafe = deployment.protocolSafe;
             daoSafe = deployment.daoSafe;
             feeCollector = deployment.feeCollector;
