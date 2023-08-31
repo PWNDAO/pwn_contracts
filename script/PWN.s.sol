@@ -25,7 +25,6 @@ import "@pwn-test/helper/token/T1155.sol";
 
 
 interface GnosisSafeLike {
-    function isOwner(address owner) external view returns (bool);
     function execTransaction(
         address to,
         uint256 value,
@@ -190,7 +189,7 @@ forge script script/PWN.s.sol:Deploy \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
-    /// @dev Expecting to have deployer & protocolSafe addresses set in the `deployments.json`
+    /// @dev Expecting to have deployer, deployerSafe & protocolSafe addresses set in the `deployments.json`
     function deployProtocolTimelockController() external {
         _loadDeployedAddresses();
 
@@ -200,7 +199,7 @@ forge script script/PWN.s.sol:Deploy \
         proposers[0] = protocolSafe;
         address[] memory executors = new address[](1);
 
-        bool success = protocolSafe._gnosisSafeTx({
+        bool success = deployerSafe._gnosisSafeTx({
             to: address(deployer),
             data: abi.encodeWithSignature("deploy(bytes32,bytes)",
                 PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER,
@@ -225,7 +224,7 @@ forge script script/PWN.s.sol:Deploy \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
-    /// @dev Expecting to have deployer & daoSafe addresses set in the `deployments.json`
+    /// @dev Expecting to have deployer, deployerSafe & daoSafe addresses set in the `deployments.json`
     function deployProductTimelockController() external {
         _loadDeployedAddresses();
 
@@ -234,8 +233,9 @@ forge script script/PWN.s.sol:Deploy \
         address[] memory proposers = new address[](1);
         proposers[0] = daoSafe;
         address[] memory executors = new address[](1);
+        executors[0] = address(0);
 
-        bool success = protocolSafe._gnosisSafeTx({
+        bool success = deployerSafe._gnosisSafeTx({
             to: address(deployer),
             data: abi.encodeWithSignature("deploy(bytes32,bytes)",
                 PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER,
@@ -355,30 +355,6 @@ forge script script/PWN.s.sol:Setup \
 
         require(success, "Accept ownership tx failed");
         console2.log("Accept ownership tx succeeded");
-
-        vm.stopBroadcast();
-    }
-
-/*
-forge script script/PWN.s.sol:Setup \
---sig "swapSafeOwner(address,address)" $SAFE $NEW_OWNER \
---rpc-url $RPC_URL \
---private-key $PRIVATE_KEY \
---broadcast
-*/
-    /// @dev Not expecting any addresses set in the `deployments.json`
-    function swapSafeOwner(address safe, address newOwner) external {
-        vm.startBroadcast();
-
-        bool success = safe._gnosisSafeTx({
-            to: safe,
-            data: abi.encodeWithSignature(
-                "swapOwner(address,address,address)", address(0x1), msg.sender, newOwner
-            )
-        });
-
-        require(success && GnosisSafeLike(safe).isOwner(newOwner), "Swap owner tx failed");
-        console2.log("Swap owner tx succeeded");
 
         vm.stopBroadcast();
     }
