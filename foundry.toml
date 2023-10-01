@@ -7,6 +7,7 @@ fs_permissions = [{ access = "read", path = "./deployments.json"}]
 # Mainnets
 mainnet = "${ETHEREUM_URL}"
 polygon = "${POLYGON_URL}"
+optimism = "${OPTIMISM_URL}"
 base = "${BASE_URL}"
 cronos = "${CRONOS_URL}"
 mantle = "${MANTLE_URL}"

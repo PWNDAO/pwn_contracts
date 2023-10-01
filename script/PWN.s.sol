@@ -73,6 +73,7 @@ forge script script/PWN.s.sol:Deploy \
 --sig "deployProtocol()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
@@ -186,6 +187,7 @@ forge script script/PWN.s.sol:Deploy \
 --sig "deployProtocolTimelockController()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
@@ -198,20 +200,23 @@ forge script script/PWN.s.sol:Deploy \
         address[] memory proposers = new address[](1);
         proposers[0] = protocolSafe;
         address[] memory executors = new address[](1);
+        executors[0] = address(0);
+
+        bytes32 salt = PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER;
+        bytes memory bytecode = abi.encodePacked(
+            type(TimelockController).creationCode,
+            abi.encode(uint256(0), proposers, executors, address(0))
+        );
 
         bool success = deployerSafe._gnosisSafeTx({
             to: address(deployer),
-            data: abi.encodeWithSignature("deploy(bytes32,bytes)",
-                PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER,
-                abi.encodePacked(
-                    type(TimelockController).creationCode,
-                    abi.encode(uint256(0), proposers, executors, address(0))
-                )
-            )
+            data: abi.encodeWithSignature("deploy(bytes32,bytes)", salt, bytecode)
         });
 
+        address timelockAddr = deployer.computeAddress(salt, keccak256(bytecode));
+
         require(success, "Protocol timelock deployment failed");
-        console2.log("Protocol timelock deployed");
+        console2.log("Protocol timelock deployed:", timelockAddr);
 
         vm.stopBroadcast();
     }
@@ -221,6 +226,7 @@ forge script script/PWN.s.sol:Deploy \
 --sig "deployProductTimelockController()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
@@ -235,19 +241,20 @@ forge script script/PWN.s.sol:Deploy \
         address[] memory executors = new address[](1);
         executors[0] = address(0);
 
+        bytes32 salt = PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER;
+        bytes memory bytecode = abi.encodePacked(
+            type(TimelockController).creationCode,
+            abi.encode(uint256(0), proposers, executors, address(0))
+        );
         bool success = deployerSafe._gnosisSafeTx({
             to: address(deployer),
-            data: abi.encodeWithSignature("deploy(bytes32,bytes)",
-                PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER,
-                abi.encodePacked(
-                    type(TimelockController).creationCode,
-                    abi.encode(uint256(0), proposers, executors, address(0))
-                )
-            )
+            data: abi.encodeWithSignature("deploy(bytes32,bytes)", salt, bytecode)
         });
 
+        address timelockAddr = deployer.computeAddress(salt, keccak256(bytecode));
+
         require(success, "Product timelock deployment failed");
-        console2.log("Product timelock deployed");
+        console2.log("Product timelock deployed:", timelockAddr);
 
         vm.stopBroadcast();
     }
@@ -257,6 +264,7 @@ forge script script/PWN.s.sol:Deploy \
 --sig "deployTestTokens()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
@@ -298,6 +306,7 @@ forge script script/PWN.s.sol:Setup \
 --sig "setTags()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
     /// @dev Expecting to have protocol addresses set in the `deployments.json`
@@ -342,6 +351,7 @@ forge script script/PWN.s.sol:Setup \
 --sig "acceptOwnership(address,address)" $SAFE $CONTRACT \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
     /// @dev Not expecting any addresses set in the `deployments.json`
@@ -364,6 +374,7 @@ forge script script/PWN.s.sol:Setup \
 --sig "setMetadata(address,string)" $LOAN_CONTRACT $METADATA" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
     /// @dev Expecting to have daoSafe & config addresses set in the `deployments.json`
@@ -379,8 +390,8 @@ forge script script/PWN.s.sol:Setup \
             )
         });
 
-        require(success, "Set metadata tx failed");
-        console2.log("Set metadata tx succeeded");
+        require(success, "Set metadata failed");
+        console2.log("Set metadata succeeded");
 
         vm.stopBroadcast();
     }
@@ -391,6 +402,7 @@ forge script script/PWN.s.sol:Setup \
 --sig "setProtocolTimelock()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
     /// @dev Expecting to have protocol, protocolSafe & protocolTimelock addresses set in the `deployments.json`
@@ -460,6 +472,7 @@ forge script script/PWN.s.sol:Setup \
 --sig "setProductTimelock()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
     /// @dev Expecting to have protocol, daoSafe & productTimelock addresses set in the `deployments.json`

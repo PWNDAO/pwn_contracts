@@ -1,5 +1,5 @@
 {
-    "deployedChains": [1, 5, 25, 137, 338, 5000, 5001, 8453, 84531],
+    "deployedChains": [1, 5, 10, 25, 137, 338, 5000, 5001, 8453, 84531],
     "chains": {
         "1": {
             "productTimelock": "0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12",
@@ -33,6 +33,24 @@
             "revokedOfferNonce": "0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e",
             "revokedRequestNonce": "0x472361E75d28597b0a7F86146fbB4a86f173d10D",
             "simpleLoan": "0x57c88D78f6D08b5c88b4A3b7BbB0C1AA34c3280A",
+            "simpleLoanSimpleOffer": "0x5E551f09b8d1353075A1FF3B484Ee688aCAc02F6",
+            "simpleLoanListOffer": "0xDA027058708961Be3676daEB68Fde1758B210065",
+            "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
+        },
+        "10": {
+            "productTimelock": "0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39",
+            "protocolTimelock": "0x744B83343a86F87Ed05a5f3A92939D6d81520F27",
+            "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
+            "daoSafe": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
+            "feeCollector": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
+            "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
+            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
+            "config": "0x55e6A9F4183CFC01ecE8f2258FC13b93e1B6c140",
+            "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+            "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+            "revokedOfferNonce": "0xFFa73Eacce930BBd92a1Ef218400cBd1036c437e",
+            "revokedRequestNonce": "0x472361E75d28597b0a7F86146fbB4a86f173d10D",
+            "simpleLoan": "0x4188C513fd94B0458715287570c832d9560bc08a",
             "simpleLoanSimpleOffer": "0x5E551f09b8d1353075A1FF3B484Ee688aCAc02F6",
             "simpleLoanListOffer": "0xDA027058708961Be3676daEB68Fde1758B210065",
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
