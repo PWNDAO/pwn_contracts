@@ -20,7 +20,7 @@ abstract contract DeploymentTest is Deployments, Test {
         feeCollector = makeAddr("feeCollector");
 
         // Deploy protocol
-        PWNConfig configSingleton = new PWNConfig();
+        configSingleton = new PWNConfig();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(configSingleton),
             protocolSafe,

@@ -28,6 +28,7 @@ abstract contract Deployments is CommonBase {
     // Properties need to be in alphabetical order
     struct Deployment {
         PWNConfig config;
+        PWNConfig configSingleton;
         address daoSafe;
         IPWNDeployer deployer;
         address deployerSafe;
@@ -55,6 +56,7 @@ abstract contract Deployments is CommonBase {
 
     IPWNDeployer deployer;
     PWNHub hub;
+    PWNConfig configSingleton;
     PWNConfig config;
     PWNLOAN loanToken;
     PWNSimpleLoan simpleLoan;
@@ -84,6 +86,7 @@ abstract contract Deployments is CommonBase {
             feeCollector = deployment.feeCollector;
             deployer = deployment.deployer;
             hub = deployment.hub;
+            configSingleton = deployment.configSingleton;
             config = deployment.config;
             loanToken = deployment.loanToken;
             simpleLoan = deployment.simpleLoan;

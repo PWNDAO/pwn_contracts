@@ -13,6 +13,7 @@ cronos = "${CRONOS_URL}"
 mantle = "${MANTLE_URL}"
 
 # Testnets
+sepolia = "${SEPOLIA_URL}"
 goerli = "${GOERLI_URL}"
 base_goerli = "${BASE_GOERLI_URL}"
 cronos_testnet = "${CRONOS_TESTNET_URL}"
