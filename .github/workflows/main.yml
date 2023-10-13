@@ -9,6 +9,7 @@ jobs:
     env:
       ETHEREUM_URL: ${{ secrets.ETHEREUM_URL }}
       POLYGON_URL: ${{ secrets.POLYGON_URL }}
+      ARBITRUM_URL: ${{ secrets.ARBITRUM_URL }}
       OPTIMISM_URL: ${{ secrets.OPTIMISM_URL }}
       BASE_URL: ${{ secrets.BASE_URL }}
       CRONOS_URL: ${{ secrets.CRONOS_URL }}
