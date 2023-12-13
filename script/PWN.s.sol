@@ -4,11 +4,11 @@ pragma solidity 0.8.16;
 import "forge-std/Script.sol";
 
 import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "openzeppelin-contracts/contracts/governance/TimelockController.sol";
+
+import { GnosisSafeLike, GnosisSafeUtils } from "./lib/GnosisSafeUtils.sol";
 
 import "@pwn/config/PWNConfig.sol";
 import "@pwn/deployer/IPWNDeployer.sol";
-import "@pwn/deployer/PWNContractDeployerSalt.sol";
 import "@pwn/hub/PWNHub.sol";
 import "@pwn/hub/PWNHubTags.sol";
 import "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
@@ -24,39 +24,27 @@ import "@pwn-test/helper/token/T721.sol";
 import "@pwn-test/helper/token/T1155.sol";
 
 
-interface GnosisSafeLike {
-    function execTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint8 operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address payable refundReceiver,
-        bytes memory signatures
-    ) external payable returns (bool success);
-}
+library PWNContractDeployerSalt {
 
+    string internal constant VERSION = "1.1";
 
-library GnosisSafeUtils {
+    // Singletons
+    bytes32 internal constant CONFIG_V1 = keccak256("PWNConfigV1");
+    bytes32 internal constant CONFIG_PROXY = keccak256("PWNConfigProxy");
+    bytes32 internal constant HUB = keccak256("PWNHub");
+    bytes32 internal constant LOAN = keccak256("PWNLOAN");
+    bytes32 internal constant REVOKED_OFFER_NONCE = keccak256("PWNRevokedOfferNonce");
+    bytes32 internal constant REVOKED_REQUEST_NONCE = keccak256("PWNRevokedRequestNonce");
 
-    function execTransaction(GnosisSafeLike safe, address to, bytes memory data) internal returns (bool) {
-        uint256 ownerValue = uint256(uint160(msg.sender));
-        return safe.execTransaction({
-            to: to,
-            value: 0,
-            data: data,
-            operation: 0,
-            safeTxGas: 0,
-            baseGas: 0,
-            gasPrice: 0,
-            gasToken: address(0),
-            refundReceiver: payable(0),
-            signatures: abi.encodePacked(ownerValue, bytes32(0), uint8(1))
-        });
-    }
+    // Loan types
+    bytes32 internal constant SIMPLE_LOAN = keccak256("PWNSimpleLoan");
+
+    // Offer types
+    bytes32 internal constant SIMPLE_LOAN_SIMPLE_OFFER = keccak256("PWNSimpleLoanSimpleOffer");
+    bytes32 internal constant SIMPLE_LOAN_LIST_OFFER = keccak256("PWNSimpleLoanListOffer");
+
+    // Request types
+    bytes32 internal constant SIMPLE_LOAN_SIMPLE_REQUEST = keccak256("PWNSimpleLoanSimpleRequest");
 
 }
 
@@ -100,10 +88,10 @@ contract Deploy is Deployments, Script {
 /*
 forge script script/PWN.s.sol:Deploy \
 --sig "deployProtocol()" \
---rpc-url $RPC_URL \
---private-key $PRIVATE_KEY \
---with-gas-price $(cast --to-wei 15 gwei) \
---verify --etherscan-api-key $ETHERSCAN_API_KEY \
+--rpc-url $BSC_URL \
+--ledger --hd-paths "m/44'/60'/3'/0/0" --sender 0x3e3290A1CF0a845bde14e842e9f2e5687F434C8b \
+--with-gas-price $(cast --to-wei 3 gwei) \
+--verify --etherscan-api-key $BSCSCAN_API_KEY \
 --broadcast
 */
     /// @dev Expecting to have deployer, deployerSafe, protocolSafe, daoSafe & feeCollector addresses set in the `deployments.json`
@@ -213,70 +201,6 @@ forge script script/PWN.s.sol:Deploy \
         console2.log("PWNSimpleLoanSimpleOffer:", address(simpleLoanSimpleOffer));
         console2.log("PWNSimpleLoanListOffer:", address(simpleLoanListOffer));
         console2.log("PWNSimpleLoanSimpleRequest:", address(simpleLoanSimpleRequest));
-
-        vm.stopBroadcast();
-    }
-
-/*
-forge script script/PWN.s.sol:Deploy \
---sig "deployProtocolTimelockController()" \
---rpc-url $RPC_URL \
---private-key $PRIVATE_KEY \
---with-gas-price $(cast --to-wei 15 gwei) \
---verify --etherscan-api-key $ETHERSCAN_API_KEY \
---broadcast
-*/
-    /// @dev Expecting to have deployer, deployerSafe & protocolSafe addresses set in the `deployments.json`
-    function deployProtocolTimelockController() external {
-        _loadDeployedAddresses();
-
-        vm.startBroadcast();
-
-        address[] memory proposers = new address[](1);
-        proposers[0] = protocolSafe;
-        address[] memory executors = new address[](1);
-        executors[0] = address(0);
-
-        address timelock = _deploy({
-            salt: PWNContractDeployerSalt.PROTOCOL_TEAM_TIMELOCK_CONTROLLER,
-            bytecode: abi.encodePacked(
-                type(TimelockController).creationCode,
-                abi.encode(uint256(0), proposers, executors, address(0))
-            )
-        });
-        console2.log("Protocol timelock deployed:", timelock);
-
-        vm.stopBroadcast();
-    }
-
-/*
-forge script script/PWN.s.sol:Deploy \
---sig "deployProductTimelockController()" \
---rpc-url $RPC_URL \
---private-key $PRIVATE_KEY \
---with-gas-price $(cast --to-wei 15 gwei) \
---verify --etherscan-api-key $ETHERSCAN_API_KEY \
---broadcast
-*/
-    /// @dev Expecting to have deployer, deployerSafe & daoSafe addresses set in the `deployments.json`
-    function deployProductTimelockController() external {
-        _loadDeployedAddresses();
-
-        vm.startBroadcast();
-
-        address[] memory proposers = new address[](1);
-        proposers[0] = daoSafe;
-        address[] memory executors = new address[](1);
-        executors[0] = address(0);
-
-        address timelock = _deploy({
-            salt: PWNContractDeployerSalt.PRODUCT_TEAM_TIMELOCK_CONTROLLER,
-            bytecode: abi.encodePacked(
-                type(TimelockController).creationCode,
-                abi.encode(uint256(0), proposers, executors, address(0))
-            )
-        });
-        console2.log("Product timelock deployed:", timelock);
 
         vm.stopBroadcast();
     }
@@ -431,144 +355,6 @@ forge script script/PWN.s.sol:Setup \
 
         require(success, "Set metadata failed");
         console2.log("Metadata set:", metadata);
-
-        vm.stopBroadcast();
-    }
-
-
-/*
-forge script script/PWN.s.sol:Setup \
---sig "setProtocolTimelock()" \
---rpc-url $RPC_URL \
---private-key $PRIVATE_KEY \
---with-gas-price $(cast --to-wei 15 gwei) \
---broadcast
-*/
-    /// @dev Expecting to have protocol, protocolSafe & protocolTimelock addresses set in the `deployments.json`
-    function setProtocolTimelock() external {
-        _loadDeployedAddresses();
-
-        uint256 protocolTimelockMinDelay = 345_600;
-
-        vm.startBroadcast();
-
-        // set PWNConfig admin
-        bool success;
-        success = GnosisSafeLike(protocolSafe).execTransaction({
-            to: address(config),
-            data: abi.encodeWithSignature("changeAdmin(address)", protocolTimelock)
-        });
-        require(success, "PWN: change admin failed");
-
-        // transfer PWNHub owner
-        success = GnosisSafeLike(protocolSafe).execTransaction({
-            to: address(hub),
-            data: abi.encodeWithSignature("transferOwnership(address)", protocolTimelock)
-        });
-        require(success, "PWN: change owner failed");
-
-        // accept PWNHub owner
-        success = GnosisSafeLike(protocolSafe).execTransaction({
-            to: address(protocolTimelock),
-            data: abi.encodeWithSignature(
-                "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
-                address(hub), 0, abi.encodeWithSignature("acceptOwnership()"), 0, 0, 0
-            )
-        });
-        require(success, "PWN: schedule failed");
-
-        TimelockController(payable(protocolTimelock)).execute({
-            target: address(hub),
-            value: 0,
-            payload: abi.encodeWithSignature("acceptOwnership()"),
-            predecessor: 0,
-            salt: 0
-        });
-
-        // Set min delay
-        success = GnosisSafeLike(protocolSafe).execTransaction({
-            to: address(protocolTimelock),
-            data: abi.encodeWithSignature(
-                "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
-                address(protocolTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", protocolTimelockMinDelay), 0, 0, 0
-            )
-        });
-        require(success, "PWN: update delay failed");
-
-        TimelockController(payable(protocolTimelock)).execute({
-            target: protocolTimelock,
-            value: 0,
-            payload: abi.encodeWithSignature("updateDelay(uint256)", protocolTimelockMinDelay),
-            predecessor: 0,
-            salt: 0
-        });
-
-        console2.log("Protocol timelock set");
-
-        vm.stopBroadcast();
-    }
-
-/*
-forge script script/PWN.s.sol:Setup \
---sig "setProductTimelock()" \
---rpc-url $RPC_URL \
---private-key $PRIVATE_KEY \
---with-gas-price $(cast --to-wei 15 gwei) \
---broadcast
-*/
-    /// @dev Expecting to have protocol, daoSafe & productTimelock addresses set in the `deployments.json`
-    function setProductTimelock() external {
-        _loadDeployedAddresses();
-
-        uint256 productTimelockMinDelay = 345_600;
-
-        vm.startBroadcast();
-
-        // transfer PWNConfig owner
-        bool success;
-        success = GnosisSafeLike(daoSafe).execTransaction({
-            to: address(config),
-            data: abi.encodeWithSignature("transferOwnership(address)", productTimelock)
-        });
-        require(success, "PWN: change owner failed");
-
-        // accept PWNConfig owner
-        success = GnosisSafeLike(daoSafe).execTransaction({
-            to: address(productTimelock),
-            data: abi.encodeWithSignature(
-                "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
-                address(config), 0, abi.encodeWithSignature("acceptOwnership()"), 0, 0, 0
-            )
-        });
-        require(success, "PWN: schedule failed");
-
-        TimelockController(payable(productTimelock)).execute({
-            target: address(config),
-            value: 0,
-            payload: abi.encodeWithSignature("acceptOwnership()"),
-            predecessor: 0,
-            salt: 0
-        });
-
-        // Set min delay
-        success = GnosisSafeLike(daoSafe).execTransaction({
-            to: address(productTimelock),
-            data: abi.encodeWithSignature(
-                "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
-                address(productTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", productTimelockMinDelay), 0, 0, 0
-            )
-        });
-        require(success, "PWN: update delay failed");
-
-        TimelockController(payable(productTimelock)).execute({
-            target: productTimelock,
-            value: 0,
-            payload: abi.encodeWithSignature("updateDelay(uint256)", productTimelockMinDelay),
-            predecessor: 0,
-            salt: 0
-        });
-
-        console2.log("Product timelock set");
 
         vm.stopBroadcast();
     }
