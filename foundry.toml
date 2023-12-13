@@ -12,6 +12,7 @@ optimism = "${OPTIMISM_URL}"
 base = "${BASE_URL}"
 cronos = "${CRONOS_URL}"
 mantle = "${MANTLE_URL}"
+bsc = "${BSC_URL}"
 
 # Testnets
 sepolia = "${SEPOLIA_URL}"
