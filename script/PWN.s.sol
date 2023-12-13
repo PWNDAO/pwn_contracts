@@ -88,9 +88,9 @@ contract Deploy is Deployments, Script {
 /*
 forge script script/PWN.s.sol:Deploy \
 --sig "deployProtocol()" \
---rpc-url $BSC_URL \
---ledger --hd-paths "m/44'/60'/3'/0/0" --sender 0x3e3290A1CF0a845bde14e842e9f2e5687F434C8b \
---with-gas-price $(cast --to-wei 3 gwei) \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
 --verify --etherscan-api-key $BSCSCAN_API_KEY \
 --broadcast
 */
