@@ -69,7 +69,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256("PWNSimpleLoanListOffer"),
-                keccak256("1"),
+                keccak256("1.2"),
                 block.chainid,
                 address(offerContract)
             )),

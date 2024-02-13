@@ -72,7 +72,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
         DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
             keccak256("PWNSimpleLoanSimpleOffer"),
-            keccak256("1"),
+            keccak256(abi.encodePacked(VERSION)),
             block.chainid,
             address(this)
         ));
