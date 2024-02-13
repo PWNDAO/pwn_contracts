@@ -14,7 +14,7 @@ import "@pwn/PWNErrors.sol";
  */
 contract PWNConfig is Ownable2Step, Initializable {
 
-    string internal constant VERSION = "1.0";
+    string internal constant VERSION = "1.2";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -65,7 +65,9 @@ contract PWNConfig is Ownable2Step, Initializable {
     |*----------------------------------------------------------*/
 
     constructor() Ownable2Step() {
-
+        // PWNConfig is used as a proxy. Use initializer to setup initial properties.
+        // Initialized the implementation contract with zero values.
+        initialize(address(0), 0, address(0));
     }
 
     function initialize(address _owner, uint16 _fee, address _feeCollector) initializer external {
