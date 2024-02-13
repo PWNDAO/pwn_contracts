@@ -23,7 +23,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             loanYield: 10e18,
             duration: 3600,
             expiration: 0,
-            borrower: borrower,
+            allowedBorrower: borrower,
             lender: lender,
             isPersistent: false,
             nonce: nonce
@@ -89,7 +89,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             loanYield: 10e18,
             duration: 3600,
             expiration: 0,
-            borrower: borrower,
+            allowedBorrower: borrower,
             lender: lender,
             isPersistent: false,
             nonce: nonce

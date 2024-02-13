@@ -44,7 +44,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
             loanYield: 1,
             duration: 1000,
             expiration: 0,
-            borrower: address(0),
+            allowedBorrower: address(0),
             lender: lender,
             isPersistent: false,
             nonce: uint256(keccak256("nonce_1"))
@@ -74,7 +74,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
                 address(offerContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,uint256 nonce)"),
+                keccak256("Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonce)"),
                 abi.encode(_offer)
             ))
         ));
@@ -256,11 +256,11 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
-    function test_shouldFail_whenCallerIsNotBorrower_whenSetBorrower() external {
-        offer.borrower = address(0x50303);
+    function test_shouldFail_whenCallerIsNotAllowedBorrower() external {
+        offer.allowedBorrower = address(0x50303);
         signature = _signOfferCompact(lenderPK, offer);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedBorrower.selector, offer.borrower));
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedBorrower.selector, offer.allowedBorrower));
         vm.prank(activeLoanContract);
         offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }

@@ -28,7 +28,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      * @dev EIP-712 simple offer struct type hash.
      */
     bytes32 constant internal OFFER_TYPEHASH = keccak256(
-        "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,bool isPersistent,uint256 nonce)"
+        "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonce)"
     );
 
     bytes32 immutable internal DOMAIN_SEPARATOR;
@@ -44,7 +44,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      * @param loanYield Amount of tokens which acts as a lenders loan interest. Borrower has to pay back a borrowed amount + yield.
      * @param duration Loan duration in seconds.
      * @param expiration Offer expiration timestamp in seconds.
-     * @param borrower Address of a borrower. Only this address can accept an offer. If the address is zero address, anybody with a collateral can accept the offer.
+     * @param allowedBorrower Address of an allowed borrower. Only this address can accept an offer. If the address is zero address, anybody with a collateral can accept the offer.
      * @param lender Address of a lender. This address has to sign an offer to be valid.
      * @param isPersistent If true, offer will not be revoked on acceptance. Persistent offer can be revoked manually.
      * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
@@ -60,7 +60,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         uint256 loanYield;
         uint32 duration;
         uint40 expiration;
-        address borrower;
+        address allowedBorrower;
         address lender;
         bool isPersistent;
         uint256 nonce;
@@ -139,9 +139,9 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         if (revokedOfferNonce.isNonceRevoked(lender, offer.nonce) == true)
             revert NonceAlreadyRevoked();
 
-        if (offer.borrower != address(0))
-            if (borrower != offer.borrower)
-                revert CallerIsNotStatedBorrower(offer.borrower);
+        if (offer.allowedBorrower != address(0))
+            if (borrower != offer.allowedBorrower)
+                revert CallerIsNotStatedBorrower(offer.allowedBorrower);
 
         if (offer.duration < MIN_LOAN_DURATION)
             revert InvalidDuration();

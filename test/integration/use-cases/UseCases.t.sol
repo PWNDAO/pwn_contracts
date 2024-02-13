@@ -52,7 +52,7 @@ abstract contract UseCasesTest is DeploymentTest {
             loanYield: 0,
             duration: 3600,
             expiration: 0,
-            borrower: address(0),
+            allowedBorrower: address(0),
             lender: lender,
             isPersistent: false,
             nonce: 0
