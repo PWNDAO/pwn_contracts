@@ -15,7 +15,7 @@ import "@pwn/PWNErrors.sol";
  */
 contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
 
-    string internal constant VERSION = "1.2";
+    string public constant VERSION = "1.2";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -24,11 +24,11 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
     /**
      * @dev EIP-712 simple request struct type hash.
      */
-    bytes32 constant internal REQUEST_TYPEHASH = keccak256(
+    bytes32 public constant REQUEST_TYPEHASH = keccak256(
         "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 nonce)"
     );
 
-    bytes32 immutable internal DOMAIN_SEPARATOR;
+    bytes32 public immutable DOMAIN_SEPARATOR;
 
     /**
      * @notice Construct defining a simple request.

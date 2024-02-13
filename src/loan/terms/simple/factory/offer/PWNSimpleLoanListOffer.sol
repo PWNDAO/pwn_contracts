@@ -18,7 +18,7 @@ import "@pwn/PWNErrors.sol";
  */
 contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
 
-    string internal constant VERSION = "1.2";
+    string public constant VERSION = "1.2";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -27,11 +27,11 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
     /**
      * @dev EIP-712 simple offer struct type hash.
      */
-    bytes32 constant internal OFFER_TYPEHASH = keccak256(
+    bytes32 public constant OFFER_TYPEHASH = keccak256(
         "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonce)"
     );
 
-    bytes32 immutable internal DOMAIN_SEPARATOR;
+    bytes32 public immutable DOMAIN_SEPARATOR;
 
     /**
      * @notice Construct defining a list offer.
