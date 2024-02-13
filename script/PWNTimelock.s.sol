@@ -140,41 +140,25 @@ forge script script/PWNTimelock.s.sol:Setup \
         _updateProposer(TimelockController(payable(productTimelock)), daoSafe);
     }
 
-    /// @dev Expecting to have address loaded from the `deployments.json` file.
-    /// Expecting to have min delay set to 0.
-    /// Expecting to have one proposer role for `0x0cfC...D6de`.
-    /// Will grant CANCELLOR_ROLE to the new address and revoke it from the old one.
+    /// @dev Will grant PROPOSER_ROLE & CANCELLOR_ROLE to the new address and revoke them from `0x0cfC...D6de`.
+    /// Expecting to have address loaded from the `deployments.json` file.
+    /// Expecting timelock to be freshly deployed with one proposer `0x0cfC...D6de` and min delay set to 0.
     function _updateProposer(TimelockController timelock, address newProposer) private {
         vm.startBroadcast();
 
         address initialProposer = 0x0cfC62C2E82dA2f580Fd54a2f526F65B6cC8D6de;
 
-        // set new proposer
-        _scheduleAndExecute({
-            timelock: timelock,
-            payload: abi.encodeWithSignature("grantRole(bytes32,address)", timelock.PROPOSER_ROLE(), newProposer)
-        });
+        bytes[] memory payloads = new bytes[](4);
+        payloads[0] = abi.encodeWithSignature("grantRole(bytes32,address)", timelock.PROPOSER_ROLE(), newProposer);
+        payloads[1] = abi.encodeWithSignature("grantRole(bytes32,address)", timelock.CANCELLER_ROLE(), newProposer);
+        payloads[2] = abi.encodeWithSignature("revokeRole(bytes32,address)", timelock.PROPOSER_ROLE(), initialProposer);
+        payloads[3] = abi.encodeWithSignature("revokeRole(bytes32,address)", timelock.CANCELLER_ROLE(), initialProposer);
+
+        _scheduleAndExecuteBatch(timelock, payloads);
+
         console2.log("Proposer role granted to:", newProposer);
-
-        // set new cancellor
-        _scheduleAndExecute({
-            timelock: timelock,
-            payload: abi.encodeWithSignature("grantRole(bytes32,address)", timelock.CANCELLER_ROLE(), newProposer)
-        });
         console2.log("Cancellor role granted to:", newProposer);
-
-        // remove initial proposer
-        _scheduleAndExecute({
-            timelock: timelock,
-            payload: abi.encodeWithSignature("revokeRole(bytes32,address)", timelock.PROPOSER_ROLE(), initialProposer)
-        });
         console2.log("Proposer role revoked from:", initialProposer);
-
-        // remove initial cancellor
-        _scheduleAndExecute({
-            timelock: timelock,
-            payload: abi.encodeWithSignature("revokeRole(bytes32,address)", timelock.CANCELLER_ROLE(), initialProposer)
-        });
         console2.log("Proposer role revoked from:", initialProposer);
 
         vm.stopBroadcast();
@@ -183,6 +167,33 @@ forge script script/PWNTimelock.s.sol:Setup \
     function _scheduleAndExecute(TimelockController timelock, bytes memory payload) private {
         timelock.schedule({ target: address(timelock), value: 0, data: payload, predecessor: 0, salt: 0, delay: 0 });
         timelock.execute({ target: address(timelock), value: 0, payload: payload, predecessor: 0, salt: 0 });
+    }
+
+    function _scheduleAndExecuteBatch(TimelockController timelock, bytes[] memory payloads) private {
+        address[] memory targets = new address[](payloads.length);
+        for (uint256 i; i < payloads.length; ++i) {
+            targets[i] = address(timelock);
+        }
+        uint256[] memory values = new uint256[](payloads.length);
+        for (uint256 i; i < payloads.length; ++i) {
+            values[i] = 0;
+        }
+
+        timelock.scheduleBatch({
+            targets: targets,
+            values: values,
+            payloads: payloads,
+            predecessor: 0,
+            salt: 0,
+            delay: 0
+         });
+         timelock.executeBatch({
+            targets: targets,
+            values: values,
+            payloads: payloads,
+            predecessor: 0,
+            salt: 0
+         });
     }
 
 
