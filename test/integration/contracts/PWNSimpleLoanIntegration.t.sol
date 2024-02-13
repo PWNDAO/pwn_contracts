@@ -272,7 +272,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
 
     // Repay LOAN
 
-    function test_shouldRepayLoan_whenNotExpired() external {
+    function test_shouldRepayLoan_whenNotExpired_whenOriginalLenderIsLOANOwner() external {
         // Create LOAN
         uint256 loanId = _createERC1155Loan();
 
@@ -280,11 +280,12 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         _repayLoan(loanId);
 
         // Assert final state
-        assertEq(loanToken.ownerOf(loanId), lender);
+        vm.expectRevert("ERC721: invalid token ID");
+        loanToken.ownerOf(loanId);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
+        assertEq(loanAsset.balanceOf(lender), 110e18);
         assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(simpleLoan)), 110e18);
+        assertEq(loanAsset.balanceOf(address(simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 10e18);
@@ -309,26 +310,34 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
 
     // Claim LOAN
 
-    function test_shouldClaimRepaidLOAN() external {
+    function test_shouldClaimRepaidLOAN_whenOriginalLenderIsNotLOANOwner() external {
+        address lender2 = makeAddr("lender2");
+
         // Create LOAN
         uint256 loanId = _createERC1155Loan();
+
+        // Transfer loan to another lender
+        vm.prank(lender);
+        loanToken.transferFrom(lender, lender2, loanId);
 
         // Repay loan
         _repayLoan(loanId);
 
         // Claim loan
-        vm.prank(lender);
+        vm.prank(lender2);
         simpleLoan.claimLOAN(loanId);
 
         // Assert final state
         vm.expectRevert("ERC721: invalid token ID");
         loanToken.ownerOf(loanId);
 
-        assertEq(loanAsset.balanceOf(lender), 110e18);
+        assertEq(loanAsset.balanceOf(lender), 0);
+        assertEq(loanAsset.balanceOf(lender2), 110e18);
         assertEq(loanAsset.balanceOf(borrower), 0);
         assertEq(loanAsset.balanceOf(address(simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
+        assertEq(t1155.balanceOf(lender2, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 10e18);
         assertEq(t1155.balanceOf(address(simpleLoan), 42), 0);
     }

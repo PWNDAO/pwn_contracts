@@ -41,6 +41,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loanAssetAddress Address of an asset used as a loan credit.
      * @param loanRepayAmount Amount of a loan asset to be paid back.
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
+     * @param originalLender Address of a lender that funded the loan.
      */
     struct LOAN {
         uint8 status;
@@ -49,6 +50,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         address loanAssetAddress;
         uint256 loanRepayAmount;
         MultiToken.Asset collateral;
+        address originalLender;
     }
 
     /**
@@ -144,6 +146,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         loan.loanAssetAddress = loanTerms.asset.assetAddress;
         loan.loanRepayAmount = loanTerms.loanRepayAmount;
         loan.collateral = loanTerms.collateral;
+        loan.originalLender = loanTerms.lender;
 
         emit LOANCreated(loanId, loanTerms, factoryDataHash, loanTermsFactoryContract);
 
@@ -204,24 +207,42 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         if (loan.expiration <= block.timestamp)
             revert LoanDefaulted(loan.expiration);
 
-        // Move loan to repaid state
-        loan.status = 3;
-
-        // Transfer repaid amount of loan asset to Vault
         MultiToken.Asset memory repayLoanAsset = MultiToken.Asset({
             category: MultiToken.Category.ERC20,
             assetAddress: loan.loanAssetAddress,
             id: 0,
             amount: loan.loanRepayAmount
         });
+        MultiToken.Asset memory collateral = loan.collateral;
+        address borrower = loan.borrower;
+        address originalLender = loan.originalLender;
 
         _permit(repayLoanAsset, msg.sender, loanAssetPermit);
-        _pull(repayLoanAsset, msg.sender);
+
+        // Note: Assuming that it is safe to transfer the loan asset to the original lender because
+        // the lender was able to sign an offer or make a contract call, thus can handle incoming transfers.
+        bool immediateClaim = originalLender == loanToken.ownerOf(loanId);
+        if (immediateClaim) {
+            // Delete loan data & burn LOAN token before calling safe transfer
+            _deleteLoan(loanId);
+
+            // Transfer the repaid loan asset to the original lender
+            _pushFrom(repayLoanAsset, msg.sender, originalLender);
+        } else {
+            // Move loan to repaid state and wait for the lender to claim the repaid loan asset
+            loan.status = 3;
+
+            // Transfer the repaid loan asset to the Vault
+            _pull(repayLoanAsset, msg.sender);
+        }
 
         // Transfer collateral back to borrower
-        _push(loan.collateral, loan.borrower);
+        _push(collateral, borrower);
 
         emit LOANPaidBack(loanId);
+
+        if (immediateClaim)
+            emit LOANClaimed(loanId, false);
     }
 
 

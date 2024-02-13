@@ -88,7 +88,8 @@ abstract contract PWNSimpleLoanTest is Test {
             expiration: uint40(block.timestamp + 40039),
             loanAssetAddress: address(fungibleAsset),
             loanRepayAmount: 6731,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC721, address(nonFungibleAsset), 2, 0)
+            collateral: MultiToken.Asset(MultiToken.Category.ERC721, address(nonFungibleAsset), 2, 0),
+            originalLender: lender
         });
 
         simpleLoanTerms = PWNLOANTerms.Simple({
@@ -106,7 +107,8 @@ abstract contract PWNSimpleLoanTest is Test {
             expiration: 0,
             loanAssetAddress: address(0),
             loanRepayAmount: 0,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0)
+            collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0),
+            originalLender: address(0)
         });
 
         loanFactoryDataHash = keccak256("factoryData");
@@ -129,6 +131,7 @@ abstract contract PWNSimpleLoanTest is Test {
         assertEq(_simpleLoan1.collateral.assetAddress, _simpleLoan2.collateral.assetAddress);
         assertEq(_simpleLoan1.collateral.id, _simpleLoan2.collateral.id);
         assertEq(_simpleLoan1.collateral.amount, _simpleLoan2.collateral.amount);
+        assertEq(_simpleLoan1.originalLender, _simpleLoan2.originalLender);
     }
 
     function _assertLOANEq(uint256 _loanId, PWNSimpleLoan.LOAN memory _simpleLoan) internal {
@@ -148,6 +151,8 @@ abstract contract PWNSimpleLoanTest is Test {
         _assertLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.collateral.id));
         // Collateral amount
         _assertLOANWord(loanSlot + 5, abi.encodePacked(_simpleLoan.collateral.amount));
+        // Original lender
+        _assertLOANWord(loanSlot + 6, abi.encodePacked(uint96(0), _simpleLoan.originalLender));
     }
 
     function _mockLOAN(uint256 _loanId, PWNSimpleLoan.LOAN memory _simpleLoan) internal {
@@ -167,6 +172,8 @@ abstract contract PWNSimpleLoanTest is Test {
         _storeLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.collateral.id));
         // Collateral amount
         _storeLOANWord(loanSlot + 5, abi.encodePacked(_simpleLoan.collateral.amount));
+        // Original lender
+        _storeLOANWord(loanSlot + 6, abi.encodePacked(uint96(0), _simpleLoan.originalLender));
     }
 
 
@@ -398,13 +405,26 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
 contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
 
+    address notOriginalLender = makeAddr("notOriginalLender");
+
     function setUp() override public {
         super.setUp();
+
+        vm.mockCall(
+            loanToken, abi.encodeWithSignature("ownerOf(uint256)", loanId), abi.encode(lender)
+        );
 
         // Move collateral to vault
         vm.prank(borrower);
         nonFungibleAsset.transferFrom(borrower, address(loan), 2);
     }
+
+    function _LOANTokenNotOwnedByOriginalLender() internal {
+        vm.mockCall(
+            loanToken, abi.encodeWithSignature("ownerOf(uint256)", loanId), abi.encode(notOriginalLender)
+        );
+    }
+
 
     function test_shouldFail_whenLoanDoesNotExist() external {
         simpleLoan.status = 0;
@@ -431,21 +451,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         loan.repayLOAN(loanId, loanAssetPermit);
     }
 
-    function test_shouldMoveLoanToRepaidState() external {
-        _mockLOAN(loanId, simpleLoan);
-
-        loan.repayLOAN(loanId, loanAssetPermit);
-
-        bytes32 loanSlot = keccak256(abi.encode(
-            loanId,
-            LOANS_SLOT
-        ));
-        // Parse status value from first storage slot
-        bytes32 statusValue = vm.load(address(loan), loanSlot) & bytes32(uint256(0xff));
-        assertTrue(statusValue == bytes32(uint256(3)));
-    }
-
-    function test_shouldTransferRepaidAmountToVault() external {
+    function test_shouldCallPermit_whenProvided() external {
         _mockLOAN(loanId, simpleLoan);
         loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
 
@@ -456,9 +462,62 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
                 borrower, address(loan), simpleLoan.loanRepayAmount, 1, uint8(4), uint256(2), uint256(3)
             )
         );
+
+        vm.prank(borrower);
+        loan.repayLOAN(loanId, loanAssetPermit);
+    }
+
+    function test_shouldDeleteLoanData_whenLOANOwnerIsOriginalLender() external {
+        _mockLOAN(loanId, simpleLoan);
+
+        loan.repayLOAN(loanId, loanAssetPermit);
+
+        _assertLOANEq(loanId, nonExistingLoan);
+    }
+
+    function test_shouldBurnLOANToken_whenLOANOwnerIsOriginalLender() external {
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.expectCall(loanToken, abi.encodeWithSignature("burn(uint256)", loanId));
+
+        loan.repayLOAN(loanId, loanAssetPermit);
+    }
+
+    function test_shouldTransferRepaidAmountToLender_whenLOANOwnerIsOriginalLender() external {
+        _mockLOAN(loanId, simpleLoan);
+
         vm.expectCall(
             simpleLoan.loanAssetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, address(loan), simpleLoan.loanRepayAmount)
+            abi.encodeWithSignature(
+                "transferFrom(address,address,uint256)", borrower, lender, simpleLoan.loanRepayAmount
+            )
+        );
+
+        vm.prank(borrower);
+        loan.repayLOAN(loanId, loanAssetPermit);
+    }
+
+    function test_shouldMoveLoanToRepaidState_whenLOANOwnerIsNotOriginalLender() external {
+        _mockLOAN(loanId, simpleLoan);
+        _LOANTokenNotOwnedByOriginalLender();
+
+        loan.repayLOAN(loanId, loanAssetPermit);
+
+        bytes32 loanSlot = keccak256(abi.encode(loanId, LOANS_SLOT));
+        // Parse status value from first storage slot
+        bytes32 statusValue = vm.load(address(loan), loanSlot) & bytes32(uint256(0xff));
+        assertTrue(statusValue == bytes32(uint256(3)));
+    }
+
+    function test_shouldTransferRepaidAmountToVault_whenLOANOwnerIsNotOriginalLender() external {
+        _mockLOAN(loanId, simpleLoan);
+        _LOANTokenNotOwnedByOriginalLender();
+
+        vm.expectCall(
+            simpleLoan.loanAssetAddress,
+            abi.encodeWithSignature(
+                "transferFrom(address,address,uint256)", borrower, address(loan), simpleLoan.loanRepayAmount
+            )
         );
 
         vm.prank(borrower);
@@ -470,7 +529,10 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectCall(
             simpleLoan.collateral.assetAddress,
-            abi.encodeWithSignature("safeTransferFrom(address,address,uint256,bytes)", address(loan), simpleLoan.borrower, simpleLoan.collateral.id)
+            abi.encodeWithSignature(
+                "safeTransferFrom(address,address,uint256,bytes)",
+                address(loan), simpleLoan.borrower, simpleLoan.collateral.id
+            )
         );
 
         loan.repayLOAN(loanId, loanAssetPermit);
@@ -481,6 +543,15 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectEmit(true, false, false, false);
         emit LOANPaidBack(loanId);
+
+        loan.repayLOAN(loanId, loanAssetPermit);
+    }
+
+    function test_shouldEmitEvent_LOANClaimed_whenLOANOwnerIsOriginalLender() external {
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.expectEmit(true, true, true, true);
+        emit LOANClaimed(loanId, false);
 
         loan.repayLOAN(loanId, loanAssetPermit);
     }
