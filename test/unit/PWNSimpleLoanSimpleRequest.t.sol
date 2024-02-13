@@ -43,8 +43,8 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
             loanYield: 1,
             duration: 1000,
             expiration: 0,
+            allowedLender: address(0),
             borrower: borrower,
-            lender: address(0),
             nonce: uint256(keccak256("nonce_1"))
         });
 
@@ -67,7 +67,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
                 address(requestContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,uint256 nonce)"),
+                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 nonce)"),
                 abi.encode(_request)
             ))
         ));
@@ -249,11 +249,11 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
-    function test_shouldFail_whenCallerIsNotLender_whenSetLender() external {
-        request.lender = address(0x50303);
+    function test_shouldFail_whenCallerIsNotAllowedLender() external {
+        request.allowedLender = address(0x50303);
         signature = _signRequestCompact(borrowerPK, request);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedLender.selector, request.lender));
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedLender.selector, request.allowedLender));
         vm.prank(activeLoanContract);
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }

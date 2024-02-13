@@ -25,7 +25,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @dev EIP-712 simple request struct type hash.
      */
     bytes32 constant internal REQUEST_TYPEHASH = keccak256(
-        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address borrower,address lender,uint256 nonce)"
+        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 nonce)"
     );
 
     bytes32 immutable internal DOMAIN_SEPARATOR;
@@ -41,8 +41,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @param loanYield Amount of tokens which acts as a lenders loan interest. Borrower has to pay back a borrowed amount + yield.
      * @param duration Loan duration in seconds.
      * @param expiration Request expiration timestamp in seconds.
+     * @param allowedLender Address of an allowed lender. Only this address can accept a request. If the address is zero address, anybody with a loan asset can accept the request.
      * @param borrower Address of a borrower. This address has to sign a request to be valid.
-     * @param lender Address of a lender. Only this address can accept a request. If the address is zero address, anybody with a loan asset can accept the request.
      * @param nonce Additional value to enable identical requests in time. Without it, it would be impossible to make again request, which was once revoked.
      *              Can be used to create a group of requests, where accepting one request will make other requests in the group revoked.
      */
@@ -56,8 +56,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         uint256 loanYield;
         uint32 duration;
         uint40 expiration;
+        address allowedLender;
         address borrower;
-        address lender;
         uint256 nonce;
     }
 
@@ -122,9 +122,9 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         if (revokedRequestNonce.isNonceRevoked(borrower, request.nonce) == true)
             revert NonceAlreadyRevoked();
 
-        if (request.lender != address(0))
-            if (lender != request.lender)
-                revert CallerIsNotStatedLender(request.lender);
+        if (request.allowedLender != address(0))
+            if (lender != request.allowedLender)
+                revert CallerIsNotStatedLender(request.allowedLender);
 
         if (request.duration < MIN_LOAN_DURATION)
             revert InvalidDuration();
