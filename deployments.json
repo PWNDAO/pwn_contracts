@@ -2,8 +2,9 @@
     "deployedChains": [1, 5, 10, 25, 56, 137, 338, 5000, 5001, 8453, 42161, 84531, 11155111],
     "chains": {
         "1": {
-            "productTimelock": "0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12",
-            "protocolTimelock": "0x9b1ec4bc634db130ab7310d4e585338888030623",
+            "dao": "0x1B8383D2726E7e18189205337424a2631A2102F4",
+            "productTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
+            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
             "protocolSafe": "0x61a77B19b7F4dB82222625D7a969698894d77473",
             "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
             "feeCollector": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
@@ -21,6 +22,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "5": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x0000000000000000000000000000000000000000",
             "protocolTimelock": "0x0000000000000000000000000000000000000000",
             "protocolSafe": "0x61a77B19b7F4dB82222625D7a969698894d77473",
@@ -40,6 +42,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "10": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39",
             "protocolTimelock": "0x744B83343a86F87Ed05a5f3A92939D6d81520F27",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
@@ -59,6 +62,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "25": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39",
             "protocolTimelock": "0x744B83343a86F87Ed05a5f3A92939D6d81520F27",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
@@ -78,6 +82,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "56": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
             "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
             "protocolSafe": "0x61a77B19b7F4dB82222625D7a969698894d77473",
@@ -97,6 +102,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "137": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12",
             "protocolTimelock": "0x9b1ec4bc634db130ab7310d4e585338888030623",
             "protocolSafe": "0x61a77B19b7F4dB82222625D7a969698894d77473",
@@ -116,6 +122,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "338": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x0000000000000000000000000000000000000000",
             "protocolTimelock": "0x0000000000000000000000000000000000000000",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
@@ -135,6 +142,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "5000": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39",
             "protocolTimelock": "0x744B83343a86F87Ed05a5f3A92939D6d81520F27",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
@@ -154,6 +162,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "5001": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x0000000000000000000000000000000000000000",
             "protocolTimelock": "0x0000000000000000000000000000000000000000",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
@@ -173,6 +182,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "8453": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x60a0F7594793e3DC31DfE1cC930dF65B54e95B39",
             "protocolTimelock": "0x744B83343a86F87Ed05a5f3A92939D6d81520F27",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
@@ -192,6 +202,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "42161": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x2cDf99aD1115Ea0E943E56dd26459E3e57788C12",
             "protocolTimelock": "0x9b1ec4bc634db130ab7310d4e585338888030623",
             "protocolSafe": "0x61a77B19b7F4dB82222625D7a969698894d77473",
@@ -211,6 +222,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "84531": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x0000000000000000000000000000000000000000",
             "protocolTimelock": "0x0000000000000000000000000000000000000000",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",
@@ -230,6 +242,7 @@
             "simpleLoanSimpleRequest": "0x9Cb87eC6448299aBc326F32d60E191Ef32Ab225D"
         },
         "11155111": {
+            "dao": "0x0000000000000000000000000000000000000000",
             "productTimelock": "0x0000000000000000000000000000000000000000",
             "protocolTimelock": "0x0000000000000000000000000000000000000000",
             "protocolSafe": "0xa7106a1C2498EaeF4AC1B594a6544c841623B327",

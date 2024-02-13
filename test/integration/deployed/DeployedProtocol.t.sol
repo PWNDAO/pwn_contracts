@@ -27,31 +27,33 @@ contract DeployedProtocolTest is DeploymentTest {
         }
 
         // TIMELOCK CONTROLLERS
-        bool hasTimelock = protocolTimelock != address(0) && productTimelock != address(0);
-        if (hasTimelock) {
+        bool haveTimelocks = protocolTimelock != address(0) && productTimelock != address(0);
+        if (haveTimelocks) {
+            address protocolTimelockOwner = dao == address(0) ? protocolSafe : dao;
             TimelockController protocolTimelockController = TimelockController(payable(protocolTimelock));
             // - protocol timelock has min delay of 14 days
             assertEq(protocolTimelockController.getMinDelay(), 345_600);
             // - protocol safe has PROPOSER role in protocol timelock
-            assertTrue(protocolTimelockController.hasRole(PROPOSER_ROLE, protocolSafe));
+            assertTrue(protocolTimelockController.hasRole(PROPOSER_ROLE, protocolTimelockOwner));
             // - protocol safe has CANCELLER role in protocol timelock
-            assertTrue(protocolTimelockController.hasRole(CANCELLER_ROLE, protocolSafe));
+            assertTrue(protocolTimelockController.hasRole(CANCELLER_ROLE, protocolTimelockOwner));
             // - everybody has EXECUTOR role in protocol timelock
             assertTrue(protocolTimelockController.hasRole(EXECUTOR_ROLE, address(0)));
 
+            address productTimelockOwner = dao == address(0) ? daoSafe : dao;
             TimelockController productTimelockController = TimelockController(payable(productTimelock));
             // - product timelock has min delay of 4 days
             assertEq(productTimelockController.getMinDelay(), 345_600);
             // - dao safe has PROPOSER role in product timelock
-            assertTrue(productTimelockController.hasRole(PROPOSER_ROLE, daoSafe));
+            assertTrue(productTimelockController.hasRole(PROPOSER_ROLE, productTimelockOwner));
             // - dao safe has CANCELLER role in product timelock
-            assertTrue(productTimelockController.hasRole(CANCELLER_ROLE, daoSafe));
+            assertTrue(productTimelockController.hasRole(CANCELLER_ROLE, productTimelockOwner));
             // - everybody has EXECUTOR role in product timelock
             assertTrue(productTimelockController.hasRole(EXECUTOR_ROLE, address(0)));
         }
 
         // CONFIG
-        if (hasTimelock) {
+        if (haveTimelocks) {
             // - admin is protocol timelock
             assertEq(vm.load(address(config), PROXY_ADMIN_SLOT), bytes32(uint256(uint160(protocolTimelock))));
             // - owner is product timelock
@@ -71,7 +73,7 @@ contract DeployedProtocolTest is DeploymentTest {
         assertEq(vm.load(configImplementation, bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(1)));
 
         // HUB
-        if (hasTimelock) {
+        if (haveTimelocks) {
             // - owner is protocol timelock
             assertEq(hub.owner(), protocolTimelock);
         } else {

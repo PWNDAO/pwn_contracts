@@ -29,6 +29,7 @@ abstract contract Deployments is CommonBase {
     struct Deployment {
         PWNConfig config;
         PWNConfig configSingleton;
+        address dao;
         address daoSafe;
         IPWNDeployer deployer;
         address deployerSafe;
@@ -45,6 +46,8 @@ abstract contract Deployments is CommonBase {
         PWNSimpleLoanSimpleOffer simpleLoanSimpleOffer;
         PWNSimpleLoanSimpleRequest simpleLoanSimpleRequest;
     }
+
+    address dao;
 
     address productTimelock;
     address protocolTimelock;
@@ -78,6 +81,7 @@ abstract contract Deployments is CommonBase {
             bytes memory rawDeployment = json.parseRaw(string.concat(".chains.", block.chainid.toString()));
             deployment = abi.decode(rawDeployment, (Deployment));
 
+            dao = deployment.dao;
             productTimelock = deployment.productTimelock;
             protocolTimelock = deployment.protocolTimelock;
             deployerSafe = deployment.deployerSafe;
