@@ -36,8 +36,9 @@ contract PWNConfig is Ownable2Step, Initializable {
     /**
      * @notice Mapping of a loan contract address to LOAN token metadata uri.
      * @dev LOAN token minted by a loan contract will return metadata uri stored in this mapping.
+     *      If there is no metadata uri for a loan contract, default metadata uri will be used stored under address(0).
      */
-    mapping (address => string) public loanMetadataUri;
+    mapping (address => string) private _loanMetadataUri;
 
 
     /*----------------------------------------------------------*|
@@ -57,7 +58,12 @@ contract PWNConfig is Ownable2Step, Initializable {
     /**
      * @dev Emitted when new LOAN token metadata uri is set.
      */
-    event LoanMetadataUriUpdated(address indexed loanContract, string newUri);
+    event LOANMetadataUriUpdated(address indexed loanContract, string newUri);
+
+    /**
+     * @dev Emitted when new default LOAN token metadata uri is set.
+     */
+    event DefaultLOANMetadataUriUpdated(string newUri);
 
 
     /*----------------------------------------------------------*|
@@ -66,11 +72,11 @@ contract PWNConfig is Ownable2Step, Initializable {
 
     constructor() Ownable2Step() {
         // PWNConfig is used as a proxy. Use initializer to setup initial properties.
-        // Initialized the implementation contract with zero values.
-        initialize(address(0), 0, address(0));
+        _disableInitializers();
+        _transferOwnership(address(0));
     }
 
-    function initialize(address _owner, uint16 _fee, address _feeCollector) initializer external {
+    function initialize(address _owner, uint16 _fee, address _feeCollector) external initializer {
         require(_owner != address(0), "Owner is zero address");
         _transferOwnership(_owner);
 
@@ -123,7 +129,7 @@ contract PWNConfig is Ownable2Step, Initializable {
 
 
     /*----------------------------------------------------------*|
-    |*  # LOAN METADATA MANAGEMENT                              *|
+    |*  # LOAN METADATA                                         *|
     |*----------------------------------------------------------*/
 
     /**
@@ -131,9 +137,34 @@ contract PWNConfig is Ownable2Step, Initializable {
      * @param loanContract Address of a loan contract.
      * @param metadataUri New value of LOAN token metadata uri for given `loanContract`.
      */
-    function setLoanMetadataUri(address loanContract, string memory metadataUri) external onlyOwner {
-        loanMetadataUri[loanContract] = metadataUri;
-        emit LoanMetadataUriUpdated(loanContract, metadataUri);
+    function setLOANMetadataUri(address loanContract, string memory metadataUri) external onlyOwner {
+        if (loanContract == address(0))
+            // address(0) is used as a default metadata uri. Use `setDefaultLOANMetadataUri` to set default metadata uri.
+            revert ZeroLoanContract();
+
+        _loanMetadataUri[loanContract] = metadataUri;
+        emit LOANMetadataUriUpdated(loanContract, metadataUri);
+    }
+
+    /**
+     * @notice Set a default LOAN token metadata uri.
+     * @param metadataUri New value of default LOAN token metadata uri.
+     */
+    function setDefaultLOANMetadataUri(string memory metadataUri) external onlyOwner {
+        _loanMetadataUri[address(0)] = metadataUri;
+        emit DefaultLOANMetadataUriUpdated(metadataUri);
+    }
+
+    /**
+     * @notice Return a LOAN token metadata uri base on a loan contract that minted the token.
+     * @param loanContract Address of a loan contract.
+     * @return uri Metadata uri for given loan contract.
+     */
+    function loanMetadataUri(address loanContract) external view returns (string memory uri) {
+        uri = _loanMetadataUri[loanContract];
+        // If there is no metadata uri for a loan contract, use default metadata uri.
+        if (bytes(uri).length == 0)
+            uri = _loanMetadataUri[address(0)];
     }
 
 }

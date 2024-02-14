@@ -10,6 +10,7 @@ abstract contract PWNConfigTest is Test {
 
     bytes32 internal constant OWNER_SLOT = bytes32(uint256(0)); // `_owner` property position
     bytes32 internal constant PENDING_OWNER_SLOT = bytes32(uint256(1)); // `_pendingOwner` property position
+    bytes32 internal constant INITIALIZED_SLOT = bytes32(uint256(1)); // `_initialized` property position
     bytes32 internal constant FEE_SLOT = bytes32(uint256(1)); // `fee` property position
     bytes32 internal constant FEE_COLLECTOR_SLOT = bytes32(uint256(2)); // `feeCollector` property position
     bytes32 internal constant LOAN_METADATA_URI_SLOT = bytes32(uint256(3)); // `loanMetadataUri` mapping position
@@ -20,10 +21,40 @@ abstract contract PWNConfigTest is Test {
 
     event FeeUpdated(uint16 oldFee, uint16 newFee);
     event FeeCollectorUpdated(address oldFeeCollector, address newFeeCollector);
-    event LoanMetadataUriUpdated(address indexed loanContract, string newUri);
+    event LOANMetadataUriUpdated(address indexed loanContract, string newUri);
+    event DefaultLOANMetadataUriUpdated(string newUri);
 
     function setUp() virtual public {
         config = new PWNConfig();
+    }
+
+    function _initialize() internal {
+        // initialize owner to `owner`, fee to 0 and feeCollector to `feeCollector`
+        vm.store(address(config), OWNER_SLOT, bytes32(uint256(uint160(owner))));
+        vm.store(address(config), FEE_COLLECTOR_SLOT, bytes32(uint256(uint160(feeCollector))));
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # CONSTRUCTOR                                           *|
+|*----------------------------------------------------------*/
+
+contract PWNConfig_Constructor_Test is PWNConfigTest {
+
+    function test_shouldInitializeWithZeroValues() external {
+        bytes32 ownerValue = vm.load(address(config), OWNER_SLOT);
+        assertEq(address(uint160(uint256(ownerValue))), address(0));
+
+        bytes32 initializedSlotValue = vm.load(address(config), INITIALIZED_SLOT);
+        assertEq(uint16(uint256(initializedSlotValue << 88 >> 248)), 255); // disable initializers
+
+        bytes32 feeSlotValue = vm.load(address(config), FEE_SLOT);
+        assertEq(uint16(uint256(feeSlotValue << 64 >> 240)), 0);
+
+        bytes32 feeCollectorValue = vm.load(address(config), FEE_COLLECTOR_SLOT);
+        assertEq(address(uint160(uint256(feeCollectorValue))), address(0));
     }
 
 }
@@ -37,14 +68,21 @@ contract PWNConfig_Initialize_Test is PWNConfigTest {
 
     uint16 fee = 32;
 
-    function test_shouldSetOwner() external {
+    function setUp() override public {
+        super.setUp();
+
+        // mock that contract is not initialized
+        vm.store(address(config), INITIALIZED_SLOT, bytes32(0));
+    }
+
+    function test_shouldSetValues() external {
         config.initialize(owner, fee, feeCollector);
 
         bytes32 ownerValue = vm.load(address(config), OWNER_SLOT);
         assertEq(address(uint160(uint256(ownerValue))), owner);
 
         bytes32 feeSlotValue = vm.load(address(config), FEE_SLOT);
-        assertEq(uint16(uint256(feeSlotValue >> 176)), fee);
+        assertEq(uint16(uint256(feeSlotValue << 64 >> 240)), fee);
 
         bytes32 feeCollectorValue = vm.load(address(config), FEE_COLLECTOR_SLOT);
         assertEq(address(uint160(uint256(feeCollectorValue))), feeCollector);
@@ -79,7 +117,7 @@ contract PWNConfig_SetFee_Test is PWNConfigTest {
     function setUp() override public {
         super.setUp();
 
-        config.initialize(owner, 0, feeCollector);
+        _initialize();
     }
 
 
@@ -125,11 +163,10 @@ contract PWNConfig_SetFeeCollector_Test is PWNConfigTest {
 
     address newFeeCollector = address(0xfee);
 
-
     function setUp() override public {
         super.setUp();
 
-        config.initialize(owner, 0, feeCollector);
+        _initialize();
     }
 
 
@@ -167,7 +204,7 @@ contract PWNConfig_SetFeeCollector_Test is PWNConfigTest {
 |*  # SET LOAN METADATA URI                                 *|
 |*----------------------------------------------------------*/
 
-contract PWNConfig_SetLoanMetadataUri_Test is PWNConfigTest {
+contract PWNConfig_SetLOANMetadataUri_Test is PWNConfigTest {
 
     string tokenUri = "test.token.uri";
     address loanContract = address(0x63);
@@ -175,18 +212,27 @@ contract PWNConfig_SetLoanMetadataUri_Test is PWNConfigTest {
     function setUp() override public {
         super.setUp();
 
-        config.initialize(owner, 0, feeCollector);
+        _initialize();
     }
 
 
     function test_shouldFail_whenCallerIsNotOwner() external {
         vm.expectRevert("Ownable: caller is not the owner");
-        config.setLoanMetadataUri(loanContract, tokenUri);
+        config.setLOANMetadataUri(loanContract, tokenUri);
     }
 
-    function test_shouldSetLoanMetadataUriToLoanContract() external {
+    function test_shouldFail_whenZeroLoanContract() external {
+        vm.expectRevert(abi.encodeWithSelector(ZeroLoanContract.selector));
         vm.prank(owner);
-        config.setLoanMetadataUri(loanContract, tokenUri);
+        config.setLOANMetadataUri(address(0), tokenUri);
+    }
+
+    function testFuzz_shouldStoreLoanMetadataUriToLoanContract(address _loanContract) external {
+        vm.assume(_loanContract != address(0));
+        loanContract = _loanContract;
+
+        vm.prank(owner);
+        config.setLOANMetadataUri(loanContract, tokenUri);
 
         bytes32 tokenUriValue = vm.load(
             address(config),
@@ -201,12 +247,97 @@ contract PWNConfig_SetLoanMetadataUri_Test is PWNConfigTest {
         assertEq(keccak256(abi.encodePacked(tokenUriValue >> 8)), keccak256(abi.encodePacked(_tokenUri >> 8)));
     }
 
-    function test_shouldEmitEvent_LoanMetadataUriUpdated() external {
-        vm.expectEmit(true, true, false, false);
-        emit LoanMetadataUriUpdated(loanContract, tokenUri);
+    function test_shouldEmitEvent_LOANMetadataUriUpdated() external {
+        vm.expectEmit(true, true, true, true);
+        emit LOANMetadataUriUpdated(loanContract, tokenUri);
 
         vm.prank(owner);
-        config.setLoanMetadataUri(loanContract, tokenUri);
+        config.setLOANMetadataUri(loanContract, tokenUri);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # SET DEFAULT LOAN METADATA URI                         *|
+|*----------------------------------------------------------*/
+
+contract PWNConfig_SetDefaultLOANMetadataUri_Test is PWNConfigTest {
+
+    string tokenUri = "test.token.uri";
+
+    function setUp() override public {
+        super.setUp();
+
+        _initialize();
+    }
+
+
+    function test_shouldFail_whenCallerIsNotOwner() external {
+        vm.expectRevert("Ownable: caller is not the owner");
+        config.setDefaultLOANMetadataUri(tokenUri);
+    }
+
+    function test_shouldStoreDefaultLoanMetadataUri() external {
+        vm.prank(owner);
+        config.setDefaultLOANMetadataUri(tokenUri);
+
+        bytes32 tokenUriValue = vm.load(
+            address(config),
+            keccak256(abi.encode(address(0), LOAN_METADATA_URI_SLOT))
+        );
+        bytes memory memoryTokenUri = bytes(tokenUri);
+        bytes32 _tokenUri;
+        assembly {
+            _tokenUri := mload(add(memoryTokenUri, 0x20))
+        }
+        // Remove string length
+        assertEq(keccak256(abi.encodePacked(tokenUriValue >> 8)), keccak256(abi.encodePacked(_tokenUri >> 8)));
+    }
+
+    function test_shouldEmitEvent_DefaultLOANMetadataUriUpdated() external {
+        vm.expectEmit(true, true, true, true);
+        emit DefaultLOANMetadataUriUpdated(tokenUri);
+
+        vm.prank(owner);
+        config.setDefaultLOANMetadataUri(tokenUri);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # LOAN METADATA URI                                     *|
+|*----------------------------------------------------------*/
+
+contract PWNConfig_LoanMetadataUri_Test is PWNConfigTest {
+
+    function setUp() override public {
+        super.setUp();
+
+        _initialize();
+    }
+
+
+    function testFuzz_shouldReturnDefaultLoanMetadataUri_whenNoStoreValueForLoanContract(address loanContract) external {
+        string memory defaultUri = "default.token.uri";
+
+        vm.prank(owner);
+        config.setDefaultLOANMetadataUri(defaultUri);
+
+        string memory uri = config.loanMetadataUri(loanContract);
+        assertEq(uri, defaultUri);
+    }
+
+    function testFuzz_shouldReturnLoanMetadataUri_whenStoredValueForLoanContract(address loanContract) external {
+        vm.assume(loanContract != address(0));
+        string memory tokenUri = "test.token.uri";
+
+        vm.prank(owner);
+        config.setLOANMetadataUri(loanContract, tokenUri);
+
+        string memory uri = config.loanMetadataUri(loanContract);
+        assertEq(uri, tokenUri);
     }
 
 }
