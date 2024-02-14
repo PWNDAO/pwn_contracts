@@ -91,7 +91,7 @@ forge script script/PWN.s.sol:Deploy \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 15 gwei) \
---verify --etherscan-api-key $BSCSCAN_API_KEY \
+--verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
     /// @dev Expecting to have deployer, deployerSafe, protocolSafe, daoSafe & feeCollector addresses set in the `deployments.json`
@@ -103,6 +103,8 @@ forge script script/PWN.s.sol:Deploy \
         require(protocolSafe != address(0), "Protocol safe not set");
         require(daoSafe != address(0), "DAO safe not set");
         require(feeCollector != address(0), "Fee collector not set");
+
+        uint256 initialConfigHelper = vmSafe.envUint("INITIAL_CONFIG_HELPER");
 
         vm.startBroadcast();
 
@@ -117,13 +119,17 @@ forge script script/PWN.s.sol:Deploy \
             salt: PWNContractDeployerSalt.CONFIG_PROXY,
             bytecode: abi.encodePacked(
                 type(TransparentUpgradeableProxy).creationCode,
-                abi.encode(
-                    configSingleton,
-                    protocolSafe,
-                    abi.encodeWithSignature("initialize(address,uint16,address)", daoSafe, 0, feeCollector)
-                )
+                abi.encode(configSingleton, vm.addr(initialConfigHelper), "")
             )
         }));
+        config.initialize(daoSafe, 0, feeCollector);
+
+        vm.stopBroadcast();
+
+        vm.broadcast(initialConfigHelper);
+        TransparentUpgradeableProxy(payable(address(config))).changeAdmin(protocolSafe);
+
+        vm.startBroadcast();
 
         // - Hub
         hub = PWNHub(_deployAndTransferOwnership({
@@ -229,35 +235,10 @@ forge script script/PWN.s.sol:Setup \
 
         vm.startBroadcast();
 
-        _initializeConfigImpl();
         _acceptOwnership(protocolSafe, address(hub));
         _setTags();
 
         vm.stopBroadcast();
-    }
-
-/*
-forge script script/PWN.s.sol:Setup \
---sig "initializeConfigImpl()" \
---rpc-url $RPC_URL \
---private-key $PRIVATE_KEY \
---with-gas-price $(cast --to-wei 15 gwei) \
---broadcast
-*/
-    /// @dev Expecting to have configSingleton address set in the `deployments.json`
-    function initializeConfigImpl() external {
-        _loadDeployedAddresses();
-
-        vm.startBroadcast();
-        _initializeConfigImpl();
-        vm.stopBroadcast();
-    }
-
-    function _initializeConfigImpl() internal {
-        address deadAddr = 0x000000000000000000000000000000000000dEaD;
-        configSingleton.initialize(deadAddr, 0, deadAddr);
-
-        console2.log("Config impl initialized");
     }
 
 /*
