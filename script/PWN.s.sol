@@ -3,7 +3,8 @@ pragma solidity 0.8.16;
 
 import "forge-std/Script.sol";
 
-import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { TransparentUpgradeableProxy, ITransparentUpgradeableProxy }
+from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { GnosisSafeLike, GnosisSafeUtils } from "./lib/GnosisSafeUtils.sol";
 
@@ -127,7 +128,7 @@ forge script script/PWN.s.sol:Deploy \
         vm.stopBroadcast();
 
         vm.broadcast(initialConfigHelper);
-        TransparentUpgradeableProxy(payable(address(config))).changeAdmin(protocolSafe);
+        ITransparentUpgradeableProxy(address(config)).changeAdmin(protocolSafe);
 
         vm.startBroadcast();
 
