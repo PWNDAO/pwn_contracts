@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "MultiToken/MultiToken.sol";
+import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.sol";
 
 import "@pwn/config/PWNConfig.sol";
 import "@pwn/hub/PWNHub.sol";
@@ -29,9 +29,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    PWNHub immutable internal hub;
-    PWNLOAN immutable internal loanToken;
-    PWNConfig immutable internal config;
+    PWNHub internal immutable hub;
+    PWNLOAN internal immutable loanToken;
+    PWNConfig internal immutable config;
+
+    IMultiTokenCategoryRegistry public immutable categoryRegistry;
 
     /**
      * @notice Struct defining a simple loan.
@@ -88,10 +90,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor(address _hub, address _loanToken, address _config) {
+    constructor(address _hub, address _loanToken, address _config, address _categoryRegistry) {
         hub = PWNHub(_hub);
         loanToken = PWNLOAN(_loanToken);
         config = PWNConfig(_config);
+        categoryRegistry = IMultiTokenCategoryRegistry(_categoryRegistry);
     }
 
 
@@ -117,22 +120,22 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bytes calldata collateralPermit
     ) external returns (uint256 loanId) {
         // Check that loan terms factory contract is tagged in PWNHub
-        if (hub.hasTag(loanTermsFactoryContract, PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY) == false)
+        if (!hub.hasTag(loanTermsFactoryContract, PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY))
             revert CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY);
 
         // Build PWNLOANTerms.Simple by loan factory
-        (PWNLOANTerms.Simple memory loanTerms, bytes32 factoryDataHash) = PWNSimpleLoanTermsFactory(loanTermsFactoryContract).createLOANTerms({
+        (loanTerms, factoryDataHash) = PWNSimpleLoanTermsFactory(loanTermsFactoryContract).createLOANTerms({
             caller: msg.sender,
             factoryData: loanTermsFactoryData,
             signature: signature
         });
 
         // Check loan asset validity
-        if (MultiToken.isValid(loanTerms.asset) == false)
+        if (!MultiToken.isValid(loanTerms.asset, categoryRegistry))
             revert InvalidLoanAsset();
 
         // Check collateral validity
-        if (MultiToken.isValid(loanTerms.collateral) == false)
+        if (!MultiToken.isValid(loanTerms.collateral, categoryRegistry))
             revert InvalidCollateralAsset();
 
         // Mint LOAN token for lender

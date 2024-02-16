@@ -4,6 +4,8 @@ pragma solidity 0.8.16;
 import "forge-std/StdJson.sol";
 import "forge-std/Base.sol";
 
+import "MultiToken/interfaces/IMultiTokenCategoryRegistry.sol";
+
 import "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 import "@pwn/config/PWNConfig.sol";
@@ -27,6 +29,7 @@ abstract contract Deployments is CommonBase {
 
     // Properties need to be in alphabetical order
     struct Deployment {
+        IMultiTokenCategoryRegistry categoryRegistry;
         PWNConfig config;
         PWNConfig configSingleton;
         address dao;
@@ -56,6 +59,8 @@ abstract contract Deployments is CommonBase {
     address protocolSafe;
     address daoSafe;
     address feeCollector;
+
+    IMultiTokenCategoryRegistry categoryRegistry;
 
     IPWNDeployer deployer;
     PWNHub hub;
@@ -99,6 +104,7 @@ abstract contract Deployments is CommonBase {
             simpleLoanSimpleOffer = deployment.simpleLoanSimpleOffer;
             simpleLoanListOffer = deployment.simpleLoanListOffer;
             simpleLoanSimpleRequest = deployment.simpleLoanSimpleRequest;
+            categoryRegistry = deployment.categoryRegistry;
         } else {
             _protocolNotDeployedOnSelectedChain();
         }

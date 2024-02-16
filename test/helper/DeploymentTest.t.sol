@@ -3,6 +3,9 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
+import "MultiToken/MultiTokenCategoryRegistry.sol";
+import "MultiToken/interfaces/IMultiTokenCategoryRegistry.sol";
+
 import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import "@pwn/Deployments.sol";
@@ -19,6 +22,10 @@ abstract contract DeploymentTest is Deployments, Test {
         daoSafe = makeAddr("daoSafe");
         feeCollector = makeAddr("feeCollector");
 
+        // Deploy category registry
+        vm.prank(protocolSafe);
+        categoryRegistry = IMultiTokenCategoryRegistry(new MultiTokenCategoryRegistry());
+
         // Deploy protocol
         configSingleton = new PWNConfig();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
@@ -32,7 +39,7 @@ abstract contract DeploymentTest is Deployments, Test {
         hub = new PWNHub();
 
         loanToken = new PWNLOAN(address(hub));
-        simpleLoan = new PWNSimpleLoan(address(hub), address(loanToken), address(config));
+        simpleLoan = new PWNSimpleLoan(address(hub), address(loanToken), address(config), address(categoryRegistry));
 
         revokedOfferNonce = new PWNRevokedNonce(address(hub), PWNHubTags.LOAN_OFFER);
         simpleLoanSimpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedOfferNonce));

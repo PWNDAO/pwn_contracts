@@ -24,6 +24,7 @@ abstract contract PWNSimpleLoanTest is Test {
     address hub = makeAddr("hub");
     address loanToken = makeAddr("loanToken");
     address config = makeAddr("config");
+    address categoryRegistry = makeAddr("categoryRegistry");
     address feeCollector = makeAddr("feeCollector");
     address alice = makeAddr("alice");
     address loanFactory = makeAddr("loanFactory");
@@ -55,7 +56,7 @@ abstract contract PWNSimpleLoanTest is Test {
     }
 
     function setUp() virtual public {
-        loan = new PWNSimpleLoan(hub, loanToken, config);
+        loan = new PWNSimpleLoan(hub, loanToken, config, categoryRegistry);
         fungibleAsset = new T20();
         nonFungibleAsset = new T721();
 
@@ -88,7 +89,7 @@ abstract contract PWNSimpleLoanTest is Test {
             expiration: uint40(block.timestamp + 40039),
             loanAssetAddress: address(fungibleAsset),
             loanRepayAmount: 6731,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC721, address(nonFungibleAsset), 2, 0),
+            collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
             originalLender: lender
         });
 
@@ -96,8 +97,8 @@ abstract contract PWNSimpleLoanTest is Test {
             lender: lender,
             borrower: borrower,
             expiration: uint40(block.timestamp + 40039),
-            collateral: MultiToken.Asset(MultiToken.Category.ERC721, address(nonFungibleAsset), 2, 0),
-            asset: MultiToken.Asset(MultiToken.Category.ERC20, address(fungibleAsset), 0, 100),
+            collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
+            asset: MultiToken.ERC20(address(fungibleAsset), 100),
             loanRepayAmount: 6731
         });
 
@@ -107,7 +108,7 @@ abstract contract PWNSimpleLoanTest is Test {
             expiration: 0,
             loanAssetAddress: address(0),
             loanRepayAmount: 0,
-            collateral: MultiToken.Asset(MultiToken.Category.ERC20, address(0), 0, 0),
+            collateral: MultiToken.Asset(MultiToken.Category(0), address(0), 0, 0),
             originalLender: address(0)
         });
 
@@ -117,6 +118,11 @@ abstract contract PWNSimpleLoanTest is Test {
             address(fungibleAsset),
             abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)"),
             abi.encode()
+        );
+        vm.mockCall(
+            categoryRegistry,
+            abi.encodeWithSignature("registeredCategoryValue(address)"),
+            abi.encode(type(uint8).max)
         );
     }
 
@@ -262,8 +268,11 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldFailWhenLoanAssetIsInvalid() external {
-        simpleLoanTerms.asset.assetAddress = address(nonFungibleAsset);
-        simpleLoanTerms.asset.amount = 100;
+        vm.mockCall(
+            categoryRegistry,
+            abi.encodeWithSignature("registeredCategoryValue(address)", simpleLoanTerms.asset.assetAddress),
+            abi.encode(1)
+        );
 
         vm.mockCall(
             loanFactory,
@@ -276,10 +285,11 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldFailWhenCollateralAssetIsInvalid() external {
-        simpleLoanTerms.collateral.category = MultiToken.Category.ERC721;
-        simpleLoanTerms.collateral.assetAddress = address(nonFungibleAsset);
-        simpleLoanTerms.collateral.id = 123;
-        simpleLoanTerms.collateral.amount = 100; // Invalid, ERC721 has to have amount = 0
+        vm.mockCall(
+            categoryRegistry,
+            abi.encodeWithSignature("registeredCategoryValue(address)", simpleLoanTerms.collateral.assetAddress),
+            abi.encode(0)
+        );
 
         vm.mockCall(
             loanFactory,
