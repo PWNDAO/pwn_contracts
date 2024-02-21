@@ -126,13 +126,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         (PWNLOANTerms.Simple memory loanTerms, bytes32 factoryDataHash)
             = _createLoanTerms(loanTermsFactoryContract, loanTermsFactoryData, signature);
 
-        // Check loan asset validity
-        if (!MultiToken.isValid(loanTerms.asset, categoryRegistry))
-            revert InvalidLoanAsset();
-
-        // Check collateral validity
-        if (!MultiToken.isValid(loanTerms.collateral, categoryRegistry))
-            revert InvalidCollateralAsset();
+        // Check loan terms validity, revert if not
+        _checkNewLoanTerms(loanTerms);
 
         // Create a new loan
         loanId = _createLoan(loanTerms, factoryDataHash, loanTermsFactoryContract);
@@ -165,6 +160,25 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             factoryData: loanTermsFactoryData,
             signature: signature
         });
+    }
+
+    /**
+     * @notice Check if the loan terms are valid for creating a new loan.
+     * @dev The function will revert if the loan terms are not valid for creating a new loan.
+     * @param loanTerms New loan terms struct.
+     */
+    function _checkNewLoanTerms(PWNLOANTerms.Simple memory loanTerms) private view {
+        // Check loan asset validity
+        if (!MultiToken.isValid(loanTerms.asset, categoryRegistry))
+            revert InvalidLoanAsset();
+
+        // Check collateral validity
+        if (!MultiToken.isValid(loanTerms.collateral, categoryRegistry))
+            revert InvalidCollateralAsset();
+
+        // Check that the terms can create a new loan
+        if (!loanTerms.canCreate)
+            revert InvalidCreateTerms();
     }
 
     /**
@@ -272,7 +286,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             = _createLoanTerms(loanTermsFactoryContract, loanTermsFactoryData, signature);
 
         // Check loan terms validity, revert if not
-        _checkRefinanceLoanTerms(loan, loanTerms);
+        _checkRefinanceLoanTerms(loanId, loanTerms);
 
         // Create a new loan
         refinancedLoanId = _createLoan(loanTerms, factoryDataHash, loanTermsFactoryContract);
@@ -290,10 +304,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Check if the loan terms are valid for refinancing.
      * @dev The function will revert if the loan terms are not valid for refinancing.
-     * @param loan Original loan struct.
+     * @param loanId Original loan id.
      * @param loanTerms Refinancing loan terms struct.
      */
-    function _checkRefinanceLoanTerms(LOAN storage loan, PWNLOANTerms.Simple memory loanTerms) private view {
+    function _checkRefinanceLoanTerms(uint256 loanId, PWNLOANTerms.Simple memory loanTerms) private view {
+        LOAN storage loan = LOANs[loanId];
+
         // Check that the loan asset is the same as in the original loan
         // Note: Address check is enough because the asset has always ERC20 category and zero id.
         // Amount can be different, but nonzero.
@@ -317,6 +333,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
                 newBorrower: loanTerms.borrower
             });
         }
+
+        // Check that the terms can refinance a loan
+        if (!loanTerms.canRefinance)
+            revert InvalidRefinanceTerms();
+        if (loanTerms.refinancingLoanId != 0 && loanTerms.refinancingLoanId != loanId)
+            revert InvalidRefinancingLoanId({ refinancingLoanId: loanTerms.refinancingLoanId });
     }
 
     /**

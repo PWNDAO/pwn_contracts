@@ -15,6 +15,9 @@ library PWNLOANTerms {
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
      * @param asset Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
      * @param loanRepayAmount Amount of a loan asset to be paid back.
+     * @param canCreate If true, the terms can be used to create a new loan.
+     * @param canRefinance If true, the terms can be used to refinance a running loan.
+     * @param refinancingLoanId Id of a loan which is refinanced by this terms. If the id is 0, any loan can be refinanced.
      */
     struct Simple {
         address lender;
@@ -23,6 +26,9 @@ library PWNLOANTerms {
         MultiToken.Asset collateral;
         MultiToken.Asset asset;
         uint256 loanRepayAmount;
+        bool canCreate;
+        bool canRefinance;
+        uint256 refinancingLoanId;
     }
 
 }

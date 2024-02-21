@@ -159,6 +159,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             expiration: 0,
             allowedLender: lender,
             borrower: borrower,
+            refinancingLoanId: 0,
             nonce: nonce
         });
 

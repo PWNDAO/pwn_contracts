@@ -99,7 +99,10 @@ abstract contract PWNSimpleLoanTest is Test {
             defaultTimestamp: uint40(block.timestamp + 40039),
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
             asset: MultiToken.ERC20(address(fungibleAsset), 100),
-            loanRepayAmount: 6731
+            loanRepayAmount: 6731,
+            canCreate: true,
+            canRefinance: true,
+            refinancingLoanId: 0
         });
 
         nonExistingLoan = PWNSimpleLoan.LOAN({
@@ -286,6 +289,14 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
+    function test_shouldFail_whenInvalidCreateTerms() external {
+        simpleLoanTerms.canCreate = false;
+        _mockLoanTerms(simpleLoanTerms, loanFactoryDataHash);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidCreateTerms.selector));
+        loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
+    }
+
     function test_shouldMintLOANToken() external {
         vm.expectCall(
             address(loanToken),
@@ -418,7 +429,10 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             defaultTimestamp: uint40(block.timestamp + 40039),
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
             asset: MultiToken.ERC20(address(fungibleAsset), 100),
-            loanRepayAmount: 6731
+            loanRepayAmount: 6731,
+            canCreate: false,
+            canRefinance: true,
+            refinancingLoanId: 0
         });
 
         loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
@@ -540,6 +554,24 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         _mockLoanTerms(refinancedLoanTerms, loanFactoryDataHash);
 
         vm.expectRevert(abi.encodeWithSelector(BorrowerMismatch.selector, simpleLoan.borrower, _borrower));
+        loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
+    }
+
+    function test_shouldFail_whenInvalidRefinanceTerms() external {
+        refinancedLoanTerms.canRefinance = false;
+        _mockLoanTerms(refinancedLoanTerms, loanFactoryDataHash);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidRefinanceTerms.selector));
+        loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
+    }
+
+    function testFuzz_shouldFail_whenInvalidRefinancingLoanId(uint256 _loanId) external {
+        vm.assume(_loanId != loanId && _loanId != 0);
+
+        refinancedLoanTerms.refinancingLoanId = _loanId;
+        _mockLoanTerms(refinancedLoanTerms, loanFactoryDataHash);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, _loanId));
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
     }
 

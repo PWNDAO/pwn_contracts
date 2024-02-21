@@ -45,6 +45,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
             expiration: 0,
             allowedLender: address(0),
             borrower: borrower,
+            refinancingLoanId: 0,
             nonce: uint256(keccak256("nonce_1"))
         });
 
@@ -67,7 +68,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
                 address(requestContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 nonce)"),
+                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonce)"),
                 abi.encode(_request)
             ))
         ));
@@ -301,6 +302,8 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         assertTrue(loanTerms.asset.id == 0);
         assertTrue(loanTerms.asset.amount == request.loanAmount);
         assertTrue(loanTerms.loanRepayAmount == request.loanAmount + request.loanYield);
+        assertTrue(loanTerms.canRefinance == false);
+        assertTrue(loanTerms.refinancingLoanId == request.refinancingLoanId);
 
         assertTrue(requestHash == _requestHash(request));
     }

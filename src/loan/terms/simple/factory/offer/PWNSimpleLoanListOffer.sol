@@ -179,7 +179,10 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
             defaultTimestamp: uint40(block.timestamp) + offer.duration,
             collateral: collateral,
             asset: loanAsset,
-            loanRepayAmount: offer.loanAmount + offer.loanYield
+            loanRepayAmount: offer.loanAmount + offer.loanYield,
+            canCreate: true,
+            canRefinance: true,
+            refinancingLoanId: 0
         });
 
         // Revoke offer if not persistent

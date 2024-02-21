@@ -43,6 +43,9 @@ error RequestExpired();
 
 // Request & Offer
 error InvalidDuration();
+error InvalidCreateTerms();
+error InvalidRefinanceTerms();
+error InvalidRefinancingLoanId(uint256 refinancingLoanId);
 
 // Input data
 error InvalidInputData();

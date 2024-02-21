@@ -361,6 +361,8 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         assertTrue(loanTerms.asset.id == 0);
         assertTrue(loanTerms.asset.amount == offer.loanAmount);
         assertTrue(loanTerms.loanRepayAmount == offer.loanAmount + offer.loanYield);
+        assertTrue(loanTerms.canRefinance == true);
+        assertTrue(loanTerms.refinancingLoanId == 0);
 
         assertTrue(offerHash == _offerHash(offer));
     }

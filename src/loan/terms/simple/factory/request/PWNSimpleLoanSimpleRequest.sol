@@ -25,7 +25,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @dev EIP-712 simple request struct type hash.
      */
     bytes32 public constant REQUEST_TYPEHASH = keccak256(
-        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 nonce)"
+        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonce)"
     );
 
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -43,6 +43,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @param expiration Request expiration timestamp in seconds.
      * @param allowedLender Address of an allowed lender. Only this address can accept a request. If the address is zero address, anybody with a loan asset can accept the request.
      * @param borrower Address of a borrower. This address has to sign a request to be valid.
+     * @param refinancingLoanId Id of a loan which is refinanced by this request. If the id is 0, the request is not a refinancing request.
      * @param nonce Additional value to enable identical requests in time. Without it, it would be impossible to make again request, which was once revoked.
      *              Can be used to create a group of requests, where accepting one request will make other requests in the group revoked.
      */
@@ -58,6 +59,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         uint40 expiration;
         address allowedLender;
         address borrower;
+        uint256 refinancingLoanId;
         uint256 nonce;
     }
 
@@ -150,7 +152,10 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
             defaultTimestamp: uint40(block.timestamp) + request.duration,
             collateral: collateral,
             asset: loanAsset,
-            loanRepayAmount: request.loanAmount + request.loanYield
+            loanRepayAmount: request.loanAmount + request.loanYield,
+            canCreate: request.refinancingLoanId == 0,
+            canRefinance: request.refinancingLoanId != 0,
+            refinancingLoanId: request.refinancingLoanId
         });
 
         revokedRequestNonce.revokeNonce(borrower, request.nonce);
