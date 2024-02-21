@@ -11,6 +11,7 @@ error InvalidLoanStatus(uint256);
 error NonExistingLoan();
 error CallerNotLOANTokenHolder();
 error InvalidExtendedExpirationDate();
+error BorrowerMismatch(address currentBorrower, address newBorrower);
 
 // Invalid asset
 error InvalidLoanAsset();
