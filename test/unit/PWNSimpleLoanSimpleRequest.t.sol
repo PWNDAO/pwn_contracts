@@ -291,7 +291,7 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
 
         assertTrue(loanTerms.lender == lender);
         assertTrue(loanTerms.borrower == request.borrower);
-        assertTrue(loanTerms.expiration == currentTimestamp + request.duration);
+        assertTrue(loanTerms.defaultTimestamp == currentTimestamp + request.duration);
         assertTrue(loanTerms.collateral.category == request.collateralCategory);
         assertTrue(loanTerms.collateral.assetAddress == request.collateralAddress);
         assertTrue(loanTerms.collateral.id == request.collateralId);

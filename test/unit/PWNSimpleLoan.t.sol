@@ -86,7 +86,7 @@ abstract contract PWNSimpleLoanTest is Test {
         simpleLoan = PWNSimpleLoan.LOAN({
             status: 2,
             borrower: borrower,
-            expiration: uint40(block.timestamp + 40039),
+            defaultTimestamp: uint40(block.timestamp + 40039),
             loanAssetAddress: address(fungibleAsset),
             loanRepayAmount: 6731,
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
@@ -96,7 +96,7 @@ abstract contract PWNSimpleLoanTest is Test {
         simpleLoanTerms = PWNLOANTerms.Simple({
             lender: lender,
             borrower: borrower,
-            expiration: uint40(block.timestamp + 40039),
+            defaultTimestamp: uint40(block.timestamp + 40039),
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
             asset: MultiToken.ERC20(address(fungibleAsset), 100),
             loanRepayAmount: 6731
@@ -105,7 +105,7 @@ abstract contract PWNSimpleLoanTest is Test {
         nonExistingLoan = PWNSimpleLoan.LOAN({
             status: 0,
             borrower: address(0),
-            expiration: 0,
+            defaultTimestamp: 0,
             loanAssetAddress: address(0),
             loanRepayAmount: 0,
             collateral: MultiToken.Asset(MultiToken.Category(0), address(0), 0, 0),
@@ -145,7 +145,7 @@ abstract contract PWNSimpleLoanTest is Test {
     function _assertLOANEq(PWNSimpleLoan.LOAN memory _simpleLoan1, PWNSimpleLoan.LOAN memory _simpleLoan2) internal {
         assertEq(_simpleLoan1.status, _simpleLoan2.status);
         assertEq(_simpleLoan1.borrower, _simpleLoan2.borrower);
-        assertEq(_simpleLoan1.expiration, _simpleLoan2.expiration);
+        assertEq(_simpleLoan1.defaultTimestamp, _simpleLoan2.defaultTimestamp);
         assertEq(_simpleLoan1.loanAssetAddress, _simpleLoan2.loanAssetAddress);
         assertEq(_simpleLoan1.loanRepayAmount, _simpleLoan2.loanRepayAmount);
         assertEq(uint8(_simpleLoan1.collateral.category), uint8(_simpleLoan2.collateral.category));
@@ -160,8 +160,8 @@ abstract contract PWNSimpleLoanTest is Test {
             _loanId,
             LOANS_SLOT
         )));
-        // Status, borrower address & expiration in one storage slot
-        _assertLOANWord(loanSlot + 0, abi.encodePacked(uint48(0), _simpleLoan.expiration, _simpleLoan.borrower, _simpleLoan.status));
+        // Status, borrower address & defaultTimestamp in one storage slot
+        _assertLOANWord(loanSlot + 0, abi.encodePacked(uint48(0), _simpleLoan.defaultTimestamp, _simpleLoan.borrower, _simpleLoan.status));
         // Loan asset address
         _assertLOANWord(loanSlot + 1, abi.encodePacked(uint96(0), _simpleLoan.loanAssetAddress));
         // Loan repay amount
@@ -182,8 +182,8 @@ abstract contract PWNSimpleLoanTest is Test {
             _loanId,
             LOANS_SLOT
         )));
-        // Status, borrower address & expiration in one storage slot
-        _storeLOANWord(loanSlot + 0, abi.encodePacked(uint48(0), _simpleLoan.expiration, _simpleLoan.borrower, _simpleLoan.status));
+        // Status, borrower address & defaultTimestamp in one storage slot
+        _storeLOANWord(loanSlot + 0, abi.encodePacked(uint48(0), _simpleLoan.defaultTimestamp, _simpleLoan.borrower, _simpleLoan.status));
         // Loan asset address
         _storeLOANWord(loanSlot + 1, abi.encodePacked(uint96(0), _simpleLoan.loanAssetAddress));
         // Loan repay amount
@@ -405,7 +405,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         refinancedLoan = PWNSimpleLoan.LOAN({
             status: 2,
             borrower: borrower,
-            expiration: uint40(block.timestamp + 40039),
+            defaultTimestamp: uint40(block.timestamp + 40039),
             loanAssetAddress: address(fungibleAsset),
             loanRepayAmount: 6731,
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
@@ -415,7 +415,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         refinancedLoanTerms = PWNLOANTerms.Simple({
             lender: lender,
             borrower: borrower,
-            expiration: uint40(block.timestamp + 40039),
+            defaultTimestamp: uint40(block.timestamp + 40039),
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
             asset: MultiToken.ERC20(address(fungibleAsset), 100),
             loanRepayAmount: 6731
@@ -448,10 +448,10 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
     }
 
-    function test_shouldFail_whenLoanIsExpired() external {
-        vm.warp(simpleLoan.expiration + 10000);
+    function test_shouldFail_whenLoanIsDefaulted() external {
+        vm.warp(simpleLoan.defaultTimestamp + 10000);
 
-        vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.expiration));
+        vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.defaultTimestamp));
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
     }
 
@@ -1065,12 +1065,12 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         loan.repayLOAN(loanId, loanAssetPermit);
     }
 
-    function test_shouldFail_whenLoanIsExpired() external {
+    function test_shouldFail_whenLoanIsDefaulted() external {
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.expiration + 10000);
+        vm.warp(simpleLoan.defaultTimestamp + 10000);
 
-        vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.expiration));
+        vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.defaultTimestamp));
         loan.repayLOAN(loanId, loanAssetPermit);
     }
 
@@ -1235,11 +1235,11 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         loan.claimLOAN(loanId);
     }
 
-    function test_shouldPass_whenLoanIsExpired() external {
+    function test_shouldPass_whenLoanIsDefaulted() external {
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.expiration + 10000);
+        vm.warp(simpleLoan.defaultTimestamp + 10000);
 
         vm.prank(lender);
         loan.claimLOAN(loanId);
@@ -1280,11 +1280,11 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         loan.claimLOAN(loanId);
     }
 
-    function test_shouldTransferCollateralToLender_whenLoanIsExpired() external {
+    function test_shouldTransferCollateralToLender_whenLoanIsDefaulted() external {
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.expiration + 10000);
+        vm.warp(simpleLoan.defaultTimestamp + 10000);
 
         vm.expectCall(
             simpleLoan.collateral.assetAddress,
@@ -1312,7 +1312,7 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.expiration + 10000);
+        vm.warp(simpleLoan.defaultTimestamp + 10000);
 
         vm.expectEmit(true, true, false, false);
         emit LOANClaimed(loanId, true);
@@ -1347,7 +1347,7 @@ contract PWNSimpleLoan_ExtendExpirationDate_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(CallerNotLOANTokenHolder.selector));
         vm.prank(borrower);
-        loan.extendLOANExpirationDate(loanId, simpleLoan.expiration + 1);
+        loan.extendLOANExpirationDate(loanId, simpleLoan.defaultTimestamp + 1);
     }
 
     function test_shouldFail_whenExtendedExpirationDateIsSmallerThanCurrentExpirationDate() external {
@@ -1355,17 +1355,17 @@ contract PWNSimpleLoan_ExtendExpirationDate_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtendedExpirationDate.selector));
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, simpleLoan.expiration - 1);
+        loan.extendLOANExpirationDate(loanId, simpleLoan.defaultTimestamp - 1);
     }
 
     function test_shouldFail_whenExtendedExpirationDateIsSmallerThanCurrentDate() external {
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.expiration + 1000);
+        vm.warp(simpleLoan.defaultTimestamp + 1000);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtendedExpirationDate.selector));
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, simpleLoan.expiration + 500);
+        loan.extendLOANExpirationDate(loanId, simpleLoan.defaultTimestamp + 500);
     }
 
     function test_shouldFail_whenExtendedExpirationDateIsBiggerThanMaxExpirationExtension() external {
@@ -1379,7 +1379,7 @@ contract PWNSimpleLoan_ExtendExpirationDate_Test is PWNSimpleLoanTest {
     function test_shouldStoreExtendedExpirationDate() external {
         _mockLOAN(loanId, simpleLoan);
 
-        uint40 newExpiration = uint40(simpleLoan.expiration + 10000);
+        uint40 newExpiration = uint40(simpleLoan.defaultTimestamp + 10000);
 
         vm.prank(lender);
         loan.extendLOANExpirationDate(loanId, newExpiration);
@@ -1393,7 +1393,7 @@ contract PWNSimpleLoan_ExtendExpirationDate_Test is PWNSimpleLoanTest {
     function test_shouldEmitEvent_LOANExpirationDateExtended() external {
         _mockLOAN(loanId, simpleLoan);
 
-        uint40 newExpiration = uint40(simpleLoan.expiration + 10000);
+        uint40 newExpiration = uint40(simpleLoan.defaultTimestamp + 10000);
 
         vm.expectEmit(true, true, true, true);
         emit LOANExpirationDateExtended(loanId, newExpiration);
@@ -1420,7 +1420,7 @@ contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
     function test_shouldReturnExpiredStatus_whenLOANExpired() external {
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.expiration + 10000);
+        vm.warp(simpleLoan.defaultTimestamp + 10000);
 
         simpleLoan.status = 4;
         _assertLOANEq(loan.getLOAN(loanId), simpleLoan);
@@ -1487,14 +1487,14 @@ contract PWNSimpleLoan_GetStateFingerprint_Test is PWNSimpleLoanTest {
     function test_shouldReturnCorrectStateFingerprint() external {
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.expiration - 10000);
-        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(2, simpleLoan.expiration)));
+        vm.warp(simpleLoan.defaultTimestamp - 10000);
+        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(2, simpleLoan.defaultTimestamp)));
 
-        vm.warp(simpleLoan.expiration + 10000);
-        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(4, simpleLoan.expiration)));
+        vm.warp(simpleLoan.defaultTimestamp + 10000);
+        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(4, simpleLoan.defaultTimestamp)));
 
         simpleLoan.status = 3;
-        simpleLoan.expiration = 60039;
+        simpleLoan.defaultTimestamp = 60039;
         _mockLOAN(loanId, simpleLoan);
         assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(3, 60039)));
     }

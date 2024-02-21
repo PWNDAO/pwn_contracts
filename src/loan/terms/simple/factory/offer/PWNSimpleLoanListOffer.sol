@@ -172,11 +172,11 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
             amount: offer.loanAmount
         });
 
-        // Create loan object
+        // Create loan terms object
         loanTerms = PWNLOANTerms.Simple({
             lender: lender,
             borrower: borrower,
-            expiration: uint40(block.timestamp) + offer.duration,
+            defaultTimestamp: uint40(block.timestamp) + offer.duration,
             collateral: collateral,
             asset: loanAsset,
             loanRepayAmount: offer.loanAmount + offer.loanYield

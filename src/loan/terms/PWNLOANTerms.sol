@@ -11,7 +11,7 @@ library PWNLOANTerms {
      * @dev This struct is created by loan factories and never stored.
      * @param lender Address of a lender.
      * @param borrower Address of a borrower.
-     * @param expiration Unix timestamp (in seconds) setting up a default date.
+     * @param defaultTimestamp Unix timestamp (in seconds) setting up a default date.
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
      * @param asset Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
      * @param loanRepayAmount Amount of a loan asset to be paid back.
@@ -19,7 +19,7 @@ library PWNLOANTerms {
     struct Simple {
         address lender;
         address borrower;
-        uint40 expiration;
+        uint40 defaultTimestamp;
         MultiToken.Asset collateral;
         MultiToken.Asset asset;
         uint256 loanRepayAmount;

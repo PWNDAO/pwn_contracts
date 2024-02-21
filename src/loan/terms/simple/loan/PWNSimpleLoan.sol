@@ -42,7 +42,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @notice Struct defining a simple loan.
      * @param status 0 == none/dead || 2 == running/accepted offer/accepted request || 3 == paid back || 4 == expired.
      * @param borrower Address of a borrower.
-     * @param expiration Unix timestamp (in seconds) setting up a default date.
+     * @param defaultTimestamp Unix timestamp (in seconds) setting up a default date.
      * @param loanAssetAddress Address of an asset used as a loan credit.
      * @param loanRepayAmount Amount of a loan asset to be paid back.
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
@@ -51,7 +51,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     struct LOAN {
         uint8 status;
         address borrower;
-        uint40 expiration;
+        uint40 defaultTimestamp;
         address loanAssetAddress;
         uint256 loanRepayAmount;
         MultiToken.Asset collateral;
@@ -186,7 +186,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         LOAN storage loan = LOANs[loanId];
         loan.status = 2;
         loan.borrower = loanTerms.borrower;
-        loan.expiration = loanTerms.expiration;
+        loan.defaultTimestamp = loanTerms.defaultTimestamp;
         loan.loanAssetAddress = loanTerms.asset.assetAddress;
         loan.loanRepayAmount = loanTerms.loanRepayAmount;
         loan.collateral = loanTerms.collateral;
@@ -265,7 +265,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         LOAN storage loan = LOANs[loanId];
 
         // Check that the original loan can be repaid, revert if not
-        _checkLoanCanBeRepaid(loan.status, loan.expiration);
+        _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
 
         // Create loan terms or revert if factory contract is not tagged in PWN Hub
         (PWNLOANTerms.Simple memory loanTerms, bytes32 factoryDataHash)
@@ -449,7 +449,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     ) external {
         LOAN memory loan = LOANs[loanId];
 
-        _checkLoanCanBeRepaid(loan.status, loan.expiration);
+        _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
 
         (bool repayLoanDirectly, address loanOwner) = _deleteOrUpdateRepaidLoan(loanId);
 
@@ -468,15 +468,15 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @notice Check if the loan can be repaid.
      * @dev The function will revert if the loan cannot be repaid.
      * @param status Loan status.
-     * @param expiration Loan expiration date.
+     * @param defaultTimestamp Loan default timestamp.
      */
-    function _checkLoanCanBeRepaid(uint8 status, uint40 expiration) private view {
+    function _checkLoanCanBeRepaid(uint8 status, uint40 defaultTimestamp) private view {
         // Check that loan exists and is not from a different loan contract
         if (status == 0) revert NonExistingLoan();
         // Check that loan is running
         if (status != 2) revert InvalidLoanStatus(status);
-        // Check that loan is not expired
-        if (expiration <= block.timestamp) revert LoanDefaulted(expiration);
+        // Check that loan is not defaulted
+        if (defaultTimestamp <= block.timestamp) revert LoanDefaulted(defaultTimestamp);
     }
 
     /**
@@ -583,7 +583,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         else if (loan.status == 3)
             _settleLoanClaim({ loanId: loanId, loanOwner: msg.sender, defaulted: false });
         // Loan is running but expired
-        else if (loan.status == 2 && loan.expiration <= block.timestamp)
+        else if (loan.status == 2 && loan.defaultTimestamp <= block.timestamp)
             _settleLoanClaim({ loanId: loanId, loanOwner: msg.sender, defaulted: true });
         // Loan is in wrong state
         else
@@ -647,11 +647,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             revert InvalidExtendedExpirationDate();
         if (extendedExpirationDate <= uint40(block.timestamp)) // have to extend expiration futher in time
             revert InvalidExtendedExpirationDate();
-        if (extendedExpirationDate <= loan.expiration) // have to be later than current expiration date
+        if (extendedExpirationDate <= loan.defaultTimestamp) // have to be later than current expiration date
             revert InvalidExtendedExpirationDate();
 
         // Extend expiration date
-        loan.expiration = extendedExpirationDate;
+        loan.defaultTimestamp = extendedExpirationDate;
 
         emit LOANExpirationDateExtended({ loanId: loanId, extendedExpirationDate: extendedExpirationDate });
     }
@@ -678,7 +678,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     function _getLOANStatus(uint256 loanId) private view returns (uint8) {
         LOAN storage loan = LOANs[loanId];
-        return (loan.status == 2 && loan.expiration <= block.timestamp) ? 4 : loan.status;
+        return (loan.status == 2 && loan.defaultTimestamp <= block.timestamp) ? 4 : loan.status;
     }
 
 
@@ -708,12 +708,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             return bytes32(0);
 
         // The only mutable state properties are:
-        // - status, expiration
+        // - status, defaultTimestamp
         // Status is updated for expired loans based on block.timestamp.
         // Others don't have to be part of the state fingerprint as it does not act as a token identification.
         return keccak256(abi.encode(
             _getLOANStatus(tokenId),
-            loan.expiration
+            loan.defaultTimestamp
         ));
     }
 
