@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
+import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+
 
 /**
  * @title PWN Fee Calculator
@@ -8,7 +10,7 @@ pragma solidity 0.8.16;
  */
 library PWNFeeCalculator {
 
-    string internal constant VERSION = "1.0";
+    string internal constant VERSION = "1.1";
 
     /**
      * @notice Compute fee amount.
@@ -21,12 +23,7 @@ library PWNFeeCalculator {
         if (fee == 0)
             return (0, loanAmount);
 
-        unchecked {
-            if ((loanAmount * fee) / fee == loanAmount)
-                feeAmount = loanAmount * uint256(fee) / 1e4;
-            else
-                feeAmount = loanAmount / 1e4 * uint256(fee);
-        }
+        feeAmount = Math.mulDiv(loanAmount, fee, 1e4);
         newLoanAmount = loanAmount - feeAmount;
     }
 
