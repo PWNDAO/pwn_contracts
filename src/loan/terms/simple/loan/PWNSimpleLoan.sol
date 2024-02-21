@@ -5,15 +5,16 @@ import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.s
 
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-import "@pwn/config/PWNConfig.sol";
-import "@pwn/hub/PWNHub.sol";
-import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/loan/lib/PWNFeeCalculator.sol";
-import "@pwn/loan/terms/PWNLOANTerms.sol";
-import "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
-import "@pwn/loan/token/IERC5646.sol";
-import "@pwn/loan/token/PWNLOAN.sol";
-import "@pwn/loan/PWNVault.sol";
+import { PWNConfig } from "@pwn/config/PWNConfig.sol";
+import { PWNHub } from "@pwn/hub/PWNHub.sol";
+import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
+import { PWNFeeCalculator } from "@pwn/loan/lib/PWNFeeCalculator.sol";
+import { PWNLOANTerms } from "@pwn/loan/terms/PWNLOANTerms.sol";
+import { PWNSimpleLoanTermsFactory } from "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
+import { IERC5646 } from "@pwn/loan/token/IERC5646.sol";
+import { IPWNLoanMetadataProvider } from "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
+import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
+import { PWNVault } from "@pwn/loan/PWNVault.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -292,7 +293,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loan Original loan struct.
      * @param loanTerms Refinancing loan terms struct.
      */
-    function _checkRefinanceLoanTerms(LOAN storage loan, PWNLOANTerms.Simple memory loanTerms) private {
+    function _checkRefinanceLoanTerms(LOAN storage loan, PWNLOANTerms.Simple memory loanTerms) private view {
         // Check that the loan asset is the same as in the original loan
         // Note: Address check is enough because the asset has always ERC20 category and zero id.
         // Amount can be different, but nonzero.
@@ -686,7 +687,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice See { IPWNLoanMetadataProvider.sol }.
+     * @inheritdoc IPWNLoanMetadataProvider
      */
     function loanMetadataUri() override external view returns (string memory) {
         return config.loanMetadataUri(address(this));
@@ -698,7 +699,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*----------------------------------------------------------*/
 
     /**
-     * @dev See {IERC5646-getStateFingerprint}.
+     * @inheritdoc IERC5646
      */
     function getStateFingerprint(uint256 tokenId) external view virtual override returns (bytes32) {
         LOAN storage loan = LOANs[tokenId];
