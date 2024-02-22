@@ -169,11 +169,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     function _checkNewLoanTerms(PWNLOANTerms.Simple memory loanTerms) private view {
         // Check loan asset validity
-        if (!MultiToken.isValid(loanTerms.asset, categoryRegistry))
+        if (!isValidAsset(loanTerms.asset))
             revert InvalidLoanAsset();
 
         // Check collateral validity
-        if (!MultiToken.isValid(loanTerms.collateral, categoryRegistry))
+        if (!isValidAsset(loanTerms.collateral))
             revert InvalidCollateralAsset();
 
         // Check that the terms can create a new loan
@@ -701,6 +701,21 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     function _getLOANStatus(uint256 loanId) private view returns (uint8) {
         LOAN storage loan = LOANs[loanId];
         return (loan.status == 2 && loan.defaultTimestamp <= block.timestamp) ? 4 : loan.status;
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # MultiToken                                            *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Check if the asset is valid with the MultiToken dependency lib and the category registry.
+     * @dev See MultiToken.isValid for more details.
+     * @param asset Asset to be checked.
+     * @return True if the asset is valid.
+     */
+    function isValidAsset(MultiToken.Asset memory asset) public view returns (bool) {
+        return MultiToken.isValid(asset, categoryRegistry);
     }
 
 
