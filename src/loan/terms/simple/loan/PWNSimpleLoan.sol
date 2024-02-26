@@ -767,11 +767,44 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Return a LOAN data struct associated with a loan id.
      * @param loanId Id of a loan in question.
-     * @return loan LOAN data struct or empty struct if the LOAN doesn't exist.
+     * @return status LOAN status.
+     * @return startTimestamp Unix timestamp (in seconds) of a loan creation date.
+     * @return defaultTimestamp Unix timestamp (in seconds) of a loan expiration date.
+     * @return borrower Address of a loan borrower.
+     * @return originalLender Address of a loan original lender.
+     * @return loanOwner Address of a LOAN token holder.
+     * @return accruingInterestDailyRate Daily interest rate in basis points.
+     * @return fixedInterestAmount Fixed interest amount in loan asset tokens.
+     * @return loanAsset Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
+     * @return collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
+     * @return repaymentAmount Loan repayment amount in loan asset tokens.
      */
-    function getLOAN(uint256 loanId) external view returns (LOAN memory loan) {
-        loan = LOANs[loanId];
-        loan.status = _getLOANStatus(loanId);
+    function getLOAN(uint256 loanId) external view returns (
+        uint8 status,
+        uint40 startTimestamp,
+        uint40 defaultTimestamp,
+        address borrower,
+        address originalLender,
+        address loanOwner,
+        uint40 accruingInterestDailyRate,
+        uint256 fixedInterestAmount,
+        MultiToken.Asset memory loanAsset,
+        MultiToken.Asset memory collateral,
+        uint256 repaymentAmount
+    ) {
+        LOAN storage loan = LOANs[loanId];
+
+        status = _getLOANStatus(loanId);
+        startTimestamp = loan.startTimestamp;
+        defaultTimestamp = loan.defaultTimestamp;
+        borrower = loan.borrower;
+        originalLender = loan.originalLender;
+        loanOwner = loan.status != 0 ? loanToken.ownerOf(loanId) : address(0);
+        accruingInterestDailyRate = loan.accruingInterestDailyRate;
+        fixedInterestAmount = loan.fixedInterestAmount;
+        loanAsset = MultiToken.ERC20(loan.loanAssetAddress, loan.principalAmount);
+        collateral = loan.collateral;
+        repaymentAmount = loanRepaymentAmount(loanId);
     }
 
     /**

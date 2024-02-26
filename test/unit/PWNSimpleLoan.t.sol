@@ -1629,23 +1629,160 @@ contract PWNSimpleLoan_ExtendExpirationDate_Test is PWNSimpleLoanTest {
 
 contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
 
-    function test_shouldReturnLOANData() external {
+    function testFuzz_shouldReturnStaticLOANData(
+        uint40 _startTimestamp,
+        uint40 _defaultTimestamp,
+        address _borrower,
+        address _originalLender,
+        uint40 _accruingInterestDailyRate,
+        uint256 _fixedInterestAmount,
+        address _loanAssetAddress,
+        uint256 _principalAmount,
+        uint8 _collateralCategory,
+        address _collateralAssetAddress,
+        uint256 _collateralId,
+        uint256 _collateralAmount
+    ) external {
+        _startTimestamp = uint40(bound(_startTimestamp, 0, type(uint40).max - 1));
+        _defaultTimestamp = uint40(bound(_defaultTimestamp, _startTimestamp + 1, type(uint40).max));
+        _accruingInterestDailyRate = uint40(bound(_accruingInterestDailyRate, 0, 274e8));
+        _fixedInterestAmount = bound(_fixedInterestAmount, 0, type(uint256).max - _principalAmount);
+
+        simpleLoan.startTimestamp = _startTimestamp;
+        simpleLoan.defaultTimestamp = _defaultTimestamp;
+        simpleLoan.borrower = _borrower;
+        simpleLoan.originalLender = _originalLender;
+        simpleLoan.accruingInterestDailyRate = _accruingInterestDailyRate;
+        simpleLoan.fixedInterestAmount = _fixedInterestAmount;
+        simpleLoan.loanAssetAddress = _loanAssetAddress;
+        simpleLoan.principalAmount = _principalAmount;
+        simpleLoan.collateral.category = MultiToken.Category(_collateralCategory % 4);
+        simpleLoan.collateral.assetAddress = _collateralAssetAddress;
+        simpleLoan.collateral.id = _collateralId;
+        simpleLoan.collateral.amount = _collateralAmount;
         _mockLOAN(loanId, simpleLoan);
 
-        _assertLOANEq(loan.getLOAN(loanId), simpleLoan);
+        vm.warp(_startTimestamp);
+
+        // test every property separately to avoid stack too deep error
+        {
+            (,uint40 startTimestamp,,,,,,,,,) = loan.getLOAN(loanId);
+            assertEq(startTimestamp, _startTimestamp);
+        }
+        {
+            (,,uint40 defaultTimestamp,,,,,,,,) = loan.getLOAN(loanId);
+            assertEq(defaultTimestamp, _defaultTimestamp);
+        }
+        {
+            (,,,address borrower,,,,,,,) = loan.getLOAN(loanId);
+            assertEq(borrower, _borrower);
+        }
+        {
+            (,,,,address originalLender,,,,,,) = loan.getLOAN(loanId);
+            assertEq(originalLender, _originalLender);
+        }
+        {
+            (,,,,,,uint40 accruingInterestDailyRate,,,,) = loan.getLOAN(loanId);
+            assertEq(accruingInterestDailyRate, _accruingInterestDailyRate);
+        }
+        {
+            (,,,,,,,uint256 fixedInterestAmount,,,) = loan.getLOAN(loanId);
+            assertEq(fixedInterestAmount, _fixedInterestAmount);
+        }
+        {
+            (,,,,,,,,MultiToken.Asset memory loanAsset,,) = loan.getLOAN(loanId);
+            assertEq(loanAsset.assetAddress, _loanAssetAddress);
+            assertEq(loanAsset.amount, _principalAmount);
+        }
+        {
+            (,,,,,,,,,MultiToken.Asset memory collateral,) = loan.getLOAN(loanId);
+            assertEq(collateral.assetAddress, _collateralAssetAddress);
+            assertEq(uint8(collateral.category), _collateralCategory % 4);
+            assertEq(collateral.id, _collateralId);
+            assertEq(collateral.amount, _collateralAmount);
+        }
     }
 
-    function test_shouldReturnDefaultedStatus_whenLOANDefaulted() external {
+    function test_shouldReturnCorrectStatus() external {
         _mockLOAN(loanId, simpleLoan);
+
+        (uint8 status,,,,,,,,,,) = loan.getLOAN(loanId);
+        assertEq(status, 2);
 
         vm.warp(simpleLoan.defaultTimestamp);
 
-        simpleLoan.status = 4;
-        _assertLOANEq(loan.getLOAN(loanId), simpleLoan);
+        (status,,,,,,,,,,) = loan.getLOAN(loanId);
+        assertEq(status, 4);
+
+        simpleLoan.status = 3;
+        _mockLOAN(loanId, simpleLoan);
+
+        (status,,,,,,,,,,) = loan.getLOAN(loanId);
+        assertEq(status, 3);
+    }
+
+    function testFuzz_shouldReturnLOANTokenOwner(address _loanOwner) external {
+        _mockLOAN(loanId, simpleLoan);
+        _mockLOANTokenOwner(loanId, _loanOwner);
+
+        (,,,,, address loanOwner,,,,,) = loan.getLOAN(loanId);
+        assertEq(loanOwner, _loanOwner);
+    }
+
+    function testFuzz_shouldReturnRepaymentAmount(
+        uint256 _days,
+        uint256 _principalAmount,
+        uint40 _accruingInterestDailyRate,
+        uint256 _fixedInterestAmount
+    ) external {
+        _days = bound(_days, 0, 2 * loanDurationInDays);
+        _principalAmount = bound(_principalAmount, 1, 1e40);
+        _accruingInterestDailyRate = uint40(bound(_accruingInterestDailyRate, 0, 274e8));
+        _fixedInterestAmount = bound(_fixedInterestAmount, 0, _principalAmount);
+
+        simpleLoan.accruingInterestDailyRate = _accruingInterestDailyRate;
+        simpleLoan.fixedInterestAmount = _fixedInterestAmount;
+        simpleLoan.principalAmount = _principalAmount;
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days * 1 days);
+
+        (,,,,,,,,,, uint256 repaymentAmount) = loan.getLOAN(loanId);
+        assertEq(repaymentAmount, loan.loanRepaymentAmount(loanId));
     }
 
     function test_shouldReturnEmptyLOANDataForNonExistingLoan() external {
-        _assertLOANEq(loan.getLOAN(loanId), nonExistingLoan);
+        uint256 nonExistingLoanId = loanId + 1;
+
+        (
+            uint8 status,
+            uint40 startTimestamp,
+            uint40 defaultTimestamp,
+            address borrower,
+            address originalLender,
+            address loanOwner,
+            uint40 accruingInterestDailyRate,
+            uint256 fixedInterestAmount,
+            MultiToken.Asset memory loanAsset,
+            MultiToken.Asset memory collateral,
+            uint256 repaymentAmount
+        ) = loan.getLOAN(nonExistingLoanId);
+
+        assertEq(status, 0);
+        assertEq(startTimestamp, 0);
+        assertEq(defaultTimestamp, 0);
+        assertEq(borrower, address(0));
+        assertEq(originalLender, address(0));
+        assertEq(loanOwner, address(0));
+        assertEq(accruingInterestDailyRate, 0);
+        assertEq(fixedInterestAmount, 0);
+        assertEq(loanAsset.assetAddress, address(0));
+        assertEq(loanAsset.amount, 0);
+        assertEq(collateral.assetAddress, address(0));
+        assertEq(uint8(collateral.category), 0);
+        assertEq(collateral.id, 0);
+        assertEq(collateral.amount, 0);
+        assertEq(repaymentAmount, 0);
     }
 
 }
