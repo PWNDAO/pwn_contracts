@@ -49,6 +49,7 @@ abstract contract PWNSimpleLoanTest is Test {
     event LOANCreated(uint256 indexed loanId, PWNLOANTerms.Simple terms, bytes32 indexed factoryDataHash, address indexed factoryAddress);
     event LOANPaidBack(uint256 indexed loanId);
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
+    event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
     event LOANExpirationDateExtended(uint256 indexed loanId, uint40 extendedExpirationDate);
 
     function setUp() virtual public {
@@ -614,6 +615,13 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function test_shouldEmit_LOANPaidBack() external {
         vm.expectEmit();
         emit LOANPaidBack(loanId);
+
+        loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
+    }
+
+    function test_shouldEmit_LOANRefinanced() external {
+        vm.expectEmit();
+        emit LOANRefinanced(loanId, ferinancedLoanId);
 
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
     }

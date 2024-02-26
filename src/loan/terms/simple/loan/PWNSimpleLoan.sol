@@ -100,6 +100,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
 
     /**
+     * @dev Emitted when a loan is refinanced.
+     */
+    event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
+
+    /**
      * @dev Emitted when a LOAN token holder extends loan expiration date.
      */
     event LOANExpirationDateExtended(uint256 indexed loanId, uint40 extendedExpirationDate);
@@ -319,6 +324,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             lenderLoanAssetPermit,
             borrowerLoanAssetPermit
         );
+
+        emit LOANRefinanced({ loanId: loanId, refinancedLoanId: refinancedLoanId });
     }
 
     /**
