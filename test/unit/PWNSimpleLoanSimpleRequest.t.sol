@@ -40,7 +40,8 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
             collateralAmount: 1032,
             loanAssetAddress: token,
             loanAmount: 1101001,
-            loanYield: 1,
+            fixedInterestAmount: 1,
+            accruingInterestAPR: 0,
             duration: 1000,
             expiration: 0,
             allowedLender: address(0),
@@ -68,7 +69,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
                 address(requestContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonce)"),
+                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonce)"),
                 abi.encode(_request)
             ))
         ));
@@ -270,6 +271,18 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
+    function testFuzz_shouldFail_whenAccruingInterestAPROutOfBounds(uint40 interestAPR) external {
+        uint40 maxInterest = requestContract.MAX_ACCRUING_INTEREST_APR();
+        interestAPR = uint40(bound(interestAPR, maxInterest + 1, type(uint40).max));
+
+        request.accruingInterestAPR = interestAPR;
+        signature = _signRequestCompact(borrowerPK, request);
+
+        vm.expectRevert(abi.encodeWithSelector(AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest));
+        vm.prank(activeLoanContract);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
+    }
+
     function test_shouldRevokeRequest() external {
         signature = _signRequestCompact(borrowerPK, request);
 
@@ -282,13 +295,16 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
-    function test_shouldReturnCorrectValues() external {
+    function testFuzz_shouldReturnCorrectValues(uint256 _refinancingLoanId) external {
+        request.refinancingLoanId = _refinancingLoanId;
+
         uint256 currentTimestamp = 40303;
         vm.warp(currentTimestamp);
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.prank(activeLoanContract);
-        (PWNLOANTerms.Simple memory loanTerms, bytes32 requestHash) = requestContract.createLOANTerms(lender, abi.encode(request), signature);
+        (PWNLOANTerms.Simple memory loanTerms, bytes32 requestHash)
+            = requestContract.createLOANTerms(lender, abi.encode(request), signature);
 
         assertTrue(loanTerms.lender == lender);
         assertTrue(loanTerms.borrower == request.borrower);
@@ -301,8 +317,10 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         assertTrue(loanTerms.asset.assetAddress == request.loanAssetAddress);
         assertTrue(loanTerms.asset.id == 0);
         assertTrue(loanTerms.asset.amount == request.loanAmount);
-        assertTrue(loanTerms.loanRepayAmount == request.loanAmount + request.loanYield);
-        assertTrue(loanTerms.canRefinance == false);
+        assertTrue(loanTerms.fixedInterestAmount == request.fixedInterestAmount);
+        assertTrue(loanTerms.accruingInterestAPR == request.accruingInterestAPR);
+        assertTrue(loanTerms.canCreate == (request.refinancingLoanId == 0));
+        assertTrue(loanTerms.canRefinance == (request.refinancingLoanId != 0));
         assertTrue(loanTerms.refinancingLoanId == request.refinancingLoanId);
 
         assertTrue(requestHash == _requestHash(request));

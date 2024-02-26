@@ -33,6 +33,7 @@ abstract contract PWNSimpleLoanTest is Test {
     uint256 loanId = 42;
     address lender = makeAddr("lender");
     address borrower = makeAddr("borrower");
+    uint256 loanDurationInDays = 101;
     PWNSimpleLoan.LOAN simpleLoan;
     PWNSimpleLoan.LOAN nonExistingLoan;
     PWNLOANTerms.Simple simpleLoanTerms;
@@ -85,21 +86,25 @@ abstract contract PWNSimpleLoanTest is Test {
 
         simpleLoan = PWNSimpleLoan.LOAN({
             status: 2,
-            borrower: borrower,
-            defaultTimestamp: uint40(block.timestamp + 40039),
             loanAssetAddress: address(fungibleAsset),
-            loanRepayAmount: 6731,
-            collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
-            originalLender: lender
+            startTimestamp: uint40(block.timestamp),
+            defaultTimestamp: uint40(block.timestamp + loanDurationInDays * 1 days),
+            borrower: borrower,
+            originalLender: lender,
+            accruingInterestDailyRate: 0,
+            fixedInterestAmount: 6631,
+            principalAmount: 100,
+            collateral: MultiToken.ERC721(address(nonFungibleAsset), 2)
         });
 
         simpleLoanTerms = PWNLOANTerms.Simple({
             lender: lender,
             borrower: borrower,
-            defaultTimestamp: uint40(block.timestamp + 40039),
+            defaultTimestamp: uint40(block.timestamp + loanDurationInDays * 1 days),
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
             asset: MultiToken.ERC20(address(fungibleAsset), 100),
-            loanRepayAmount: 6731,
+            fixedInterestAmount: 6631,
+            accruingInterestAPR: 0,
             canCreate: true,
             canRefinance: true,
             refinancingLoanId: 0
@@ -107,12 +112,15 @@ abstract contract PWNSimpleLoanTest is Test {
 
         nonExistingLoan = PWNSimpleLoan.LOAN({
             status: 0,
-            borrower: address(0),
-            defaultTimestamp: 0,
             loanAssetAddress: address(0),
-            loanRepayAmount: 0,
-            collateral: MultiToken.Asset(MultiToken.Category(0), address(0), 0, 0),
-            originalLender: address(0)
+            startTimestamp: 0,
+            defaultTimestamp: 0,
+            borrower: address(0),
+            originalLender: address(0),
+            accruingInterestDailyRate: 0,
+            fixedInterestAmount: 0,
+            principalAmount: 0,
+            collateral: MultiToken.Asset(MultiToken.Category(0), address(0), 0, 0)
         });
 
         loanFactoryDataHash = keccak256("factoryData");
@@ -147,58 +155,61 @@ abstract contract PWNSimpleLoanTest is Test {
 
     function _assertLOANEq(PWNSimpleLoan.LOAN memory _simpleLoan1, PWNSimpleLoan.LOAN memory _simpleLoan2) internal {
         assertEq(_simpleLoan1.status, _simpleLoan2.status);
-        assertEq(_simpleLoan1.borrower, _simpleLoan2.borrower);
-        assertEq(_simpleLoan1.defaultTimestamp, _simpleLoan2.defaultTimestamp);
         assertEq(_simpleLoan1.loanAssetAddress, _simpleLoan2.loanAssetAddress);
-        assertEq(_simpleLoan1.loanRepayAmount, _simpleLoan2.loanRepayAmount);
+        assertEq(_simpleLoan1.startTimestamp, _simpleLoan2.startTimestamp);
+        assertEq(_simpleLoan1.defaultTimestamp, _simpleLoan2.defaultTimestamp);
+        assertEq(_simpleLoan1.borrower, _simpleLoan2.borrower);
+        assertEq(_simpleLoan1.originalLender, _simpleLoan2.originalLender);
+        assertEq(_simpleLoan1.accruingInterestDailyRate, _simpleLoan2.accruingInterestDailyRate);
+        assertEq(_simpleLoan1.fixedInterestAmount, _simpleLoan2.fixedInterestAmount);
+        assertEq(_simpleLoan1.principalAmount, _simpleLoan2.principalAmount);
         assertEq(uint8(_simpleLoan1.collateral.category), uint8(_simpleLoan2.collateral.category));
         assertEq(_simpleLoan1.collateral.assetAddress, _simpleLoan2.collateral.assetAddress);
         assertEq(_simpleLoan1.collateral.id, _simpleLoan2.collateral.id);
         assertEq(_simpleLoan1.collateral.amount, _simpleLoan2.collateral.amount);
-        assertEq(_simpleLoan1.originalLender, _simpleLoan2.originalLender);
     }
 
     function _assertLOANEq(uint256 _loanId, PWNSimpleLoan.LOAN memory _simpleLoan) internal {
-        uint256 loanSlot = uint256(keccak256(abi.encode(
-            _loanId,
-            LOANS_SLOT
-        )));
-        // Status, borrower address & defaultTimestamp in one storage slot
-        _assertLOANWord(loanSlot + 0, abi.encodePacked(uint48(0), _simpleLoan.defaultTimestamp, _simpleLoan.borrower, _simpleLoan.status));
-        // Loan asset address
-        _assertLOANWord(loanSlot + 1, abi.encodePacked(uint96(0), _simpleLoan.loanAssetAddress));
-        // Loan repay amount
-        _assertLOANWord(loanSlot + 2, abi.encodePacked(_simpleLoan.loanRepayAmount));
-        // Collateral category & collateral asset address in one storage slot
-        _assertLOANWord(loanSlot + 3, abi.encodePacked(uint88(0), _simpleLoan.collateral.assetAddress, _simpleLoan.collateral.category));
+        uint256 loanSlot = uint256(keccak256(abi.encode(_loanId, LOANS_SLOT)));
+
+        // Status, loan asset address, start timestamp, default timestamp
+        _assertLOANWord(loanSlot + 0, abi.encodePacked(uint8(0), _simpleLoan.defaultTimestamp, _simpleLoan.startTimestamp, _simpleLoan.loanAssetAddress, _simpleLoan.status));
+        // Borrower address
+        _assertLOANWord(loanSlot + 1, abi.encodePacked(uint96(0), _simpleLoan.borrower));
+        // Original lender, accruing interest daily rate
+        _assertLOANWord(loanSlot + 2, abi.encodePacked(uint56(0), _simpleLoan.accruingInterestDailyRate, _simpleLoan.originalLender));
+        // Fixed interest amount
+        _assertLOANWord(loanSlot + 3, abi.encodePacked(_simpleLoan.fixedInterestAmount));
+        // Principal amount
+        _assertLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.principalAmount));
+        // Collateral category, collateral asset address
+        _assertLOANWord(loanSlot + 5, abi.encodePacked(uint88(0), _simpleLoan.collateral.assetAddress, _simpleLoan.collateral.category));
         // Collateral id
-        _assertLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.collateral.id));
+        _assertLOANWord(loanSlot + 6, abi.encodePacked(_simpleLoan.collateral.id));
         // Collateral amount
-        _assertLOANWord(loanSlot + 5, abi.encodePacked(_simpleLoan.collateral.amount));
-        // Original lender
-        _assertLOANWord(loanSlot + 6, abi.encodePacked(uint96(0), _simpleLoan.originalLender));
+        _assertLOANWord(loanSlot + 7, abi.encodePacked(_simpleLoan.collateral.amount));
     }
 
 
     function _mockLOAN(uint256 _loanId, PWNSimpleLoan.LOAN memory _simpleLoan) internal {
-        uint256 loanSlot = uint256(keccak256(abi.encode(
-            _loanId,
-            LOANS_SLOT
-        )));
-        // Status, borrower address & defaultTimestamp in one storage slot
-        _storeLOANWord(loanSlot + 0, abi.encodePacked(uint48(0), _simpleLoan.defaultTimestamp, _simpleLoan.borrower, _simpleLoan.status));
-        // Loan asset address
-        _storeLOANWord(loanSlot + 1, abi.encodePacked(uint96(0), _simpleLoan.loanAssetAddress));
-        // Loan repay amount
-        _storeLOANWord(loanSlot + 2, abi.encodePacked(_simpleLoan.loanRepayAmount));
-        // Collateral category & collateral asset address in one storage slot
-        _storeLOANWord(loanSlot + 3, abi.encodePacked(uint88(0), _simpleLoan.collateral.assetAddress, _simpleLoan.collateral.category));
+        uint256 loanSlot = uint256(keccak256(abi.encode(_loanId, LOANS_SLOT)));
+
+        // Status, loan asset address, start timestamp, default timestamp
+        _storeLOANWord(loanSlot + 0, abi.encodePacked(uint8(0), _simpleLoan.defaultTimestamp, _simpleLoan.startTimestamp, _simpleLoan.loanAssetAddress, _simpleLoan.status));
+        // Borrower address
+        _storeLOANWord(loanSlot + 1, abi.encodePacked(uint96(0), _simpleLoan.borrower));
+        // Original lender, accruing interest daily rate
+        _storeLOANWord(loanSlot + 2, abi.encodePacked(uint56(0), _simpleLoan.accruingInterestDailyRate, _simpleLoan.originalLender));
+        // Fixed interest amount
+        _storeLOANWord(loanSlot + 3, abi.encodePacked(_simpleLoan.fixedInterestAmount));
+        // Principal amount
+        _storeLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.principalAmount));
+        // Collateral category, collateral asset address
+        _storeLOANWord(loanSlot + 5, abi.encodePacked(uint88(0), _simpleLoan.collateral.assetAddress, _simpleLoan.collateral.category));
         // Collateral id
-        _storeLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.collateral.id));
+        _storeLOANWord(loanSlot + 6, abi.encodePacked(_simpleLoan.collateral.id));
         // Collateral amount
-        _storeLOANWord(loanSlot + 5, abi.encodePacked(_simpleLoan.collateral.amount));
-        // Original lender
-        _storeLOANWord(loanSlot + 6, abi.encodePacked(uint96(0), _simpleLoan.originalLender));
+        _storeLOANWord(loanSlot + 7, abi.encodePacked(_simpleLoan.collateral.amount));
     }
 
     function _mockLoanTerms(PWNLOANTerms.Simple memory _loanTerms, bytes32 _loanFactoryDataHash) internal {
@@ -244,14 +255,14 @@ abstract contract PWNSimpleLoanTest is Test {
 
 contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
 
-    function test_shouldFail_whenLoanFactoryContractIsNotTaggerInPWNHub() external {
-        address notLoanFactory = address(0);
+    function testFuzz_shouldFail_whenLoanFactoryContractIsNotTaggerInPWNHub(address notLoanFactory) external {
+        vm.assume(notLoanFactory != loanFactory);
 
         vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY));
         loan.createLOAN(notLoanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
-    function test_shouldGetLOANTermsStructFromGivenFactoryContract() external {
+    function test_shouldCall_createLOANTerms_onProvidedFactoryContract() external {
         loanFactoryData = abi.encode(1, 2, "data");
         signature = abi.encode("other data", "whaat?", uint256(312312));
 
@@ -270,8 +281,6 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
             abi.encode(1)
         );
 
-        _mockLoanTerms(simpleLoanTerms, loanFactoryDataHash);
-
         vm.expectRevert(InvalidLoanAsset.selector);
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
@@ -282,8 +291,6 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
             abi.encodeWithSignature("registeredCategoryValue(address)", simpleLoanTerms.collateral.assetAddress),
             abi.encode(0)
         );
-
-        _mockLoanTerms(simpleLoanTerms, loanFactoryDataHash);
 
         vm.expectRevert(InvalidCollateralAsset.selector);
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
@@ -306,9 +313,15 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
-    function test_shouldStoreLoanData() external {
+    function testFuzz_shouldStoreLoanData(uint40 accruingInterestAPR) external {
+        accruingInterestAPR = uint40(bound(accruingInterestAPR, 0, 1e11));
+
+        simpleLoanTerms.accruingInterestAPR = accruingInterestAPR;
+        _mockLoanTerms(simpleLoanTerms, loanFactoryDataHash);
+
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
 
+        simpleLoan.accruingInterestDailyRate = uint40(uint256(accruingInterestAPR) * 274 / 1e5);
         _assertLOANEq(loanId, simpleLoan);
     }
 
@@ -335,52 +348,46 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
-    function test_shouldTransferLoanAsset_fromLender_toBorrower_whenZeroFees() external {
+    function testFuzz_shouldTransferLoanAsset_fromLender_toBorrowerAndFeeCollector(
+        uint256 fee, uint256 loanAmount
+    ) external {
+        fee = bound(fee, 0, 9999);
+        loanAmount = bound(loanAmount, 1, 1e40);
+
+        simpleLoanTerms.asset.amount = loanAmount;
+        _mockLoanTerms(simpleLoanTerms, loanFactoryDataHash);
+        fungibleAsset.mint(lender, loanAmount);
+
+        vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
         loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
+
+        uint256 feeAmount = Math.mulDiv(loanAmount, fee, 1e4);
+        uint256 newAmount = loanAmount - feeAmount;
 
         vm.expectCall(
             simpleLoanTerms.asset.assetAddress,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                lender, address(loan), simpleLoanTerms.asset.amount, 1, uint8(4), uint256(2), uint256(3)
-            )
-        );
-        vm.expectCall(
-            simpleLoanTerms.asset.assetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, simpleLoanTerms.asset.amount)
-        );
-
-        loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
-    }
-
-    function test_shouldTransferLoanAsset_fromLender_toBorrowerAndFeeCollector_whenNonZeroFee() external {
-        vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(1000));
-
-        loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
-
-        vm.expectCall(
-            simpleLoanTerms.asset.assetAddress,
-            abi.encodeWithSignature(
-                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                lender, address(loan), simpleLoanTerms.asset.amount, 1, uint8(4), uint256(2), uint256(3)
+                lender, address(loan), loanAmount, 1, uint8(4), uint256(2), uint256(3)
             )
         );
         // Fee transfer
-        vm.expectCall(
-            simpleLoanTerms.asset.assetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, feeCollector, 10)
-        );
+        vm.expectCall({
+            callee: simpleLoanTerms.asset.assetAddress,
+            data: abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, feeCollector, feeAmount),
+            count: feeAmount > 0 ? 1 : 0
+        });
         // Updated amount transfer
         vm.expectCall(
             simpleLoanTerms.asset.assetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, 90)
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, newAmount)
         );
 
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
     }
 
     function test_shouldEmitEvent_LOANCreated() external {
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit();
         emit LOANCreated(loanId, simpleLoanTerms, loanFactoryDataHash, loanFactory);
 
         loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
@@ -415,12 +422,15 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         refinancedLoan = PWNSimpleLoan.LOAN({
             status: 2,
-            borrower: borrower,
-            defaultTimestamp: uint40(block.timestamp + 40039),
             loanAssetAddress: address(fungibleAsset),
-            loanRepayAmount: 6731,
-            collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
-            originalLender: lender
+            startTimestamp: uint40(block.timestamp),
+            defaultTimestamp: uint40(block.timestamp + 40039),
+            borrower: borrower,
+            originalLender: lender,
+            accruingInterestDailyRate: 0,
+            fixedInterestAmount: 6631,
+            principalAmount: 100,
+            collateral: MultiToken.ERC721(address(nonFungibleAsset), 2)
         });
 
         refinancedLoanTerms = PWNLOANTerms.Simple({
@@ -429,7 +439,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             defaultTimestamp: uint40(block.timestamp + 40039),
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2),
             asset: MultiToken.ERC20(address(fungibleAsset), 100),
-            loanRepayAmount: 6731,
+            fixedInterestAmount: 6631,
+            accruingInterestAPR: 0,
             canCreate: false,
             canRefinance: true,
             refinancingLoanId: 0
@@ -463,7 +474,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldFail_whenLoanIsDefaulted() external {
-        vm.warp(simpleLoan.defaultTimestamp + 10000);
+        vm.warp(simpleLoan.defaultTimestamp);
 
         vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.defaultTimestamp));
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
@@ -620,29 +631,48 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
     }
 
-    function test_shouldMoveLoanToRepaidState_whenLOANOwnerIsNotOriginalLender() external {
+    function testFuzz_shouldUpdateLoanData_whenLOANOwnerIsNotOriginalLender(
+        uint256 _days, uint256 principal, uint256 fixedInterest, uint256 dailyInterest
+    ) external {
         _mockLOANTokenOwner(loanId, makeAddr("notOriginalLender"));
+
+        _days = bound(_days, 0, loanDurationInDays - 1);
+        principal = bound(principal, 1, 1e40);
+        fixedInterest = bound(fixedInterest, 0, 1e40);
+        dailyInterest = bound(dailyInterest, 1, 274e8);
+
+        simpleLoan.principalAmount = principal;
+        simpleLoan.fixedInterestAmount = fixedInterest;
+        simpleLoan.accruingInterestDailyRate = uint40(dailyInterest);
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days * 1 days);
+
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        fungibleAsset.mint(borrower, loanRepaymentAmount);
 
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
 
-        bytes32 loanSlot = keccak256(abi.encode(loanId, LOANS_SLOT));
-        // Parse status value from first storage slot
-        bytes32 statusValue = vm.load(address(loan), loanSlot) & bytes32(uint256(0xff));
-        assertTrue(statusValue == bytes32(uint256(3)));
+        // Update loan and compare
+        simpleLoan.status = 3; // move loan to repaid state
+        simpleLoan.fixedInterestAmount = loanRepaymentAmount - principal; // stored accrued interest at the time of repayment
+        simpleLoan.accruingInterestDailyRate = 0; // stop accruing interest
+        _assertLOANEq(loanId, simpleLoan);
     }
 
     function testFuzz_shouldTransferOriginalLoanRepaymentDirectly_andTransferSurplusToBorrower_whenLOANOwnerIsOriginalLender_whenRefinanceLoanMoreThanOrEqualToOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
-        uint256 minRefinanceAmount = Math.mulDiv(simpleLoan.loanRepayAmount, 1e4, 1e4 - fee);
+        uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(
             refinanceAmount,
             minRefinanceAmount,
             type(uint256).max - minRefinanceAmount - fungibleAsset.totalSupply()
         );
         uint256 feeAmount = Math.mulDiv(refinanceAmount, fee, 1e4);
-        uint256 borrowerSurplus = refinanceAmount - feeAmount - simpleLoan.loanRepayAmount;
+        uint256 borrowerSurplus = refinanceAmount - feeAmount - loanRepaymentAmount;
 
         refinancedLoanTerms.asset.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
@@ -672,7 +702,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             refinancedLoanTerms.asset.assetAddress,
             abi.encodeWithSignature(
                 "transferFrom(address,address,uint256)",
-                newLender, simpleLoan.originalLender, simpleLoan.loanRepayAmount
+                newLender, simpleLoan.originalLender, loanRepaymentAmount
             )
         );
         vm.expectCall({ // borrower surplus
@@ -690,15 +720,16 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldTransferOriginalLoanRepaymentToVault_andTransferSurplusToBorrower_whenLOANOwnerIsNotOriginalLender_whenRefinanceLoanMoreThanOrEqualToOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
-        uint256 minRefinanceAmount = Math.mulDiv(simpleLoan.loanRepayAmount, 1e4, 1e4 - fee);
+        uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(
             refinanceAmount,
             minRefinanceAmount,
             type(uint256).max - minRefinanceAmount - fungibleAsset.totalSupply()
         );
         uint256 feeAmount = Math.mulDiv(refinanceAmount, fee, 1e4);
-        uint256 borrowerSurplus = refinanceAmount - feeAmount - simpleLoan.loanRepayAmount;
+        uint256 borrowerSurplus = refinanceAmount - feeAmount - loanRepaymentAmount;
 
         refinancedLoanTerms.asset.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
@@ -728,7 +759,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             refinancedLoanTerms.asset.assetAddress,
             abi.encodeWithSignature(
                 "transferFrom(address,address,uint256)",
-                newLender, address(loan), simpleLoan.loanRepayAmount
+                newLender, address(loan), loanRepaymentAmount
             )
         );
         vm.expectCall({ // borrower surplus
@@ -746,15 +777,16 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldNotTransferOriginalLoanRepayment_andTransferSurplusToBorrower_whenLOANOwnerIsNewLender_whenRefinanceLoanMoreThanOrEqualOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
-        uint256 minRefinanceAmount = Math.mulDiv(simpleLoan.loanRepayAmount, 1e4, 1e4 - fee);
+        uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(
             refinanceAmount,
             minRefinanceAmount,
             type(uint256).max - minRefinanceAmount - fungibleAsset.totalSupply()
         );
         uint256 feeAmount = Math.mulDiv(refinanceAmount, fee, 1e4);
-        uint256 borrowerSurplus = refinanceAmount - feeAmount - simpleLoan.loanRepayAmount;
+        uint256 borrowerSurplus = refinanceAmount - feeAmount - loanRepaymentAmount;
 
         refinancedLoanTerms.asset.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
@@ -785,7 +817,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             callee: refinancedLoanTerms.asset.assetAddress,
             data: abi.encodeWithSignature(
                 "transferFrom(address,address,uint256)",
-                newLender, newLender, simpleLoan.loanRepayAmount
+                newLender, newLender, loanRepaymentAmount
             ),
             count: 0
         });
@@ -804,11 +836,12 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldTransferOriginalLoanRepaymentDirectly_andContributeFromBorrower_whenLOANOwnerIsOriginalLender_whenRefinanceLoanLessThanOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
-        uint256 minRefinanceAmount = Math.mulDiv(simpleLoan.loanRepayAmount, 1e4, 1e4 - fee);
+        uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(refinanceAmount, 1, minRefinanceAmount - 1);
         uint256 feeAmount = Math.mulDiv(refinanceAmount, fee, 1e4);
-        uint256 borrowerContribution = simpleLoan.loanRepayAmount - (refinanceAmount - feeAmount);
+        uint256 borrowerContribution = loanRepaymentAmount - (refinanceAmount - feeAmount);
 
         refinancedLoanTerms.asset.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
@@ -863,11 +896,12 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldTransferOriginalLoanRepaymentToVault_andContributeFromBorrower_whenLOANOwnerIsNotOriginalLender_whenRefinanceLoanLessThanOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
-        uint256 minRefinanceAmount = Math.mulDiv(simpleLoan.loanRepayAmount, 1e4, 1e4 - fee);
+        uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(refinanceAmount, 1, minRefinanceAmount - 1);
         uint256 feeAmount = Math.mulDiv(refinanceAmount, fee, 1e4);
-        uint256 borrowerContribution = simpleLoan.loanRepayAmount - (refinanceAmount - feeAmount);
+        uint256 borrowerContribution = loanRepaymentAmount - (refinanceAmount - feeAmount);
 
         refinancedLoanTerms.asset.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
@@ -922,11 +956,12 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldNotTransferOriginalLoanRepayment_andContributeFromBorrower_whenLOANOwnerIsNewLender_whenRefinanceLoanLessThanOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
-        uint256 minRefinanceAmount = Math.mulDiv(simpleLoan.loanRepayAmount, 1e4, 1e4 - fee);
+        uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(refinanceAmount, 1, minRefinanceAmount - 1);
         uint256 feeAmount = Math.mulDiv(refinanceAmount, fee, 1e4);
-        uint256 borrowerContribution = simpleLoan.loanRepayAmount - (refinanceAmount - feeAmount);
+        uint256 borrowerContribution = loanRepaymentAmount - (refinanceAmount - feeAmount);
 
         refinancedLoanTerms.asset.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
@@ -980,11 +1015,24 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, loanAssetPermit, loanAssetPermit);
     }
 
-    function testFuzz_shouldRepayOriginalLoan(uint256 refinanceAmount) external {
+    function testFuzz_shouldRepayOriginalLoan(
+        uint256 _days, uint256 principal, uint256 fixedInterest, uint256 dailyInterest, uint256 refinanceAmount
+    ) external {
+        _days = bound(_days, 0, loanDurationInDays - 1);
+        principal = bound(principal, 1, 1e40);
+        fixedInterest = bound(fixedInterest, 0, 1e40);
+        dailyInterest = bound(dailyInterest, 1, 274e8);
+
+        simpleLoan.principalAmount = principal;
+        simpleLoan.fixedInterestAmount = fixedInterest;
+        simpleLoan.accruingInterestDailyRate = uint40(dailyInterest);
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days * 1 days);
+
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
         refinanceAmount = bound(
-            refinanceAmount,
-            1,
-            type(uint256).max - simpleLoan.loanRepayAmount - fungibleAsset.totalSupply()
+            refinanceAmount, 1, type(uint256).max - loanRepaymentAmount - fungibleAsset.totalSupply()
         );
 
         refinancedLoanTerms.asset.amount = refinanceAmount;
@@ -993,19 +1041,36 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         _mockLOANTokenOwner(loanId, lender);
 
         fungibleAsset.mint(newLender, refinanceAmount);
+        if (loanRepaymentAmount > refinanceAmount) {
+            fungibleAsset.mint(borrower, loanRepaymentAmount - refinanceAmount);
+        }
+
         uint256 originalBalance = fungibleAsset.balanceOf(lender);
 
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
 
-        assertEq(fungibleAsset.balanceOf(lender), originalBalance + simpleLoan.loanRepayAmount);
+        assertEq(fungibleAsset.balanceOf(lender), originalBalance + loanRepaymentAmount);
     }
 
-    function testFuzz_shouldCollectProtocolFee(uint256 refinanceAmount, uint256 fee) external {
+    function testFuzz_shouldCollectProtocolFee(
+        uint256 _days, uint256 principal, uint256 fixedInterest, uint256 dailyInterest, uint256 refinanceAmount, uint256 fee
+    ) external {
+        _days = bound(_days, 0, loanDurationInDays - 1);
+        principal = bound(principal, 1, 1e40);
+        fixedInterest = bound(fixedInterest, 0, 1e40);
+        dailyInterest = bound(dailyInterest, 1, 274e8);
+
+        simpleLoan.principalAmount = principal;
+        simpleLoan.fixedInterestAmount = fixedInterest;
+        simpleLoan.accruingInterestDailyRate = uint40(dailyInterest);
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days * 1 days);
+
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
         fee = bound(fee, 1, 9999); // 0 - 99.99%
         refinanceAmount = bound(
-            refinanceAmount,
-            1,
-            type(uint256).max - simpleLoan.loanRepayAmount - fungibleAsset.totalSupply()
+            refinanceAmount, 1, type(uint256).max - loanRepaymentAmount - fungibleAsset.totalSupply()
         );
         uint256 feeAmount = Math.mulDiv(refinanceAmount, fee, 1e4);
 
@@ -1016,6 +1081,10 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         fungibleAsset.mint(newLender, refinanceAmount);
+        if (loanRepaymentAmount > refinanceAmount - feeAmount) {
+            fungibleAsset.mint(borrower, loanRepaymentAmount - (refinanceAmount - feeAmount));
+        }
+
         uint256 originalBalance = fungibleAsset.balanceOf(feeCollector);
 
         loan.refinanceLOAN(loanId, loanFactory, loanFactoryData, signature, "", "");
@@ -1024,12 +1093,11 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     }
 
     function testFuzz_shouldTransferSurplusToBorrower(uint256 refinanceAmount) external {
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
         refinanceAmount = bound(
-            refinanceAmount,
-            simpleLoan.loanRepayAmount + 1,
-            type(uint256).max - simpleLoan.loanRepayAmount - fungibleAsset.totalSupply()
+            refinanceAmount, loanRepaymentAmount + 1, type(uint256).max - loanRepaymentAmount - fungibleAsset.totalSupply()
         );
-        uint256 surplus = refinanceAmount - simpleLoan.loanRepayAmount;
+        uint256 surplus = refinanceAmount - loanRepaymentAmount;
 
         refinancedLoanTerms.asset.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
@@ -1045,8 +1113,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     }
 
     function testFuzz_shouldContributeFromBorrower(uint256 refinanceAmount) external {
-        refinanceAmount = bound(refinanceAmount, 1, simpleLoan.loanRepayAmount - 1);
-        uint256 contribution = simpleLoan.loanRepayAmount - refinanceAmount;
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        refinanceAmount = bound(refinanceAmount, 1, loanRepaymentAmount - 1);
+        uint256 contribution = loanRepaymentAmount - refinanceAmount;
 
         refinancedLoanTerms.asset.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
@@ -1075,6 +1144,8 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
     function setUp() override public {
         super.setUp();
 
+        _mockLOAN(loanId, simpleLoan);
+
         // Move collateral to vault
         vm.prank(borrower);
         nonFungibleAsset.transferFrom(borrower, address(loan), 2);
@@ -1098,23 +1169,37 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldFail_whenLoanIsDefaulted() external {
-        _mockLOAN(loanId, simpleLoan);
-
-        vm.warp(simpleLoan.defaultTimestamp + 10000);
+        vm.warp(simpleLoan.defaultTimestamp);
 
         vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.defaultTimestamp));
         loan.repayLOAN(loanId, loanAssetPermit);
     }
 
-    function test_shouldCallPermit_whenProvided() external {
+    function testFuzz_shouldCallPermit_whenProvided(
+        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _dailyInterest
+    ) external {
+        _days = bound(_days, 0, loanDurationInDays - 1);
+        _principal = bound(_principal, 1, 1e40);
+        _fixedInterest = bound(_fixedInterest, 0, 1e40);
+        _dailyInterest = bound(_dailyInterest, 1, 274e8);
+
+        simpleLoan.principalAmount = _principal;
+        simpleLoan.fixedInterestAmount = _fixedInterest;
+        simpleLoan.accruingInterestDailyRate = uint40(_dailyInterest);
         _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days * 1 days);
+
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        fungibleAsset.mint(borrower, loanRepaymentAmount);
+
         loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
 
         vm.expectCall(
             simpleLoan.loanAssetAddress,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                borrower, address(loan), simpleLoan.loanRepayAmount, 1, uint8(4), uint256(2), uint256(3)
+                borrower, address(loan), loanRepaymentAmount, 1, uint8(4), uint256(2), uint256(3)
             )
         );
 
@@ -1123,28 +1208,39 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldDeleteLoanData_whenLOANOwnerIsOriginalLender() external {
-        _mockLOAN(loanId, simpleLoan);
-
         loan.repayLOAN(loanId, loanAssetPermit);
 
         _assertLOANEq(loanId, nonExistingLoan);
     }
 
     function test_shouldBurnLOANToken_whenLOANOwnerIsOriginalLender() external {
-        _mockLOAN(loanId, simpleLoan);
-
         vm.expectCall(loanToken, abi.encodeWithSignature("burn(uint256)", loanId));
 
         loan.repayLOAN(loanId, loanAssetPermit);
     }
 
-    function test_shouldTransferRepaidAmountToLender_whenLOANOwnerIsOriginalLender() external {
+    function testFuzz_shouldTransferRepaidAmountToLender_whenLOANOwnerIsOriginalLender(
+        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _dailyInterest
+    ) external {
+        _days = bound(_days, 0, loanDurationInDays - 1);
+        _principal = bound(_principal, 1, 1e40);
+        _fixedInterest = bound(_fixedInterest, 0, 1e40);
+        _dailyInterest = bound(_dailyInterest, 1, 274e8);
+
+        simpleLoan.principalAmount = _principal;
+        simpleLoan.fixedInterestAmount = _fixedInterest;
+        simpleLoan.accruingInterestDailyRate = uint40(_dailyInterest);
         _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days * 1 days);
+
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        fungibleAsset.mint(borrower, loanRepaymentAmount);
 
         vm.expectCall(
             simpleLoan.loanAssetAddress,
             abi.encodeWithSignature(
-                "transferFrom(address,address,uint256)", borrower, lender, simpleLoan.loanRepayAmount
+                "transferFrom(address,address,uint256)", borrower, lender, loanRepaymentAmount
             )
         );
 
@@ -1152,26 +1248,60 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         loan.repayLOAN(loanId, loanAssetPermit);
     }
 
-    function test_shouldMoveLoanToRepaidState_whenLOANOwnerIsNotOriginalLender() external {
-        _mockLOAN(loanId, simpleLoan);
+    function testFuzz_shouldUpdateLoanData_whenLOANOwnerIsNotOriginalLender(
+        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _dailyInterest
+    ) external {
         _mockLOANTokenOwner(loanId, notOriginalLender);
 
+        _days = bound(_days, 0, loanDurationInDays - 1);
+        _principal = bound(_principal, 1, 1e40);
+        _fixedInterest = bound(_fixedInterest, 0, 1e40);
+        _dailyInterest = bound(_dailyInterest, 1, 274e8);
+
+        simpleLoan.principalAmount = _principal;
+        simpleLoan.fixedInterestAmount = _fixedInterest;
+        simpleLoan.accruingInterestDailyRate = uint40(_dailyInterest);
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days * 1 days);
+
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        fungibleAsset.mint(borrower, loanRepaymentAmount);
+
+        vm.prank(borrower);
         loan.repayLOAN(loanId, loanAssetPermit);
 
-        bytes32 loanSlot = keccak256(abi.encode(loanId, LOANS_SLOT));
-        // Parse status value from first storage slot
-        bytes32 statusValue = vm.load(address(loan), loanSlot) & bytes32(uint256(0xff));
-        assertTrue(statusValue == bytes32(uint256(3)));
+        // Update loan and compare
+        simpleLoan.status = 3; // move loan to repaid state
+        simpleLoan.fixedInterestAmount = loanRepaymentAmount - _principal; // stored accrued interest at the time of repayment
+        simpleLoan.accruingInterestDailyRate = 0; // stop accruing interest
+        _assertLOANEq(loanId, simpleLoan);
     }
 
-    function test_shouldTransferRepaidAmountToVault_whenLOANOwnerIsNotOriginalLender() external {
-        _mockLOAN(loanId, simpleLoan);
+    function testFuzz_shouldTransferRepaidAmountToVault_whenLOANOwnerIsNotOriginalLender(
+        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _dailyInterest
+    ) external {
         _mockLOANTokenOwner(loanId, notOriginalLender);
+
+        _days = bound(_days, 0, loanDurationInDays - 1);
+        _principal = bound(_principal, 1, 1e40);
+        _fixedInterest = bound(_fixedInterest, 0, 1e40);
+        _dailyInterest = bound(_dailyInterest, 1, 274e8);
+
+        simpleLoan.principalAmount = _principal;
+        simpleLoan.fixedInterestAmount = _fixedInterest;
+        simpleLoan.accruingInterestDailyRate = uint40(_dailyInterest);
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days * 1 days);
+
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        fungibleAsset.mint(borrower, loanRepaymentAmount);
 
         vm.expectCall(
             simpleLoan.loanAssetAddress,
             abi.encodeWithSignature(
-                "transferFrom(address,address,uint256)", borrower, address(loan), simpleLoan.loanRepayAmount
+                "transferFrom(address,address,uint256)", borrower, address(loan), loanRepaymentAmount
             )
         );
 
@@ -1180,8 +1310,6 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldTransferCollateralToBorrower() external {
-        _mockLOAN(loanId, simpleLoan);
-
         vm.expectCall(
             simpleLoan.collateral.assetAddress,
             abi.encodeWithSignature(
@@ -1194,21 +1322,69 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldEmitEvent_LOANPaidBack() external {
-        _mockLOAN(loanId, simpleLoan);
-
-        vm.expectEmit(true, false, false, false);
+        vm.expectEmit();
         emit LOANPaidBack(loanId);
 
         loan.repayLOAN(loanId, loanAssetPermit);
     }
 
     function test_shouldEmitEvent_LOANClaimed_whenLOANOwnerIsOriginalLender() external {
-        _mockLOAN(loanId, simpleLoan);
-
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit();
         emit LOANClaimed(loanId, false);
 
         loan.repayLOAN(loanId, loanAssetPermit);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # LOAN REPAYMENT AMOUNT                                 *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoan_LoanRepaymentAmount_Test is PWNSimpleLoanTest {
+
+    function test_shouldReturnZero_whenLoanDoesNotExist() external {
+        assertEq(loan.loanRepaymentAmount(loanId), 0);
+    }
+
+    function testFuzz_shouldReturnFixedInterest_whenZeroAccruedInterest(
+        uint256 _days, uint256 _principal, uint256 _fixedInterest
+    ) external {
+        _days = bound(_days, 0, 2 * loanDurationInDays); // should return non zero value even after loan expiration
+        _principal = bound(_principal, 1, 1e40);
+        _fixedInterest = bound(_fixedInterest, 0, 1e40);
+
+        simpleLoan.defaultTimestamp = simpleLoan.startTimestamp + 101 * 1 days;
+        simpleLoan.principalAmount = _principal;
+        simpleLoan.fixedInterestAmount = _fixedInterest;
+        simpleLoan.accruingInterestDailyRate = 0;
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days + 1 days); // should not have an effect
+
+        assertEq(loan.loanRepaymentAmount(loanId), _principal + _fixedInterest);
+    }
+
+    function test_shouldReturnAccruedInterest_whenNonZeroAccruedInterest(
+        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _dailyInterest
+    ) external {
+        _days = bound(_days, 0, 2 * loanDurationInDays); // should return non zero value even after loan expiration
+        _principal = bound(_principal, 1, 1e40);
+        _fixedInterest = bound(_fixedInterest, 0, 1e40);
+        _dailyInterest = bound(_dailyInterest, 1, 274e8);
+
+        simpleLoan.defaultTimestamp = simpleLoan.startTimestamp + 101 * 1 days;
+        simpleLoan.principalAmount = _principal;
+        simpleLoan.fixedInterestAmount = _fixedInterest;
+        simpleLoan.accruingInterestDailyRate = uint40(_dailyInterest);
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + _days * 1 days + 1);
+
+        uint256 expectedInterest = _fixedInterest + _principal * _dailyInterest * _days / 1e10;
+        uint256 expectedLoanRepaymentAmount = _principal + expectedInterest;
+        assertEq(loan.loanRepaymentAmount(loanId), expectedLoanRepaymentAmount);
     }
 
 }
@@ -1223,13 +1399,8 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
     function setUp() override public {
         super.setUp();
 
-        vm.mockCall(
-            loanToken,
-            abi.encodeWithSignature("ownerOf(uint256)", loanId),
-            abi.encode(lender)
-        );
-
         simpleLoan.status = 3;
+        _mockLOAN(loanId, simpleLoan);
 
         // Move collateral to vault
         vm.prank(borrower);
@@ -1237,15 +1408,18 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
     }
 
 
-    function test_shouldFail_whenCallerIsNotLOANTokenHolder() external {
-        _mockLOAN(loanId, simpleLoan);
+    function testFuzz_shouldFail_whenCallerIsNotLOANTokenHolder(address caller) external {
+        vm.assume(caller != lender);
 
         vm.expectRevert(abi.encodeWithSelector(CallerNotLOANTokenHolder.selector));
-        vm.prank(borrower);
+        vm.prank(caller);
         loan.claimLOAN(loanId);
     }
 
     function test_shouldFail_whenLoanDoesNotExist() external {
+        simpleLoan.status = 0;
+        _mockLOAN(loanId, simpleLoan);
+
         vm.expectRevert(abi.encodeWithSelector(NonExistingLoan.selector));
         vm.prank(lender);
         loan.claimLOAN(loanId);
@@ -1261,8 +1435,6 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldPass_whenLoanIsRepaid() external {
-        _mockLOAN(loanId, simpleLoan);
-
         vm.prank(lender);
         loan.claimLOAN(loanId);
     }
@@ -1271,15 +1443,13 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.defaultTimestamp + 10000);
+        vm.warp(simpleLoan.defaultTimestamp);
 
         vm.prank(lender);
         loan.claimLOAN(loanId);
     }
 
     function test_shouldDeleteLoanData() external {
-        _mockLOAN(loanId, simpleLoan);
-
         vm.prank(lender);
         loan.claimLOAN(loanId);
 
@@ -1287,8 +1457,6 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldBurnLOANToken() external {
-        _mockLOAN(loanId, simpleLoan);
-
         vm.expectCall(
             loanToken,
             abi.encodeWithSignature("burn(uint256)", loanId)
@@ -1298,14 +1466,24 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         loan.claimLOAN(loanId);
     }
 
-    function test_shouldTransferRepaidAmountToLender_whenLoanIsRepaid() external {
-        simpleLoan.loanRepayAmount = 110;
+    function testFuzz_shouldTransferRepaidAmountToLender_whenLoanIsRepaid(
+        uint256 _principal, uint256 _fixedInterest
+    ) external {
+        _principal = bound(_principal, 1, 1e40);
+        _fixedInterest = bound(_fixedInterest, 0, 1e40);
 
-        _mockLOAN(loanId, simpleLoan);
+        // Note: loan repayment into Vault will reuse `fixedInterestAmount` and store total interest
+        // at the time of repayment and set `accruingInterestDailyRate` to zero.
+        simpleLoan.principalAmount = _principal;
+        simpleLoan.fixedInterestAmount = _fixedInterest;
+        simpleLoan.accruingInterestDailyRate = 0;
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+
+        fungibleAsset.mint(address(loan), loanRepaymentAmount);
 
         vm.expectCall(
             simpleLoan.loanAssetAddress,
-            abi.encodeWithSignature("transfer(address,uint256)", lender, simpleLoan.loanRepayAmount)
+            abi.encodeWithSignature("transfer(address,uint256)", lender, loanRepaymentAmount)
         );
 
         vm.prank(lender);
@@ -1316,7 +1494,7 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.defaultTimestamp + 10000);
+        vm.warp(simpleLoan.defaultTimestamp);
 
         vm.expectCall(
             simpleLoan.collateral.assetAddress,
@@ -1331,9 +1509,7 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldEmitEvent_LOANClaimed_whenRepaid() external {
-        _mockLOAN(loanId, simpleLoan);
-
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit();
         emit LOANClaimed(loanId, false);
 
         vm.prank(lender);
@@ -1344,9 +1520,9 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.defaultTimestamp + 10000);
+        vm.warp(simpleLoan.defaultTimestamp);
 
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit();
         emit LOANClaimed(loanId, true);
 
         vm.prank(lender);
@@ -1365,69 +1541,71 @@ contract PWNSimpleLoan_ExtendExpirationDate_Test is PWNSimpleLoanTest {
     function setUp() override public {
         super.setUp();
 
-        // vm.warp(block.timestamp - 30039); // orig: block.timestamp + 40039
-        vm.mockCall(
-            loanToken,
-            abi.encodeWithSignature("ownerOf(uint256)", loanId),
-            abi.encode(lender)
-        );
+        _mockLOAN(loanId, simpleLoan);
+
+        // Set current timestamp to 5 days before loan default
+        vm.warp(simpleLoan.defaultTimestamp - 5 days);
     }
 
 
-    function test_shouldFail_whenCallerIsNotLOANTokenHolder() external {
-        _mockLOAN(loanId, simpleLoan);
+    function testFuzz_shouldFail_whenCallerIsNotLOANTokenHolder(address caller) external {
+        vm.assume(caller != lender);
 
         vm.expectRevert(abi.encodeWithSelector(CallerNotLOANTokenHolder.selector));
-        vm.prank(borrower);
+        vm.prank(caller);
         loan.extendLOANExpirationDate(loanId, simpleLoan.defaultTimestamp + 1);
     }
 
-    function test_shouldFail_whenExtendedExpirationDateIsSmallerThanCurrentExpirationDate() external {
-        _mockLOAN(loanId, simpleLoan);
+    function testFuzz_shouldFail_whenExtendedExpirationDateIsSmallerThanOrEqualToCurrentExpirationDate(
+        uint40 newExpiration
+    ) external {
+        newExpiration = uint40(bound(newExpiration, block.timestamp + 1, simpleLoan.defaultTimestamp));
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtendedExpirationDate.selector));
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, simpleLoan.defaultTimestamp - 1);
+        loan.extendLOANExpirationDate(loanId, newExpiration);
     }
 
-    function test_shouldFail_whenExtendedExpirationDateIsSmallerThanCurrentDate() external {
-        _mockLOAN(loanId, simpleLoan);
-
-        vm.warp(simpleLoan.defaultTimestamp + 1000);
+    function testFuzz_shouldFail_whenExtendedExpirationDateIsSmallerThanOrEqualToCurrentDate(uint40 newExpiration) external {
+        newExpiration = uint40(bound(newExpiration, 0, block.timestamp));
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtendedExpirationDate.selector));
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, simpleLoan.defaultTimestamp + 500);
+        loan.extendLOANExpirationDate(loanId, newExpiration);
     }
 
-    function test_shouldFail_whenExtendedExpirationDateIsBiggerThanMaxExpirationExtension() external {
-        _mockLOAN(loanId, simpleLoan);
+    function testFuzz_shouldFail_whenExtendedExpirationDateIsBiggerThanMaxExpirationExtension(
+        uint40 newExpiration
+    ) external {
+        newExpiration = uint40(bound(
+            newExpiration, block.timestamp + MAX_EXPIRATION_EXTENSION + 1, type(uint40).max
+        ));
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtendedExpirationDate.selector));
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, uint40(block.timestamp + MAX_EXPIRATION_EXTENSION + 1));
+        loan.extendLOANExpirationDate(loanId, newExpiration);
     }
 
-    function test_shouldStoreExtendedExpirationDate() external {
-        _mockLOAN(loanId, simpleLoan);
-
-        uint40 newExpiration = uint40(simpleLoan.defaultTimestamp + 10000);
+    function testFuzz_shouldStoreExtendedExpirationDate(uint40 newExpiration) external {
+        newExpiration = uint40(bound(
+            newExpiration, simpleLoan.defaultTimestamp + 1, block.timestamp + MAX_EXPIRATION_EXTENSION
+        ));
 
         vm.prank(lender);
         loan.extendLOANExpirationDate(loanId, newExpiration);
 
         bytes32 loanFirstSlot = keccak256(abi.encode(loanId, LOANS_SLOT));
         bytes32 firstSlotValue = vm.load(address(loan), loanFirstSlot);
-        bytes32 expirationDateValue = firstSlotValue >> 168;
+        bytes32 expirationDateValue = firstSlotValue << 8 >> 216;
         assertEq(uint256(expirationDateValue), newExpiration);
     }
 
-    function test_shouldEmitEvent_LOANExpirationDateExtended() external {
-        _mockLOAN(loanId, simpleLoan);
+    function testFuzz_shouldEmitEvent_LOANExpirationDateExtended(uint40 newExpiration) external {
+        newExpiration = uint40(bound(
+            newExpiration, simpleLoan.defaultTimestamp + 1, block.timestamp + MAX_EXPIRATION_EXTENSION
+        ));
 
-        uint40 newExpiration = uint40(simpleLoan.defaultTimestamp + 10000);
-
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit();
         emit LOANExpirationDateExtended(loanId, newExpiration);
 
         vm.prank(lender);
@@ -1449,10 +1627,10 @@ contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
         _assertLOANEq(loan.getLOAN(loanId), simpleLoan);
     }
 
-    function test_shouldReturnExpiredStatus_whenLOANExpired() external {
+    function test_shouldReturnDefaultedStatus_whenLOANDefaulted() external {
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.defaultTimestamp + 10000);
+        vm.warp(simpleLoan.defaultTimestamp);
 
         simpleLoan.status = 4;
         _assertLOANEq(loan.getLOAN(loanId), simpleLoan);
@@ -1516,19 +1694,33 @@ contract PWNSimpleLoan_GetStateFingerprint_Test is PWNSimpleLoanTest {
         assertEq(fingerprint, bytes32(0));
     }
 
-    function test_shouldReturnCorrectStateFingerprint() external {
+    function test_shouldUpdateStateFingerprint_whenLoanDefaulted() external {
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.defaultTimestamp - 10000);
-        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(2, simpleLoan.defaultTimestamp)));
+        vm.warp(simpleLoan.defaultTimestamp - 1);
+        assertEq(
+            loan.getStateFingerprint(loanId),
+            keccak256(abi.encode(2, simpleLoan.defaultTimestamp, simpleLoan.fixedInterestAmount, simpleLoan.accruingInterestDailyRate))
+        );
 
-        vm.warp(simpleLoan.defaultTimestamp + 10000);
-        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(4, simpleLoan.defaultTimestamp)));
+        vm.warp(simpleLoan.defaultTimestamp);
+        assertEq(
+            loan.getStateFingerprint(loanId),
+            keccak256(abi.encode(4, simpleLoan.defaultTimestamp, simpleLoan.fixedInterestAmount, simpleLoan.accruingInterestDailyRate))
+        );
+    }
 
-        simpleLoan.status = 3;
-        simpleLoan.defaultTimestamp = 60039;
+    function testFuzz_shouldReturnCorrectStateFingerprint(
+        uint256 fixedInterestAmount, uint40 accruingInterestDailyRate
+    ) external {
+        simpleLoan.fixedInterestAmount = fixedInterestAmount;
+        simpleLoan.accruingInterestDailyRate = accruingInterestDailyRate;
         _mockLOAN(loanId, simpleLoan);
-        assertEq(loan.getStateFingerprint(loanId), keccak256(abi.encode(3, 60039)));
+
+        assertEq(
+            loan.getStateFingerprint(loanId),
+            keccak256(abi.encode(2, simpleLoan.defaultTimestamp, simpleLoan.fixedInterestAmount, simpleLoan.accruingInterestDailyRate))
+        );
     }
 
 }

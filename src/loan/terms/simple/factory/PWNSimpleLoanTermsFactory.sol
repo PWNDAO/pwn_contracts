@@ -11,6 +11,7 @@ import "@pwn/loan/terms/PWNLOANTerms.sol";
 abstract contract PWNSimpleLoanTermsFactory {
 
     uint32 public constant MIN_LOAN_DURATION = 600; // 10 min
+    uint40 public constant MAX_ACCRUING_INTEREST_APR = 1e11; // 1,000,000% APR
 
     /**
      * @notice Build a simple loan terms from given data.

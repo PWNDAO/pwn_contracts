@@ -25,7 +25,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @dev EIP-712 simple request struct type hash.
      */
     bytes32 public constant REQUEST_TYPEHASH = keccak256(
-        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonce)"
+        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonce)"
     );
 
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -38,7 +38,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0.
      * @param loanAssetAddress Address of an asset which is lender to a borrower.
      * @param loanAmount Amount of tokens which is requested as a loan to a borrower.
-     * @param loanYield Amount of tokens which acts as a lenders loan interest. Borrower has to pay back a borrowed amount + yield.
+     * @param fixedInterestAmount Fixed interest amount in loan asset tokens. It is the minimum amount of interest which has to be paid by a borrower.
+     * @param accruingInterestAPR Accruing interest APR.
      * @param duration Loan duration in seconds.
      * @param expiration Request expiration timestamp in seconds.
      * @param allowedLender Address of an allowed lender. Only this address can accept a request. If the address is zero address, anybody with a loan asset can accept the request.
@@ -54,7 +55,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         uint256 collateralAmount;
         address loanAssetAddress;
         uint256 loanAmount;
-        uint256 loanYield;
+        uint256 fixedInterestAmount;
+        uint40 accruingInterestAPR;
         uint32 duration;
         uint40 expiration;
         address allowedLender;
@@ -98,7 +100,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice See { IPWNSimpleLoanFactory.sol }.
+     * @inheritdoc PWNSimpleLoanTermsFactory
      */
     function createLOANTerms(
         address caller,
@@ -131,6 +133,13 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
         if (request.duration < MIN_LOAN_DURATION)
             revert InvalidDuration();
 
+        // Check APR
+        if (request.accruingInterestAPR > MAX_ACCRUING_INTEREST_APR)
+            revert AccruingInterestAPROutOfBounds({
+                providedAPR: request.accruingInterestAPR,
+                maxAPR: MAX_ACCRUING_INTEREST_APR
+            });
+
         // Prepare collateral and loan asset
         MultiToken.Asset memory collateral = MultiToken.Asset({
             category: request.collateralCategory,
@@ -152,7 +161,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
             defaultTimestamp: uint40(block.timestamp) + request.duration,
             collateral: collateral,
             asset: loanAsset,
-            loanRepayAmount: request.loanAmount + request.loanYield,
+            fixedInterestAmount: request.fixedInterestAmount,
+            accruingInterestAPR: request.accruingInterestAPR,
             canCreate: request.refinancingLoanId == 0,
             canRefinance: request.refinancingLoanId != 0,
             refinancingLoanId: request.refinancingLoanId

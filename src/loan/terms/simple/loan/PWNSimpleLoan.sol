@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.sol";
 
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { SafeCast } from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 
 import { PWNConfig } from "@pwn/config/PWNConfig.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
@@ -26,6 +27,13 @@ import "@pwn/PWNErrors.sol";
 contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     string public constant VERSION = "1.2";
+
+    uint256 public constant APR_INTEREST_DENOMINATOR = 1e4;
+    uint256 public constant DAILY_INTEREST_DENOMINATOR = 1e10;
+
+    uint256 public constant APR_TO_DAILY_INTEREST_NUMERATOR = 274;
+    uint256 public constant APR_TO_DAILY_INTEREST_DENOMINATOR = 1e5;
+
     uint256 public constant MAX_EXPIRATION_EXTENSION = 2_592_000; // 30 days
 
     /*----------------------------------------------------------*|
@@ -41,21 +49,29 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Struct defining a simple loan.
      * @param status 0 == none/dead || 2 == running/accepted offer/accepted request || 3 == paid back || 4 == expired.
-     * @param borrower Address of a borrower.
-     * @param defaultTimestamp Unix timestamp (in seconds) setting up a default date.
      * @param loanAssetAddress Address of an asset used as a loan credit.
-     * @param loanRepayAmount Amount of a loan asset to be paid back.
-     * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
+     * @param startTimestamp Unix timestamp (in seconds) of a start date.
+     * @param defaultTimestamp Unix timestamp (in seconds) of a default date.
+     * @param borrower Address of a borrower.
      * @param originalLender Address of a lender that funded the loan.
+     * @param accruingInterestDailyRate Accruing daily interest rate.
+     * @param fixedInterestAmount Fixed interest amount in loan asset tokens.
+     *                            It is the minimum amount of interest which has to be paid by a borrower.
+     *                            This property is reused to store the final interest amount if the loan is repaid and waiting to be claimed.
+     * @param principalAmount Principal amount in loan asset tokens.
+     * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
      */
     struct LOAN {
         uint8 status;
-        address borrower;
-        uint40 defaultTimestamp;
         address loanAssetAddress;
-        uint256 loanRepayAmount;
-        MultiToken.Asset collateral;
+        uint40 startTimestamp;
+        uint40 defaultTimestamp;
+        address borrower;
         address originalLender;
+        uint40 accruingInterestDailyRate;
+        uint256 fixedInterestAmount;
+        uint256 principalAmount;
+        MultiToken.Asset collateral;
     }
 
     /**
@@ -199,12 +215,17 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Store loan data under loan id
         LOAN storage loan = LOANs[loanId];
         loan.status = 2;
-        loan.borrower = loanTerms.borrower;
-        loan.defaultTimestamp = loanTerms.defaultTimestamp;
         loan.loanAssetAddress = loanTerms.asset.assetAddress;
-        loan.loanRepayAmount = loanTerms.loanRepayAmount;
-        loan.collateral = loanTerms.collateral;
+        loan.startTimestamp = uint40(block.timestamp);
+        loan.defaultTimestamp = loanTerms.defaultTimestamp;
+        loan.borrower = loanTerms.borrower;
         loan.originalLender = loanTerms.lender;
+        loan.accruingInterestDailyRate = SafeCast.toUint40(Math.mulDiv(
+            loanTerms.accruingInterestAPR, APR_TO_DAILY_INTEREST_NUMERATOR, APR_TO_DAILY_INTEREST_DENOMINATOR
+        ));
+        loan.fixedInterestAmount = loanTerms.fixedInterestAmount;
+        loan.principalAmount = loanTerms.asset.amount;
+        loan.collateral = loanTerms.collateral;
 
         emit LOANCreated({
             loanId: loanId,
@@ -294,7 +315,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Refinance the original loan
         _refinanceOriginalLoan(
             loanId,
-            loan.loanRepayAmount,
             loanTerms,
             lenderLoanAssetPermit,
             borrowerLoanAssetPermit
@@ -348,18 +368,18 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      If the new loan amount is not enough to cover the original loan, the borrower needs to contribute.
      *      The function assumes a prior token approval to a contract address or signed permits.
      * @param loanId Id of a loan that is being refinanced.
-     * @param loanRepayAmount Amount of the original loan to be repaid.
      * @param loanTerms Loan terms struct.
      * @param lenderLoanAssetPermit Permit data for a loan asset signed by a lender.
      * @param borrowerLoanAssetPermit Permit data for a loan asset signed by a borrower.
      */
     function _refinanceOriginalLoan(
         uint256 loanId,
-        uint256 loanRepayAmount,
         PWNLOANTerms.Simple memory loanTerms,
         bytes calldata lenderLoanAssetPermit,
         bytes calldata borrowerLoanAssetPermit
     ) private {
+        uint256 repaymentAmount = _loanRepaymentAmount(loanId);
+
         // Delete or update the original loan
         (bool repayLoanDirectly, address loanOwner) = _deleteOrUpdateRepaidLoan(loanId);
 
@@ -367,7 +387,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         _settleLoanRefinance({
             repayLoanDirectly: repayLoanDirectly,
             loanOwner: loanOwner,
-            loanRepayAmount: loanRepayAmount,
+            repaymentAmount: repaymentAmount,
             loanTerms: loanTerms,
             lenderPermit: lenderLoanAssetPermit,
             borrowerPermit: borrowerLoanAssetPermit
@@ -381,7 +401,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *         The function assumes a prior token approval to a contract address or signed permits.
      * @param repayLoanDirectly If the loan can be repaid directly to the current LOAN owner.
      * @param loanOwner Address of the current LOAN owner.
-     * @param loanRepayAmount Amount of the original loan to be repaid.
+     * @param repaymentAmount Amount of the original loan to be repaid.
      * @param loanTerms Loan terms struct.
      * @param lenderPermit Permit data for a loan asset signed by a lender.
      * @param borrowerPermit Permit data for a loan asset signed by a borrower.
@@ -389,7 +409,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     function _settleLoanRefinance(
         bool repayLoanDirectly,
         address loanOwner,
-        uint256 loanRepayAmount,
+        uint256 repaymentAmount,
         PWNLOANTerms.Simple memory loanTerms,
         bytes calldata lenderPermit,
         bytes calldata borrowerPermit
@@ -408,7 +428,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Permit lenders loan asset spending if permit provided
         loanAssetHelper.amount = loanTerms.asset.amount + feeAmount; // Permit the whole loan amount + fee
         loanAssetHelper.amount -= loanTerms.lender == loanOwner // Permit only the surplus transfer + fee
-            ? Math.min(loanRepayAmount, loanTerms.asset.amount) : 0;
+            ? Math.min(repaymentAmount, loanTerms.asset.amount) : 0;
         if (loanAssetHelper.amount > 0)
             _permit(loanAssetHelper, loanTerms.lender, lenderPermit);
 
@@ -421,7 +441,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // If the new lender is the LOAN token owner, don't execute the transfer at all,
         // it would make transfer from the same address to the same address
         if (loanTerms.lender != loanOwner) {
-            loanAssetHelper.amount = Math.min(loanRepayAmount, loanTerms.asset.amount);
+            loanAssetHelper.amount = Math.min(repaymentAmount, loanTerms.asset.amount);
             _transferLoanRepayment({
                 repayLoanDirectly: repayLoanDirectly,
                 asset: loanAssetHelper,
@@ -430,16 +450,16 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             });
         }
 
-        if (loanTerms.asset.amount >= loanRepayAmount) {
+        if (loanTerms.asset.amount >= repaymentAmount) {
             // New loan covers the whole original loan, transfer surplus to the borrower if any
-            uint256 surplus = loanTerms.asset.amount - loanRepayAmount;
+            uint256 surplus = loanTerms.asset.amount - repaymentAmount;
             if (surplus > 0) {
                 loanAssetHelper.amount = surplus;
                 _pushFrom(loanAssetHelper, loanTerms.lender, loanTerms.borrower);
             }
         } else {
             // Permit borrowers loan asset spending if permit provided
-            loanAssetHelper.amount = loanRepayAmount - loanTerms.asset.amount;
+            loanAssetHelper.amount = repaymentAmount - loanTerms.asset.amount;
             _permit(loanAssetHelper, loanTerms.borrower, borrowerPermit);
 
             // New loan covers only part of the original loan, borrower needs to contribute
@@ -469,9 +489,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         uint256 loanId,
         bytes calldata loanAssetPermit
     ) external {
-        LOAN memory loan = LOANs[loanId];
+        LOAN storage loan = LOANs[loanId];
 
         _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
+
+        address borrower = loan.borrower;
+        MultiToken.Asset memory collateral = loan.collateral;
+        MultiToken.Asset memory repaymentLoanAsset = MultiToken.ERC20(loan.loanAssetAddress, _loanRepaymentAmount(loanId));
 
         (bool repayLoanDirectly, address loanOwner) = _deleteOrUpdateRepaidLoan(loanId);
 
@@ -479,11 +503,53 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             repayLoanDirectly: repayLoanDirectly,
             loanOwner: loanOwner,
             repayingAddress: msg.sender,
-            borrower: loan.borrower,
-            repayLoanAsset: MultiToken.ERC20(loan.loanAssetAddress, loan.loanRepayAmount),
-            collateral: loan.collateral,
+            borrower: borrower,
+            repaymentLoanAsset: repaymentLoanAsset,
+            collateral: collateral,
             loanAssetPermit: loanAssetPermit
         });
+    }
+
+    /**
+     * @notice Calculate the loan repayment amount with fixed and accrued interest.
+     * @param loanId Id of a loan.
+     * @return Repayment amount.
+     */
+    function loanRepaymentAmount(uint256 loanId) public view returns (uint256) {
+        LOAN storage loan = LOANs[loanId];
+
+        // Check non-existent
+        if (loan.status == 0) return 0;
+
+        return _loanRepaymentAmount(loanId);
+    }
+
+    /**
+     * @notice Internal function to calculate the loan repayment amount with fixed and accrued interest.
+     * @param loanId Id of a loan.
+     * @return Repayment amount.
+     */
+    function _loanRepaymentAmount(uint256 loanId) private view returns (uint256) {
+        LOAN storage loan = LOANs[loanId];
+
+        // Return loan principal with accrued interest
+        return loan.principalAmount + _loanAccruedInterest(loan);
+    }
+
+    /**
+     * @notice Calculate the loan accrued interest.
+     * @param loan Loan data struct.
+     * @return Accrued interest amount.
+     */
+    function _loanAccruedInterest(LOAN storage loan) private view returns (uint256) {
+        if (loan.accruingInterestDailyRate == 0)
+            return loan.fixedInterestAmount;
+
+        uint256 accruingDays = (block.timestamp - loan.startTimestamp) / 1 days;
+        uint256 accruedInterest = Math.mulDiv(
+            loan.principalAmount, loan.accruingInterestDailyRate * accruingDays, DAILY_INTEREST_DENOMINATOR
+        );
+        return loan.fixedInterestAmount + accruedInterest;
     }
 
     /**
@@ -512,13 +578,15 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @return loanOwner Address of the current LOAN owner.
      */
     function _deleteOrUpdateRepaidLoan(uint256 loanId) private returns (bool repayLoanDirectly, address loanOwner) {
+        LOAN storage loan = LOANs[loanId];
+
         emit LOANPaidBack({ loanId: loanId });
 
         // Note: Assuming that it is safe to transfer the loan asset to the original lender
         // if the lender still owns the LOAN token because the lender was able to sign an offer
         // or make a contract call, thus can handle incoming transfers.
         loanOwner = loanToken.ownerOf(loanId);
-        repayLoanDirectly = LOANs[loanId].originalLender == loanOwner;
+        repayLoanDirectly = loan.originalLender == loanOwner;
         if (repayLoanDirectly) {
             // Delete loan data & burn LOAN token before calling safe transfer
             _deleteLoan(loanId);
@@ -526,7 +594,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             emit LOANClaimed({ loanId: loanId, defaulted: false });
         } else {
             // Move loan to repaid state and wait for the lender to claim the repaid loan asset
-            LOANs[loanId].status = 3;
+            loan.status = 3;
+            // Update accrued interest amount
+            loan.fixedInterestAmount = _loanAccruedInterest(loan);
+            // Note: Reusing `fixedInterestAmount` to store accrued interest at the time of repayment
+            // to have the value at the time of claim and stop accruing new interest.
+            loan.accruingInterestDailyRate = 0;
         }
     }
 
@@ -537,7 +610,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loanOwner Address of the current LOAN owner.
      * @param repayingAddress Address of the account repaying the loan.
      * @param borrower Address of the borrower associated with the loan.
-     * @param repayLoanAsset Loan asset to be repaid.
+     * @param repaymentLoanAsset Loan asset to be repaid.
      * @param collateral Collateral to be transferred back to the borrower.
      * @param loanAssetPermit Permit data for a loan asset signed by a borrower.
      */
@@ -546,13 +619,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         address loanOwner,
         address repayingAddress,
         address borrower,
-        MultiToken.Asset memory repayLoanAsset,
+        MultiToken.Asset memory repaymentLoanAsset,
         MultiToken.Asset memory collateral,
         bytes calldata loanAssetPermit
     ) private {
         // Transfer loan asset to the original lender or to the Vault
-        _permit(repayLoanAsset, repayingAddress, loanAssetPermit);
-        _transferLoanRepayment(repayLoanDirectly, repayLoanAsset, repayingAddress, loanOwner);
+        _permit(repaymentLoanAsset, repayingAddress, loanAssetPermit);
+        _transferLoanRepayment(repayLoanDirectly, repaymentLoanAsset, repayingAddress, loanOwner);
 
         // Transfer collateral back to borrower
         _push(collateral, borrower);
@@ -621,9 +694,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     function _settleLoanClaim(uint256 loanId, address loanOwner, bool defaulted) private {
         LOAN storage loan = LOANs[loanId];
 
+        // Store in memory before deleting the loan
         MultiToken.Asset memory asset = defaulted
             ? loan.collateral
-            : MultiToken.ERC20(loan.loanAssetAddress, loan.loanRepayAmount);
+            : MultiToken.ERC20(loan.loanAssetAddress, _loanRepaymentAmount(loanId));
 
         // Delete loan data & burn LOAN token before calling safe transfer
         _deleteLoan(loanId);
@@ -745,12 +819,16 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             return bytes32(0);
 
         // The only mutable state properties are:
-        // - status, defaultTimestamp
-        // Status is updated for expired loans based on block.timestamp.
+        // - status: updated for expired loans based on block.timestamp
+        // - defaultTimestamp: updated when the loan expiration date is extended
+        // - fixedInterestAmount: updated when the loan is repaid and waiting to be claimed
+        // - accruingInterestDailyRate: updated when the loan is repaid and waiting to be claimed
         // Others don't have to be part of the state fingerprint as it does not act as a token identification.
         return keccak256(abi.encode(
             _getLOANStatus(tokenId),
-            loan.defaultTimestamp
+            loan.defaultTimestamp,
+            loan.fixedInterestAmount,
+            loan.accruingInterestDailyRate
         ));
     }
 

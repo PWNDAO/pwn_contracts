@@ -41,7 +41,8 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
             collateralAmount: 1032,
             loanAssetAddress: token,
             loanAmount: 1101001,
-            loanYield: 1,
+            fixedInterestAmount: 1,
+            accruingInterestAPR: 0,
             duration: 1000,
             expiration: 0,
             allowedBorrower: address(0),
@@ -74,7 +75,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
                 address(offerContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 loanYield,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonce)"),
+                keccak256("Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonce)"),
                 abi.encode(_offer)
             ))
         ));
@@ -276,6 +277,18 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
+    function testFuzz_shouldFail_whenAccruingInterestAPROutOfBounds(uint40 interestAPR) external {
+        uint40 maxInterest = offerContract.MAX_ACCRUING_INTEREST_APR();
+        interestAPR = uint40(bound(interestAPR, maxInterest + 1, type(uint40).max));
+
+        offer.accruingInterestAPR = interestAPR;
+        signature = _signOfferCompact(lenderPK, offer);
+
+        vm.expectRevert(abi.encodeWithSelector(AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest));
+        vm.prank(activeLoanContract);
+        offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
+    }
+
     function test_shouldRevokeOffer_whenIsNotPersistent() external {
         offer.isPersistent = false;
         signature = _signOfferCompact(lenderPK, offer);
@@ -289,15 +302,15 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
     }
 
-    // This test should fail because `revokeNonce` is not called for persistent offer
-    function testFail_shouldNotRevokeOffer_whenIsPersistent() external {
+    function test_shouldNotRevokeOffer_whenIsPersistent() external {
         offer.isPersistent = true;
         signature = _signOfferCompact(lenderPK, offer);
 
-        vm.expectCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("revokeNonce(address,uint256)", offer.lender, offer.nonce)
-        );
+        vm.expectCall({
+            callee: revokedOfferNonce,
+            data: abi.encodeWithSignature("revokeNonce(address,uint256)", offer.lender, offer.nonce),
+            count: 0
+        });
 
         vm.prank(activeLoanContract);
         offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
@@ -347,7 +360,8 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.prank(activeLoanContract);
-        (PWNLOANTerms.Simple memory loanTerms, bytes32 offerHash) = offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
+        (PWNLOANTerms.Simple memory loanTerms, bytes32 offerHash)
+            = offerContract.createLOANTerms(borrower, abi.encode(offer, offerValues), signature);
 
         assertTrue(loanTerms.lender == offer.lender);
         assertTrue(loanTerms.borrower == borrower);
@@ -360,7 +374,9 @@ contract PWNSimpleLoanListOffer_CreateLOANTerms_Test is PWNSimpleLoanListOfferTe
         assertTrue(loanTerms.asset.assetAddress == offer.loanAssetAddress);
         assertTrue(loanTerms.asset.id == 0);
         assertTrue(loanTerms.asset.amount == offer.loanAmount);
-        assertTrue(loanTerms.loanRepayAmount == offer.loanAmount + offer.loanYield);
+        assertTrue(loanTerms.fixedInterestAmount == offer.fixedInterestAmount);
+        assertTrue(loanTerms.accruingInterestAPR == offer.accruingInterestAPR);
+        assertTrue(loanTerms.canCreate == true);
         assertTrue(loanTerms.canRefinance == true);
         assertTrue(loanTerms.refinancingLoanId == 0);
 
