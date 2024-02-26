@@ -46,14 +46,10 @@ abstract contract PWNSimpleLoanRequestTest is Test {
     address borrower = address(0x070ce3);
     uint256 nonce = uint256(keccak256("nonce_1"));
 
-    event RequestMade(bytes32 indexed requestHash, address indexed borrower);
-
-    constructor() {
+    function setUp() virtual public {
         vm.etch(hub, bytes("data"));
         vm.etch(revokedRequestNonce, bytes("data"));
-    }
 
-    function setUp() virtual public {
         requestContract = new PWNSimpleLoanRequestExposed(hub, revokedRequestNonce);
 
         vm.mockCall(
@@ -85,15 +81,7 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
             address(requestContract),
             keccak256(abi.encode(requestHash, REQUESTS_MADE_SLOT))
         );
-        assertEq(isMadeValue, bytes32(uint256(1)));
-    }
-
-    function test_shouldEmitEvent_RequestMade() external {
-        vm.expectEmit(true, true, false, false);
-        emit RequestMade(requestHash, borrower);
-
-        vm.prank(borrower);
-        requestContract.makeRequest(requestHash, borrower);
+        assertEq(uint256(isMadeValue), 1);
     }
 
 }

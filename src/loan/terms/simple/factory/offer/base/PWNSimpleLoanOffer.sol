@@ -22,15 +22,6 @@ abstract contract PWNSimpleLoanOffer is PWNSimpleLoanTermsFactory, PWNHubAccessC
      */
     mapping (bytes32 => bool) public offersMade;
 
-    /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
-    |*----------------------------------------------------------*/
-
-    /**
-     * @dev Emitted when an offer is made via an on-chain transaction.
-     */
-    event OfferMade(bytes32 indexed offerHash, address indexed lender);
-
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
@@ -58,8 +49,6 @@ abstract contract PWNSimpleLoanOffer is PWNSimpleLoanTermsFactory, PWNHubAccessC
 
         // Mark offer as made
         offersMade[offerStructHash] = true;
-
-        emit OfferMade(offerStructHash, lender);
     }
 
     /**

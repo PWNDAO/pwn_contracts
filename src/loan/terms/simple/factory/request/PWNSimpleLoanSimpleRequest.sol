@@ -67,6 +67,16 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
 
 
     /*----------------------------------------------------------*|
+    |*  # EVENTS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @dev Emitted when a request is made via an on-chain transaction.
+     */
+    event RequestMade(bytes32 indexed requestHash, address indexed borrower, Request request);
+
+
+    /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
@@ -91,7 +101,9 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @param request Request struct containing all needed request data.
      */
     function makeRequest(Request calldata request) external {
-        _makeRequest(getRequestHash(request), request.borrower);
+        bytes32 requestHash = getRequestHash(request);
+        _makeRequest(requestHash, request.borrower);
+        emit RequestMade(requestHash, request.borrower, request);
     }
 
 

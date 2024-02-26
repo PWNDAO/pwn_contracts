@@ -82,6 +82,16 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
 
 
     /*----------------------------------------------------------*|
+    |*  # EVENTS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @dev Emitted when an offer is made via an on-chain transaction.
+     */
+    event OfferMade(bytes32 indexed offerHash, address indexed lender, Offer offer);
+
+
+    /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
@@ -106,7 +116,9 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      * @param offer Offer struct containing all needed offer data.
      */
     function makeOffer(Offer calldata offer) external {
-        _makeOffer(getOfferHash(offer), offer.lender);
+        bytes32 offerHash = getOfferHash(offer);
+        _makeOffer(offerHash, offer.lender);
+        emit OfferMade(offerHash, offer.lender, offer);
     }
 
 

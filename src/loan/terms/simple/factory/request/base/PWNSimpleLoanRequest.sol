@@ -22,15 +22,6 @@ abstract contract PWNSimpleLoanRequest is PWNSimpleLoanTermsFactory, PWNHubAcces
      */
     mapping (bytes32 => bool) public requestsMade;
 
-    /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
-    |*----------------------------------------------------------*/
-
-    /**
-     * @dev Emitted when a request is made via an on-chain transaction.
-     */
-    event RequestMade(bytes32 indexed requestHash, address indexed borrower);
-
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
@@ -58,8 +49,6 @@ abstract contract PWNSimpleLoanRequest is PWNSimpleLoanTermsFactory, PWNHubAcces
 
         // Mark request as made
         requestsMade[requestStructHash] = true;
-
-        emit RequestMade(requestStructHash, borrower);
     }
 
     /**
