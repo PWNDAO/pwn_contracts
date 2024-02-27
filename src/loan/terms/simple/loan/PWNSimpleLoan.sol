@@ -518,48 +518,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     }
 
     /**
-     * @notice Calculate the loan repayment amount with fixed and accrued interest.
-     * @param loanId Id of a loan.
-     * @return Repayment amount.
-     */
-    function loanRepaymentAmount(uint256 loanId) public view returns (uint256) {
-        LOAN storage loan = LOANs[loanId];
-
-        // Check non-existent
-        if (loan.status == 0) return 0;
-
-        return _loanRepaymentAmount(loanId);
-    }
-
-    /**
-     * @notice Internal function to calculate the loan repayment amount with fixed and accrued interest.
-     * @param loanId Id of a loan.
-     * @return Repayment amount.
-     */
-    function _loanRepaymentAmount(uint256 loanId) private view returns (uint256) {
-        LOAN storage loan = LOANs[loanId];
-
-        // Return loan principal with accrued interest
-        return loan.principalAmount + _loanAccruedInterest(loan);
-    }
-
-    /**
-     * @notice Calculate the loan accrued interest.
-     * @param loan Loan data struct.
-     * @return Accrued interest amount.
-     */
-    function _loanAccruedInterest(LOAN storage loan) private view returns (uint256) {
-        if (loan.accruingInterestDailyRate == 0)
-            return loan.fixedInterestAmount;
-
-        uint256 accruingDays = (block.timestamp - loan.startTimestamp) / 1 days;
-        uint256 accruedInterest = Math.mulDiv(
-            loan.principalAmount, loan.accruingInterestDailyRate * accruingDays, DAILY_INTEREST_DENOMINATOR
-        );
-        return loan.fixedInterestAmount + accruedInterest;
-    }
-
-    /**
      * @notice Check if the loan can be repaid.
      * @dev The function will revert if the loan cannot be repaid.
      * @param status Loan status.
@@ -658,6 +616,53 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             // Transfer the repaid loan asset to the Vault
             _pull(asset, repayingAddress);
         }
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # LOAN REPAYMENT AMOUNT                                 *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Calculate the loan repayment amount with fixed and accrued interest.
+     * @param loanId Id of a loan.
+     * @return Repayment amount.
+     */
+    function loanRepaymentAmount(uint256 loanId) public view returns (uint256) {
+        LOAN storage loan = LOANs[loanId];
+
+        // Check non-existent
+        if (loan.status == 0) return 0;
+
+        return _loanRepaymentAmount(loanId);
+    }
+
+    /**
+     * @notice Internal function to calculate the loan repayment amount with fixed and accrued interest.
+     * @param loanId Id of a loan.
+     * @return Repayment amount.
+     */
+    function _loanRepaymentAmount(uint256 loanId) private view returns (uint256) {
+        LOAN storage loan = LOANs[loanId];
+
+        // Return loan principal with accrued interest
+        return loan.principalAmount + _loanAccruedInterest(loan);
+    }
+
+    /**
+     * @notice Calculate the loan accrued interest.
+     * @param loan Loan data struct.
+     * @return Accrued interest amount.
+     */
+    function _loanAccruedInterest(LOAN storage loan) private view returns (uint256) {
+        if (loan.accruingInterestDailyRate == 0)
+            return loan.fixedInterestAmount;
+
+        uint256 accruingDays = (block.timestamp - loan.startTimestamp) / 1 days;
+        uint256 accruedInterest = Math.mulDiv(
+            loan.principalAmount, loan.accruingInterestDailyRate * accruingDays, DAILY_INTEREST_DENOMINATOR
+        );
+        return loan.fixedInterestAmount + accruedInterest;
     }
 
 
