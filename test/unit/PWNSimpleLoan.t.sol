@@ -1675,11 +1675,12 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         loan.extendLOAN(extension, signature, "");
     }
 
-    function testFuzz_shouldFail_whenOfferExpirated(uint256 timestamp) external {
-        timestamp = bound(timestamp, extension.expiration, type(uint256).max);
-        _mockExtensionOfferMade(extension);
-
+    function testFuzz_shouldFail_whenOfferExpirated(uint40 expiration) external {
+        uint256 timestamp = 300;
         vm.warp(timestamp);
+
+        extension.expiration = uint40(bound(expiration, 0, timestamp));
+        _mockExtensionOfferMade(extension);
 
         vm.expectRevert(abi.encodeWithSelector(OfferExpired.selector));
         vm.prank(lender);

@@ -824,7 +824,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         if (!extensionOffersMade[extensionHash])
             if (!PWNSignatureChecker.isValidSignatureNow(extension.proposer, extensionHash, signature))
                 revert InvalidSignature();
-        if (extension.expiration != 0 && block.timestamp >= extension.expiration)
+        if (block.timestamp >= extension.expiration)
             revert OfferExpired();
         if (revokedNonce.isNonceRevoked(extension.proposer, extension.nonce))
             revert NonceAlreadyRevoked();

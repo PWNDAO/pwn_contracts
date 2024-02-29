@@ -132,7 +132,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
                 revert InvalidSignature();
 
         // Check valid request
-        if (request.expiration != 0 && block.timestamp >= request.expiration)
+        if (block.timestamp >= request.expiration)
             revert RequestExpired();
 
         if (revokedRequestNonce.isNonceRevoked(borrower, request.nonce) == true)

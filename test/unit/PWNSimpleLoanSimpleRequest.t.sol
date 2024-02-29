@@ -43,7 +43,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
             fixedInterestAmount: 1,
             accruingInterestAPR: 0,
             duration: 1000,
-            expiration: 0,
+            expiration: 60303,
             allowedLender: address(0),
             borrower: borrower,
             refinancingLoanId: 0,
@@ -221,15 +221,6 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.expectRevert(abi.encodeWithSelector(RequestExpired.selector));
-        vm.prank(activeLoanContract);
-        requestContract.createLOANTerms(lender, abi.encode(request), signature);
-    }
-
-    function test_shouldPass_whenRequestHasNoExpiration() external {
-        vm.warp(40303);
-        request.expiration = 0;
-        signature = _signRequestCompact(borrowerPK, request);
-
         vm.prank(activeLoanContract);
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }

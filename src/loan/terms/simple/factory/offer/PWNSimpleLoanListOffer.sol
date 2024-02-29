@@ -147,7 +147,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
                 revert InvalidSignature();
 
         // Check valid offer
-        if (offer.expiration != 0 && block.timestamp >= offer.expiration)
+        if (block.timestamp >= offer.expiration)
             revert OfferExpired();
 
         if (revokedOfferNonce.isNonceRevoked(lender, offer.nonce) == true)
