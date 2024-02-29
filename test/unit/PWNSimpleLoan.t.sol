@@ -162,6 +162,10 @@ abstract contract PWNSimpleLoanTest is Test {
         _mockLoanTerms(simpleLoanTerms, loanFactoryDataHash);
         _mockLOANMint(loanId);
         _mockLOANTokenOwner(loanId, lender);
+
+        vm.mockCall(
+            revokedNonce, abi.encodeWithSignature("isNonceRevoked(address,uint256)"), abi.encode(false)
+        );
     }
 
 
@@ -287,7 +291,7 @@ abstract contract PWNSimpleLoanTest is Test {
 |*  # CREATE LOAN                                           *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
+contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 
     function testFuzz_shouldFail_whenLoanFactoryContractIsNotTaggerInPWNHub(address notLoanFactory) external {
         vm.assume(notLoanFactory != loanFactory);
@@ -431,6 +435,46 @@ contract PWNSimpleLoan_CreateLoan_Test is PWNSimpleLoanTest {
         uint256 createdLoanId = loan.createLOAN(loanFactory, loanFactoryData, signature, loanAssetPermit, collateralPermit);
 
         assertEq(createdLoanId, loanId);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # CREATE LOAN AND REVOKE NONCE                          *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoan_CreateLOANAndRevokeNonce_Test is PWNSimpleLoanTest {
+
+    function testFuzz_shouldFail_whenNonceAlreadyRevoked(uint256 nonce) external {
+        vm.mockCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)", borrower, nonce),
+            abi.encode(true)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
+        vm.prank(borrower);
+        loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", nonce);
+    }
+
+    function testFuzz_shouldRevokeCallersNonce(address caller, uint256 nonce) external {
+        assumeAddressIsNot(caller, AddressType.ZeroAddress);
+
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature("revokeNonce(address,uint256)", caller, nonce)
+        );
+
+        vm.prank(caller);
+        loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", nonce);
+    }
+
+    function test_shouldCreateLoan() external {
+        uint256 _loanId = loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", 1);
+
+        assertEq(_loanId, loanId);
+        _assertLOANEq(_loanId, simpleLoan);
     }
 
 }
@@ -1628,12 +1672,6 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         // borrower as proposer, lender accepting extension
         extension.proposer = borrower;
-
-        vm.mockCall(
-            revokedNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256)"),
-            abi.encode(false)
-        );
     }
 
 

@@ -191,7 +191,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bytes calldata signature,
         bytes calldata loanAssetPermit,
         bytes calldata collateralPermit
-    ) external returns (uint256 loanId) {
+    ) public returns (uint256 loanId) {
         // Create loan terms or revert if factory contract is not tagged in PWN Hub
         (PWNLOANTerms.Simple memory loanTerms, bytes32 factoryDataHash)
             = _createLoanTerms(loanTermsFactoryContract, loanTermsFactoryData, signature);
@@ -204,6 +204,39 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         // Transfer collateral to Vault and loan asset to borrower
         _settleNewLoan(loanTerms, loanAssetPermit, collateralPermit);
+    }
+
+    /**
+     * @notice Create a new loan by minting LOAN token for lender, transferring loan asset to a borrower and a collateral to a vault.
+               Revoke a nonce on behalf of the caller.
+     * @dev The function assumes a prior token approval to a contract address or signed permits.
+     * @param loanTermsFactoryContract Address of a loan terms factory contract. Need to have `SIMPLE_LOAN_TERMS_FACTORY` tag in PWN Hub.
+     * @param loanTermsFactoryData Encoded data for a loan terms factory.
+     * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
+     * @param loanAssetPermit Permit data for a loan asset signed by a lender.
+     * @param collateralPermit Permit data for a collateral signed by a borrower.
+     * @param callersNonceToRevoke Nonce to revoke on callers behalf.
+     * @return loanId Id of a newly minted LOAN token.
+     */
+    function createLOANAndRevokeNonce(
+        address loanTermsFactoryContract,
+        bytes calldata loanTermsFactoryData,
+        bytes calldata signature,
+        bytes calldata loanAssetPermit,
+        bytes calldata collateralPermit,
+        uint256 callersNonceToRevoke
+    ) external returns (uint256 loanId) {
+        if (revokedNonce.isNonceRevoked(msg.sender, callersNonceToRevoke))
+            revert NonceAlreadyRevoked();
+
+        revokedNonce.revokeNonce(msg.sender, callersNonceToRevoke);
+        loanId = createLOAN({
+            loanTermsFactoryContract: loanTermsFactoryContract,
+            loanTermsFactoryData: loanTermsFactoryData,
+            signature: signature,
+            loanAssetPermit: loanAssetPermit,
+            collateralPermit: collateralPermit
+        });
     }
 
     /**
