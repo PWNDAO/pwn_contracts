@@ -19,13 +19,13 @@ import "@pwn-test/helper/token/T721.sol";
 abstract contract PWNSimpleLoanTest is Test {
 
     bytes32 internal constant LOANS_SLOT = bytes32(uint256(0)); // `LOANs` mapping position
-
-    uint256 public constant MAX_EXPIRATION_EXTENSION = 2_592_000; // 30 days
+    bytes32 internal constant EXTENSION_OFFERS_MADE_SLOT = bytes32(uint256(1)); // `extensionOffersMade` mapping position
 
     PWNSimpleLoan loan;
     address hub = makeAddr("hub");
     address loanToken = makeAddr("loanToken");
     address config = makeAddr("config");
+    address revokedNonce = makeAddr("revokedNonce");
     address categoryRegistry = makeAddr("categoryRegistry");
     address feeCollector = makeAddr("feeCollector");
     address alice = makeAddr("alice");
@@ -37,6 +37,7 @@ abstract contract PWNSimpleLoanTest is Test {
     PWNSimpleLoan.LOAN simpleLoan;
     PWNSimpleLoan.LOAN nonExistingLoan;
     PWNLOANTerms.Simple simpleLoanTerms;
+    PWNSimpleLoan.Extension extension;
     T20 fungibleAsset;
     T721 nonFungibleAsset;
 
@@ -50,7 +51,8 @@ abstract contract PWNSimpleLoanTest is Test {
     event LOANPaidBack(uint256 indexed loanId);
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
     event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
-    event LOANExpirationDateExtended(uint256 indexed loanId, uint40 extendedExpirationDate);
+    event LOANExtended(uint256 indexed loanId, uint40 originalDefaultTimestamp, uint40 extendedDefaultTimestamp);
+    event ExtensionOfferMade(bytes32 indexed extensionHash, address indexed proposer, PWNSimpleLoan.Extension extension);
 
     function setUp() virtual public {
         vm.etch(hub, bytes("data"));
@@ -58,7 +60,7 @@ abstract contract PWNSimpleLoanTest is Test {
         vm.etch(loanFactory, bytes("data"));
         vm.etch(config, bytes("data"));
 
-        loan = new PWNSimpleLoan(hub, loanToken, config, categoryRegistry);
+        loan = new PWNSimpleLoan(hub, loanToken, config, revokedNonce, categoryRegistry);
         fungibleAsset = new T20();
         nonFungibleAsset = new T721();
 
@@ -122,6 +124,15 @@ abstract contract PWNSimpleLoanTest is Test {
             fixedInterestAmount: 0,
             principalAmount: 0,
             collateral: MultiToken.Asset(MultiToken.Category(0), address(0), 0, 0)
+        });
+
+        extension = PWNSimpleLoan.Extension({
+            loanId: loanId,
+            price: 100,
+            duration: 2 days,
+            expiration: simpleLoan.defaultTimestamp,
+            proposer: borrower,
+            nonce: 0
         });
 
         loanFactoryDataHash = keccak256("factoryData");
@@ -229,6 +240,11 @@ abstract contract PWNSimpleLoanTest is Test {
         vm.mockCall(loanToken, abi.encodeWithSignature("ownerOf(uint256)", _loanId), abi.encode(_owner));
     }
 
+    function _mockExtensionOfferMade(PWNSimpleLoan.Extension memory _extension) internal {
+        bytes32 extensionOfferSlot = keccak256(abi.encode(_extensionHash(_extension), EXTENSION_OFFERS_MADE_SLOT));
+        vm.store(address(loan), extensionOfferSlot, bytes32(uint256(1)));
+    }
+
 
     function _assertLOANWord(uint256 wordSlot, bytes memory word) private {
         assertEq(
@@ -245,6 +261,23 @@ abstract contract PWNSimpleLoanTest is Test {
         assembly {
             _bytes32 := mload(add(_bytes, 32))
         }
+    }
+
+    function _extensionHash(PWNSimpleLoan.Extension memory _extension) internal view returns (bytes32) {
+        return keccak256(abi.encodePacked(
+            "\x19\x01",
+            keccak256(abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("PWNSimpleLoan"),
+                keccak256("1.2"),
+                block.chainid,
+                address(loan)
+            )),
+            keccak256(abi.encodePacked(
+                keccak256("Extension(uint256 loanId,uint256 price,uint40 duration,uint40 expiration,address proposer,uint256 nonce)"),
+                abi.encode(_extension)
+            ))
+        ));
     }
 
 }
@@ -1541,83 +1574,303 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
 
 
 /*----------------------------------------------------------*|
-|*  # EXTEND LOAN EXPIRATION DATE                           *|
+|*  # MAKE EXTENSION OFFER                                  *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoan_ExtendExpirationDate_Test is PWNSimpleLoanTest {
+contract PWNSimpleLoan_MakeExtensionOffer_Test is PWNSimpleLoanTest {
+
+    function testFuzz_shouldFail_whenCallerNotProposer(address caller) external {
+        vm.assume(caller != extension.proposer);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionSigner.selector, extension.proposer, caller));
+        vm.prank(caller);
+        loan.makeExtensionOffer(extension);
+    }
+
+    function test_shouldStoreMadeFlag() external {
+        vm.prank(extension.proposer);
+        loan.makeExtensionOffer(extension);
+
+        bytes32 extensionOfferSlot = keccak256(abi.encode(_extensionHash(extension), EXTENSION_OFFERS_MADE_SLOT));
+        bytes32 isMadeValue = vm.load(address(loan), extensionOfferSlot);
+        assertEq(uint256(isMadeValue), 1);
+    }
+
+    function test_shouldEmit_ExtensionOfferMade() external {
+        bytes32 extensionHash = _extensionHash(extension);
+
+        vm.expectEmit();
+        emit ExtensionOfferMade(extensionHash, extension.proposer, extension);
+
+        vm.prank(extension.proposer);
+        loan.makeExtensionOffer(extension);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # EXTEND LOAN                                           *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
+
+    uint256 lenderPk;
+    uint256 borrowerPk;
 
     function setUp() override public {
         super.setUp();
 
         _mockLOAN(loanId, simpleLoan);
 
-        // Set current timestamp to 5 days before loan default
-        vm.warp(simpleLoan.defaultTimestamp - 5 days);
+        (, lenderPk) = makeAddrAndKey("lender");
+        (, borrowerPk) = makeAddrAndKey("borrower");
+
+        // borrower as proposer, lender accepting extension
+        extension.proposer = borrower;
+
+        vm.mockCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)"),
+            abi.encode(false)
+        );
     }
 
 
-    function testFuzz_shouldFail_whenCallerIsNotLOANTokenHolder(address caller) external {
-        vm.assume(caller != lender);
+    // Helpers
 
-        vm.expectRevert(abi.encodeWithSelector(CallerNotLOANTokenHolder.selector));
+    function _signExtension(uint256 pk, PWNSimpleLoan.Extension memory _extension) private view returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _extensionHash(_extension));
+        return abi.encodePacked(r, s, v);
+    }
+
+    // Tests
+
+    function test_shouldFail_whenLoanDoesNotExist() external {
+        simpleLoan.status = 0;
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.expectRevert(abi.encodeWithSelector(NonExistingLoan.selector));
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function test_shouldFail_whenLoanIsRepaid() external {
+        simpleLoan.status = 3;
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidLoanStatus.selector, 3));
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function testFuzz_shouldFail_whenInvalidSignature_whenEOA(uint256 pk) external {
+        pk = boundPrivateKey(pk);
+        vm.assume(pk != borrowerPk);
+
+        signature = _signExtension(pk, extension);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
+        vm.prank(lender);
+        loan.extendLOAN(extension, signature, "");
+    }
+
+    function testFuzz_shouldFail_whenOfferExpirated(uint256 timestamp) external {
+        timestamp = bound(timestamp, extension.expiration, type(uint256).max);
+        _mockExtensionOfferMade(extension);
+
+        vm.warp(timestamp);
+
+        vm.expectRevert(abi.encodeWithSelector(OfferExpired.selector));
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function test_shouldFail_whenOfferNonceRevoked() external {
+        _mockExtensionOfferMade(extension);
+
+        vm.mockCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceRevoked(address,uint256)", extension.proposer, extension.nonce),
+            abi.encode(true)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function testFuzz_shouldFail_whenCallerIsNotBorrowerNorLoanOwner(address caller) external {
+        vm.assume(caller != borrower && caller != lender);
+        _mockExtensionOfferMade(extension);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionCaller.selector));
         vm.prank(caller);
-        loan.extendLOANExpirationDate(loanId, simpleLoan.defaultTimestamp + 1);
+        loan.extendLOAN(extension, "", "");
     }
 
-    function testFuzz_shouldFail_whenExtendedExpirationDateIsSmallerThanOrEqualToCurrentExpirationDate(
-        uint40 newExpiration
-    ) external {
-        newExpiration = uint40(bound(newExpiration, block.timestamp + 1, simpleLoan.defaultTimestamp));
+    function testFuzz_shouldFail_whenCallerIsBorrower_andProposerIsNotLoanOwner(address proposer) external {
+        vm.assume(proposer != lender);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidExtendedExpirationDate.selector));
+        extension.proposer = proposer;
+        _mockExtensionOfferMade(extension);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionSigner.selector, lender, proposer));
+        vm.prank(borrower);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function testFuzz_shouldFail_whenCallerIsLoanOwner_andProposerIsNotBorrower(address proposer) external {
+        vm.assume(proposer != borrower);
+
+        extension.proposer = proposer;
+        _mockExtensionOfferMade(extension);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionSigner.selector, borrower, proposer));
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, newExpiration);
+        loan.extendLOAN(extension, "", "");
     }
 
-    function testFuzz_shouldFail_whenExtendedExpirationDateIsSmallerThanOrEqualToCurrentDate(uint40 newExpiration) external {
-        newExpiration = uint40(bound(newExpiration, 0, block.timestamp));
+    function testFuzz_shouldFail_whenExtensionDurationLessThanMin(uint40 duration) external {
+        uint256 minDuration = loan.MIN_EXTENSION_DURATION();
+        duration = uint40(bound(duration, 0, minDuration - 1));
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidExtendedExpirationDate.selector));
+        extension.duration = duration;
+        _mockExtensionOfferMade(extension);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionDuration.selector, duration, minDuration));
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, newExpiration);
+        loan.extendLOAN(extension, "", "");
     }
 
-    function testFuzz_shouldFail_whenExtendedExpirationDateIsBiggerThanMaxExpirationExtension(
-        uint40 newExpiration
-    ) external {
-        newExpiration = uint40(bound(
-            newExpiration, block.timestamp + MAX_EXPIRATION_EXTENSION + 1, type(uint40).max
-        ));
+    function testFuzz_shouldFail_whenExtensionDurationMoreThanMax(uint40 duration) external {
+        uint256 maxDuration = loan.MAX_EXTENSION_DURATION();
+        duration = uint40(bound(duration, maxDuration + 1, type(uint40).max));
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidExtendedExpirationDate.selector));
+        extension.duration = duration;
+        _mockExtensionOfferMade(extension);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionDuration.selector, duration, maxDuration));
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, newExpiration);
+        loan.extendLOAN(extension, "", "");
     }
 
-    function testFuzz_shouldStoreExtendedExpirationDate(uint40 newExpiration) external {
-        newExpiration = uint40(bound(
-            newExpiration, simpleLoan.defaultTimestamp + 1, block.timestamp + MAX_EXPIRATION_EXTENSION
-        ));
+    function testFuzz_shouldRevokeExtensionNonce(uint256 nonce) external {
+        extension.nonce = nonce;
+        _mockExtensionOfferMade(extension);
+
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature("revokeNonce(address,uint256)", extension.proposer, nonce)
+        );
 
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, newExpiration);
-
-        bytes32 loanFirstSlot = keccak256(abi.encode(loanId, LOANS_SLOT));
-        bytes32 firstSlotValue = vm.load(address(loan), loanFirstSlot);
-        bytes32 expirationDateValue = firstSlotValue << 8 >> 216;
-        assertEq(uint256(expirationDateValue), newExpiration);
+        loan.extendLOAN(extension, "", "");
     }
 
-    function testFuzz_shouldEmitEvent_LOANExpirationDateExtended(uint40 newExpiration) external {
-        newExpiration = uint40(bound(
-            newExpiration, simpleLoan.defaultTimestamp + 1, block.timestamp + MAX_EXPIRATION_EXTENSION
-        ));
+    function testFuzz_shouldUpdateLoanData(uint40 duration) external {
+        duration = uint40(bound(duration, loan.MIN_EXTENSION_DURATION(), loan.MAX_EXTENSION_DURATION()));
+
+        extension.duration = duration;
+        _mockExtensionOfferMade(extension);
+
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
+
+        simpleLoan.defaultTimestamp = simpleLoan.defaultTimestamp + duration;
+        _assertLOANEq(loanId, simpleLoan);
+    }
+
+    function testFuzz_shouldEmit_LOANExtended(uint40 duration) external {
+        duration = uint40(bound(duration, loan.MIN_EXTENSION_DURATION(), loan.MAX_EXTENSION_DURATION()));
+
+        extension.duration = duration;
+        _mockExtensionOfferMade(extension);
 
         vm.expectEmit();
-        emit LOANExpirationDateExtended(loanId, newExpiration);
+        emit LOANExtended(loanId, simpleLoan.defaultTimestamp, simpleLoan.defaultTimestamp + duration);
 
         vm.prank(lender);
-        loan.extendLOANExpirationDate(loanId, newExpiration);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function testFuzz_shouldTransferLoanAsset_whenPriceMoreThanZero(uint256 price) external {
+        price = bound(price, 1, 1e40);
+
+        extension.price = price;
+        _mockExtensionOfferMade(extension);
+        fungibleAsset.mint(borrower, price);
+
+        vm.expectCall(
+            simpleLoan.loanAssetAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, lender, price)
+        );
+
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function test_shouldNotTransferLoanAsset_whenPriceZero() external {
+        extension.price = 0;
+        _mockExtensionOfferMade(extension);
+
+        vm.expectCall({
+            callee: simpleLoan.loanAssetAddress,
+            data: abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, lender, 0),
+            count: 0
+        });
+
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function testFuzz_shouldCallPermit_whenPriceMoreThanZero_whenPermitData(uint256 price) external {
+        price = bound(price, 1, 1e40);
+
+        extension.price = price;
+        _mockExtensionOfferMade(extension);
+        fungibleAsset.mint(borrower, price);
+        loanAssetPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
+
+        vm.expectCall(
+            simpleLoan.loanAssetAddress,
+            abi.encodeWithSignature(
+                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+                borrower, address(loan), price, 1, uint8(4), uint256(2), uint256(3)
+            )
+        );
+
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", loanAssetPermit);
+    }
+
+    function test_shouldPass_whenBorrowerSignature_whenLenderAccepts() external {
+        extension.proposer = borrower;
+        signature = _signExtension(borrowerPk, extension);
+
+        vm.prank(lender);
+        loan.extendLOAN(extension, signature, "");
+    }
+
+    function test_shouldPass_whenLenderSignature_whenBorrowerAccepts() external {
+        extension.proposer = lender;
+        signature = _signExtension(lenderPk, extension);
+
+        vm.prank(borrower);
+        loan.extendLOAN(extension, signature, "");
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # GET EXTENSION HASH                                    *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoan_GetExtensionHash_Test is PWNSimpleLoanTest {
+
+    function test_shouldHaveCorrectDomainSeparator() external {
+        assertEq(_extensionHash(extension), loan.getExtensionHash(extension));
     }
 
 }

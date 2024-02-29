@@ -10,8 +10,12 @@ error LoanDefaulted(uint40);
 error InvalidLoanStatus(uint256);
 error NonExistingLoan();
 error CallerNotLOANTokenHolder();
-error InvalidExtendedExpirationDate();
 error BorrowerMismatch(address currentBorrower, address newBorrower);
+
+// Loan extension
+error InvalidExtensionDuration(uint256 duration, uint256 limit);
+error InvalidExtensionSigner(address allowed, address current);
+error InvalidExtensionCaller();
 
 // Invalid asset
 error InvalidLoanAsset();

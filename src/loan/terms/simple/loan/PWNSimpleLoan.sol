@@ -10,12 +10,14 @@ import { PWNConfig } from "@pwn/config/PWNConfig.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNFeeCalculator } from "@pwn/loan/lib/PWNFeeCalculator.sol";
+import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
 import { PWNLOANTerms } from "@pwn/loan/terms/PWNLOANTerms.sol";
 import { PWNSimpleLoanTermsFactory } from "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
 import { IERC5646 } from "@pwn/loan/token/IERC5646.sol";
 import { IPWNLoanMetadataProvider } from "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
 import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
 import { PWNVault } from "@pwn/loan/PWNVault.sol";
+import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -28,21 +30,35 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     string public constant VERSION = "1.2";
 
+    /*----------------------------------------------------------*|
+    |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
+    |*----------------------------------------------------------*/
+
     uint256 public constant APR_INTEREST_DENOMINATOR = 1e4;
     uint256 public constant DAILY_INTEREST_DENOMINATOR = 1e10;
 
     uint256 public constant APR_TO_DAILY_INTEREST_NUMERATOR = 274;
     uint256 public constant APR_TO_DAILY_INTEREST_DENOMINATOR = 1e5;
 
-    uint256 public constant MAX_EXPIRATION_EXTENSION = 2_592_000; // 30 days
+    uint256 public constant MAX_EXTENSION_DURATION = 90 days;
+    uint256 public constant MIN_EXTENSION_DURATION = 1 days;
 
-    /*----------------------------------------------------------*|
-    |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
-    |*----------------------------------------------------------*/
+    bytes32 public constant EXTENSION_TYPEHASH = keccak256(
+        "Extension(uint256 loanId,uint256 price,uint40 duration,uint40 expiration,address proposer,uint256 nonce)"
+    );
+
+    bytes32 public immutable DOMAIN_SEPARATOR = keccak256(abi.encode(
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+        keccak256("PWNSimpleLoan"),
+        keccak256(abi.encodePacked(VERSION)),
+        block.chainid,
+        address(this)
+    ));
 
     PWNHub internal immutable hub;
     PWNLOAN internal immutable loanToken;
     PWNConfig internal immutable config;
+    PWNRevokedNonce internal immutable revokedNonce;
 
     IMultiTokenCategoryRegistry public immutable categoryRegistry;
 
@@ -79,6 +95,28 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     mapping (uint256 => LOAN) private LOANs;
 
+    /**
+     * @notice Struct defining a loan extension offer. Offer can be signed by a borrower or a lender.
+     * @param loanId Id of a loan to be extended.
+     * @param price Price of the extension in loan asset tokens.
+     * @param duration Duration of the extension in seconds.
+     * @param expiration Unix timestamp (in seconds) of an expiration date.
+     * @param proposer Address of a proposer that signed the extension offer.
+     * @param nonce Nonce of the extension offer.
+     */
+    struct Extension {
+        uint256 loanId;
+        uint256 price;
+        uint40 duration;
+        uint40 expiration;
+        address proposer;
+        uint256 nonce;
+    }
+
+    /**
+     * Mapping of extension offers made via on-chain transaction by extension hash.
+     */
+    mapping (bytes32 => bool) public extensionOffersMade;
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
@@ -105,19 +143,31 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
 
     /**
-     * @dev Emitted when a LOAN token holder extends loan expiration date.
+     * @dev Emitted when a LOAN token holder extends a loan.
      */
-    event LOANExpirationDateExtended(uint256 indexed loanId, uint40 extendedExpirationDate);
+    event LOANExtended(uint256 indexed loanId, uint40 originalDefaultTimestamp, uint40 extendedDefaultTimestamp);
+
+    /**
+     * @dev Emitted when a loan extension offer is made.
+     */
+    event ExtensionOfferMade(bytes32 indexed extensionHash, address indexed proposer,  Extension extension);
 
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor(address _hub, address _loanToken, address _config, address _categoryRegistry) {
+    constructor(
+        address _hub,
+        address _loanToken,
+        address _config,
+        address _revokedNonce,
+        address _categoryRegistry
+    ) {
         hub = PWNHub(_hub);
         loanToken = PWNLOAN(_loanToken);
         config = PWNConfig(_config);
+        revokedNonce = PWNRevokedNonce(_revokedNonce);
         categoryRegistry = IMultiTokenCategoryRegistry(_categoryRegistry);
     }
 
@@ -731,37 +781,126 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
 
     /*----------------------------------------------------------*|
-    |*  # EXTEND LOAN EXPIRATION DATE                           *|
+    |*  # EXTEND LOAN                                           *|
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Enable lender to extend loans expiration date.
-     * @dev Only LOAN token holder can call this function.
-     *      Extending the expiration date of a repaid loan is allowed, but considered a lender mistake.
-     *      The extended expiration date has to be in the future, be later than the current expiration date, and cannot be extending the date by more than `MAX_EXPIRATION_EXTENSION`.
-     * @param loanId Id of a LOAN to extend its expiration date.
-     * @param extendedExpirationDate New LOAN expiration date.
+     * @notice Make an extension offer for a loan on-chain.
+     * @param extension Extension struct.
      */
-    function extendLOANExpirationDate(uint256 loanId, uint40 extendedExpirationDate) external {
-        // Check that caller is LOAN token holder
-        // This prevents from extending non-existing loans
-        if (loanToken.ownerOf(loanId) != msg.sender)
-            revert CallerNotLOANTokenHolder();
+    function makeExtensionOffer(Extension calldata extension) external {
+        // Check that caller is a proposer
+        if (msg.sender != extension.proposer)
+            revert InvalidExtensionSigner({ allowed: extension.proposer, current: msg.sender });
 
-        LOAN storage loan = LOANs[loanId];
+        // Mark extension offer as made
+        bytes32 extensionHash = getExtensionHash(extension);
+        extensionOffersMade[extensionHash] = true;
 
-        // Check extended expiration date
-        if (extendedExpirationDate > uint40(block.timestamp + MAX_EXPIRATION_EXTENSION)) // to protect lender
-            revert InvalidExtendedExpirationDate();
-        if (extendedExpirationDate <= uint40(block.timestamp)) // have to extend expiration futher in time
-            revert InvalidExtendedExpirationDate();
-        if (extendedExpirationDate <= loan.defaultTimestamp) // have to be later than current expiration date
-            revert InvalidExtendedExpirationDate();
+        emit ExtensionOfferMade(extensionHash, extension.proposer, extension);
+    }
 
-        // Extend expiration date
-        loan.defaultTimestamp = extendedExpirationDate;
+    /**
+     * @notice Extend loans default date with signed extension offer / request from borrower or LOAN token owner.
+     * @dev The function assumes a prior token approval to a contract address or a signed permit.
+     * @param extension Extension struct.
+     * @param signature Signature of the extension offer / request.
+     * @param loanAssetPermit Permit data for a loan asset signed by a borrower.
+     */
+    function extendLOAN(
+        Extension calldata extension,
+        bytes calldata signature,
+        bytes calldata loanAssetPermit
+    ) external {
+        LOAN storage loan = LOANs[extension.loanId];
 
-        emit LOANExpirationDateExtended({ loanId: loanId, extendedExpirationDate: extendedExpirationDate });
+        // Check that loan is in the right state
+        if (loan.status == 0)
+            revert NonExistingLoan();
+        if (loan.status == 3) // cannot extend repaid loan
+            revert InvalidLoanStatus(loan.status);
+
+        // Check extension validity
+        bytes32 extensionHash = getExtensionHash(extension);
+        if (!extensionOffersMade[extensionHash])
+            if (!PWNSignatureChecker.isValidSignatureNow(extension.proposer, extensionHash, signature))
+                revert InvalidSignature();
+        if (extension.expiration != 0 && block.timestamp >= extension.expiration)
+            revert OfferExpired();
+        if (revokedNonce.isNonceRevoked(extension.proposer, extension.nonce))
+            revert NonceAlreadyRevoked();
+
+        // Check caller and signer
+        address loanOwner = loanToken.ownerOf(extension.loanId);
+        if (msg.sender == loanOwner) {
+            if (extension.proposer != loan.borrower) {
+                // If caller is loan owner, proposer must be borrower
+                revert InvalidExtensionSigner({
+                    allowed: loan.borrower,
+                    current: extension.proposer
+                });
+            }
+        } else if (msg.sender == loan.borrower) {
+            if (extension.proposer != loanOwner) {
+                // If caller is borrower, proposer must be loan owner
+                revert InvalidExtensionSigner({
+                    allowed: loanOwner,
+                    current: extension.proposer
+                });
+            }
+        } else {
+            // Caller must be loan owner or borrower
+            revert InvalidExtensionCaller();
+        }
+
+        // Check duration range
+        if (extension.duration < MIN_EXTENSION_DURATION)
+            revert InvalidExtensionDuration({
+                duration: extension.duration,
+                limit: MIN_EXTENSION_DURATION
+            });
+        if (extension.duration > MAX_EXTENSION_DURATION)
+            revert InvalidExtensionDuration({
+                duration: extension.duration,
+                limit: MAX_EXTENSION_DURATION
+            });
+
+        // Revoke extension offer nonce
+        revokedNonce.revokeNonce(extension.proposer, extension.nonce);
+
+        // Update loan
+        uint40 originalDefaultTimestamp = loan.defaultTimestamp;
+        loan.defaultTimestamp = originalDefaultTimestamp + extension.duration;
+
+        // Emit event
+        emit LOANExtended({
+            loanId: extension.loanId,
+            originalDefaultTimestamp: originalDefaultTimestamp,
+            extendedDefaultTimestamp: loan.defaultTimestamp
+        });
+
+        // Transfer extension price to the loan owner
+        if (extension.price > 0) {
+            MultiToken.Asset memory loanAsset = MultiToken.ERC20(loan.loanAssetAddress, extension.price);
+            _permit(loanAsset, loan.borrower, loanAssetPermit);
+            _pushFrom(loanAsset, loan.borrower, loanOwner);
+        }
+    }
+
+    /**
+     * @notice Get the hash of the extension struct.
+     * @param extension Extension struct.
+     * @return Hash of the extension struct.
+     */
+    function getExtensionHash(Extension calldata extension) public view returns (bytes32) {
+        return keccak256(abi.encodePacked(
+            hex"1901",
+            DOMAIN_SEPARATOR,
+            keccak256(abi.encodePacked(
+                EXTENSION_TYPEHASH,
+                abi.encode(extension)
+            ))
+        ));
     }
 
 
@@ -774,7 +913,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loanId Id of a loan in question.
      * @return status LOAN status.
      * @return startTimestamp Unix timestamp (in seconds) of a loan creation date.
-     * @return defaultTimestamp Unix timestamp (in seconds) of a loan expiration date.
+     * @return defaultTimestamp Unix timestamp (in seconds) of a loan default date.
      * @return borrower Address of a loan borrower.
      * @return originalLender Address of a loan original lender.
      * @return loanOwner Address of a LOAN token holder.
@@ -865,7 +1004,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         // The only mutable state properties are:
         // - status: updated for expired loans based on block.timestamp
-        // - defaultTimestamp: updated when the loan expiration date is extended
+        // - defaultTimestamp: updated when the loan is extended
         // - fixedInterestAmount: updated when the loan is repaid and waiting to be claimed
         // - accruingInterestDailyRate: updated when the loan is repaid and waiting to be claimed
         // Others don't have to be part of the state fingerprint as it does not act as a token identification.

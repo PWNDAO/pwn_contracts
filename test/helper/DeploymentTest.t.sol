@@ -39,7 +39,9 @@ abstract contract DeploymentTest is Deployments, Test {
         hub = new PWNHub();
 
         loanToken = new PWNLOAN(address(hub));
-        simpleLoan = new PWNSimpleLoan(address(hub), address(loanToken), address(config), address(categoryRegistry));
+        simpleLoan = new PWNSimpleLoan( // todo:
+            address(hub), address(loanToken), address(config), address(0), address(categoryRegistry)
+        );
 
         revokedOfferNonce = new PWNRevokedNonce(address(hub), PWNHubTags.LOAN_OFFER);
         simpleLoanSimpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedOfferNonce));
