@@ -55,11 +55,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         address(this)
     ));
 
-    PWNHub internal immutable hub;
-    PWNLOAN internal immutable loanToken;
-    PWNConfig internal immutable config;
-    PWNRevokedNonce internal immutable revokedNonce;
-
+    PWNHub public immutable hub;
+    PWNLOAN public immutable loanToken;
+    PWNConfig public immutable config;
+    PWNRevokedNonce public immutable revokedNonce;
     IMultiTokenCategoryRegistry public immutable categoryRegistry;
 
     /**
