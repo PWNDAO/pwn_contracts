@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "@pwn/hub/PWNHubAccessControl.sol";
+import { PWNHubAccessControl } from "@pwn/hub/PWNHubAccessControl.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -15,20 +15,22 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    bytes32 immutable internal accessTag;
+    /**
+     * @notice Access tag that needs to be assigned to a caller in PWN Hub
+     *         to call functions that revoke nonces on behalf of an owner.
+     */
+    bytes32 public immutable accessTag;
 
     /**
-     * @dev Mapping of revoked nonces by an address.
-     *      Every address has its own nonce space.
-     *      (owner => nonce => is revoked)
+     * @notice Mapping of revoked nonces by an address. Every address has its own nonce space.
+     *         (owner => nonce space => nonce => is revoked)
      */
-    mapping (address => mapping (uint256 => bool)) private revokedNonces;
+    mapping (address => mapping (uint256 => mapping (uint256 => bool))) private _revokedNonce;
 
     /**
-     * @dev Mapping of minimal nonce value per address.
-     *      (owner => minimal nonce value)
+     * @notice Mapping of current nonce space for an address.
      */
-    mapping (address => uint256) private minNonces;
+    mapping (address => uint256) private _nonceSpace;
 
 
     /*----------------------------------------------------------*|
@@ -38,13 +40,12 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     /**
      * @dev Emitted when a nonce is revoked.
      */
-    event NonceRevoked(address indexed owner, uint256 indexed nonce);
-
+    event NonceRevoked(address indexed owner, uint256 indexed nonceSpace, uint256 indexed nonce);
 
     /**
-     * @dev Emitted when a new min nonce value is set.
+     * @dev Emitted when a nonce is revoked.
      */
-    event MinNonceSet(address indexed owner, uint256 indexed minNonce);
+    event NonceSpaceRevoked(address indexed owner, uint256 indexed nonceSpace);
 
 
     /*----------------------------------------------------------*|
@@ -57,76 +58,74 @@ contract PWNRevokedNonce is PWNHubAccessControl {
 
 
     /*----------------------------------------------------------*|
-    |*  # REVOKE NONCE                                          *|
+    |*  # NONCE                                                 *|
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Revoke a nonce.
+     * @notice Revoke a nonce in a nonce space.
      * @dev Caller is used as a nonce owner.
+     * @param nonceSpace Nonce space where a nonce will be revoked.
      * @param nonce Nonce to be revoked.
      */
-    function revokeNonce(uint256 nonce) external {
-        _revokeNonce(msg.sender, nonce);
+    function revokeNonce(uint256 nonceSpace, uint256 nonce) external {
+        _revokeNonce(msg.sender, nonceSpace, nonce);
     }
 
     /**
-     * @notice Revoke a nonce on behalf of an owner.
+     * @notice Revoke a nonce in a nonce space on behalf of an owner.
      * @dev Only an address with associated access tag in PWN Hub can call this function.
      * @param owner Owner address of a revoking nonce.
+     * @param nonceSpace Nonce space where a nonce will be revoked.
      * @param nonce Nonce to be revoked.
      */
-    function revokeNonce(address owner, uint256 nonce) external onlyWithTag(accessTag) {
-        _revokeNonce(owner, nonce);
+    function revokeNonce(address owner, uint256 nonceSpace, uint256 nonce) external onlyWithTag(accessTag) {
+        _revokeNonce(owner, nonceSpace, nonce);
     }
-
-    function _revokeNonce(address owner, uint256 nonce) private {
-        // Revoke nonce
-        revokedNonces[owner][nonce] = true;
-
-        // Emit event
-        emit NonceRevoked(owner, nonce);
-    }
-
-
-    /*----------------------------------------------------------*|
-    |*  # SET MIN NONCE                                         *|
-    |*----------------------------------------------------------*/
 
     /**
-     * @notice Set a minimal nonce.
-     * @dev Nonce is considered revoked when smaller than minimal nonce.
-     * @param minNonce New value of a minimal nonce.
+     * @notice Internal function to revoke a nonce in a nonce space.
      */
-    function setMinNonce(uint256 minNonce) external {
-        // Check that nonce is greater than current min nonce
-        uint256 currentMinNonce = minNonces[msg.sender];
-        if (currentMinNonce >= minNonce)
-            revert InvalidMinNonce();
-
-        // Set new min nonce value
-        minNonces[msg.sender] = minNonce;
-
-        // Emit event
-        emit MinNonceSet(msg.sender, minNonce);
+    function _revokeNonce(address owner, uint256 nonceSpace, uint256 nonce) private {
+        _revokedNonce[owner][nonceSpace][nonce] = true;
+        emit NonceRevoked(owner, nonceSpace, nonce);
     }
 
-
-    /*----------------------------------------------------------*|
-    |*  # IS NONCE REVOKED                                      *|
-    |*----------------------------------------------------------*/
-
     /**
-     * @notice Get information if owners nonce is revoked or not.
-     * @dev Nonce is considered revoked if is smaller than owners min nonce value or if is explicitly revoked.
+     * @notice Return true if owners nonce is revoked in the given nonce space, or if the whole nonce space is revoked.
      * @param owner Address of a nonce owner.
-     * @param nonce Nonce in question.
-     * @return True if owners nonce is revoked.
+     * @param nonceSpace Value of a nonce space.
+     * @param nonce Value of a nonce.
+     * @return True if nonce is revoked.
      */
-    function isNonceRevoked(address owner, uint256 nonce) external view returns (bool) {
-        if (nonce < minNonces[owner])
+    function isNonceRevoked(address owner, uint256 nonceSpace, uint256 nonce) external view returns (bool) {
+        if (_nonceSpace[owner] > nonceSpace)
             return true;
 
-        return revokedNonces[owner][nonce];
+        return _revokedNonce[owner][nonceSpace][nonce];
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # NONCE SPACE                                           *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Revoke all nonces in the current nonce space and increment nonce space.
+     * @dev Caller is used as a nonce owner.
+     * @return New nonce space.
+     */
+    function revokeNonceSpace() external returns (uint256) {
+        emit NonceSpaceRevoked(msg.sender, _nonceSpace[msg.sender]);
+        return ++_nonceSpace[msg.sender];
+    }
+
+    /**
+     * @notice Return current nonce space for an address.
+     * @param owner Address of a nonce owner.
+     * @return Current nonce space.
+     */
+    function currentNonceSpace(address owner) external view returns (uint256) {
+        return _nonceSpace[owner];
     }
 
 }

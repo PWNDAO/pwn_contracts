@@ -132,7 +132,8 @@ abstract contract PWNSimpleLoanTest is Test {
             duration: 2 days,
             expiration: simpleLoan.defaultTimestamp,
             proposer: borrower,
-            nonce: 0
+            nonceSpace: 1,
+            nonce: 1
         });
 
         loanFactoryDataHash = keccak256("factoryData");
@@ -164,7 +165,7 @@ abstract contract PWNSimpleLoanTest is Test {
         _mockLOANTokenOwner(loanId, lender);
 
         vm.mockCall(
-            revokedNonce, abi.encodeWithSignature("isNonceRevoked(address,uint256)"), abi.encode(false)
+            revokedNonce, abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)"), abi.encode(false)
         );
     }
 
@@ -278,7 +279,7 @@ abstract contract PWNSimpleLoanTest is Test {
                 address(loan)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Extension(uint256 loanId,uint256 price,uint40 duration,uint40 expiration,address proposer,uint256 nonce)"),
+                keccak256("Extension(uint256 loanId,uint256 price,uint40 duration,uint40 expiration,address proposer,uint256 nonceSpace,uint256 nonce)"),
                 abi.encode(_extension)
             ))
         ));
@@ -446,32 +447,32 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 
 contract PWNSimpleLoan_CreateLOANAndRevokeNonce_Test is PWNSimpleLoanTest {
 
-    function testFuzz_shouldFail_whenNonceAlreadyRevoked(uint256 nonce) external {
+    function testFuzz_shouldFail_whenNonceAlreadyRevoked(uint256 nonceSpace, uint256 nonce) external {
         vm.mockCall(
             revokedNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256)", borrower, nonce),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)", borrower, nonceSpace, nonce),
             abi.encode(true)
         );
 
         vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
         vm.prank(borrower);
-        loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", nonce);
+        loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", nonceSpace, nonce);
     }
 
-    function testFuzz_shouldRevokeCallersNonce(address caller, uint256 nonce) external {
+    function testFuzz_shouldRevokeCallersNonce(address caller, uint256 nonceSpace, uint256 nonce) external {
         assumeAddressIsNot(caller, AddressType.ZeroAddress);
 
         vm.expectCall(
             revokedNonce,
-            abi.encodeWithSignature("revokeNonce(address,uint256)", caller, nonce)
+            abi.encodeWithSignature("revokeNonce(address,uint256,uint256)", caller, nonceSpace, nonce)
         );
 
         vm.prank(caller);
-        loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", nonce);
+        loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", nonceSpace, nonce);
     }
 
     function test_shouldCreateLoan() external {
-        uint256 _loanId = loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", 1);
+        uint256 _loanId = loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", 0, 1);
 
         assertEq(_loanId, loanId);
         _assertLOANEq(_loanId, simpleLoan);
@@ -1730,7 +1731,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.mockCall(
             revokedNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256)", extension.proposer, extension.nonce),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)", extension.proposer, extension.nonceSpace, extension.nonce),
             abi.encode(true)
         );
 
@@ -1794,13 +1795,14 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         loan.extendLOAN(extension, "", "");
     }
 
-    function testFuzz_shouldRevokeExtensionNonce(uint256 nonce) external {
+    function testFuzz_shouldRevokeExtensionNonce(uint256 nonceSpace, uint256 nonce) external {
+        extension.nonceSpace = nonceSpace;
         extension.nonce = nonce;
         _mockExtensionOfferMade(extension);
 
         vm.expectCall(
             revokedNonce,
-            abi.encodeWithSignature("revokeNonce(address,uint256)", extension.proposer, nonce)
+            abi.encodeWithSignature("revokeNonce(address,uint256,uint256)", extension.proposer, nonceSpace, nonce)
         );
 
         vm.prank(lender);

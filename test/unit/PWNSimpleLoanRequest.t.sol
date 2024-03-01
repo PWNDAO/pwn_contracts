@@ -54,7 +54,7 @@ abstract contract PWNSimpleLoanRequestTest is Test {
 
         vm.mockCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256)"),
+            abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)"),
             abi.encode(false)
         );
     }
@@ -93,16 +93,14 @@ contract PWNSimpleLoanRequest_MakeRequest_Test is PWNSimpleLoanRequestTest {
 
 contract PWNSimpleLoanRequest_RevokeRequestNonce_Test is PWNSimpleLoanRequestTest {
 
-    function test_shouldCallRevokeRequestNonce() external {
-        uint256 nonce = uint256(keccak256("its my monkey"));
-
+    function testFuzz_shouldCallRevokeRequestNonce(uint256 nonceSpace, uint256 nonce) external {
         vm.expectCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("revokeNonce(address,uint256)", borrower, nonce)
+            abi.encodeWithSignature("revokeNonce(address,uint256,uint256)", borrower, nonceSpace, nonce)
         );
 
         vm.prank(borrower);
-        requestContract.revokeRequestNonce(nonce);
+        requestContract.revokeRequestNonce(nonceSpace, nonce);
     }
 
 }

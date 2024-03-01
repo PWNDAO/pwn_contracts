@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "@pwn/hub/PWNHubAccessControl.sol";
-import "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
-import "@pwn/nonce/PWNRevokedNonce.sol";
+import { PWNHubAccessControl } from "@pwn/hub/PWNHubAccessControl.sol";
+import { PWNSimpleLoanTermsFactory } from "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
+import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -53,10 +53,11 @@ abstract contract PWNSimpleLoanRequest is PWNSimpleLoanTermsFactory, PWNHubAcces
 
     /**
      * @notice Helper function for revoking a request nonce on behalf of a caller.
+     * @param requestNonceSpace Nonce space of a request nonce to be revoked.
      * @param requestNonce Request nonce to be revoked.
      */
-    function revokeRequestNonce(uint256 requestNonce) external {
-        revokedRequestNonce.revokeNonce(msg.sender, requestNonce);
+    function revokeRequestNonce(uint256 requestNonceSpace, uint256 requestNonce) external {
+        revokedRequestNonce.revokeNonce(msg.sender, requestNonceSpace, requestNonce);
     }
 
 }

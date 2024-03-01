@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "@pwn/hub/PWNHubAccessControl.sol";
-import "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
-import "@pwn/nonce/PWNRevokedNonce.sol";
+import { PWNHubAccessControl } from "@pwn/hub/PWNHubAccessControl.sol";
+import { PWNSimpleLoanTermsFactory } from "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
+import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -13,7 +13,7 @@ abstract contract PWNSimpleLoanOffer is PWNSimpleLoanTermsFactory, PWNHubAccessC
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    PWNRevokedNonce internal immutable revokedOfferNonce;
+    PWNRevokedNonce public immutable revokedOfferNonce;
 
     /**
      * @dev Mapping of offers made via on-chain transactions.
@@ -53,10 +53,11 @@ abstract contract PWNSimpleLoanOffer is PWNSimpleLoanTermsFactory, PWNHubAccessC
 
     /**
      * @notice Helper function for revoking an offer nonce on behalf of a caller.
+     * @param offerNonceSpace Nonce space of an offer nonce to be revoked.
      * @param offerNonce Offer nonce to be revoked.
      */
-    function revokeOfferNonce(uint256 offerNonce) external {
-        revokedOfferNonce.revokeNonce(msg.sender, offerNonce);
+    function revokeOfferNonce(uint256 offerNonceSpace, uint256 offerNonce) external {
+        revokedOfferNonce.revokeNonce(msg.sender, offerNonceSpace, offerNonce);
     }
 
 }

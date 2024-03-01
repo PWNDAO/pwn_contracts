@@ -44,7 +44,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     uint256 public constant MIN_EXTENSION_DURATION = 1 days;
 
     bytes32 public constant EXTENSION_TYPEHASH = keccak256(
-        "Extension(uint256 loanId,uint256 price,uint40 duration,uint40 expiration,address proposer,uint256 nonce)"
+        "Extension(uint256 loanId,uint256 price,uint40 duration,uint40 expiration,address proposer,uint256 nonceSpace,uint256 nonce)"
     );
 
     bytes32 public immutable DOMAIN_SEPARATOR = keccak256(abi.encode(
@@ -101,6 +101,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param duration Duration of the extension in seconds.
      * @param expiration Unix timestamp (in seconds) of an expiration date.
      * @param proposer Address of a proposer that signed the extension offer.
+     * @param nonceSpace Nonce space of the extension offer nonce.
      * @param nonce Nonce of the extension offer.
      */
     struct Extension {
@@ -109,6 +110,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         uint40 duration;
         uint40 expiration;
         address proposer;
+        uint256 nonceSpace;
         uint256 nonce;
     }
 
@@ -224,12 +226,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bytes calldata signature,
         bytes calldata loanAssetPermit,
         bytes calldata collateralPermit,
+        uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
-        if (revokedNonce.isNonceRevoked(msg.sender, callersNonceToRevoke))
+        if (revokedNonce.isNonceRevoked(msg.sender, callersNonceSpace, callersNonceToRevoke))
             revert NonceAlreadyRevoked();
 
-        revokedNonce.revokeNonce(msg.sender, callersNonceToRevoke);
+        revokedNonce.revokeNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
         loanId = createLOAN({
             loanTermsFactoryContract: loanTermsFactoryContract,
             loanTermsFactoryData: loanTermsFactoryData,
@@ -859,7 +862,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
                 revert InvalidSignature();
         if (block.timestamp >= extension.expiration)
             revert OfferExpired();
-        if (revokedNonce.isNonceRevoked(extension.proposer, extension.nonce))
+        if (revokedNonce.isNonceRevoked(extension.proposer, extension.nonceSpace, extension.nonce))
             revert NonceAlreadyRevoked();
 
         // Check caller and signer
@@ -898,7 +901,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             });
 
         // Revoke extension offer nonce
-        revokedNonce.revokeNonce(extension.proposer, extension.nonce);
+        revokedNonce.revokeNonce(extension.proposer, extension.nonceSpace, extension.nonce);
 
         // Update loan
         uint40 originalDefaultTimestamp = loan.defaultTimestamp;

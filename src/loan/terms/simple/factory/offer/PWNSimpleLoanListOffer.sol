@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "MultiToken/MultiToken.sol";
+import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
+import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
-import "@pwn/loan/lib/PWNSignatureChecker.sol";
-import "@pwn/loan/terms/simple/factory/offer/base/PWNSimpleLoanOffer.sol";
-import "@pwn/loan/terms/PWNLOANTerms.sol";
+import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
+import { PWNSimpleLoanOffer, PWNSimpleLoanTermsFactory } from "@pwn/loan/terms/simple/factory/offer/base/PWNSimpleLoanOffer.sol";
+import { PWNLOANTerms } from "@pwn/loan/terms/PWNLOANTerms.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -28,7 +28,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      * @dev EIP-712 simple offer struct type hash.
      */
     bytes32 public constant OFFER_TYPEHASH = keccak256(
-        "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonce)"
+        "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonceSpace,uint256 nonce)"
     );
 
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -48,6 +48,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      * @param allowedBorrower Address of an allowed borrower. Only this address can accept an offer. If the address is zero address, anybody with a collateral can accept the offer.
      * @param lender Address of a lender. This address has to sign an offer to be valid.
      * @param isPersistent If true, offer will not be revoked on acceptance. Persistent offer can be revoked manually.
+     * @param nonceSpace Nonce space of an offer nonce. All nonces in the same space can be revoked at once.
      * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
      *              Can be used to create a group of offers, where accepting one offer will make other offers in the group revoked.
      */
@@ -65,6 +66,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         address allowedBorrower;
         address lender;
         bool isPersistent;
+        uint256 nonceSpace;
         uint256 nonce;
     }
 
@@ -123,7 +125,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
 
 
     /*----------------------------------------------------------*|
-    |*  # IPWNSimpleLoanFactory                                 *|
+    |*  # PWNSimpleLoanTermsFactory                             *|
     |*----------------------------------------------------------*/
 
     /**
@@ -142,15 +144,15 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         address borrower = caller;
 
         // Check that offer has been made via on-chain tx, EIP-1271 or signed off-chain
-        if (offersMade[offerHash] == false)
-            if (PWNSignatureChecker.isValidSignatureNow(lender, offerHash, signature) == false)
+        if (!offersMade[offerHash])
+            if (!PWNSignatureChecker.isValidSignatureNow(lender, offerHash, signature))
                 revert InvalidSignature();
 
         // Check valid offer
         if (block.timestamp >= offer.expiration)
             revert OfferExpired();
 
-        if (revokedOfferNonce.isNonceRevoked(lender, offer.nonce) == true)
+        if (revokedOfferNonce.isNonceRevoked(lender, offer.nonceSpace, offer.nonce))
             revert NonceAlreadyRevoked();
 
         if (offer.allowedBorrower != address(0))
@@ -209,7 +211,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
 
         // Revoke offer if not persistent
         if (!offer.isPersistent)
-            revokedOfferNonce.revokeNonce(lender, offer.nonce);
+            revokedOfferNonce.revokeNonce(lender, offer.nonceSpace, offer.nonce);
     }
 
 
