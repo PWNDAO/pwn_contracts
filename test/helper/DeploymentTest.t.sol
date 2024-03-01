@@ -3,10 +3,10 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "MultiToken/MultiTokenCategoryRegistry.sol";
-import "MultiToken/interfaces/IMultiTokenCategoryRegistry.sol";
+import { MultiTokenCategoryRegistry, IMultiTokenCategoryRegistry } from "MultiToken/MultiTokenCategoryRegistry.sol";
 
-import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { TransparentUpgradeableProxy }
+    from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import "@pwn/Deployments.sol";
 
@@ -38,36 +38,37 @@ abstract contract DeploymentTest is Deployments, Test {
         vm.prank(protocolSafe);
         hub = new PWNHub();
 
+        revokedNonce = new PWNRevokedNonce(address(hub), PWNHubTags.NONCE_MANAGER);
+
         loanToken = new PWNLOAN(address(hub));
-        simpleLoan = new PWNSimpleLoan( // todo:
-            address(hub), address(loanToken), address(config), address(0), address(categoryRegistry)
+        simpleLoan = new PWNSimpleLoan(
+            address(hub), address(loanToken), address(config), address(revokedNonce), address(categoryRegistry)
         );
 
-        revokedOfferNonce = new PWNRevokedNonce(address(hub), PWNHubTags.LOAN_OFFER);
-        simpleLoanSimpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedOfferNonce));
-        simpleLoanListOffer = new PWNSimpleLoanListOffer(address(hub), address(revokedOfferNonce));
-
-        revokedRequestNonce = new PWNRevokedNonce(address(hub), PWNHubTags.LOAN_REQUEST);
-        simpleLoanSimpleRequest = new PWNSimpleLoanSimpleRequest(address(hub), address(revokedRequestNonce));
+        simpleLoanSimpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedNonce));
+        simpleLoanListOffer = new PWNSimpleLoanListOffer(address(hub), address(revokedNonce));
+        simpleLoanSimpleRequest = new PWNSimpleLoanSimpleRequest(address(hub), address(revokedNonce));
 
         // Set hub tags
-        address[] memory addrs = new address[](7);
+        address[] memory addrs = new address[](8);
         addrs[0] = address(simpleLoan);
-        addrs[1] = address(simpleLoanSimpleOffer);
+        addrs[1] = address(simpleLoan);
         addrs[2] = address(simpleLoanSimpleOffer);
-        addrs[3] = address(simpleLoanListOffer);
+        addrs[3] = address(simpleLoanSimpleOffer);
         addrs[4] = address(simpleLoanListOffer);
-        addrs[5] = address(simpleLoanSimpleRequest);
+        addrs[5] = address(simpleLoanListOffer);
         addrs[6] = address(simpleLoanSimpleRequest);
+        addrs[7] = address(simpleLoanSimpleRequest);
 
-        bytes32[] memory tags = new bytes32[](7);
+        bytes32[] memory tags = new bytes32[](8);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
-        tags[1] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
-        tags[2] = PWNHubTags.LOAN_OFFER;
-        tags[3] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
-        tags[4] = PWNHubTags.LOAN_OFFER;
-        tags[5] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
-        tags[6] = PWNHubTags.LOAN_REQUEST;
+        tags[1] = PWNHubTags.NONCE_MANAGER;
+        tags[2] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[3] = PWNHubTags.NONCE_MANAGER;
+        tags[4] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[5] = PWNHubTags.NONCE_MANAGER;
+        tags[6] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[7] = PWNHubTags.NONCE_MANAGER;
 
         vm.prank(protocolSafe);
         hub.setTags(addrs, tags, true);

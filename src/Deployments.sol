@@ -4,20 +4,20 @@ pragma solidity 0.8.16;
 import "forge-std/StdJson.sol";
 import "forge-std/Base.sol";
 
-import "MultiToken/interfaces/IMultiTokenCategoryRegistry.sol";
+import { IMultiTokenCategoryRegistry } from "MultiToken/interfaces/IMultiTokenCategoryRegistry.sol";
 
-import "openzeppelin-contracts/contracts/utils/Strings.sol";
+import { Strings } from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-import "@pwn/config/PWNConfig.sol";
-import "@pwn/deployer/IPWNDeployer.sol";
-import "@pwn/hub/PWNHub.sol";
-import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import "@pwn/loan/terms/simple/factory/offer/PWNSimpleLoanListOffer.sol";
-import "@pwn/loan/terms/simple/factory/offer/PWNSimpleLoanSimpleOffer.sol";
-import "@pwn/loan/terms/simple/factory/request/PWNSimpleLoanSimpleRequest.sol";
-import "@pwn/loan/token/PWNLOAN.sol";
-import "@pwn/nonce/PWNRevokedNonce.sol";
+import { PWNConfig } from "@pwn/config/PWNConfig.sol";
+import { IPWNDeployer } from "@pwn/deployer/IPWNDeployer.sol";
+import { PWNHub } from "@pwn/hub/PWNHub.sol";
+import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
+import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { PWNSimpleLoanListOffer } from "@pwn/loan/terms/simple/factory/offer/PWNSimpleLoanListOffer.sol";
+import { PWNSimpleLoanSimpleOffer } from "@pwn/loan/terms/simple/factory/offer/PWNSimpleLoanSimpleOffer.sol";
+import { PWNSimpleLoanSimpleRequest } from "@pwn/loan/terms/simple/factory/request/PWNSimpleLoanSimpleRequest.sol";
+import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
+import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 
 
 abstract contract Deployments is CommonBase {
@@ -42,8 +42,7 @@ abstract contract Deployments is CommonBase {
         address productTimelock;
         address protocolSafe;
         address protocolTimelock;
-        PWNRevokedNonce revokedOfferNonce;
-        PWNRevokedNonce revokedRequestNonce;
+        PWNRevokedNonce revokedNonce;
         PWNSimpleLoan simpleLoan;
         PWNSimpleLoanListOffer simpleLoanListOffer;
         PWNSimpleLoanSimpleOffer simpleLoanSimpleOffer;
@@ -68,8 +67,7 @@ abstract contract Deployments is CommonBase {
     PWNConfig config;
     PWNLOAN loanToken;
     PWNSimpleLoan simpleLoan;
-    PWNRevokedNonce revokedOfferNonce;
-    PWNRevokedNonce revokedRequestNonce;
+    PWNRevokedNonce revokedNonce;
     PWNSimpleLoanSimpleOffer simpleLoanSimpleOffer;
     PWNSimpleLoanListOffer simpleLoanListOffer;
     PWNSimpleLoanSimpleRequest simpleLoanSimpleRequest;
@@ -99,8 +97,7 @@ abstract contract Deployments is CommonBase {
             config = deployment.config;
             loanToken = deployment.loanToken;
             simpleLoan = deployment.simpleLoan;
-            revokedOfferNonce = deployment.revokedOfferNonce;
-            revokedRequestNonce = deployment.revokedRequestNonce;
+            revokedNonce = deployment.revokedNonce;
             simpleLoanSimpleOffer = deployment.simpleLoanSimpleOffer;
             simpleLoanListOffer = deployment.simpleLoanListOffer;
             simpleLoanSimpleRequest = deployment.simpleLoanSimpleRequest;
