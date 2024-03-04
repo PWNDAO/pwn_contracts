@@ -94,7 +94,7 @@ forge script script/PWN.s.sol:Deploy \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
-    /// @dev Expecting to have deployer, deployerSafe, protocolSafe, daoSafe & feeCollector addresses set in the `deployments.json`
+    /// @dev Expecting to have deployer, deployerSafe, protocolSafe, daoSafe, feeCollector & categoryRegistry addresses set in the `deployments.json`
     function deployProtocol() external {
         _loadDeployedAddresses();
 
@@ -103,6 +103,7 @@ forge script script/PWN.s.sol:Deploy \
         require(protocolSafe != address(0), "Protocol safe not set");
         require(daoSafe != address(0), "DAO safe not set");
         require(feeCollector != address(0), "Fee collector not set");
+        require(address(categoryRegistry) != address(0), "Category registry not set");
 
         uint256 initialConfigHelper = vmSafe.envUint("INITIAL_CONFIG_HELPER");
 
@@ -161,7 +162,13 @@ forge script script/PWN.s.sol:Deploy \
             salt: PWNContractDeployerSalt.SIMPLE_LOAN,
             bytecode: abi.encodePacked(
                 type(PWNSimpleLoan).creationCode,
-                abi.encode(address(hub), address(loanToken), address(revokedNonce), address(config))
+                abi.encode(
+                    address(hub),
+                    address(loanToken),
+                    address(config),
+                    address(revokedNonce),
+                    address(categoryRegistry)
+                )
             )
         }));
 
