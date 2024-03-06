@@ -3,12 +3,12 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
+import { PWNHubAccessControl } from "@pwn/hub/PWNHubAccessControl.sol";
 import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
-import { PWNSimpleLoanRequest, PWNSimpleLoanTermsFactory }
-    from "@pwn/loan/terms/simple/factory/request/base/PWNSimpleLoanRequest.sol";
+import { PWNSimpleLoanTermsFactory } from "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
 import { PWNLOANTerms } from "@pwn/loan/terms/PWNLOANTerms.sol";
-import { StateFingerprintComputerRegistry, IERC5646 }
-    from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
+import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
+import { StateFingerprintComputerRegistry, IERC5646 } from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -16,7 +16,7 @@ import "@pwn/PWNErrors.sol";
  * @title PWN Simple Loan Simple Request
  * @notice Loan terms factory contract creating a simple loan terms from a simple request.
  */
-contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
+contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanTermsFactory, PWNHubAccessControl {
 
     string public constant VERSION = "1.2";
 
@@ -33,7 +33,15 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
 
     bytes32 public immutable DOMAIN_SEPARATOR;
 
+    PWNRevokedNonce public immutable revokedRequestNonce;
     StateFingerprintComputerRegistry public immutable stateFingerprintComputerRegistry;
+
+    /**
+     * @dev Mapping of requests made via on-chain transactions.
+     *      Could be used by contract wallets instead of EIP-1271.
+     *      (request hash => is made)
+     */
+    mapping (bytes32 => bool) public requestsMade;
 
     /**
      * @notice Construct defining a simple request.
@@ -93,9 +101,9 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
 
     constructor(
         address hub,
-        address revokedRequestNonce,
+        address _revokedRequestNonce,
         address _stateFingerprintComputerRegistry
-    ) PWNSimpleLoanRequest(hub, revokedRequestNonce) {
+    ) PWNHubAccessControl(hub) {
         DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
             keccak256("PWNSimpleLoanSimpleRequest"),
@@ -103,6 +111,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
             block.chainid,
             address(this)
         ));
+
+        revokedRequestNonce = PWNRevokedNonce(_revokedRequestNonce);
         stateFingerprintComputerRegistry = StateFingerprintComputerRegistry(_stateFingerprintComputerRegistry);
     }
 
@@ -117,9 +127,24 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanRequest {
      * @param request Request struct containing all needed request data.
      */
     function makeRequest(Request calldata request) external {
+        // Check that caller is a borrower
+        if (msg.sender != request.borrower)
+            revert CallerIsNotStatedBorrower(request.borrower);
+
         bytes32 requestHash = getRequestHash(request);
-        _makeRequest(requestHash, request.borrower);
         emit RequestMade(requestHash, request.borrower, request);
+
+        // Mark request as made
+        requestsMade[requestHash] = true;
+    }
+
+    /**
+     * @notice Helper function for revoking a request nonce on behalf of a caller.
+     * @param requestNonceSpace Nonce space of a request nonce to be revoked.
+     * @param requestNonce Request nonce to be revoked.
+     */
+    function revokeRequestNonce(uint256 requestNonceSpace, uint256 requestNonce) external {
+        revokedRequestNonce.revokeNonce(msg.sender, requestNonceSpace, requestNonce);
     }
 
 

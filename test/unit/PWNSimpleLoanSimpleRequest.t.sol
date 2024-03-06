@@ -86,28 +86,48 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
 |*  # MAKE REQUEST                                          *|
 |*----------------------------------------------------------*/
 
-// Feature tested in PWNSimpleLoanRequest.t.sol
 contract PWNSimpleLoanSimpleRequest_MakeRequest_Test is PWNSimpleLoanSimpleRequestTest {
 
-    function test_shouldMakeRequest() external {
-        vm.prank(borrower);
-        requestContract.makeRequest(request);
+    function testFuzz_shouldFail_whenCallerIsNotBorrower(address caller) external {
+        vm.assume(caller != request.borrower);
 
-        bytes32 isMadeValue = vm.load(
-            address(requestContract),
-            keccak256(abi.encode(_requestHash(request), REQUESTS_MADE_SLOT))
-        );
-        assertEq(isMadeValue, bytes32(uint256(1)));
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedBorrower.selector, borrower));
+        vm.prank(caller);
+        requestContract.makeRequest(request);
     }
 
     function test_shouldEmit_RequestMade() external {
-        bytes32 requestHash = _requestHash(request);
-
         vm.expectEmit();
-        emit RequestMade(requestHash, borrower, request);
+        emit RequestMade(_requestHash(request), request.borrower, request);
+
+        vm.prank(request.borrower);
+        requestContract.makeRequest(request);
+    }
+
+    function test_shouldMakeRequest() external {
+        vm.prank(request.borrower);
+        requestContract.makeRequest(request);
+
+        assertTrue(requestContract.requestsMade(_requestHash(request)));
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # REVOKE REQUEST NONCE                                  *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanRequest_RevokeRequestNonce_Test is PWNSimpleLoanSimpleRequestTest {
+
+    function testFuzz_shouldCallRevokeRequestNonce(uint256 nonceSpace, uint256 nonce) external {
+        vm.expectCall(
+            revokedRequestNonce,
+            abi.encodeWithSignature("revokeNonce(address,uint256,uint256)", borrower, nonceSpace, nonce)
+        );
 
         vm.prank(borrower);
-        requestContract.makeRequest(request);
+        requestContract.revokeRequestNonce(nonceSpace, nonce);
     }
 
 }

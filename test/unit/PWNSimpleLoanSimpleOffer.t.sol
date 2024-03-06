@@ -86,28 +86,47 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
 |*  # MAKE OFFER                                            *|
 |*----------------------------------------------------------*/
 
-// Feature tested in PWNSimpleLoanOffer.t.sol
 contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanSimpleOfferTest {
 
-    function test_shouldMakeOffer() external {
-        vm.prank(lender);
-        offerContract.makeOffer(offer);
+    function testFuzz_shouldFail_whenCallerIsNotLender(address caller) external {
+        vm.assume(caller != offer.lender);
 
-        bytes32 isMadeValue = vm.load(
-            address(offerContract),
-            keccak256(abi.encode(_offerHash(offer), OFFERS_MADE_SLOT))
-        );
-        assertEq(isMadeValue, bytes32(uint256(1)));
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedLender.selector, lender));
+        offerContract.makeOffer(offer);
     }
 
     function test_shouldEmit_OfferMade() external {
-        bytes32 offerHash = _offerHash(offer);
-
         vm.expectEmit();
-        emit OfferMade(offerHash, lender, offer);
+        emit OfferMade(_offerHash(offer), offer.lender, offer);
+
+        vm.prank(offer.lender);
+        offerContract.makeOffer(offer);
+    }
+
+    function test_shouldMakeOffer() external {
+        vm.prank(offer.lender);
+        offerContract.makeOffer(offer);
+
+        assertTrue(offerContract.offersMade(_offerHash(offer)));
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # REVOKE OFFER NONCE                                    *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanOffer_RevokeOfferNonce_Test is PWNSimpleLoanSimpleOfferTest {
+
+    function testFuzz_shouldCallRevokeOfferNonce(uint256 nonceSpace, uint256 nonce) external {
+        vm.expectCall(
+            revokedOfferNonce,
+            abi.encodeWithSignature("revokeNonce(address,uint256,uint256)", lender, nonceSpace, nonce)
+        );
 
         vm.prank(lender);
-        offerContract.makeOffer(offer);
+        offerContract.revokeOfferNonce(nonceSpace, nonce);
     }
 
 }

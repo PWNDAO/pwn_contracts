@@ -3,12 +3,12 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
+import { PWNHubAccessControl } from "@pwn/hub/PWNHubAccessControl.sol";
 import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
-import { PWNSimpleLoanOffer, PWNSimpleLoanTermsFactory }
-    from "@pwn/loan/terms/simple/factory/offer/base/PWNSimpleLoanOffer.sol";
+import { PWNSimpleLoanTermsFactory } from "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
 import { PWNLOANTerms } from "@pwn/loan/terms/PWNLOANTerms.sol";
-import { StateFingerprintComputerRegistry, IERC5646 }
-    from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
+import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
+import { StateFingerprintComputerRegistry, IERC5646 } from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -16,7 +16,7 @@ import "@pwn/PWNErrors.sol";
  * @title PWN Simple Loan Simple Offer
  * @notice Loan terms factory contract creating a simple loan terms from a simple offer.
  */
-contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
+contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanTermsFactory, PWNHubAccessControl {
 
     string public constant VERSION = "1.2";
 
@@ -33,7 +33,15 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
 
     bytes32 public immutable DOMAIN_SEPARATOR;
 
+    PWNRevokedNonce public immutable revokedOfferNonce;
     StateFingerprintComputerRegistry public immutable stateFingerprintComputerRegistry;
+
+    /**
+     * @dev Mapping of offers made via on-chain transactions.
+     *      Could be used by contract wallets instead of EIP-1271.
+     *      (offer hash => is made)
+     */
+    mapping (bytes32 => bool) public offersMade;
 
     /**
      * @notice Construct defining a simple offer.
@@ -93,9 +101,9 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
 
     constructor(
         address hub,
-        address revokedOfferNonce,
+        address _revokedOfferNonce,
         address _stateFingerprintComputerRegistry
-    ) PWNSimpleLoanOffer(hub, revokedOfferNonce) {
+    ) PWNHubAccessControl(hub) {
         DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
             keccak256("PWNSimpleLoanSimpleOffer"),
@@ -103,6 +111,8 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
             block.chainid,
             address(this)
         ));
+
+        revokedOfferNonce = PWNRevokedNonce(_revokedOfferNonce);
         stateFingerprintComputerRegistry = StateFingerprintComputerRegistry(_stateFingerprintComputerRegistry);
     }
 
@@ -117,9 +127,24 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanOffer {
      * @param offer Offer struct containing all needed offer data.
      */
     function makeOffer(Offer calldata offer) external {
+        // Check that caller is a lender
+        if (msg.sender != offer.lender)
+            revert CallerIsNotStatedLender(offer.lender);
+
         bytes32 offerHash = getOfferHash(offer);
-        _makeOffer(offerHash, offer.lender);
         emit OfferMade(offerHash, offer.lender, offer);
+
+        // Mark offer as made
+        offersMade[offerHash] = true;
+    }
+
+    /**
+     * @notice Helper function for revoking an offer nonce on behalf of a caller.
+     * @param offerNonceSpace Nonce space of an offer nonce to be revoked.
+     * @param offerNonce Offer nonce to be revoked.
+     */
+    function revokeOfferNonce(uint256 offerNonceSpace, uint256 offerNonce) external {
+        revokedOfferNonce.revokeNonce(msg.sender, offerNonceSpace, offerNonce);
     }
 
 
