@@ -45,9 +45,9 @@ abstract contract DeploymentTest is Deployments, Test {
             address(hub), address(loanToken), address(config), address(revokedNonce), address(categoryRegistry)
         );
 
-        simpleLoanSimpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedNonce));
-        simpleLoanListOffer = new PWNSimpleLoanListOffer(address(hub), address(revokedNonce));
-        simpleLoanSimpleRequest = new PWNSimpleLoanSimpleRequest(address(hub), address(revokedNonce));
+        simpleLoanSimpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedNonce), address(stateFingerprintComputerRegistry));
+        simpleLoanListOffer = new PWNSimpleLoanListOffer(address(hub), address(revokedNonce), address(stateFingerprintComputerRegistry));
+        simpleLoanSimpleRequest = new PWNSimpleLoanSimpleRequest(address(hub), address(revokedNonce), address(stateFingerprintComputerRegistry));
 
         // Set hub tags
         address[] memory addrs = new address[](8);

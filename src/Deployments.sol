@@ -18,6 +18,7 @@ import { PWNSimpleLoanSimpleOffer } from "@pwn/loan/terms/simple/factory/offer/P
 import { PWNSimpleLoanSimpleRequest } from "@pwn/loan/terms/simple/factory/request/PWNSimpleLoanSimpleRequest.sol";
 import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
+import { StateFingerprintComputerRegistry } from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
 
 
 abstract contract Deployments is CommonBase {
@@ -47,6 +48,7 @@ abstract contract Deployments is CommonBase {
         PWNSimpleLoanListOffer simpleLoanListOffer;
         PWNSimpleLoanSimpleOffer simpleLoanSimpleOffer;
         PWNSimpleLoanSimpleRequest simpleLoanSimpleRequest;
+        StateFingerprintComputerRegistry stateFingerprintComputerRegistry;
     }
 
     address dao;
@@ -60,6 +62,7 @@ abstract contract Deployments is CommonBase {
     address feeCollector;
 
     IMultiTokenCategoryRegistry categoryRegistry;
+    StateFingerprintComputerRegistry stateFingerprintComputerRegistry;
 
     IPWNDeployer deployer;
     PWNHub hub;
@@ -101,6 +104,7 @@ abstract contract Deployments is CommonBase {
             simpleLoanSimpleOffer = deployment.simpleLoanSimpleOffer;
             simpleLoanListOffer = deployment.simpleLoanListOffer;
             simpleLoanSimpleRequest = deployment.simpleLoanSimpleRequest;
+            stateFingerprintComputerRegistry = deployment.stateFingerprintComputerRegistry;
             categoryRegistry = deployment.categoryRegistry;
         } else {
             _protocolNotDeployedOnSelectedChain();

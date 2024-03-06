@@ -20,6 +20,10 @@ error InvalidExtensionCaller();
 // Invalid asset
 error InvalidLoanAsset();
 error InvalidCollateralAsset();
+error InvalidCollateralStateFingerprint(bytes32 offered, bytes32 current);
+
+// State fingerprint computer registry
+error MissingStateFingerprintComputer();
 
 // LOAN token
 error InvalidLoanContractCaller();

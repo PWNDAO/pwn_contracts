@@ -6,8 +6,11 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
-import { PWNSimpleLoanOffer, PWNSimpleLoanTermsFactory } from "@pwn/loan/terms/simple/factory/offer/base/PWNSimpleLoanOffer.sol";
+import { PWNSimpleLoanOffer, PWNSimpleLoanTermsFactory }
+    from "@pwn/loan/terms/simple/factory/offer/base/PWNSimpleLoanOffer.sol";
 import { PWNLOANTerms } from "@pwn/loan/terms/PWNLOANTerms.sol";
+import { StateFingerprintComputerRegistry, IERC5646 }
+    from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -28,10 +31,12 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      * @dev EIP-712 simple offer struct type hash.
      */
     bytes32 public constant OFFER_TYPEHASH = keccak256(
-        "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonceSpace,uint256 nonce)"
+        "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonceSpace,uint256 nonce)"
     );
 
     bytes32 public immutable DOMAIN_SEPARATOR;
+
+    StateFingerprintComputerRegistry public immutable stateFingerprintComputerRegistry;
 
     /**
      * @notice Construct defining a list offer.
@@ -39,6 +44,8 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
      * @param collateralAddress Address of an asset used as a collateral.
      * @param collateralIdsWhitelistMerkleRoot Merkle tree root of a set of whitelisted collateral ids.
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0.
+     * @param checkCollateralStateFingerprint If true, collateral state fingerprint will be checked on loan terms creation.
+     * @param collateralStateFingerprint Fingerprint of a collateral state. It is used to check if a collateral is in a valid state.
      * @param loanAssetAddress Address of an asset which is lender to a borrower.
      * @param loanAmount Amount of tokens which is offered as a loan to a borrower.
      * @param fixedInterestAmount Fixed interest amount in loan asset tokens. It is the minimum amount of interest which has to be paid by a borrower.
@@ -57,6 +64,8 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
         address collateralAddress;
         bytes32 collateralIdsWhitelistMerkleRoot;
         uint256 collateralAmount;
+        bool checkCollateralStateFingerprint;
+        bytes32 collateralStateFingerprint;
         address loanAssetAddress;
         uint256 loanAmount;
         uint256 fixedInterestAmount;
@@ -97,7 +106,11 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor(address hub, address _revokedOfferNonce) PWNSimpleLoanOffer(hub, _revokedOfferNonce) {
+    constructor(
+        address hub,
+        address revokedOfferNonce,
+        address _stateFingerprintComputerRegistry
+    ) PWNSimpleLoanOffer(hub, revokedOfferNonce) {
         DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
             keccak256("PWNSimpleLoanListOffer"),
@@ -105,6 +118,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
             block.chainid,
             address(this)
         ));
+        stateFingerprintComputerRegistry = StateFingerprintComputerRegistry(_stateFingerprintComputerRegistry);
     }
 
 
@@ -181,27 +195,39 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanOffer {
                 revert CollateralIdIsNotWhitelisted();
         } // else: Any collateral id - collection offer
 
-        // Prepare collateral and loan asset
-        MultiToken.Asset memory collateral = MultiToken.Asset({
-            category: offer.collateralCategory,
-            assetAddress: offer.collateralAddress,
-            id: offerValues.collateralId,
-            amount: offer.collateralAmount
-        });
-        MultiToken.Asset memory loanAsset = MultiToken.Asset({
-            category: MultiToken.Category.ERC20,
-            assetAddress: offer.loanAssetAddress,
-            id: 0,
-            amount: offer.loanAmount
-        });
+        // Check that the collateral state fingerprint matches the current state
+        if (offer.checkCollateralStateFingerprint) {
+            IERC5646 computer = stateFingerprintComputerRegistry.getStateFingerprintComputer(offer.collateralAddress);
+            if (address(computer) == address(0)) {
+                // Asset is not implementing ERC5646 and no computer is registered
+                revert MissingStateFingerprintComputer();
+            }
+
+            bytes32 currentFingerprint = computer.getStateFingerprint(offerValues.collateralId);
+            if (offer.collateralStateFingerprint != currentFingerprint) {
+                // Fingerprint mismatch
+                revert InvalidCollateralStateFingerprint({
+                    offered: offer.collateralStateFingerprint,
+                    current: currentFingerprint
+                });
+            }
+        }
 
         // Create loan terms object
         loanTerms = PWNLOANTerms.Simple({
             lender: lender,
             borrower: borrower,
             defaultTimestamp: uint40(block.timestamp) + offer.duration,
-            collateral: collateral,
-            asset: loanAsset,
+            collateral: MultiToken.Asset({
+                category: offer.collateralCategory,
+                assetAddress: offer.collateralAddress,
+                id: offerValues.collateralId,
+                amount: offer.collateralAmount
+            }),
+            asset: MultiToken.ERC20({
+                assetAddress: offer.loanAssetAddress,
+                amount: offer.loanAmount
+            }),
             fixedInterestAmount: offer.fixedInterestAmount,
             accruingInterestAPR: offer.accruingInterestAPR,
             canCreate: true,

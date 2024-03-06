@@ -18,6 +18,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
     PWNSimpleLoanSimpleRequest requestContract;
     address hub = address(0x80b);
     address revokedRequestNonce = address(0x80c);
+    address stateFingerprintComputerRegistry = makeAddr("stateFingerprintComputerRegistry");
     address activeLoanContract = address(0x80d);
     PWNSimpleLoanSimpleRequest.Request request;
     address token = address(0x070ce2);
@@ -31,13 +32,15 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
         vm.etch(revokedRequestNonce, bytes("data"));
         vm.etch(token, bytes("data"));
 
-        requestContract = new PWNSimpleLoanSimpleRequest(hub, revokedRequestNonce);
+        requestContract = new PWNSimpleLoanSimpleRequest(hub, revokedRequestNonce, stateFingerprintComputerRegistry);
 
         request = PWNSimpleLoanSimpleRequest.Request({
             collateralCategory: MultiToken.Category.ERC721,
             collateralAddress: token,
             collateralId: 42,
             collateralAmount: 1032,
+            checkCollateralStateFingerprint: true,
+            collateralStateFingerprint: keccak256("some state fingerprint"),
             loanAssetAddress: token,
             loanAmount: 1101001,
             fixedInterestAmount: 1,
@@ -70,7 +73,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
                 address(requestContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce)"),
+                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce)"),
                 abi.encode(_request)
             ))
         ));
@@ -117,7 +120,8 @@ contract PWNSimpleLoanSimpleRequest_MakeRequest_Test is PWNSimpleLoanSimpleReque
 contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleRequestTest {
 
     bytes signature;
-    address lender = address(0x0303030303);
+    address lender = makeAddr("lender");
+    address stateFingerprintComputer = makeAddr("stateFingerprintComputer");
 
     function setUp() override public {
         super.setUp();
@@ -133,7 +137,16 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
             abi.encode(true)
         );
 
-        signature = "";
+        vm.mockCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", request.collateralAddress),
+            abi.encode(stateFingerprintComputer)
+        );
+        vm.mockCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", request.collateralId),
+            abi.encode(request.collateralStateFingerprint)
+        );
     }
 
     // Helpers
@@ -281,6 +294,64 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.expectRevert(abi.encodeWithSelector(AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest));
+        vm.prank(activeLoanContract);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
+    }
+
+    function test_shouldNotCallComputerRegistry_whenShouldNotCheckStateFingerprint() external {
+        request.checkCollateralStateFingerprint = false;
+        signature = _signRequestCompact(borrowerPK, request);
+
+        vm.expectCall({
+            callee: stateFingerprintComputerRegistry,
+            data: abi.encodeWithSignature("getStateFingerprintComputer(address)", request.collateralAddress),
+            count: 0
+        });
+
+        vm.prank(activeLoanContract);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
+    }
+
+    function test_shouldFail_whenComputerRegistryReturnsZeroAddress_whenShouldCheckStateFingerprint() external {
+        signature = _signRequestCompact(borrowerPK, request);
+
+        vm.mockCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", request.collateralAddress),
+            abi.encode(address(0))
+        );
+
+        vm.expectCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", request.collateralAddress)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(MissingStateFingerprintComputer.selector));
+        vm.prank(activeLoanContract);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
+    }
+
+    function testFuzz_shouldFail_whenComputerReturnsDifferentStateFingerprint_whenShouldCheckStateFingerprint(
+        bytes32 stateFingerprint
+    ) external {
+        vm.assume(stateFingerprint != request.collateralStateFingerprint);
+
+        signature = _signRequestCompact(borrowerPK, request);
+
+        vm.mockCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", request.collateralId),
+            abi.encode(stateFingerprint)
+        );
+
+        vm.expectCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", request.collateralId)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(
+            InvalidCollateralStateFingerprint.selector, request.collateralStateFingerprint, stateFingerprint
+        ));
         vm.prank(activeLoanContract);
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }

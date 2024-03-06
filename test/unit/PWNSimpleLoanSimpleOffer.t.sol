@@ -18,6 +18,7 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
     PWNSimpleLoanSimpleOffer offerContract;
     address hub = address(0x80b);
     address revokedOfferNonce = address(0x80c);
+    address stateFingerprintComputerRegistry = makeAddr("stateFingerprintComputerRegistry");
     address activeLoanContract = address(0x80d);
     PWNSimpleLoanSimpleOffer.Offer offer;
     address token = address(0x070ce2);
@@ -31,13 +32,15 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
         vm.etch(revokedOfferNonce, bytes("data"));
         vm.etch(token, bytes("data"));
 
-        offerContract = new PWNSimpleLoanSimpleOffer(hub, revokedOfferNonce);
+        offerContract = new PWNSimpleLoanSimpleOffer(hub, revokedOfferNonce, stateFingerprintComputerRegistry);
 
         offer = PWNSimpleLoanSimpleOffer.Offer({
             collateralCategory: MultiToken.Category.ERC721,
             collateralAddress: token,
             collateralId: 42,
             collateralAmount: 1032,
+            checkCollateralStateFingerprint: true,
+            collateralStateFingerprint: keccak256("some state fingerprint"),
             loanAssetAddress: token,
             loanAmount: 1101001,
             fixedInterestAmount: 1,
@@ -70,7 +73,7 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
                 address(offerContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonceSpace,uint256 nonce)"),
+                keccak256("Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonceSpace,uint256 nonce)"),
                 abi.encode(_offer)
             ))
         ));
@@ -117,7 +120,8 @@ contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanSimpleOfferTest
 contract PWNSimpleLoanSimpleOffer_CreateLOANTerms_Test is PWNSimpleLoanSimpleOfferTest {
 
     bytes signature;
-    address borrower = address(0x0303030303);
+    address borrower = makeAddr("borrower");
+    address stateFingerprintComputer = makeAddr("stateFingerprintComputer");
 
     function setUp() override public {
         super.setUp();
@@ -133,7 +137,16 @@ contract PWNSimpleLoanSimpleOffer_CreateLOANTerms_Test is PWNSimpleLoanSimpleOff
             abi.encode(true)
         );
 
-        signature = "";
+        vm.mockCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress),
+            abi.encode(stateFingerprintComputer)
+        );
+        vm.mockCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId),
+            abi.encode(offer.collateralStateFingerprint)
+        );
     }
 
     // Helpers
@@ -281,6 +294,64 @@ contract PWNSimpleLoanSimpleOffer_CreateLOANTerms_Test is PWNSimpleLoanSimpleOff
         signature = _signOfferCompact(lenderPK, offer);
 
         vm.expectRevert(abi.encodeWithSelector(AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest));
+        vm.prank(activeLoanContract);
+        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
+    }
+
+    function test_shouldNotCallComputerRegistry_whenShouldNotCheckStateFingerprint() external {
+        offer.checkCollateralStateFingerprint = false;
+        signature = _signOfferCompact(lenderPK, offer);
+
+        vm.expectCall({
+            callee: stateFingerprintComputerRegistry,
+            data: abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress),
+            count: 0
+        });
+
+        vm.prank(activeLoanContract);
+        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
+    }
+
+    function test_shouldFail_whenComputerRegistryReturnsZeroAddress_whenShouldCheckStateFingerprint() external {
+        signature = _signOfferCompact(lenderPK, offer);
+
+        vm.mockCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress),
+            abi.encode(address(0))
+        );
+
+        vm.expectCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(MissingStateFingerprintComputer.selector));
+        vm.prank(activeLoanContract);
+        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
+    }
+
+    function testFuzz_shouldFail_whenComputerReturnsDifferentStateFingerprint_whenShouldCheckStateFingerprint(
+        bytes32 stateFingerprint
+    ) external {
+        vm.assume(stateFingerprint != offer.collateralStateFingerprint);
+
+        signature = _signOfferCompact(lenderPK, offer);
+
+        vm.mockCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId),
+            abi.encode(stateFingerprint)
+        );
+
+        vm.expectCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(
+            InvalidCollateralStateFingerprint.selector, offer.collateralStateFingerprint, stateFingerprint
+        ));
         vm.prank(activeLoanContract);
         offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
     }
