@@ -176,8 +176,8 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanTermsFactory, PWNHubAccessCont
         if (block.timestamp >= offer.expiration)
             revert OfferExpired();
 
-        if (revokedOfferNonce.isNonceRevoked(lender, offer.nonceSpace, offer.nonce))
-            revert NonceAlreadyRevoked();
+        if (!revokedOfferNonce.isNonceUsable(lender, offer.nonceSpace, offer.nonce))
+            revert NonceNotUsable();
 
         if (offer.allowedBorrower != address(0))
             if (borrower != offer.allowedBorrower)

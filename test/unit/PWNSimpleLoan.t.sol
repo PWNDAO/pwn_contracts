@@ -165,7 +165,7 @@ abstract contract PWNSimpleLoanTest is Test {
         _mockLOANTokenOwner(loanId, lender);
 
         vm.mockCall(
-            revokedNonce, abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)"), abi.encode(false)
+            revokedNonce, abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)"), abi.encode(true)
         );
     }
 
@@ -447,14 +447,14 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 
 contract PWNSimpleLoan_CreateLOANAndRevokeNonce_Test is PWNSimpleLoanTest {
 
-    function testFuzz_shouldFail_whenNonceAlreadyRevoked(uint256 nonceSpace, uint256 nonce) external {
+    function testFuzz_shouldFail_whenNonceNotUsable(uint256 nonceSpace, uint256 nonce) external {
         vm.mockCall(
             revokedNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)", borrower, nonceSpace, nonce),
-            abi.encode(true)
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", borrower, nonceSpace, nonce),
+            abi.encode(false)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceNotUsable.selector));
         vm.prank(borrower);
         loan.createLOANAndRevokeNonce(loanFactory, loanFactoryData, "", "", "", nonceSpace, nonce);
     }
@@ -1726,16 +1726,16 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         loan.extendLOAN(extension, "", "");
     }
 
-    function test_shouldFail_whenOfferNonceRevoked() external {
+    function test_shouldFail_whenOfferNonceNotUsable() external {
         _mockExtensionOfferMade(extension);
 
         vm.mockCall(
             revokedNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)", extension.proposer, extension.nonceSpace, extension.nonce),
-            abi.encode(true)
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", extension.proposer, extension.nonceSpace, extension.nonce),
+            abi.encode(false)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceNotUsable.selector));
         vm.prank(lender);
         loan.extendLOAN(extension, "", "");
     }

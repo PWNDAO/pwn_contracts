@@ -33,8 +33,7 @@ error UnsupportedTransferFunction();
 error IncompleteTransfer();
 
 // Nonce
-error NonceAlreadyRevoked();
-error InvalidMinNonce();
+error NonceNotUsable();
 
 // Signature checks
 error InvalidSignatureLength(uint256);

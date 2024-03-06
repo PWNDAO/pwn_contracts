@@ -56,8 +56,8 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
 
         vm.mockCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)"),
-            abi.encode(false)
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)"),
+            abi.encode(true)
         );
     }
 
@@ -268,20 +268,20 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
-    function test_shouldFail_whenRequestIsRevoked() external {
+    function test_shouldFail_whenRequestNonceNotUsable() external {
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.mockCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)"),
-            abi.encode(true)
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)"),
+            abi.encode(false)
         );
         vm.expectCall(
             revokedRequestNonce,
-            abi.encodeWithSignature("isNonceRevoked(address,uint256,uint256)", request.borrower, request.nonceSpace, request.nonce)
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", request.borrower, request.nonceSpace, request.nonce)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector));
+        vm.expectRevert(abi.encodeWithSelector(NonceNotUsable.selector));
         vm.prank(activeLoanContract);
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }

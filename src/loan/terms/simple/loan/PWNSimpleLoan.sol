@@ -229,8 +229,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
-        if (revokedNonce.isNonceRevoked(msg.sender, callersNonceSpace, callersNonceToRevoke))
-            revert NonceAlreadyRevoked();
+        if (!revokedNonce.isNonceUsable(msg.sender, callersNonceSpace, callersNonceToRevoke))
+            revert NonceNotUsable();
 
         revokedNonce.revokeNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
         loanId = createLOAN({
@@ -862,8 +862,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
                 revert InvalidSignature();
         if (block.timestamp >= extension.expiration)
             revert OfferExpired();
-        if (revokedNonce.isNonceRevoked(extension.proposer, extension.nonceSpace, extension.nonce))
-            revert NonceAlreadyRevoked();
+        if (!revokedNonce.isNonceUsable(extension.proposer, extension.nonceSpace, extension.nonce))
+            revert NonceNotUsable();
 
         // Check caller and signer
         address loanOwner = loanToken.ownerOf(extension.loanId);

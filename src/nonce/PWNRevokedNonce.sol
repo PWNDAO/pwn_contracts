@@ -62,6 +62,15 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     |*----------------------------------------------------------*/
 
     /**
+     * @notice Revoke a nonce in the current nonce space.
+     * @dev Caller is used as a nonce owner.
+     * @param nonce Nonce to be revoked.
+     */
+    function revokeNonce(uint256 nonce) external {
+        _revokeNonce(msg.sender, _nonceSpace[msg.sender], nonce);
+    }
+
+    /**
      * @notice Revoke a nonce in a nonce space.
      * @dev Caller is used as a nonce owner.
      * @param nonceSpace Nonce space where a nonce will be revoked.
@@ -91,17 +100,30 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     }
 
     /**
-     * @notice Return true if owners nonce is revoked in the given nonce space, or if the whole nonce space is revoked.
+     * @notice Return true if owners nonce is revoked in the given nonce space.
+     * @dev Do not use this function to check if nonce is usable.
+     *      Use `isNonceUsable` instead, which checks nonce space as well.
      * @param owner Address of a nonce owner.
      * @param nonceSpace Value of a nonce space.
      * @param nonce Value of a nonce.
      * @return True if nonce is revoked.
      */
     function isNonceRevoked(address owner, uint256 nonceSpace, uint256 nonce) external view returns (bool) {
-        if (_nonceSpace[owner] > nonceSpace)
-            return true;
-
         return _revokedNonce[owner][nonceSpace][nonce];
+    }
+
+    /**
+     * @notice Return true if owners nonce is usable. Nonce is usable if it is not revoked and in the current nonce space.
+     * @param owner Address of a nonce owner.
+     * @param nonceSpace Value of a nonce space.
+     * @param nonce Value of a nonce.
+     * @return True if nonce is usable.
+     */
+    function isNonceUsable(address owner, uint256 nonceSpace, uint256 nonce) external view returns (bool) {
+        if (_nonceSpace[owner] != nonceSpace)
+            return false;
+
+        return !_revokedNonce[owner][nonceSpace][nonce];
     }
 
 
