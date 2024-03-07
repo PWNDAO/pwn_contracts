@@ -14,6 +14,7 @@ import "@pwn/PWNErrors.sol";
 abstract contract PWNSimpleLoanSimpleRequestTest is Test {
 
     bytes32 internal constant REQUESTS_MADE_SLOT = bytes32(uint256(0)); // `requestsMade` mapping position
+    bytes32 internal constant CREDIT_USED_SLOT = bytes32(uint256(1)); // `_creditUsed` mapping position
 
     PWNSimpleLoanSimpleRequest requestContract;
     address hub = address(0x80b);
@@ -43,6 +44,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
             collateralStateFingerprint: keccak256("some state fingerprint"),
             loanAssetAddress: token,
             loanAmount: 1101001,
+            availableCreditLimit: 0,
             fixedInterestAmount: 1,
             accruingInterestAPR: 0,
             duration: 1000,
@@ -73,7 +75,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
                 address(requestContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce)"),
+                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce)"),
                 abi.encode(_request)
             ))
         ));
@@ -115,10 +117,43 @@ contract PWNSimpleLoanSimpleRequest_MakeRequest_Test is PWNSimpleLoanSimpleReque
 
 
 /*----------------------------------------------------------*|
+|*  # AVAILABLE CREDIT                                      *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanSimpleRequest_AvailableCredit_Test is PWNSimpleLoanSimpleRequestTest {
+
+    function testFuzz_shouldReturnAvailableCredit(uint256 used, uint256 limit) external {
+        limit = bound(limit, used, type(uint256).max);
+        request.availableCreditLimit = limit;
+
+        vm.store(address(requestContract), keccak256(abi.encode(_requestHash(request), CREDIT_USED_SLOT)), bytes32(used));
+
+        assertEq(requestContract.availableCredit(request), limit - used);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # CREDIT USED                                           *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanSimpleRequest_CreditUsed_Test is PWNSimpleLoanSimpleRequestTest {
+
+    function testFuzz_shouldReturnUsedCredit(uint256 used) external {
+        vm.store(address(requestContract), keccak256(abi.encode(_requestHash(request), CREDIT_USED_SLOT)), bytes32(used));
+
+        assertEq(requestContract.creditUsed(request), used);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
 |*  # REVOKE REQUEST NONCE                                  *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanRequest_RevokeRequestNonce_Test is PWNSimpleLoanSimpleRequestTest {
+contract PWNSimpleLoanSimpleRequest_RevokeRequestNonce_Test is PWNSimpleLoanSimpleRequestTest {
 
     function testFuzz_shouldCallRevokeRequestNonce(uint256 nonceSpace, uint256 nonce) external {
         vm.expectCall(
@@ -376,7 +411,8 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
     }
 
-    function test_shouldRevokeRequest() external {
+    function test_shouldRevokeRequest_whenAvailableCreditLimitEqualToZero() external {
+        request.availableCreditLimit = 0;
         signature = _signRequestCompact(borrowerPK, request);
 
         vm.expectCall(
@@ -386,6 +422,33 @@ contract PWNSimpleLoanSimpleRequest_CreateLOANTerms_Test is PWNSimpleLoanSimpleR
 
         vm.prank(activeLoanContract);
         requestContract.createLOANTerms(lender, abi.encode(request), signature);
+    }
+
+    function testFuzz_shouldFail_whenUsedCreditExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
+        used = bound(used, 1, type(uint256).max - request.loanAmount);
+        limit = bound(limit, used, used + request.loanAmount - 1);
+        request.availableCreditLimit = limit;
+        signature = _signRequestCompact(borrowerPK, request);
+
+        vm.store(address(requestContract), keccak256(abi.encode(_requestHash(request), CREDIT_USED_SLOT)), bytes32(used));
+
+        vm.expectRevert(abi.encodeWithSelector(AvailableCreditLimitExceeded.selector, used + request.loanAmount, limit));
+        vm.prank(activeLoanContract);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
+    }
+
+    function testFuzz_shouldIncreaseUsedCredit_whenUsedCreditNotExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
+        used = bound(used, 1, type(uint256).max - request.loanAmount);
+        limit = bound(limit, used + request.loanAmount, type(uint256).max);
+        request.availableCreditLimit = limit;
+        signature = _signRequestCompact(borrowerPK, request);
+
+        vm.store(address(requestContract), keccak256(abi.encode(_requestHash(request), CREDIT_USED_SLOT)), bytes32(used));
+
+        vm.prank(activeLoanContract);
+        requestContract.createLOANTerms(lender, abi.encode(request), signature);
+
+        assertEq(requestContract.creditUsed(request), used + request.loanAmount);
     }
 
     function testFuzz_shouldReturnCorrectValues(uint256 _refinancingLoanId) external {

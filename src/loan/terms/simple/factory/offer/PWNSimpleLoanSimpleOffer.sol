@@ -28,7 +28,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanTermsFactory, PWNHubAccessCont
      * @dev EIP-712 simple offer struct type hash.
      */
     bytes32 public constant OFFER_TYPEHASH = keccak256(
-        "Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,bool isPersistent,uint256 nonceSpace,uint256 nonce)"
+        "Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,uint256 nonceSpace,uint256 nonce)"
     );
 
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -44,6 +44,12 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanTermsFactory, PWNHubAccessCont
     mapping (bytes32 => bool) public offersMade;
 
     /**
+     * @dev Mapping of credit used by an offer.
+     *      (offer hash => credit used)
+     */
+    mapping (bytes32 => uint256) private _creditUsed;
+
+    /**
      * @notice Construct defining a simple offer.
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
@@ -53,13 +59,13 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanTermsFactory, PWNHubAccessCont
      * @param collateralStateFingerprint Fingerprint of a collateral state. It is used to check if a collateral is in a valid state.
      * @param loanAssetAddress Address of an asset which is lender to a borrower.
      * @param loanAmount Amount of tokens which is offered as a loan to a borrower.
+     * @param availableCreditLimit Available credit limit for the offer. It is the maximum amount of tokens which can be borrowed using the offer.
      * @param fixedInterestAmount Fixed interest amount in loan asset tokens. It is the minimum amount of interest which has to be paid by a borrower.
      * @param accruingInterestAPR Accruing interest APR.
      * @param duration Loan duration in seconds.
      * @param expiration Offer expiration timestamp in seconds.
      * @param allowedBorrower Address of an allowed borrower. Only this address can accept an offer. If the address is zero address, anybody with a collateral can accept the offer.
      * @param lender Address of a lender. This address has to sign an offer to be valid.
-     * @param isPersistent If true, offer will not be revoked on acceptance. Persistent offer can be revoked manually.
      * @param nonceSpace Nonce space of an offer nonce. All nonces in the same space can be revoked at once.
      * @param nonce Additional value to enable identical offers in time. Without it, it would be impossible to make again offer, which was once revoked.
      *              Can be used to create a group of offers, where accepting one offer will make other offers in the group revoked.
@@ -73,13 +79,13 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanTermsFactory, PWNHubAccessCont
         bytes32 collateralStateFingerprint;
         address loanAssetAddress;
         uint256 loanAmount;
+        uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
         uint40 accruingInterestAPR;
         uint32 duration;
         uint40 expiration;
         address allowedBorrower;
         address lender;
-        bool isPersistent;
         uint256 nonceSpace;
         uint256 nonce;
     }
@@ -136,6 +142,24 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanTermsFactory, PWNHubAccessCont
 
         // Mark offer as made
         offersMade[offerHash] = true;
+    }
+
+    /**
+     * @notice Get available credit for an offer.
+     * @param offer Offer struct containing all needed offer data.
+     * @return Available credit for an offer.
+     */
+    function availableCredit(Offer calldata offer) external view returns (uint256) {
+        return offer.availableCreditLimit - _creditUsed[getOfferHash(offer)];
+    }
+
+    /**
+     * @notice Get credit used for an offer.
+     * @param offer Offer struct containing all needed offer data.
+     * @return Credit used for an offer.
+     */
+    function creditUsed(Offer calldata offer) external view returns (uint256) {
+        return _creditUsed[getOfferHash(offer)];
     }
 
     /**
@@ -211,6 +235,18 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanTermsFactory, PWNHubAccessCont
             }
         }
 
+        // Check that the available credit limit is not exceeded
+        if (offer.availableCreditLimit == 0) {
+            revokedOfferNonce.revokeNonce(lender, offer.nonceSpace, offer.nonce);
+        } else if (_creditUsed[offerHash] + offer.loanAmount <= offer.availableCreditLimit) {
+            _creditUsed[offerHash] += offer.loanAmount;
+        } else {
+            revert AvailableCreditLimitExceeded({
+                usedCredit: _creditUsed[offerHash] + offer.loanAmount,
+                availableCreditLimit: offer.availableCreditLimit
+            });
+        }
+
         // Create loan terms object
         loanTerms = PWNLOANTerms.Simple({
             lender: lender,
@@ -232,10 +268,6 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanTermsFactory, PWNHubAccessCont
             canRefinance: true,
             refinancingLoanId: 0
         });
-
-        // Revoke offer if not persistent
-        if (!offer.isPersistent)
-            revokedOfferNonce.revokeNonce(lender, offer.nonceSpace, offer.nonce);
     }
 
 

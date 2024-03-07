@@ -54,6 +54,7 @@ error InvalidCreateTerms();
 error InvalidRefinanceTerms();
 error InvalidRefinancingLoanId(uint256 refinancingLoanId);
 error AccruingInterestAPROutOfBounds(uint40 providedAPR, uint40 maxAPR);
+error AvailableCreditLimitExceeded(uint256 usedCredit, uint256 availableCreditLimit);
 
 // Input data
 error InvalidInputData();

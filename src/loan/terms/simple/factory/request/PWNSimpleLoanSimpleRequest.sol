@@ -28,7 +28,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanTermsFactory, PWNHubAccessCo
      * @dev EIP-712 simple request struct type hash.
      */
     bytes32 public constant REQUEST_TYPEHASH = keccak256(
-        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce)"
+        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce)"
     );
 
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -44,6 +44,12 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanTermsFactory, PWNHubAccessCo
     mapping (bytes32 => bool) public requestsMade;
 
     /**
+     * @dev Mapping of credit used by a request.
+     *      (request hash => credit used)
+     */
+    mapping (bytes32 => uint256) private _creditUsed;
+
+    /**
      * @notice Construct defining a simple request.
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
@@ -53,6 +59,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanTermsFactory, PWNHubAccessCo
      * @param collateralStateFingerprint Fingerprint of a collateral state defined by ERC5646.
      * @param loanAssetAddress Address of an asset which is lender to a borrower.
      * @param loanAmount Amount of tokens which is requested as a loan to a borrower.
+     * @param availableCreditLimit Available credit limit for the request. It is the maximum amount of tokens which can be borrowed using the request.
      * @param fixedInterestAmount Fixed interest amount in loan asset tokens. It is the minimum amount of interest which has to be paid by a borrower.
      * @param accruingInterestAPR Accruing interest APR.
      * @param duration Loan duration in seconds.
@@ -73,6 +80,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanTermsFactory, PWNHubAccessCo
         bytes32 collateralStateFingerprint;
         address loanAssetAddress;
         uint256 loanAmount;
+        uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
         uint40 accruingInterestAPR;
         uint32 duration;
@@ -136,6 +144,24 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanTermsFactory, PWNHubAccessCo
 
         // Mark request as made
         requestsMade[requestHash] = true;
+    }
+
+    /**
+     * @notice Get available credit for a request.
+     * @param request Request struct containing all needed request data.
+     * @return Available credit for a request.
+     */
+    function availableCredit(Request calldata request) external view returns (uint256) {
+        return request.availableCreditLimit - _creditUsed[getRequestHash(request)];
+    }
+
+    /**
+     * @notice Get credit used for a request.
+     * @param request Request struct containing all needed request data.
+     * @return Credit used for a request.
+     */
+    function creditUsed(Request calldata request) external view returns (uint256) {
+        return _creditUsed[getRequestHash(request)];
     }
 
     /**
@@ -211,6 +237,18 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanTermsFactory, PWNHubAccessCo
             }
         }
 
+        // Check that the available credit limit is not exceeded
+        if (request.availableCreditLimit == 0) {
+            revokedRequestNonce.revokeNonce(borrower, request.nonceSpace, request.nonce);
+        } else if (_creditUsed[requestHash] + request.loanAmount <= request.availableCreditLimit) {
+            _creditUsed[requestHash] += request.loanAmount;
+        } else {
+            revert AvailableCreditLimitExceeded({
+                usedCredit: _creditUsed[requestHash] + request.loanAmount,
+                availableCreditLimit: request.availableCreditLimit
+            });
+        }
+
         // Create loan terms object
         loanTerms = PWNLOANTerms.Simple({
             lender: lender,
@@ -232,8 +270,6 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanTermsFactory, PWNHubAccessCo
             canRefinance: request.refinancingLoanId != 0,
             refinancingLoanId: request.refinancingLoanId
         });
-
-        revokedRequestNonce.revokeNonce(borrower, request.nonceSpace, request.nonce);
     }
 
 
