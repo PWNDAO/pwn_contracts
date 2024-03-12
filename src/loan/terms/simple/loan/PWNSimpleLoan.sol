@@ -287,7 +287,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param collateralPermit Permit data for a collateral signed by a borrower.
      */
     function _settleNewLoan(
-        Terms memory loanTerms,
+        Terms calldata loanTerms,
         bytes calldata loanAssetPermit,
         bytes calldata collateralPermit
     ) private {
@@ -298,22 +298,24 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Permit loan asset spending if permit provided
         _permit(loanTerms.asset, loanTerms.lender, loanAssetPermit);
 
+        MultiToken.Asset memory loanAssetHelper = loanTerms.asset;
+
         // Collect fee if any and update loan asset amount
         (uint256 feeAmount, uint256 newLoanAmount)
             = PWNFeeCalculator.calculateFeeAmount(config.fee(), loanTerms.asset.amount);
         if (feeAmount > 0) {
             // Transfer fee amount to fee collector
-            loanTerms.asset.amount = feeAmount;
-            _pushFrom(loanTerms.asset, loanTerms.lender, config.feeCollector());
+            loanAssetHelper.amount = feeAmount;
+            _pushFrom(loanAssetHelper, loanTerms.lender, config.feeCollector());
 
             // Set new loan amount value
-            loanTerms.asset.amount = newLoanAmount;
+            loanAssetHelper.amount = newLoanAmount;
         }
 
         // Note: If the fee amount is greater than zero, the loan asset amount is already updated to the new loan amount.
 
         // Transfer loan asset to borrower
-        _pushFrom(loanTerms.asset, loanTerms.lender, loanTerms.borrower);
+        _pushFrom(loanAssetHelper, loanTerms.lender, loanTerms.borrower);
     }
 
 
@@ -377,7 +379,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loanId Original loan id.
      * @param loanTerms Refinancing loan terms struct.
      */
-    function _checkRefinanceLoanTerms(uint256 loanId, Terms memory loanTerms) private view {
+    function _checkRefinanceLoanTerms(uint256 loanId, Terms calldata loanTerms) private view {
         LOAN storage loan = LOANs[loanId];
 
         // Check that the loan asset is the same as in the original loan
@@ -418,7 +420,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     function _refinanceOriginalLoan(
         uint256 loanId,
-        Terms memory loanTerms,
+        Terms calldata loanTerms,
         bytes calldata lenderLoanAssetPermit,
         bytes calldata borrowerLoanAssetPermit
     ) private {
@@ -454,27 +456,24 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bool repayLoanDirectly,
         address loanOwner,
         uint256 repaymentAmount,
-        Terms memory loanTerms,
+        Terms calldata loanTerms,
         bytes calldata lenderPermit,
         bytes calldata borrowerPermit
     ) private {
-        MultiToken.Asset memory loanAssetHelper = MultiToken.ERC20(loanTerms.asset.assetAddress, 0);
+        MultiToken.Asset memory loanAssetHelper = loanTerms.asset;
 
         // Compute fee size
         (uint256 feeAmount, uint256 newLoanAmount)
             = PWNFeeCalculator.calculateFeeAmount(config.fee(), loanTerms.asset.amount);
 
-        // Set new loan amount value
-        loanTerms.asset.amount = newLoanAmount;
-
-        // Note: At this point `loanTerms` struct has loan asset amount deducted by the fee amount.
-
         // Permit lenders loan asset spending if permit provided
-        loanAssetHelper.amount = loanTerms.asset.amount + feeAmount; // Permit the whole loan amount + fee
         loanAssetHelper.amount -= loanTerms.lender == loanOwner // Permit only the surplus transfer + fee
-            ? Math.min(repaymentAmount, loanTerms.asset.amount) : 0;
-        if (loanAssetHelper.amount > 0)
+            ? Math.min(repaymentAmount, newLoanAmount)
+            : 0;
+
+        if (loanAssetHelper.amount > 0) {
             _permit(loanAssetHelper, loanTerms.lender, lenderPermit);
+        }
 
         // Collect fees
         if (feeAmount > 0) {
@@ -485,7 +484,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // If the new lender is the LOAN token owner, don't execute the transfer at all,
         // it would make transfer from the same address to the same address
         if (loanTerms.lender != loanOwner) {
-            loanAssetHelper.amount = Math.min(repaymentAmount, loanTerms.asset.amount);
+            loanAssetHelper.amount = Math.min(repaymentAmount, newLoanAmount);
             _transferLoanRepayment({
                 repayLoanDirectly: repayLoanDirectly,
                 asset: loanAssetHelper,
@@ -494,16 +493,16 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             });
         }
 
-        if (loanTerms.asset.amount >= repaymentAmount) {
+        if (newLoanAmount >= repaymentAmount) {
             // New loan covers the whole original loan, transfer surplus to the borrower if any
-            uint256 surplus = loanTerms.asset.amount - repaymentAmount;
+            uint256 surplus = newLoanAmount - repaymentAmount;
             if (surplus > 0) {
                 loanAssetHelper.amount = surplus;
                 _pushFrom(loanAssetHelper, loanTerms.lender, loanTerms.borrower);
             }
         } else {
             // Permit borrowers loan asset spending if permit provided
-            loanAssetHelper.amount = repaymentAmount - loanTerms.asset.amount;
+            loanAssetHelper.amount = repaymentAmount - newLoanAmount;
             _permit(loanAssetHelper, loanTerms.borrower, borrowerPermit);
 
             // New loan covers only part of the original loan, borrower needs to contribute
@@ -959,7 +958,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param asset Asset to be checked.
      * @return True if the asset is valid.
      */
-    function isValidAsset(MultiToken.Asset memory asset) public view returns (bool) {
+    function isValidAsset(MultiToken.Asset calldata asset) public view returns (bool) {
         return MultiToken.isValid(asset, categoryRegistry);
     }
 
@@ -968,7 +967,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @dev The function will revert if the asset is not valid.
      * @param asset Asset to be checked.
      */
-    function _checkValidAsset(MultiToken.Asset memory asset) private view {
+    function _checkValidAsset(MultiToken.Asset calldata asset) private view {
         if (!isValidAsset(asset)) {
             revert InvalidMultiTokenAsset({
                 category: uint8(asset.category),
