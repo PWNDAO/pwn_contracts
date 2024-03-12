@@ -3,37 +3,41 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "MultiToken/MultiToken.sol";
+import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/loan/terms/simple/factory/offer/PWNSimpleLoanSimpleOffer.sol";
-import "@pwn/loan/terms/PWNLOANTerms.sol";
+import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
+import { PWNSimpleLoanSimpleOffer, PWNSimpleLoan }
+    from "@pwn/loan/terms/simple/proposal/offer/PWNSimpleLoanSimpleOffer.sol";
 import "@pwn/PWNErrors.sol";
 
 
 abstract contract PWNSimpleLoanSimpleOfferTest is Test {
 
-    bytes32 internal constant OFFERS_MADE_SLOT = bytes32(uint256(0)); // `offersMade` mapping position
-    bytes32 internal constant CREDIT_USED_SLOT = bytes32(uint256(1)); // `_creditUsed` mapping position
+    bytes32 internal constant PROPOSALS_MADE_SLOT = bytes32(uint256(0)); // `proposalsMade` mapping position
+    bytes32 internal constant CREDIT_USED_SLOT = bytes32(uint256(1)); // `creditUsed` mapping position
 
     PWNSimpleLoanSimpleOffer offerContract;
-    address hub = address(0x80b);
-    address revokedOfferNonce = address(0x80c);
+    address hub = makeAddr("hub");
+    address revokedNonce = makeAddr("revokedNonce");
     address stateFingerprintComputerRegistry = makeAddr("stateFingerprintComputerRegistry");
-    address activeLoanContract = address(0x80d);
+    address activeLoanContract = makeAddr("activeLoanContract");
     PWNSimpleLoanSimpleOffer.Offer offer;
-    address token = address(0x070ce2);
-    uint256 lenderPK = uint256(73661723);
+    address token = makeAddr("token");
+    uint256 lenderPK = 73661723;
     address lender = vm.addr(lenderPK);
+    address borrower = makeAddr("borrower");
+    address stateFingerprintComputer = makeAddr("stateFingerprintComputer");
+    uint256 loanId = 421;
+    uint256 refinancedLoanId = 123;
 
-    event OfferMade(bytes32 indexed offerHash, address indexed lender, PWNSimpleLoanSimpleOffer.Offer offer);
+    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, bytes proposal);
 
     function setUp() virtual public {
         vm.etch(hub, bytes("data"));
-        vm.etch(revokedOfferNonce, bytes("data"));
+        vm.etch(revokedNonce, bytes("data"));
         vm.etch(token, bytes("data"));
 
-        offerContract = new PWNSimpleLoanSimpleOffer(hub, revokedOfferNonce, stateFingerprintComputerRegistry);
+        offerContract = new PWNSimpleLoanSimpleOffer(hub, revokedNonce, stateFingerprintComputerRegistry);
 
         offer = PWNSimpleLoanSimpleOffer.Offer({
             collateralCategory: MultiToken.Category.ERC721,
@@ -51,139 +55,19 @@ abstract contract PWNSimpleLoanSimpleOfferTest is Test {
             expiration: 60303,
             allowedBorrower: address(0),
             lender: lender,
+            refinancingLoanId: 0,
             nonceSpace: 1,
-            nonce: uint256(keccak256("nonce_1"))
+            nonce: uint256(keccak256("nonce_1")),
+            loanContract: activeLoanContract
         });
 
         vm.mockCall(
-            revokedOfferNonce,
+            revokedNonce,
             abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)"),
             abi.encode(true)
         );
-    }
 
-
-    function _offerHash(PWNSimpleLoanSimpleOffer.Offer memory _offer) internal view returns (bytes32) {
-        return keccak256(abi.encodePacked(
-            "\x19\x01",
-            keccak256(abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("PWNSimpleLoanSimpleOffer"),
-                keccak256("1.2"),
-                block.chainid,
-                address(offerContract)
-            )),
-            keccak256(abi.encodePacked(
-                keccak256("Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,uint256 nonceSpace,uint256 nonce)"),
-                abi.encode(_offer)
-            ))
-        ));
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # MAKE OFFER                                            *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanSimpleOfferTest {
-
-    function testFuzz_shouldFail_whenCallerIsNotLender(address caller) external {
-        vm.assume(caller != offer.lender);
-
-        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedLender.selector, lender));
-        offerContract.makeOffer(offer);
-    }
-
-    function test_shouldEmit_OfferMade() external {
-        vm.expectEmit();
-        emit OfferMade(_offerHash(offer), offer.lender, offer);
-
-        vm.prank(offer.lender);
-        offerContract.makeOffer(offer);
-    }
-
-    function test_shouldMakeOffer() external {
-        vm.prank(offer.lender);
-        offerContract.makeOffer(offer);
-
-        assertTrue(offerContract.offersMade(_offerHash(offer)));
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # AVAILABLE CREDIT                                      *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanSimpleOffer_AvailableCredit_Test is PWNSimpleLoanSimpleOfferTest {
-
-    function testFuzz_shouldReturnAvailableCredit(uint256 used, uint256 limit) external {
-        limit = bound(limit, used, type(uint256).max);
-        offer.availableCreditLimit = limit;
-
-        vm.store(address(offerContract), keccak256(abi.encode(_offerHash(offer), CREDIT_USED_SLOT)), bytes32(used));
-
-        assertEq(offerContract.availableCredit(offer), limit - used);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # CREDIT USED                                           *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanSimpleOffer_CreditUsed_Test is PWNSimpleLoanSimpleOfferTest {
-
-    function testFuzz_shouldReturnUsedCredit(uint256 used) external {
-        vm.store(address(offerContract), keccak256(abi.encode(_offerHash(offer), CREDIT_USED_SLOT)), bytes32(used));
-
-        assertEq(offerContract.creditUsed(offer), used);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # REVOKE OFFER NONCE                                    *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanSimpleOffer_RevokeOfferNonce_Test is PWNSimpleLoanSimpleOfferTest {
-
-    function testFuzz_shouldCallRevokeOfferNonce(uint256 nonceSpace, uint256 nonce) external {
-        vm.expectCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("revokeNonce(address,uint256,uint256)", lender, nonceSpace, nonce)
-        );
-
-        vm.prank(lender);
-        offerContract.revokeOfferNonce(nonceSpace, nonce);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # CREATE LOAN TERMS                                     *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanSimpleOffer_CreateLOANTerms_Test is PWNSimpleLoanSimpleOfferTest {
-
-    bytes signature;
-    address borrower = makeAddr("borrower");
-    address stateFingerprintComputer = makeAddr("stateFingerprintComputer");
-
-    function setUp() override public {
-        super.setUp();
-
-        vm.mockCall(
-            address(hub),
-            abi.encodeWithSignature("hasTag(address,bytes32)"),
-            abi.encode(false)
-        );
+        vm.mockCall(address(hub), abi.encodeWithSignature("hasTag(address,bytes32)"), abi.encode(false));
         vm.mockCall(
             address(hub),
             abi.encodeWithSignature("hasTag(address,bytes32)", activeLoanContract, PWNHubTags.ACTIVE_LOAN),
@@ -200,282 +84,60 @@ contract PWNSimpleLoanSimpleOffer_CreateLOANTerms_Test is PWNSimpleLoanSimpleOff
             abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId),
             abi.encode(offer.collateralStateFingerprint)
         );
+
+        vm.mockCall(
+            activeLoanContract, abi.encodeWithSelector(PWNSimpleLoan.createLOAN.selector), abi.encode(loanId)
+        );
+        vm.mockCall(
+            activeLoanContract, abi.encodeWithSelector(PWNSimpleLoan.refinanceLOAN.selector), abi.encode(refinancedLoanId)
+        );
     }
 
-    // Helpers
 
-    function _signOffer(uint256 pk, PWNSimpleLoanSimpleOffer.Offer memory _offer) private view returns (bytes memory) {
+    function _offerHash(PWNSimpleLoanSimpleOffer.Offer memory _offer) internal view returns (bytes32) {
+        return keccak256(abi.encodePacked(
+            "\x19\x01",
+            keccak256(abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("PWNSimpleLoanSimpleOffer"),
+                keccak256("1.2"),
+                block.chainid,
+                address(offerContract)
+            )),
+            keccak256(abi.encodePacked(
+                keccak256("Offer(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
+                abi.encode(_offer)
+            ))
+        ));
+    }
+
+    function _signOffer(
+        uint256 pk, PWNSimpleLoanSimpleOffer.Offer memory _offer
+    ) internal view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _offerHash(_offer));
         return abi.encodePacked(r, s, v);
     }
 
-    function _signOfferCompact(uint256 pk, PWNSimpleLoanSimpleOffer.Offer memory _offer) private view returns (bytes memory) {
+    function _signOfferCompact(
+        uint256 pk, PWNSimpleLoanSimpleOffer.Offer memory _offer
+    ) internal view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _offerHash(_offer));
         return abi.encodePacked(r, bytes32(uint256(v) - 27) << 255 | s);
     }
 
+}
 
-    // Tests
 
-    function test_shouldFail_whenCallerIsNotActiveLoan() external {
-        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.ACTIVE_LOAN));
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
+/*----------------------------------------------------------*|
+|*  # CREDIT USED                                           *|
+|*----------------------------------------------------------*/
 
-    function test_shouldFail_whenPassingInvalidOfferData() external {
-        vm.expectRevert();
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(uint16(1), uint256(3213), address(0x01320), false, "whaaaaat?"), signature);
-    }
+contract PWNSimpleLoanSimpleOffer_CreditUsed_Test is PWNSimpleLoanSimpleOfferTest {
 
-    function test_shouldFail_whenInvalidSignature_whenEOA() external {
-        signature = _signOffer(1, offer);
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldFail_whenInvalidSignature_whenContractAccount() external {
-        vm.etch(lender, bytes("data"));
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldPass_whenOfferHasBeenMadeOnchain() external {
-        vm.store(
-            address(offerContract),
-            keccak256(abi.encode(_offerHash(offer), OFFERS_MADE_SLOT)),
-            bytes32(uint256(1))
-        );
-
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldPass_withValidSignature_whenEOA_whenStandardSignature() external {
-        signature = _signOffer(lenderPK, offer);
-
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldPass_withValidSignature_whenEOA_whenCompactEIP2098Signature() external {
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldPass_whenValidSignature_whenContractAccount() external {
-        vm.etch(lender, bytes("data"));
-
-        vm.mockCall(
-            lender,
-            abi.encodeWithSignature("isValidSignature(bytes32,bytes)"),
-            abi.encode(bytes4(0x1626ba7e))
-        );
-
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldFail_whenOfferIsExpired() external {
-        vm.warp(40303);
-        offer.expiration = 30303;
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.expectRevert(abi.encodeWithSelector(OfferExpired.selector));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldPass_whenOfferIsNotExpired() external {
-        vm.warp(40303);
-        offer.expiration = 50303;
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldFail_whenOfferNonceNotUsable() external {
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.mockCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)"),
-            abi.encode(false)
-        );
-        vm.expectCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", offer.lender, offer.nonceSpace, offer.nonce)
-        );
-
-        vm.expectRevert(abi.encodeWithSelector(NonceNotUsable.selector));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldFail_whenCallerIsNotAllowedBorrower() external {
-        offer.allowedBorrower = address(0x50303);
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedBorrower.selector, offer.allowedBorrower));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function testFuzz_shouldFail_whenLessThanMinDuration(uint32 duration) external {
-        vm.assume(duration < offerContract.MIN_LOAN_DURATION());
-
-        offer.duration = duration;
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidDuration.selector));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function testFuzz_shouldFail_whenAccruingInterestAPROutOfBounds(uint40 interestAPR) external {
-        uint40 maxInterest = offerContract.MAX_ACCRUING_INTEREST_APR();
-        interestAPR = uint40(bound(interestAPR, maxInterest + 1, type(uint40).max));
-
-        offer.accruingInterestAPR = interestAPR;
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.expectRevert(abi.encodeWithSelector(AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldNotCallComputerRegistry_whenShouldNotCheckStateFingerprint() external {
-        offer.checkCollateralStateFingerprint = false;
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.expectCall({
-            callee: stateFingerprintComputerRegistry,
-            data: abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress),
-            count: 0
-        });
-
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldFail_whenComputerRegistryReturnsZeroAddress_whenShouldCheckStateFingerprint() external {
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.mockCall(
-            stateFingerprintComputerRegistry,
-            abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress),
-            abi.encode(address(0))
-        );
-
-        vm.expectCall(
-            stateFingerprintComputerRegistry,
-            abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress)
-        );
-
-        vm.expectRevert(abi.encodeWithSelector(MissingStateFingerprintComputer.selector));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function testFuzz_shouldFail_whenComputerReturnsDifferentStateFingerprint_whenShouldCheckStateFingerprint(
-        bytes32 stateFingerprint
-    ) external {
-        vm.assume(stateFingerprint != offer.collateralStateFingerprint);
-
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.mockCall(
-            stateFingerprintComputer,
-            abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId),
-            abi.encode(stateFingerprint)
-        );
-
-        vm.expectCall(
-            stateFingerprintComputer,
-            abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId)
-        );
-
-        vm.expectRevert(abi.encodeWithSelector(
-            InvalidCollateralStateFingerprint.selector, offer.collateralStateFingerprint, stateFingerprint
-        ));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function test_shouldRevokeOffer_whenAvailableCreditLimitEqualToZero() external {
-        offer.availableCreditLimit = 0;
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.expectCall(
-            revokedOfferNonce,
-            abi.encodeWithSignature("revokeNonce(address,uint256,uint256)", offer.lender, offer.nonceSpace, offer.nonce)
-        );
-
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function testFuzz_shouldFail_whenUsedCreditExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - offer.loanAmount);
-        limit = bound(limit, used, used + offer.loanAmount - 1);
-        offer.availableCreditLimit = limit;
-        signature = _signOfferCompact(lenderPK, offer);
-
+    function testFuzz_shouldReturnUsedCredit(uint256 used) external {
         vm.store(address(offerContract), keccak256(abi.encode(_offerHash(offer), CREDIT_USED_SLOT)), bytes32(used));
 
-        vm.expectRevert(abi.encodeWithSelector(AvailableCreditLimitExceeded.selector, used + offer.loanAmount, limit));
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-    }
-
-    function testFuzz_shouldIncreaseUsedCredit_whenUsedCreditNotExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - offer.loanAmount);
-        limit = bound(limit, used + offer.loanAmount, type(uint256).max);
-        offer.availableCreditLimit = limit;
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.store(address(offerContract), keccak256(abi.encode(_offerHash(offer), CREDIT_USED_SLOT)), bytes32(used));
-
-        vm.prank(activeLoanContract);
-        offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-
-        assertEq(offerContract.creditUsed(offer), used + offer.loanAmount);
-    }
-
-    function test_shouldReturnCorrectValues() external {
-        uint256 currentTimestamp = 40303;
-        vm.warp(currentTimestamp);
-        signature = _signOfferCompact(lenderPK, offer);
-
-        vm.prank(activeLoanContract);
-        (PWNLOANTerms.Simple memory loanTerms, bytes32 offerHash)
-            = offerContract.createLOANTerms(borrower, abi.encode(offer), signature);
-
-        assertTrue(loanTerms.lender == offer.lender);
-        assertTrue(loanTerms.borrower == borrower);
-        assertTrue(loanTerms.defaultTimestamp == currentTimestamp + offer.duration);
-        assertTrue(loanTerms.collateral.category == offer.collateralCategory);
-        assertTrue(loanTerms.collateral.assetAddress == offer.collateralAddress);
-        assertTrue(loanTerms.collateral.id == offer.collateralId);
-        assertTrue(loanTerms.collateral.amount == offer.collateralAmount);
-        assertTrue(loanTerms.asset.category == MultiToken.Category.ERC20);
-        assertTrue(loanTerms.asset.assetAddress == offer.loanAssetAddress);
-        assertTrue(loanTerms.asset.id == 0);
-        assertTrue(loanTerms.asset.amount == offer.loanAmount);
-        assertTrue(loanTerms.fixedInterestAmount == offer.fixedInterestAmount);
-        assertTrue(loanTerms.accruingInterestAPR == offer.accruingInterestAPR);
-        assertTrue(loanTerms.canCreate == true);
-        assertTrue(loanTerms.canRefinance == true);
-        assertTrue(loanTerms.refinancingLoanId == 0);
-
-        assertTrue(offerHash == _offerHash(offer));
+        assertEq(offerContract.creditUsed(_offerHash(offer)), used);
     }
 
 }
@@ -495,13 +157,690 @@ contract PWNSimpleLoanSimpleOffer_GetOfferHash_Test is PWNSimpleLoanSimpleOfferT
 
 
 /*----------------------------------------------------------*|
-|*  # LOAN TERMS FACTORY DATA ENCODING                      *|
+|*  # MAKE OFFER                                            *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanSimpleOffer_EncodeLoanTermsFactoryData_Test is PWNSimpleLoanSimpleOfferTest {
+contract PWNSimpleLoanSimpleOffer_MakeOffer_Test is PWNSimpleLoanSimpleOfferTest {
 
-    function test_shouldReturnEncodedLoanTermsFactoryData() external {
-        assertEq(abi.encode(offer), offerContract.encodeLoanTermsFactoryData(offer));
+    function testFuzz_shouldFail_whenCallerIsNotLender(address caller) external {
+        vm.assume(caller != offer.lender);
+
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedProposer.selector, lender));
+        vm.prank(caller);
+        offerContract.makeOffer(offer);
+    }
+
+    function test_shouldEmit_OfferMade() external {
+        vm.expectEmit();
+        emit ProposalMade(_offerHash(offer), offer.lender, abi.encode(offer));
+
+        vm.prank(offer.lender);
+        offerContract.makeOffer(offer);
+    }
+
+    function test_shouldMakeOffer() external {
+        vm.prank(offer.lender);
+        offerContract.makeOffer(offer);
+
+        assertTrue(offerContract.proposalsMade(_offerHash(offer)));
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # REVOKE NONCE                                          *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanSimpleOffer_RevokeNonce_Test is PWNSimpleLoanSimpleOfferTest {
+
+    function testFuzz_shouldCallRevokeNonce(address caller, uint256 nonceSpace, uint256 nonce) external {
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature("revokeNonce(address,uint256,uint256)", caller, nonceSpace, nonce)
+        );
+
+        vm.prank(caller);
+        offerContract.revokeNonce(nonceSpace, nonce);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # ACCEPT OFFER                                          *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanSimpleOffer_AcceptOffer_Test is PWNSimpleLoanSimpleOfferTest {
+
+    function testFuzz_shouldFail_whenRefinancingLoanIdNotZero(uint256 refinancingLoanId) external {
+        vm.assume(refinancingLoanId != 0);
+        offer.refinancingLoanId = refinancingLoanId;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, refinancingLoanId));
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenLoanContractNotTagged_ACTIVE_LOAN(address loanContract) external {
+        vm.assume(loanContract != activeLoanContract);
+        offer.loanContract = loanContract;
+
+        vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, loanContract, PWNHubTags.ACTIVE_LOAN));
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldNotCallComputerRegistry_whenShouldNotCheckStateFingerprint() external {
+        offer.checkCollateralStateFingerprint = false;
+
+        vm.expectCall({
+            callee: stateFingerprintComputerRegistry,
+            data: abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress),
+            count: 0
+        });
+
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldFail_whenComputerRegistryReturnsZeroAddress_whenShouldCheckStateFingerprint() external {
+        vm.mockCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress),
+            abi.encode(address(0))
+        );
+
+        vm.expectCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(MissingStateFingerprintComputer.selector));
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenComputerReturnsDifferentStateFingerprint_whenShouldCheckStateFingerprint(
+        bytes32 stateFingerprint
+    ) external {
+        vm.assume(stateFingerprint != offer.collateralStateFingerprint);
+
+        vm.mockCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId),
+            abi.encode(stateFingerprint)
+        );
+
+        vm.expectCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(
+            InvalidCollateralStateFingerprint.selector, stateFingerprint, offer.collateralStateFingerprint
+        ));
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldFail_whenInvalidSignature_whenEOA() external {
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, offer.lender, _offerHash(offer)));
+        offerContract.acceptOffer(offer, _signOffer(1, offer), "", "");
+    }
+
+    function test_shouldFail_whenInvalidSignature_whenContractAccount() external {
+        vm.etch(lender, bytes("data"));
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, offer.lender, _offerHash(offer)));
+        offerContract.acceptOffer(offer, "", "", "");
+    }
+
+    function test_shouldPass_whenOfferHasBeenMadeOnchain() external {
+        vm.store(
+            address(offerContract),
+            keccak256(abi.encode(_offerHash(offer), PROPOSALS_MADE_SLOT)),
+            bytes32(uint256(1))
+        );
+
+        offerContract.acceptOffer(offer, "", "", "");
+    }
+
+    function test_shouldPass_withValidSignature_whenEOA_whenStandardSignature() external {
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldPass_withValidSignature_whenEOA_whenCompactEIP2098Signature() external {
+        offerContract.acceptOffer(offer, _signOfferCompact(lenderPK, offer), "", "");
+    }
+
+    function test_shouldPass_whenValidSignature_whenContractAccount() external {
+        vm.etch(lender, bytes("data"));
+
+        vm.mockCall(
+            lender,
+            abi.encodeWithSignature("isValidSignature(bytes32,bytes)"),
+            abi.encode(bytes4(0x1626ba7e))
+        );
+
+        offerContract.acceptOffer(offer, "", "", "");
+    }
+
+    function testFuzz_shouldFail_whenOfferIsExpired(uint256 timestamp) external {
+        timestamp = bound(timestamp, offer.expiration, type(uint256).max);
+        vm.warp(timestamp);
+
+        vm.expectRevert(abi.encodeWithSelector(Expired.selector, timestamp, offer.expiration));
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldFail_whenOfferNonceNotUsable() external {
+        vm.mockCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)"),
+            abi.encode(false)
+        );
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", offer.lender, offer.nonceSpace, offer.nonce)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(
+            NonceNotUsable.selector, offer.lender, offer.nonceSpace, offer.nonce
+        ));
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenCallerIsNotAllowedBorrower(address caller) external {
+        address allowedBorrower = makeAddr("allowedBorrower");
+        vm.assume(caller != allowedBorrower);
+        offer.allowedBorrower = allowedBorrower;
+
+        vm.expectRevert(abi.encodeWithSelector(CallerNotAllowedAcceptor.selector, caller, offer.allowedBorrower));
+        vm.prank(caller);
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenLessThanMinDuration(uint256 duration) external {
+        vm.assume(duration < offerContract.MIN_LOAN_DURATION());
+        duration = bound(duration, 0, offerContract.MIN_LOAN_DURATION() - 1);
+        offer.duration = uint32(duration);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidDuration.selector, duration, offerContract.MIN_LOAN_DURATION()));
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenAccruingInterestAPROutOfBounds(uint256 interestAPR) external {
+        uint256 maxInterest = offerContract.MAX_ACCRUING_INTEREST_APR();
+        interestAPR = bound(interestAPR, maxInterest + 1, type(uint40).max);
+        offer.accruingInterestAPR = uint40(interestAPR);
+
+        vm.expectRevert(abi.encodeWithSelector(AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest));
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldRevokeOffer_whenAvailableCreditLimitEqualToZero() external {
+        offer.availableCreditLimit = 0;
+
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature(
+                "revokeNonce(address,uint256,uint256)", offer.lender, offer.nonceSpace, offer.nonce
+            )
+        );
+
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenUsedCreditExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
+        used = bound(used, 1, type(uint256).max - offer.loanAmount);
+        limit = bound(limit, used, used + offer.loanAmount - 1);
+        offer.availableCreditLimit = limit;
+
+        vm.store(address(offerContract), keccak256(abi.encode(_offerHash(offer), CREDIT_USED_SLOT)), bytes32(used));
+
+        vm.expectRevert(abi.encodeWithSelector(AvailableCreditLimitExceeded.selector, used + offer.loanAmount, limit));
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldIncreaseUsedCredit_whenUsedCreditNotExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
+        used = bound(used, 1, type(uint256).max - offer.loanAmount);
+        limit = bound(limit, used + offer.loanAmount, type(uint256).max);
+        offer.availableCreditLimit = limit;
+
+        vm.store(address(offerContract), keccak256(abi.encode(_offerHash(offer), CREDIT_USED_SLOT)), bytes32(used));
+
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", "");
+
+        assertEq(offerContract.creditUsed(_offerHash(offer)), used + offer.loanAmount);
+    }
+
+    function test_shouldCallLoanContractWithLoanTerms() external {
+        bytes memory loanAssetPermit = "loanAssetPermit";
+        bytes memory collateralPermit = "collateralPermit";
+
+        PWNSimpleLoan.Terms memory loanTerms = PWNSimpleLoan.Terms({
+            lender: offer.lender,
+            borrower: borrower,
+            duration: offer.duration,
+            collateral: MultiToken.Asset({
+                category: offer.collateralCategory,
+                assetAddress: offer.collateralAddress,
+                id: offer.collateralId,
+                amount: offer.collateralAmount
+            }),
+            asset: MultiToken.Asset({
+                category: MultiToken.Category.ERC20,
+                assetAddress: offer.loanAssetAddress,
+                id: 0,
+                amount: offer.loanAmount
+            }),
+            fixedInterestAmount: offer.fixedInterestAmount,
+            accruingInterestAPR: offer.accruingInterestAPR
+        });
+
+        vm.expectCall(
+            activeLoanContract,
+            abi.encodeWithSelector(
+                PWNSimpleLoan.createLOAN.selector,
+                _offerHash(offer), loanTerms, loanAssetPermit, collateralPermit
+            )
+        );
+
+        vm.prank(borrower);
+        offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), loanAssetPermit, collateralPermit);
+    }
+
+    function test_shouldReturnNewLoanId() external {
+        assertEq(
+            offerContract.acceptOffer(offer, _signOffer(lenderPK, offer), "", ""),
+            loanId
+        );
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # ACCEPT OFFER AND REVOKE CALLERS NONCE                 *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanSimpleOffer_AcceptOfferAndRevokeCallersNonce_Test is PWNSimpleLoanSimpleOfferTest {
+
+    function testFuzz_shouldFail_whenNonceIsNotUsable(address caller, uint256 nonceSpace, uint256 nonce) external {
+        vm.mockCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", caller, nonceSpace, nonce),
+            abi.encode(false)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(NonceNotUsable.selector, caller, nonceSpace, nonce));
+        vm.prank(caller);
+        offerContract.acceptOffer({
+            offer: offer,
+            signature: _signOffer(lenderPK, offer),
+            loanAssetPermit: "",
+            collateralPermit: "",
+            callersNonceSpace: nonceSpace,
+            callersNonceToRevoke: nonce
+        });
+    }
+
+    function testFuzz_shouldRevokeCallersNonce(address caller, uint256 nonceSpace, uint256 nonce) external {
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", caller, nonceSpace, nonce)
+        );
+
+        vm.prank(caller);
+        offerContract.acceptOffer({
+            offer: offer,
+            signature: _signOffer(lenderPK, offer),
+            loanAssetPermit: "",
+            collateralPermit: "",
+            callersNonceSpace: nonceSpace,
+            callersNonceToRevoke: nonce
+        });
+    }
+
+    // function is calling `acceptOffer`, no need to test it again
+    function test_shouldCallLoanContract() external {
+        uint256 newLoanId = offerContract.acceptOffer({
+            offer: offer,
+            signature: _signOffer(lenderPK, offer),
+            loanAssetPermit: "",
+            collateralPermit: "",
+            callersNonceSpace: 1,
+            callersNonceToRevoke: 2
+        });
+
+        assertEq(newLoanId, loanId);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # ACCEPT REFINANCE OFFER                                *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanSimpleOffer_AcceptRefinanceOffer_Test is PWNSimpleLoanSimpleOfferTest {
+
+    function testFuzz_shouldFail_whenRefinancingLoanIdIsNotEqualToLoanId_whenRefinanceingLoanIdNotZero(
+        uint256 _loanId, uint256 _refinancingLoanId
+    ) external {
+        vm.assume(_refinancingLoanId != 0);
+        vm.assume(_loanId != _refinancingLoanId);
+        offer.refinancingLoanId = _refinancingLoanId;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, offer.refinancingLoanId));
+        offerContract.acceptRefinanceOffer(_loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenLoanContractNotTagged_ACTIVE_LOAN(address loanContract) external {
+        vm.assume(loanContract != activeLoanContract);
+        offer.loanContract = loanContract;
+
+        vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, loanContract, PWNHubTags.ACTIVE_LOAN));
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldNotCallComputerRegistry_whenShouldNotCheckStateFingerprint() external {
+        offer.checkCollateralStateFingerprint = false;
+
+        vm.expectCall({
+            callee: stateFingerprintComputerRegistry,
+            data: abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress),
+            count: 0
+        });
+
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldFail_whenComputerRegistryReturnsZeroAddress_whenShouldCheckStateFingerprint() external {
+        vm.mockCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress),
+            abi.encode(address(0))
+        );
+
+        vm.expectCall(
+            stateFingerprintComputerRegistry,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", offer.collateralAddress)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(MissingStateFingerprintComputer.selector));
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenComputerReturnsDifferentStateFingerprint_whenShouldCheckStateFingerprint(
+        bytes32 stateFingerprint
+    ) external {
+        vm.assume(stateFingerprint != offer.collateralStateFingerprint);
+
+        vm.mockCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId),
+            abi.encode(stateFingerprint)
+        );
+
+        vm.expectCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("getStateFingerprint(uint256)", offer.collateralId)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(
+            InvalidCollateralStateFingerprint.selector, stateFingerprint, offer.collateralStateFingerprint
+        ));
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldFail_whenInvalidSignature_whenEOA() external {
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, offer.lender, _offerHash(offer)));
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(1, offer), "", "");
+    }
+
+    function test_shouldFail_whenInvalidSignature_whenContractAccount() external {
+        vm.etch(lender, bytes("data"));
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, offer.lender, _offerHash(offer)));
+        offerContract.acceptRefinanceOffer(loanId, offer, "", "", "");
+    }
+
+    function test_shouldPass_whenOfferHasBeenMadeOnchain() external {
+        vm.store(
+            address(offerContract),
+            keccak256(abi.encode(_offerHash(offer), PROPOSALS_MADE_SLOT)),
+            bytes32(uint256(1))
+        );
+
+        offerContract.acceptRefinanceOffer(loanId, offer, "", "", "");
+    }
+
+    function test_shouldPass_withValidSignature_whenEOA_whenStandardSignature() external {
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldPass_withValidSignature_whenEOA_whenCompactEIP2098Signature() external {
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOfferCompact(lenderPK, offer), "", "");
+    }
+
+    function test_shouldPass_whenValidSignature_whenContractAccount() external {
+        vm.etch(lender, bytes("data"));
+
+        vm.mockCall(
+            lender,
+            abi.encodeWithSignature("isValidSignature(bytes32,bytes)"),
+            abi.encode(bytes4(0x1626ba7e))
+        );
+
+        offerContract.acceptRefinanceOffer(loanId, offer, "", "", "");
+    }
+
+    function testFuzz_shouldFail_whenOfferIsExpired(uint256 timestamp) external {
+        timestamp = bound(timestamp, offer.expiration, type(uint256).max);
+        vm.warp(timestamp);
+
+        vm.expectRevert(abi.encodeWithSelector(Expired.selector, timestamp, offer.expiration));
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldFail_whenOfferNonceNotUsable() external {
+        vm.mockCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)"),
+            abi.encode(false)
+        );
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", offer.lender, offer.nonceSpace, offer.nonce)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(
+            NonceNotUsable.selector, offer.lender, offer.nonceSpace, offer.nonce
+        ));
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenCallerIsNotAllowedBorrower(address caller) external {
+        address allowedBorrower = makeAddr("allowedBorrower");
+        vm.assume(caller != allowedBorrower);
+        offer.allowedBorrower = allowedBorrower;
+
+        vm.expectRevert(abi.encodeWithSelector(CallerNotAllowedAcceptor.selector, caller, offer.allowedBorrower));
+        vm.prank(caller);
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenLessThanMinDuration(uint256 duration) external {
+        vm.assume(duration < offerContract.MIN_LOAN_DURATION());
+        duration = bound(duration, 0, offerContract.MIN_LOAN_DURATION() - 1);
+        offer.duration = uint32(duration);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidDuration.selector, duration, offerContract.MIN_LOAN_DURATION()));
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenAccruingInterestAPROutOfBounds(uint256 interestAPR) external {
+        uint256 maxInterest = offerContract.MAX_ACCRUING_INTEREST_APR();
+        interestAPR = bound(interestAPR, maxInterest + 1, type(uint40).max);
+        offer.accruingInterestAPR = uint40(interestAPR);
+
+        vm.expectRevert(abi.encodeWithSelector(AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest));
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function test_shouldRevokeOffer_whenAvailableCreditLimitEqualToZero() external {
+        offer.availableCreditLimit = 0;
+
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature(
+                "revokeNonce(address,uint256,uint256)", offer.lender, offer.nonceSpace, offer.nonce
+            )
+        );
+
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldFail_whenUsedCreditExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
+        used = bound(used, 1, type(uint256).max - offer.loanAmount);
+        limit = bound(limit, used, used + offer.loanAmount - 1);
+        offer.availableCreditLimit = limit;
+
+        vm.store(address(offerContract), keccak256(abi.encode(_offerHash(offer), CREDIT_USED_SLOT)), bytes32(used));
+
+        vm.expectRevert(abi.encodeWithSelector(AvailableCreditLimitExceeded.selector, used + offer.loanAmount, limit));
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+    }
+
+    function testFuzz_shouldIncreaseUsedCredit_whenUsedCreditNotExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
+        used = bound(used, 1, type(uint256).max - offer.loanAmount);
+        limit = bound(limit, used + offer.loanAmount, type(uint256).max);
+        offer.availableCreditLimit = limit;
+
+        vm.store(address(offerContract), keccak256(abi.encode(_offerHash(offer), CREDIT_USED_SLOT)), bytes32(used));
+
+        offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", "");
+
+        assertEq(offerContract.creditUsed(_offerHash(offer)), used + offer.loanAmount);
+    }
+
+    function test_shouldCallLoanContract() external {
+        bytes memory loanAssetPermit = "loanAssetPermit";
+        bytes memory collateralPermit = "collateralPermit";
+
+        PWNSimpleLoan.Terms memory loanTerms = PWNSimpleLoan.Terms({
+            lender: lender,
+            borrower: offer.lender,
+            duration: offer.duration,
+            collateral: MultiToken.Asset({
+                category: offer.collateralCategory,
+                assetAddress: offer.collateralAddress,
+                id: offer.collateralId,
+                amount: offer.collateralAmount
+            }),
+            asset: MultiToken.Asset({
+                category: MultiToken.Category.ERC20,
+                assetAddress: offer.loanAssetAddress,
+                id: 0,
+                amount: offer.loanAmount
+            }),
+            fixedInterestAmount: offer.fixedInterestAmount,
+            accruingInterestAPR: offer.accruingInterestAPR
+        });
+
+        vm.expectCall(
+            activeLoanContract,
+            abi.encodeWithSelector(
+                PWNSimpleLoan.refinanceLOAN.selector,
+                loanId, _offerHash(offer), loanTerms, loanAssetPermit, collateralPermit
+            )
+        );
+
+        vm.prank(lender);
+        offerContract.acceptRefinanceOffer(
+            loanId, offer, _signOffer(lenderPK, offer), loanAssetPermit, collateralPermit
+        );
+    }
+
+    function test_shouldReturnRefinancedLoanId() external {
+        assertEq(
+            offerContract.acceptRefinanceOffer(loanId, offer, _signOffer(lenderPK, offer), "", ""),
+            refinancedLoanId
+        );
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # ACCEPT REFINANCE OFFER AND REVOKE CALLERS NONCE       *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanSimpleOffer_AcceptRefinanceOfferAndRevokeCallersNonce_Test is PWNSimpleLoanSimpleOfferTest {
+
+    function testFuzz_shouldFail_whenNonceIsNotUsable(address caller, uint256 nonceSpace, uint256 nonce) external {
+        vm.mockCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", caller, nonceSpace, nonce),
+            abi.encode(false)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(NonceNotUsable.selector, caller, nonceSpace, nonce));
+        vm.prank(caller);
+        offerContract.acceptRefinanceOffer({
+            loanId: loanId,
+            offer: offer,
+            signature: _signOffer(lenderPK, offer),
+            lenderLoanAssetPermit: "",
+            borrowerLoanAssetPermit: "",
+            callersNonceSpace: nonceSpace,
+            callersNonceToRevoke: nonce
+        });
+    }
+
+    function testFuzz_shouldRevokeCallersNonce(address caller, uint256 nonceSpace, uint256 nonce) external {
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", caller, nonceSpace, nonce)
+        );
+
+        vm.prank(caller);
+        offerContract.acceptRefinanceOffer({
+            loanId: loanId,
+            offer: offer,
+            signature: _signOffer(lenderPK, offer),
+            lenderLoanAssetPermit: "",
+            borrowerLoanAssetPermit: "",
+            callersNonceSpace: nonceSpace,
+            callersNonceToRevoke: nonce
+        });
+    }
+
+    // function is calling `acceptRefinanceOffer`, no need to test it again
+    function test_shouldCallLoanContract() external {
+        uint256 newLoanId = offerContract.acceptRefinanceOffer({
+            loanId: loanId,
+            offer: offer,
+            signature: _signOffer(lenderPK, offer),
+            lenderLoanAssetPermit: "",
+            borrowerLoanAssetPermit: "",
+            callersNonceSpace: 1,
+            callersNonceToRevoke: 2
+        });
+
+        assertEq(newLoanId, refinancedLoanId);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # DECODE PROPOSAL                                       *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanSimpleOffer_DecodeProposal_Test is PWNSimpleLoanSimpleOfferTest {
+
+    function test_shouldReturnDecodedOfferData() external {
+        PWNSimpleLoanSimpleOffer.Offer memory decodedOffer = offerContract.decodeProposal(abi.encode(offer));
+
+        assertEq(_offerHash(decodedOffer), _offerHash(offer));
     }
 
 }

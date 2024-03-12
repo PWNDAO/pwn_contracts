@@ -11,8 +11,7 @@ import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNFeeCalculator } from "@pwn/loan/lib/PWNFeeCalculator.sol";
 import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
-import { PWNLOANTerms } from "@pwn/loan/terms/PWNLOANTerms.sol";
-import { PWNSimpleLoanTermsFactory } from "@pwn/loan/terms/simple/factory/PWNSimpleLoanTermsFactory.sol";
+import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 import { IERC5646 } from "@pwn/loan/token/IERC5646.sol";
 import { IPWNLoanMetadataProvider } from "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
 import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
@@ -60,6 +59,27 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     PWNConfig public immutable config;
     PWNRevokedNonce public immutable revokedNonce;
     IMultiTokenCategoryRegistry public immutable categoryRegistry;
+
+    /**
+     * @notice Struct defining a simple loan terms.
+     * @dev This struct is created by proposal contracts and never stored.
+     * @param lender Address of a lender.
+     * @param borrower Address of a borrower.
+     * @param duration Loan duration in seconds.
+     * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
+     * @param asset Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
+     * @param fixedInterestAmount Fixed interest amount in loan asset tokens. It is the minimum amount of interest which has to be paid by a borrower.
+     * @param accruingInterestAPR Accruing interest APR.
+     */
+    struct Terms {
+        address lender;
+        address borrower;
+        uint32 duration;
+        MultiToken.Asset collateral;
+        MultiToken.Asset asset;
+        uint256 fixedInterestAmount;
+        uint40 accruingInterestAPR;
+    }
 
     /**
      * @notice Struct defining a simple loan.
@@ -126,7 +146,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @dev Emitted when a new loan in created.
      */
-    event LOANCreated(uint256 indexed loanId, PWNLOANTerms.Simple terms, bytes32 indexed factoryDataHash, address indexed factoryAddress);
+    event LOANCreated(uint256 indexed loanId, Terms terms, bytes32 indexed proposalHash, address indexed proposalContract);
 
     /**
      * @dev Emitted when a loan is paid back.
@@ -178,126 +198,60 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Create a new loan by minting LOAN token for lender, transferring loan asset to a borrower and a collateral to a vault.
+     * @notice Create a new loan.
      * @dev The function assumes a prior token approval to a contract address or signed permits.
-     * @param loanTermsFactoryContract Address of a loan terms factory contract. Need to have `SIMPLE_LOAN_TERMS_FACTORY` tag in PWN Hub.
-     * @param loanTermsFactoryData Encoded data for a loan terms factory.
-     * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
+     * @param proposalHash Hash of a loan offer / request that is signed by a lender / borrower.
+     * @param loanTerms Loan terms struct.
      * @param loanAssetPermit Permit data for a loan asset signed by a lender.
      * @param collateralPermit Permit data for a collateral signed by a borrower.
-     * @return loanId Id of a newly minted LOAN token.
+     * @return loanId Id of the created LOAN token.
      */
     function createLOAN(
-        address loanTermsFactoryContract,
-        bytes calldata loanTermsFactoryData,
-        bytes calldata signature,
+        bytes32 proposalHash,
+        Terms calldata loanTerms,
         bytes calldata loanAssetPermit,
         bytes calldata collateralPermit
-    ) public returns (uint256 loanId) {
-        // Create loan terms or revert if factory contract is not tagged in PWN Hub
-        (PWNLOANTerms.Simple memory loanTerms, bytes32 factoryDataHash)
-            = _createLoanTerms(loanTermsFactoryContract, loanTermsFactoryData, signature);
+    ) external returns (uint256 loanId) {
+        // Check that caller is loan proposal contract
+        if (!hub.hasTag(msg.sender, PWNHubTags.LOAN_PROPOSAL)) {
+            revert CallerMissingHubTag(PWNHubTags.LOAN_PROPOSAL);
+        }
 
-        // Check loan terms validity, revert if not
-        _checkNewLoanTerms(loanTerms);
+        // Check loan terms
+        _checkLoanTerms(loanTerms);
 
         // Create a new loan
-        loanId = _createLoan(loanTerms, factoryDataHash, loanTermsFactoryContract);
+        loanId = _createLoan({
+            proposalHash: proposalHash,
+            proposalContract: msg.sender,
+            loanTerms: loanTerms
+        });
 
         // Transfer collateral to Vault and loan asset to borrower
         _settleNewLoan(loanTerms, loanAssetPermit, collateralPermit);
     }
 
     /**
-     * @notice Create a new loan by minting LOAN token for lender, transferring loan asset to a borrower and a collateral to a vault.
-               Revoke a nonce on behalf of the caller.
-     * @dev The function assumes a prior token approval to a contract address or signed permits.
-     * @param loanTermsFactoryContract Address of a loan terms factory contract. Need to have `SIMPLE_LOAN_TERMS_FACTORY` tag in PWN Hub.
-     * @param loanTermsFactoryData Encoded data for a loan terms factory.
-     * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
-     * @param loanAssetPermit Permit data for a loan asset signed by a lender.
-     * @param collateralPermit Permit data for a collateral signed by a borrower.
-     * @param callersNonceToRevoke Nonce to revoke on callers behalf.
-     * @return loanId Id of a newly minted LOAN token.
-     */
-    function createLOANAndRevokeNonce(
-        address loanTermsFactoryContract,
-        bytes calldata loanTermsFactoryData,
-        bytes calldata signature,
-        bytes calldata loanAssetPermit,
-        bytes calldata collateralPermit,
-        uint256 callersNonceSpace,
-        uint256 callersNonceToRevoke
-    ) external returns (uint256 loanId) {
-        if (!revokedNonce.isNonceUsable(msg.sender, callersNonceSpace, callersNonceToRevoke))
-            revert NonceNotUsable();
-
-        revokedNonce.revokeNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        loanId = createLOAN({
-            loanTermsFactoryContract: loanTermsFactoryContract,
-            loanTermsFactoryData: loanTermsFactoryData,
-            signature: signature,
-            loanAssetPermit: loanAssetPermit,
-            collateralPermit: collateralPermit
-        });
-    }
-
-    /**
-     * @notice Create a loan terms by a loan terms factory contract.
-     * @dev The function will revert if the loan terms factory contract is not tagged in PWN Hub.
-     * @param loanTermsFactoryContract Address of a loan terms factory contract. Need to have `SIMPLE_LOAN_TERMS_FACTORY` tag in PWN Hub.
-     * @param loanTermsFactoryData Encoded data for a loan terms factory.
-     * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
-     * @return loanTerms Loan terms struct.
-     * @return factoryDataHash Hash of the factory data.
-     */
-    function _createLoanTerms(
-        address loanTermsFactoryContract,
-        bytes calldata loanTermsFactoryData,
-        bytes calldata signature
-    ) private returns (PWNLOANTerms.Simple memory loanTerms, bytes32 factoryDataHash) {
-        // Check that loan terms factory contract is tagged in PWNHub
-        if (!hub.hasTag(loanTermsFactoryContract, PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY))
-            revert CallerMissingHubTag(PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY);
-
-        // Build PWNLOANTerms.Simple by loan factory
-        (loanTerms, factoryDataHash) = PWNSimpleLoanTermsFactory(loanTermsFactoryContract).createLOANTerms({
-            caller: msg.sender,
-            factoryData: loanTermsFactoryData,
-            signature: signature
-        });
-    }
-
-    /**
-     * @notice Check if the loan terms are valid for creating a new loan.
-     * @dev The function will revert if the loan terms are not valid for creating a new loan.
-     * @param loanTerms New loan terms struct.
-     */
-    function _checkNewLoanTerms(PWNLOANTerms.Simple memory loanTerms) private view {
-        // Check loan asset validity
-        if (!isValidAsset(loanTerms.asset))
-            revert InvalidLoanAsset();
-
-        // Check collateral validity
-        if (!isValidAsset(loanTerms.collateral))
-            revert InvalidCollateralAsset();
-
-        // Check that the terms can create a new loan
-        if (!loanTerms.canCreate)
-            revert InvalidCreateTerms();
-    }
-
-    /**
-     * @notice Store a new loan in the contract state, mints new LOAN token, and emit a `LOANCreated` event.
+     * @notice Check loan terms validity.
+     * @dev The function will revert if the loan terms are not valid.
      * @param loanTerms Loan terms struct.
-     * @param factoryDataHash Hash of the factory data.
-     * @param loanTermsFactoryContract Address of a loan terms factory contract.
-     * @return loanId Id of a newly minted LOAN token.
+     */
+    function _checkLoanTerms(Terms calldata loanTerms) private view {
+        // Check loan credit and collateral validity
+        _checkValidAsset(loanTerms.asset);
+        _checkValidAsset(loanTerms.collateral);
+    }
+
+    /**
+     * @notice Mint LOAN token and store loan data under loan id.
+     * @param proposalHash Hash of a loan offer / request that is signed by a lender / borrower.
+     * @param proposalContract Address of a loan proposal contract.
+     * @param loanTerms Loan terms struct.
      */
     function _createLoan(
-        PWNLOANTerms.Simple memory loanTerms,
-        bytes32 factoryDataHash,
-        address loanTermsFactoryContract
+        bytes32 proposalHash,
+        address proposalContract,
+        Terms calldata loanTerms
     ) private returns (uint256 loanId) {
         // Mint LOAN token for lender
         loanId = loanToken.mint(loanTerms.lender);
@@ -307,7 +261,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         loan.status = 2;
         loan.loanAssetAddress = loanTerms.asset.assetAddress;
         loan.startTimestamp = uint40(block.timestamp);
-        loan.defaultTimestamp = loanTerms.defaultTimestamp;
+        loan.defaultTimestamp = uint40(block.timestamp) + loanTerms.duration;
         loan.borrower = loanTerms.borrower;
         loan.originalLender = loanTerms.lender;
         loan.accruingInterestDailyRate = SafeCast.toUint40(Math.mulDiv(
@@ -320,8 +274,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         emit LOANCreated({
             loanId: loanId,
             terms: loanTerms,
-            factoryDataHash: factoryDataHash,
-            factoryAddress: loanTermsFactoryContract
+            proposalHash: proposalHash,
+            proposalContract: proposalContract
         });
     }
 
@@ -333,7 +287,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param collateralPermit Permit data for a collateral signed by a borrower.
      */
     function _settleNewLoan(
-        PWNLOANTerms.Simple memory loanTerms,
+        Terms memory loanTerms,
         bytes calldata loanAssetPermit,
         bytes calldata collateralPermit
     ) private {
@@ -356,6 +310,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             loanTerms.asset.amount = newLoanAmount;
         }
 
+        // Note: If the fee amount is greater than zero, the loan asset amount is already updated to the new loan amount.
+
         // Transfer loan asset to borrower
         _pushFrom(loanTerms.asset, loanTerms.lender, loanTerms.borrower);
     }
@@ -371,36 +327,38 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      the function will transfer only the surplus to the borrower, if any.
      *      If the new loan amount is not enough to cover the original loan, the borrower needs to contribute.
      *      The function assumes a prior token approval to a contract address or signed permits.
-     * @param loanId Id of a loan that is being refinanced.
-     * @param loanTermsFactoryContract Address of a loan terms factory contract. Need to have `SIMPLE_LOAN_TERMS_FACTORY` tag in PWN Hub.
-     * @param loanTermsFactoryData Encoded data for a loan terms factory.
-     * @param signature Signed loan factory data. Could be empty if an offer / request has been made via on-chain transaction.
+     * @param proposalHash Hash of a loan offer / request that is signed by a lender / borrower. Used to uniquely identify a loan offer / request.
+     * @param loanTerms Loan terms struct.
      * @param lenderLoanAssetPermit Permit data for a loan asset signed by a lender.
      * @param borrowerLoanAssetPermit Permit data for a loan asset signed by a borrower.
      * @return refinancedLoanId Id of the refinanced LOAN token.
      */
     function refinanceLOAN(
         uint256 loanId,
-        address loanTermsFactoryContract,
-        bytes calldata loanTermsFactoryData,
-        bytes calldata signature,
+        bytes32 proposalHash,
+        Terms calldata loanTerms,
         bytes calldata lenderLoanAssetPermit,
         bytes calldata borrowerLoanAssetPermit
     ) external returns (uint256 refinancedLoanId) {
+        // Check that caller is loan proposal contract
+        if (!hub.hasTag(msg.sender, PWNHubTags.LOAN_PROPOSAL)) {
+            revert CallerMissingHubTag(PWNHubTags.LOAN_PROPOSAL);
+        }
+
         LOAN storage loan = LOANs[loanId];
 
         // Check that the original loan can be repaid, revert if not
         _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
 
-        // Create loan terms or revert if factory contract is not tagged in PWN Hub
-        (PWNLOANTerms.Simple memory loanTerms, bytes32 factoryDataHash)
-            = _createLoanTerms(loanTermsFactoryContract, loanTermsFactoryData, signature);
-
-        // Check loan terms validity, revert if not
+        // Check refinance loan terms
         _checkRefinanceLoanTerms(loanId, loanTerms);
 
         // Create a new loan
-        refinancedLoanId = _createLoan(loanTerms, factoryDataHash, loanTermsFactoryContract);
+        refinancedLoanId = _createLoan({
+            proposalHash: proposalHash,
+            proposalContract: msg.sender,
+            loanTerms: loanTerms
+        });
 
         // Refinance the original loan
         _refinanceOriginalLoan(
@@ -419,7 +377,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loanId Original loan id.
      * @param loanTerms Refinancing loan terms struct.
      */
-    function _checkRefinanceLoanTerms(uint256 loanId, PWNLOANTerms.Simple memory loanTerms) private view {
+    function _checkRefinanceLoanTerms(uint256 loanId, Terms memory loanTerms) private view {
         LOAN storage loan = LOANs[loanId];
 
         // Check that the loan asset is the same as in the original loan
@@ -428,7 +386,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         if (
             loan.loanAssetAddress != loanTerms.asset.assetAddress ||
             loanTerms.asset.amount == 0
-        ) revert InvalidLoanAsset();
+        ) revert RefinanceCreditMismatch();
 
         // Check that the collateral is identical to the original one
         if (
@@ -436,21 +394,15 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             loan.collateral.assetAddress != loanTerms.collateral.assetAddress ||
             loan.collateral.id != loanTerms.collateral.id ||
             loan.collateral.amount != loanTerms.collateral.amount
-        ) revert InvalidCollateralAsset();
+        ) revert RefinanceCollateralMismatch();
 
         // Check that the borrower is the same as in the original loan
         if (loan.borrower != loanTerms.borrower) {
-            revert BorrowerMismatch({
+            revert RefinanceBorrowerMismatch({
                 currentBorrower: loan.borrower,
                 newBorrower: loanTerms.borrower
             });
         }
-
-        // Check that the terms can refinance a loan
-        if (!loanTerms.canRefinance)
-            revert InvalidRefinanceTerms();
-        if (loanTerms.refinancingLoanId != 0 && loanTerms.refinancingLoanId != loanId)
-            revert InvalidRefinancingLoanId({ refinancingLoanId: loanTerms.refinancingLoanId });
     }
 
     /**
@@ -466,7 +418,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     function _refinanceOriginalLoan(
         uint256 loanId,
-        PWNLOANTerms.Simple memory loanTerms,
+        Terms memory loanTerms,
         bytes calldata lenderLoanAssetPermit,
         bytes calldata borrowerLoanAssetPermit
     ) private {
@@ -502,7 +454,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bool repayLoanDirectly,
         address loanOwner,
         uint256 repaymentAmount,
-        PWNLOANTerms.Simple memory loanTerms,
+        Terms memory loanTerms,
         bytes calldata lenderPermit,
         bytes calldata borrowerPermit
     ) private {
@@ -859,11 +811,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bytes32 extensionHash = getExtensionHash(extension);
         if (!extensionOffersMade[extensionHash])
             if (!PWNSignatureChecker.isValidSignatureNow(extension.proposer, extensionHash, signature))
-                revert InvalidSignature();
+                revert InvalidSignature({ signer: extension.proposer, digest: extensionHash });
         if (block.timestamp >= extension.expiration)
-            revert OfferExpired();
+            revert Expired({ current: block.timestamp, expiration: extension.expiration });
         if (!revokedNonce.isNonceUsable(extension.proposer, extension.nonceSpace, extension.nonce))
-            revert NonceNotUsable();
+            revert NonceNotUsable({ addr: extension.proposer, nonceSpace: extension.nonceSpace, nonce: extension.nonce });
 
         // Check caller and signer
         address loanOwner = loanToken.ownerOf(extension.loanId);
@@ -1009,6 +961,22 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     function isValidAsset(MultiToken.Asset memory asset) public view returns (bool) {
         return MultiToken.isValid(asset, categoryRegistry);
+    }
+
+    /**
+     * @notice Check if the asset is valid with the MultiToken lib and the category registry.
+     * @dev The function will revert if the asset is not valid.
+     * @param asset Asset to be checked.
+     */
+    function _checkValidAsset(MultiToken.Asset memory asset) private view {
+        if (!isValidAsset(asset)) {
+            revert InvalidMultiTokenAsset({
+                category: uint8(asset.category),
+                addr: asset.assetAddress,
+                id: asset.id,
+                amount: asset.amount
+            });
+        }
     }
 
 

@@ -63,11 +63,11 @@ abstract contract DeploymentTest is Deployments, Test {
         bytes32[] memory tags = new bytes32[](8);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
         tags[1] = PWNHubTags.NONCE_MANAGER;
-        tags[2] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[2] = PWNHubTags.LOAN_PROPOSAL;
         tags[3] = PWNHubTags.NONCE_MANAGER;
-        tags[4] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[4] = PWNHubTags.LOAN_PROPOSAL;
         tags[5] = PWNHubTags.NONCE_MANAGER;
-        tags[6] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[6] = PWNHubTags.LOAN_PROPOSAL;
         tags[7] = PWNHubTags.NONCE_MANAGER;
 
         vm.prank(protocolSafe);

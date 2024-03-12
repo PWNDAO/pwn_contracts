@@ -13,9 +13,9 @@ import { IPWNDeployer } from "@pwn/deployer/IPWNDeployer.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanListOffer } from "@pwn/loan/terms/simple/factory/offer/PWNSimpleLoanListOffer.sol";
-import { PWNSimpleLoanSimpleOffer } from "@pwn/loan/terms/simple/factory/offer/PWNSimpleLoanSimpleOffer.sol";
-import { PWNSimpleLoanSimpleRequest } from "@pwn/loan/terms/simple/factory/request/PWNSimpleLoanSimpleRequest.sol";
+import { PWNSimpleLoanListOffer } from "@pwn/loan/terms/simple/proposal/offer/PWNSimpleLoanListOffer.sol";
+import { PWNSimpleLoanSimpleOffer } from "@pwn/loan/terms/simple/proposal/offer/PWNSimpleLoanSimpleOffer.sol";
+import { PWNSimpleLoanSimpleRequest } from "@pwn/loan/terms/simple/proposal/request/PWNSimpleLoanSimpleRequest.sol";
 import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import { Deployments } from "@pwn/Deployments.sol";
@@ -296,11 +296,11 @@ forge script script/PWN.s.sol:Setup \
         bytes32[] memory tags = new bytes32[](8);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
         tags[1] = PWNHubTags.NONCE_MANAGER;
-        tags[2] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[2] = PWNHubTags.LOAN_PROPOSAL;
         tags[3] = PWNHubTags.NONCE_MANAGER;
-        tags[4] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[4] = PWNHubTags.LOAN_PROPOSAL;
         tags[5] = PWNHubTags.NONCE_MANAGER;
-        tags[6] = PWNHubTags.SIMPLE_LOAN_TERMS_FACTORY;
+        tags[6] = PWNHubTags.LOAN_PROPOSAL;
         tags[7] = PWNHubTags.NONCE_MANAGER;
 
         bool success = GnosisSafeLike(protocolSafe).execTransaction({
