@@ -46,8 +46,8 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
             collateralAmount: 1032,
             checkCollateralStateFingerprint: true,
             collateralStateFingerprint: keccak256("some state fingerprint"),
-            loanAssetAddress: token,
-            loanAmount: 1101001,
+            creditAddress: token,
+            creditAmount: 1101001,
             availableCreditLimit: 0,
             fixedInterestAmount: 1,
             accruingInterestAPR: 0,
@@ -105,7 +105,7 @@ abstract contract PWNSimpleLoanSimpleRequestTest is Test {
                 address(requestContract)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
+                keccak256("Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
                 abi.encode(_request)
             ))
         ));
@@ -388,30 +388,30 @@ contract PWNSimpleLoanSimpleRequest_AcceptRequest_Test is PWNSimpleLoanSimpleReq
     }
 
     function testFuzz_shouldFail_whenUsedCreditExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - request.loanAmount);
-        limit = bound(limit, used, used + request.loanAmount - 1);
+        used = bound(used, 1, type(uint256).max - request.creditAmount);
+        limit = bound(limit, used, used + request.creditAmount - 1);
         request.availableCreditLimit = limit;
 
         vm.store(address(requestContract), keccak256(abi.encode(_requestHash(request), CREDIT_USED_SLOT)), bytes32(used));
 
-        vm.expectRevert(abi.encodeWithSelector(AvailableCreditLimitExceeded.selector, used + request.loanAmount, limit));
+        vm.expectRevert(abi.encodeWithSelector(AvailableCreditLimitExceeded.selector, used + request.creditAmount, limit));
         requestContract.acceptRequest(request, _signRequest(borrowerPK, request), "", "");
     }
 
     function testFuzz_shouldIncreaseUsedCredit_whenUsedCreditNotExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - request.loanAmount);
-        limit = bound(limit, used + request.loanAmount, type(uint256).max);
+        used = bound(used, 1, type(uint256).max - request.creditAmount);
+        limit = bound(limit, used + request.creditAmount, type(uint256).max);
         request.availableCreditLimit = limit;
 
         vm.store(address(requestContract), keccak256(abi.encode(_requestHash(request), CREDIT_USED_SLOT)), bytes32(used));
 
         requestContract.acceptRequest(request, _signRequest(borrowerPK, request), "", "");
 
-        assertEq(requestContract.creditUsed(_requestHash(request)), used + request.loanAmount);
+        assertEq(requestContract.creditUsed(_requestHash(request)), used + request.creditAmount);
     }
 
     function test_shouldCallLoanContractWithLoanTerms() external {
-        bytes memory loanAssetPermit = "loanAssetPermit";
+        bytes memory creditPermit = "creditPermit";
         bytes memory collateralPermit = "collateralPermit";
 
         PWNSimpleLoan.Terms memory loanTerms = PWNSimpleLoan.Terms({
@@ -424,11 +424,11 @@ contract PWNSimpleLoanSimpleRequest_AcceptRequest_Test is PWNSimpleLoanSimpleReq
                 id: request.collateralId,
                 amount: request.collateralAmount
             }),
-            asset: MultiToken.Asset({
+            credit: MultiToken.Asset({
                 category: MultiToken.Category.ERC20,
-                assetAddress: request.loanAssetAddress,
+                assetAddress: request.creditAddress,
                 id: 0,
-                amount: request.loanAmount
+                amount: request.creditAmount
             }),
             fixedInterestAmount: request.fixedInterestAmount,
             accruingInterestAPR: request.accruingInterestAPR
@@ -438,12 +438,12 @@ contract PWNSimpleLoanSimpleRequest_AcceptRequest_Test is PWNSimpleLoanSimpleReq
             activeLoanContract,
             abi.encodeWithSelector(
                 PWNSimpleLoan.createLOAN.selector,
-                _requestHash(request), loanTerms, loanAssetPermit, collateralPermit
+                _requestHash(request), loanTerms, creditPermit, collateralPermit
             )
         );
 
         vm.prank(lender);
-        requestContract.acceptRequest(request, _signRequest(borrowerPK, request), loanAssetPermit, collateralPermit);
+        requestContract.acceptRequest(request, _signRequest(borrowerPK, request), creditPermit, collateralPermit);
     }
 
     function test_shouldReturnNewLoanId() external {
@@ -474,7 +474,7 @@ contract PWNSimpleLoanSimpleRequest_AcceptRequestAndRevokeCallersNonce_Test is P
         requestContract.acceptRequest({
             request: request,
             signature: _signRequest(borrowerPK, request),
-            loanAssetPermit: "",
+            creditPermit: "",
             collateralPermit: "",
             callersNonceSpace: nonceSpace,
             callersNonceToRevoke: nonce
@@ -491,7 +491,7 @@ contract PWNSimpleLoanSimpleRequest_AcceptRequestAndRevokeCallersNonce_Test is P
         requestContract.acceptRequest({
             request: request,
             signature: _signRequest(borrowerPK, request),
-            loanAssetPermit: "",
+            creditPermit: "",
             collateralPermit: "",
             callersNonceSpace: nonceSpace,
             callersNonceToRevoke: nonce
@@ -503,7 +503,7 @@ contract PWNSimpleLoanSimpleRequest_AcceptRequestAndRevokeCallersNonce_Test is P
         uint256 newLoanId = requestContract.acceptRequest({
             request: request,
             signature: _signRequest(borrowerPK, request),
-            loanAssetPermit: "",
+            creditPermit: "",
             collateralPermit: "",
             callersNonceSpace: 1,
             callersNonceToRevoke: 2
@@ -710,30 +710,30 @@ contract PWNSimpleLoanSimpleRequest_AcceptRefinanceRequest_Test is PWNSimpleLoan
     }
 
     function testFuzz_shouldFail_whenUsedCreditExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - request.loanAmount);
-        limit = bound(limit, used, used + request.loanAmount - 1);
+        used = bound(used, 1, type(uint256).max - request.creditAmount);
+        limit = bound(limit, used, used + request.creditAmount - 1);
         request.availableCreditLimit = limit;
 
         vm.store(address(requestContract), keccak256(abi.encode(_requestHash(request), CREDIT_USED_SLOT)), bytes32(used));
 
-        vm.expectRevert(abi.encodeWithSelector(AvailableCreditLimitExceeded.selector, used + request.loanAmount, limit));
+        vm.expectRevert(abi.encodeWithSelector(AvailableCreditLimitExceeded.selector, used + request.creditAmount, limit));
         requestContract.acceptRefinanceRequest(loanId, request, _signRequest(borrowerPK, request), "", "");
     }
 
     function testFuzz_shouldIncreaseUsedCredit_whenUsedCreditNotExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - request.loanAmount);
-        limit = bound(limit, used + request.loanAmount, type(uint256).max);
+        used = bound(used, 1, type(uint256).max - request.creditAmount);
+        limit = bound(limit, used + request.creditAmount, type(uint256).max);
         request.availableCreditLimit = limit;
 
         vm.store(address(requestContract), keccak256(abi.encode(_requestHash(request), CREDIT_USED_SLOT)), bytes32(used));
 
         requestContract.acceptRefinanceRequest(loanId, request, _signRequest(borrowerPK, request), "", "");
 
-        assertEq(requestContract.creditUsed(_requestHash(request)), used + request.loanAmount);
+        assertEq(requestContract.creditUsed(_requestHash(request)), used + request.creditAmount);
     }
 
     function test_shouldCallLoanContract() external {
-        bytes memory loanAssetPermit = "loanAssetPermit";
+        bytes memory creditPermit = "creditPermit";
         bytes memory collateralPermit = "collateralPermit";
 
         PWNSimpleLoan.Terms memory loanTerms = PWNSimpleLoan.Terms({
@@ -746,11 +746,11 @@ contract PWNSimpleLoanSimpleRequest_AcceptRefinanceRequest_Test is PWNSimpleLoan
                 id: request.collateralId,
                 amount: request.collateralAmount
             }),
-            asset: MultiToken.Asset({
+            credit: MultiToken.Asset({
                 category: MultiToken.Category.ERC20,
-                assetAddress: request.loanAssetAddress,
+                assetAddress: request.creditAddress,
                 id: 0,
-                amount: request.loanAmount
+                amount: request.creditAmount
             }),
             fixedInterestAmount: request.fixedInterestAmount,
             accruingInterestAPR: request.accruingInterestAPR
@@ -760,13 +760,13 @@ contract PWNSimpleLoanSimpleRequest_AcceptRefinanceRequest_Test is PWNSimpleLoan
             activeLoanContract,
             abi.encodeWithSelector(
                 PWNSimpleLoan.refinanceLOAN.selector,
-                loanId, _requestHash(request), loanTerms, loanAssetPermit, collateralPermit
+                loanId, _requestHash(request), loanTerms, creditPermit, collateralPermit
             )
         );
 
         vm.prank(lender);
         requestContract.acceptRefinanceRequest(
-            loanId, request, _signRequest(borrowerPK, request), loanAssetPermit, collateralPermit
+            loanId, request, _signRequest(borrowerPK, request), creditPermit, collateralPermit
         );
     }
 
@@ -805,8 +805,8 @@ contract PWNSimpleLoanSimpleRequest_AcceptRefinanceRequestAndRevokeCallersNonce_
             loanId: loanId,
             request: request,
             signature: _signRequest(borrowerPK, request),
-            lenderLoanAssetPermit: "",
-            borrowerLoanAssetPermit: "",
+            lenderCreditPermit: "",
+            borrowerCreditPermit: "",
             callersNonceSpace: nonceSpace,
             callersNonceToRevoke: nonce
         });
@@ -823,8 +823,8 @@ contract PWNSimpleLoanSimpleRequest_AcceptRefinanceRequestAndRevokeCallersNonce_
             loanId: loanId,
             request: request,
             signature: _signRequest(borrowerPK, request),
-            lenderLoanAssetPermit: "",
-            borrowerLoanAssetPermit: "",
+            lenderCreditPermit: "",
+            borrowerCreditPermit: "",
             callersNonceSpace: nonceSpace,
             callersNonceToRevoke: nonce
         });
@@ -836,8 +836,8 @@ contract PWNSimpleLoanSimpleRequest_AcceptRefinanceRequestAndRevokeCallersNonce_
             loanId: loanId,
             request: request,
             signature: _signRequest(borrowerPK, request),
-            lenderLoanAssetPermit: "",
-            borrowerLoanAssetPermit: "",
+            lenderCreditPermit: "",
+            borrowerCreditPermit: "",
             callersNonceSpace: 1,
             callersNonceToRevoke: 2
         });

@@ -20,7 +20,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
      * @dev EIP-712 simple request struct type hash.
      */
     bytes32 public constant REQUEST_TYPEHASH = keccak256(
-        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Request(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedLender,address borrower,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
@@ -31,14 +31,14 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0.
      * @param checkCollateralStateFingerprint If true, the collateral state fingerprint has to be checked.
      * @param collateralStateFingerprint Fingerprint of a collateral state defined by ERC5646.
-     * @param loanAssetAddress Address of an asset which is lender to a borrower.
-     * @param loanAmount Amount of tokens which is requested as a loan to a borrower.
+     * @param creditAddress Address of an asset which is lender to a borrower.
+     * @param creditAmount Amount of tokens which is requested as a loan to a borrower.
      * @param availableCreditLimit Available credit limit for the request. It is the maximum amount of tokens which can be borrowed using the request.
-     * @param fixedInterestAmount Fixed interest amount in loan asset tokens. It is the minimum amount of interest which has to be paid by a borrower.
+     * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
      * @param accruingInterestAPR Accruing interest APR.
      * @param duration Loan duration in seconds.
      * @param expiration Request expiration timestamp in seconds.
-     * @param allowedLender Address of an allowed lender. Only this address can accept a request. If the address is zero address, anybody with a loan asset can accept the request.
+     * @param allowedLender Address of an allowed lender. Only this address can accept a request. If the address is zero address, anybody with a credit asset can accept the request.
      * @param borrower Address of a borrower. This address has to sign a request to be valid.
      * @param refinancingLoanId Id of a loan which is refinanced by this request. If the id is 0, the request is not a refinancing request.
      * @param nonceSpace Nonce space of a request nonce. All nonces in the same space can be revoked at once.
@@ -53,8 +53,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         uint256 collateralAmount;
         bool checkCollateralStateFingerprint;
         bytes32 collateralStateFingerprint;
-        address loanAssetAddress;
-        uint256 loanAmount;
+        address creditAddress;
+        uint256 creditAmount;
         uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
         uint40 accruingInterestAPR;
@@ -98,7 +98,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
     function acceptRequest(
         Request calldata request,
         bytes calldata signature,
-        bytes calldata loanAssetPermit,
+        bytes calldata creditPermit,
         bytes calldata collateralPermit
     ) public returns (uint256 loanId) {
         // Check if the request is refinancing request
@@ -112,7 +112,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         return PWNSimpleLoan(request.loanContract).createLOAN({
             proposalHash: requestHash,
             loanTerms: loanTerms,
-            loanAssetPermit: loanAssetPermit,
+            creditPermit: creditPermit,
             collateralPermit: collateralPermit
         });
     }
@@ -121,8 +121,8 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         uint256 loanId,
         Request calldata request,
         bytes calldata signature,
-        bytes calldata lenderLoanAssetPermit,
-        bytes calldata borrowerLoanAssetPermit
+        bytes calldata lenderCreditPermit,
+        bytes calldata borrowerCreditPermit
     ) public returns (uint256 refinancedLoanId) {
         // Check if the request is refinancing request
         if (request.refinancingLoanId == 0 || request.refinancingLoanId != loanId) {
@@ -136,34 +136,34 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
             loanId: loanId,
             proposalHash: requestHash,
             loanTerms: loanTerms,
-            lenderLoanAssetPermit: lenderLoanAssetPermit,
-            borrowerLoanAssetPermit: borrowerLoanAssetPermit
+            lenderCreditPermit: lenderCreditPermit,
+            borrowerCreditPermit: borrowerCreditPermit
         });
     }
 
     function acceptRequest(
         Request calldata request,
         bytes calldata signature,
-        bytes calldata loanAssetPermit,
+        bytes calldata creditPermit,
         bytes calldata collateralPermit,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRequest(request, signature, loanAssetPermit, collateralPermit);
+        return acceptRequest(request, signature, creditPermit, collateralPermit);
     }
 
     function acceptRefinanceRequest(
         uint256 loanId,
         Request calldata request,
         bytes calldata signature,
-        bytes calldata lenderLoanAssetPermit,
-        bytes calldata borrowerLoanAssetPermit,
+        bytes calldata lenderCreditPermit,
+        bytes calldata borrowerCreditPermit,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 refinancedLoanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRefinanceRequest(loanId, request, signature, lenderLoanAssetPermit, borrowerLoanAssetPermit);
+        return acceptRefinanceRequest(loanId, request, signature, lenderCreditPermit, borrowerCreditPermit);
     }
 
 
@@ -194,7 +194,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         requestHash = getRequestHash(request);
         _tryAcceptProposal({
             proposalHash: requestHash,
-            creditAmount: request.loanAmount,
+            creditAmount: request.creditAmount,
             availableCreditLimit: request.availableCreditLimit,
             apr: request.accruingInterestAPR,
             duration: request.duration,
@@ -219,9 +219,9 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
                 id: request.collateralId,
                 amount: request.collateralAmount
             }),
-            asset: MultiToken.ERC20({
-                assetAddress: request.loanAssetAddress,
-                amount: request.loanAmount
+            credit: MultiToken.ERC20({
+                assetAddress: request.creditAddress,
+                amount: request.creditAmount
             }),
             fixedInterestAmount: request.fixedInterestAmount,
             accruingInterestAPR: request.accruingInterestAPR

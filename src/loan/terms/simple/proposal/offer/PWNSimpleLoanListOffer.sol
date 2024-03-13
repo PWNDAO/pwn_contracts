@@ -23,7 +23,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
      * @dev EIP-712 simple offer struct type hash.
      */
     bytes32 public constant OFFER_TYPEHASH = keccak256(
-        "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address loanAssetAddress,uint256 loanAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Offer(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedBorrower,address lender,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
@@ -34,10 +34,10 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0.
      * @param checkCollateralStateFingerprint If true, collateral state fingerprint will be checked on loan terms creation.
      * @param collateralStateFingerprint Fingerprint of a collateral state. It is used to check if a collateral is in a valid state.
-     * @param loanAssetAddress Address of an asset which is lender to a borrower.
-     * @param loanAmount Amount of tokens which is offered as a loan to a borrower.
+     * @param creditAddress Address of an asset which is lender to a borrower.
+     * @param creditAmount Amount of tokens which is offered as a loan to a borrower.
      * @param availableCreditLimit Available credit limit for the offer. It is the maximum amount of tokens which can be borrowed using the offer.
-     * @param fixedInterestAmount Fixed interest amount in loan asset tokens. It is the minimum amount of interest which has to be paid by a borrower.
+     * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
      * @param accruingInterestAPR Accruing interest APR.
      * @param duration Loan duration in seconds.
      * @param expiration Offer expiration timestamp in seconds.
@@ -56,8 +56,8 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         uint256 collateralAmount;
         bool checkCollateralStateFingerprint;
         bytes32 collateralStateFingerprint;
-        address loanAssetAddress;
-        uint256 loanAmount;
+        address creditAddress;
+        uint256 creditAmount;
         uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
         uint40 accruingInterestAPR;
@@ -114,7 +114,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
-        bytes calldata loanAssetPermit,
+        bytes calldata creditPermit,
         bytes calldata collateralPermit
     ) public returns (uint256 loanId) {
         // Check if the offer is refinancing offer
@@ -128,7 +128,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         return PWNSimpleLoan(offer.loanContract).createLOAN({
             proposalHash: offerHash,
             loanTerms: loanTerms,
-            loanAssetPermit: loanAssetPermit,
+            creditPermit: creditPermit,
             collateralPermit: collateralPermit
         });
     }
@@ -138,8 +138,8 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
-        bytes calldata lenderLoanAssetPermit,
-        bytes calldata borrowerLoanAssetPermit
+        bytes calldata lenderCreditPermit,
+        bytes calldata borrowerCreditPermit
     ) public returns (uint256 refinancedLoanId) {
         // Check if the offer is refinancing offer
         if (offer.refinancingLoanId != 0 && offer.refinancingLoanId != loanId) {
@@ -153,8 +153,8 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
             loanId: loanId,
             proposalHash: offerHash,
             loanTerms: loanTerms,
-            lenderLoanAssetPermit: lenderLoanAssetPermit,
-            borrowerLoanAssetPermit: borrowerLoanAssetPermit
+            lenderCreditPermit: lenderCreditPermit,
+            borrowerCreditPermit: borrowerCreditPermit
         });
     }
 
@@ -162,13 +162,13 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
-        bytes calldata loanAssetPermit,
+        bytes calldata creditPermit,
         bytes calldata collateralPermit,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptOffer(offer, offerValues, signature, loanAssetPermit, collateralPermit);
+        return acceptOffer(offer, offerValues, signature, creditPermit, collateralPermit);
     }
 
     function acceptRefinanceOffer(
@@ -176,13 +176,13 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
-        bytes calldata lenderLoanAssetPermit,
-        bytes calldata borrowerLoanAssetPermit,
+        bytes calldata lenderCreditPermit,
+        bytes calldata borrowerCreditPermit,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 refinancedLoanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRefinanceOffer(loanId, offer, offerValues, signature, lenderLoanAssetPermit, borrowerLoanAssetPermit);
+        return acceptRefinanceOffer(loanId, offer, offerValues, signature, lenderCreditPermit, borrowerCreditPermit);
     }
 
 
@@ -233,7 +233,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         offerHash = getOfferHash(offer);
         _tryAcceptProposal({
             proposalHash: offerHash,
-            creditAmount: offer.loanAmount,
+            creditAmount: offer.creditAmount,
             availableCreditLimit: offer.availableCreditLimit,
             apr: offer.accruingInterestAPR,
             duration: offer.duration,
@@ -261,9 +261,9 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
                 id: offerValues.collateralId,
                 amount: offer.collateralAmount
             }),
-            asset: MultiToken.ERC20({
-                assetAddress: offer.loanAssetAddress,
-                amount: offer.loanAmount
+            credit: MultiToken.ERC20({
+                assetAddress: offer.creditAddress,
+                amount: offer.creditAmount
             }),
             fixedInterestAmount: offer.fixedInterestAmount,
             accruingInterestAPR: offer.accruingInterestAPR
