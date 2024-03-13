@@ -18,7 +18,7 @@ import { T721 } from "@pwn-test/helper/token/T721.sol";
 abstract contract PWNSimpleLoanTest is Test {
 
     bytes32 internal constant LOANS_SLOT = bytes32(uint256(0)); // `LOANs` mapping position
-    bytes32 internal constant EXTENSION_OFFERS_MADE_SLOT = bytes32(uint256(1)); // `extensionOffersMade` mapping position
+    bytes32 internal constant EXTENSION_PROPOSALS_MADE_SLOT = bytes32(uint256(1)); // `extensionProposalsMade` mapping position
 
     PWNSimpleLoan loan;
     address hub = makeAddr("hub");
@@ -36,7 +36,7 @@ abstract contract PWNSimpleLoanTest is Test {
     PWNSimpleLoan.LOAN simpleLoan;
     PWNSimpleLoan.LOAN nonExistingLoan;
     PWNSimpleLoan.Terms simpleLoanTerms;
-    PWNSimpleLoan.Extension extension;
+    PWNSimpleLoan.ExtensionProposal extension;
     T20 fungibleAsset;
     T721 nonFungibleAsset;
 
@@ -49,7 +49,7 @@ abstract contract PWNSimpleLoanTest is Test {
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
     event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
     event LOANExtended(uint256 indexed loanId, uint40 originalDefaultTimestamp, uint40 extendedDefaultTimestamp);
-    event ExtensionOfferMade(bytes32 indexed extensionHash, address indexed proposer, PWNSimpleLoan.Extension extension);
+    event ExtensionProposalMade(bytes32 indexed extensionHash, address indexed proposer,  PWNSimpleLoan.ExtensionProposal proposal);
 
     function setUp() virtual public {
         vm.etch(hub, bytes("data"));
@@ -115,9 +115,10 @@ abstract contract PWNSimpleLoanTest is Test {
             collateral: MultiToken.Asset(MultiToken.Category(0), address(0), 0, 0)
         });
 
-        extension = PWNSimpleLoan.Extension({
+        extension = PWNSimpleLoan.ExtensionProposal({
             loanId: loanId,
-            price: 100,
+            compensationAddress: address(fungibleAsset),
+            compensationAmount: 100,
             duration: 2 days,
             expiration: simpleLoan.defaultTimestamp,
             proposer: borrower,
@@ -223,9 +224,9 @@ abstract contract PWNSimpleLoanTest is Test {
         vm.mockCall(loanToken, abi.encodeWithSignature("ownerOf(uint256)", _loanId), abi.encode(_owner));
     }
 
-    function _mockExtensionOfferMade(PWNSimpleLoan.Extension memory _extension) internal {
-        bytes32 extensionOfferSlot = keccak256(abi.encode(_extensionHash(_extension), EXTENSION_OFFERS_MADE_SLOT));
-        vm.store(address(loan), extensionOfferSlot, bytes32(uint256(1)));
+    function _mockExtensionProposalMade(PWNSimpleLoan.ExtensionProposal memory _extension) internal {
+        bytes32 extensionProposalSlot = keccak256(abi.encode(_extensionHash(_extension), EXTENSION_PROPOSALS_MADE_SLOT));
+        vm.store(address(loan), extensionProposalSlot, bytes32(uint256(1)));
     }
 
 
@@ -246,7 +247,7 @@ abstract contract PWNSimpleLoanTest is Test {
         }
     }
 
-    function _extensionHash(PWNSimpleLoan.Extension memory _extension) internal view returns (bytes32) {
+    function _extensionHash(PWNSimpleLoan.ExtensionProposal memory _extension) internal view returns (bytes32) {
         return keccak256(abi.encodePacked(
             "\x19\x01",
             keccak256(abi.encode(
@@ -257,7 +258,7 @@ abstract contract PWNSimpleLoanTest is Test {
                 address(loan)
             )),
             keccak256(abi.encodePacked(
-                keccak256("Extension(uint256 loanId,uint256 price,uint40 duration,uint40 expiration,address proposer,uint256 nonceSpace,uint256 nonce)"),
+                keccak256("ExtensionProposal(uint256 loanId,address compensationAddress,uint256 compensationAmount,uint40 duration,uint40 expiration,address proposer,uint256 nonceSpace,uint256 nonce)"),
                 abi.encode(_extension)
             ))
         ));
@@ -1747,36 +1748,36 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
 
 
 /*----------------------------------------------------------*|
-|*  # MAKE EXTENSION OFFER                                  *|
+|*  # MAKE EXTENSION PROPOSAL                               *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoan_MakeExtensionOffer_Test is PWNSimpleLoanTest {
+contract PWNSimpleLoan_MakeExtensionProposal_Test is PWNSimpleLoanTest {
 
     function testFuzz_shouldFail_whenCallerNotProposer(address caller) external {
         vm.assume(caller != extension.proposer);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtensionSigner.selector, extension.proposer, caller));
         vm.prank(caller);
-        loan.makeExtensionOffer(extension);
+        loan.makeExtensionProposal(extension);
     }
 
     function test_shouldStoreMadeFlag() external {
         vm.prank(extension.proposer);
-        loan.makeExtensionOffer(extension);
+        loan.makeExtensionProposal(extension);
 
-        bytes32 extensionOfferSlot = keccak256(abi.encode(_extensionHash(extension), EXTENSION_OFFERS_MADE_SLOT));
-        bytes32 isMadeValue = vm.load(address(loan), extensionOfferSlot);
+        bytes32 extensionProposalSlot = keccak256(abi.encode(_extensionHash(extension), EXTENSION_PROPOSALS_MADE_SLOT));
+        bytes32 isMadeValue = vm.load(address(loan), extensionProposalSlot);
         assertEq(uint256(isMadeValue), 1);
     }
 
-    function test_shouldEmit_ExtensionOfferMade() external {
+    function test_shouldEmit_ExtensionProposalMade() external {
         bytes32 extensionHash = _extensionHash(extension);
 
         vm.expectEmit();
-        emit ExtensionOfferMade(extensionHash, extension.proposer, extension);
+        emit ExtensionProposalMade(extensionHash, extension.proposer, extension);
 
         vm.prank(extension.proposer);
-        loan.makeExtensionOffer(extension);
+        loan.makeExtensionProposal(extension);
     }
 
 }
@@ -1806,7 +1807,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
     // Helpers
 
-    function _signExtension(uint256 pk, PWNSimpleLoan.Extension memory _extension) private view returns (bytes memory) {
+    function _signExtension(uint256 pk, PWNSimpleLoan.ExtensionProposal memory _extension) private view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _extensionHash(_extension));
         return abi.encodePacked(r, s, v);
     }
@@ -1845,7 +1846,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         vm.warp(timestamp);
 
         extension.expiration = uint40(bound(expiration, 0, timestamp));
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.expectRevert(abi.encodeWithSelector(Expired.selector, block.timestamp, extension.expiration));
         vm.prank(lender);
@@ -1853,7 +1854,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldFail_whenOfferNonceNotUsable() external {
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.mockCall(
             revokedNonce,
@@ -1870,7 +1871,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
     function testFuzz_shouldFail_whenCallerIsNotBorrowerNorLoanOwner(address caller) external {
         vm.assume(caller != borrower && caller != lender);
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtensionCaller.selector));
         vm.prank(caller);
@@ -1881,7 +1882,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         vm.assume(proposer != lender);
 
         extension.proposer = proposer;
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtensionSigner.selector, lender, proposer));
         vm.prank(borrower);
@@ -1892,7 +1893,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         vm.assume(proposer != borrower);
 
         extension.proposer = proposer;
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtensionSigner.selector, borrower, proposer));
         vm.prank(lender);
@@ -1904,7 +1905,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         duration = uint40(bound(duration, 0, minDuration - 1));
 
         extension.duration = duration;
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtensionDuration.selector, duration, minDuration));
         vm.prank(lender);
@@ -1916,7 +1917,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         duration = uint40(bound(duration, maxDuration + 1, type(uint40).max));
 
         extension.duration = duration;
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidExtensionDuration.selector, duration, maxDuration));
         vm.prank(lender);
@@ -1926,7 +1927,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldRevokeExtensionNonce(uint256 nonceSpace, uint256 nonce) external {
         extension.nonceSpace = nonceSpace;
         extension.nonce = nonce;
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.expectCall(
             revokedNonce,
@@ -1941,7 +1942,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         duration = uint40(bound(duration, loan.MIN_EXTENSION_DURATION(), loan.MAX_EXTENSION_DURATION()));
 
         extension.duration = duration;
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.prank(lender);
         loan.extendLOAN(extension, "", "");
@@ -1954,7 +1955,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         duration = uint40(bound(duration, loan.MIN_EXTENSION_DURATION(), loan.MAX_EXTENSION_DURATION()));
 
         extension.duration = duration;
-        _mockExtensionOfferMade(extension);
+        _mockExtensionProposalMade(extension);
 
         vm.expectEmit();
         emit LOANExtended(loanId, simpleLoan.defaultTimestamp, simpleLoan.defaultTimestamp + duration);
@@ -1963,28 +1964,13 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         loan.extendLOAN(extension, "", "");
     }
 
-    function testFuzz_shouldTransferCredit_whenPriceMoreThanZero(uint256 price) external {
-        price = bound(price, 1, 1e40);
-
-        extension.price = price;
-        _mockExtensionOfferMade(extension);
-        fungibleAsset.mint(borrower, price);
-
-        vm.expectCall(
-            simpleLoan.creditAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, lender, price)
-        );
-
-        vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
-    }
-
-    function test_shouldNotTransferCredit_whenPriceZero() external {
-        extension.price = 0;
-        _mockExtensionOfferMade(extension);
+    function test_shouldNotTransferCredit_whenAmountZero() external {
+        extension.compensationAddress = address(fungibleAsset);
+        extension.compensationAmount = 0;
+        _mockExtensionProposalMade(extension);
 
         vm.expectCall({
-            callee: simpleLoan.creditAddress,
+            callee: extension.compensationAddress,
             data: abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, lender, 0),
             count: 0
         });
@@ -1993,23 +1979,101 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         loan.extendLOAN(extension, "", "");
     }
 
-    function testFuzz_shouldCallPermit_whenPriceMoreThanZero_whenPermitData(uint256 price) external {
-        price = bound(price, 1, 1e40);
+    function test_shouldNotTransferCredit_whenAddressZero() external {
+        extension.compensationAddress = address(0);
+        extension.compensationAmount = 3123;
+        _mockExtensionProposalMade(extension);
 
-        extension.price = price;
-        _mockExtensionOfferMade(extension);
-        fungibleAsset.mint(borrower, price);
+        vm.expectCall({
+            callee: extension.compensationAddress,
+            data: abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, lender, extension.compensationAmount),
+            count: 0
+        });
+
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function test_shouldFail_whenInvalidCompensationAsset() external {
+        extension.compensationAddress = address(0x1);
+        extension.compensationAmount = 3123;
+        _mockExtensionProposalMade(extension);
+
+        vm.mockCall(
+            categoryRegistry,
+            abi.encodeWithSignature("registeredCategoryValue(address)", extension.compensationAddress),
+            abi.encode(1) // ERC721
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 0, extension.compensationAddress, 0, extension.compensationAmount));
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
+    }
+
+    function testFuzz_shouldCallPermit_whenPermitData(address addr, uint256 amount) external {
+        assumeAddressIsNot(addr, AddressType.ZeroAddress, AddressType.Precompile, AddressType.ForgeAddress);
+        amount = bound(amount, 1, 1e40);
+
+        vm.etch(addr, address(fungibleAsset).code);
+
+        extension.compensationAddress = addr;
+        extension.compensationAmount = amount;
+        _mockExtensionProposalMade(extension);
+
+        T20(addr).mint(borrower, amount);
+        vm.prank(borrower);
+        T20(addr).approve(address(loan), type(uint256).max);
+
+        vm.mockCall(
+            categoryRegistry,
+            abi.encodeWithSignature("registeredCategoryValue(address)", extension.compensationAddress),
+            abi.encode(0) // ER20
+        );
+        vm.mockCall(
+            extension.compensationAddress,
+            abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)"),
+            abi.encode("")
+        );
 
         vm.expectCall(
-            simpleLoan.creditAddress,
+            extension.compensationAddress,
             abi.encodeWithSignature(
                 "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                borrower, address(loan), price, 1, uint8(4), uint256(2), uint256(3)
+                borrower, address(loan), amount, 1, uint8(4), uint256(2), uint256(3)
             )
         );
 
         vm.prank(lender);
         loan.extendLOAN(extension, "", creditPermit);
+    }
+
+    function testFuzz_shouldTransferCompensation_whenDefined(address addr, uint256 amount) external {
+        assumeAddressIsNot(addr, AddressType.ZeroAddress, AddressType.Precompile, AddressType.ForgeAddress);
+        amount = bound(amount, 1, 1e40);
+
+        vm.etch(addr, address(fungibleAsset).code);
+
+        extension.compensationAddress = addr;
+        extension.compensationAmount = amount;
+        _mockExtensionProposalMade(extension);
+
+        T20(addr).mint(borrower, amount);
+        vm.prank(borrower);
+        T20(addr).approve(address(loan), type(uint256).max);
+
+        vm.mockCall(
+            categoryRegistry,
+            abi.encodeWithSignature("registeredCategoryValue(address)", extension.compensationAddress),
+            abi.encode(0) // ER20
+        );
+
+        vm.expectCall(
+            extension.compensationAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, lender, amount)
+        );
+
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", "");
     }
 
     function test_shouldPass_whenBorrowerSignature_whenLenderAccepts() external {
@@ -2035,7 +2099,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
 contract PWNSimpleLoan_GetExtensionHash_Test is PWNSimpleLoanTest {
 
-    function test_shouldHaveCorrectDomainSeparator() external {
+    function test_shouldReturnExtensionHash() external {
         assertEq(_extensionHash(extension), loan.getExtensionHash(extension));
     }
 

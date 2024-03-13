@@ -42,8 +42,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     uint256 public constant MAX_EXTENSION_DURATION = 90 days;
     uint256 public constant MIN_EXTENSION_DURATION = 1 days;
 
-    bytes32 public constant EXTENSION_TYPEHASH = keccak256(
-        "Extension(uint256 loanId,uint256 price,uint40 duration,uint40 expiration,address proposer,uint256 nonceSpace,uint256 nonce)"
+    bytes32 public constant EXTENSION_PROPOSAL_TYPEHASH = keccak256(
+        "ExtensionProposal(uint256 loanId,address compensationAddress,uint256 compensationAmount,uint40 duration,uint40 expiration,address proposer,uint256 nonceSpace,uint256 nonce)"
     );
 
     bytes32 public immutable DOMAIN_SEPARATOR = keccak256(abi.encode(
@@ -115,18 +115,20 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     mapping (uint256 => LOAN) private LOANs;
 
     /**
-     * @notice Struct defining a loan extension offer. Offer can be signed by a borrower or a lender.
+     * @notice Struct defining a loan extension proposal that can be signed by a borrower or a lender.
      * @param loanId Id of a loan to be extended.
-     * @param price Price of the extension in credit asset tokens.
+     * @param compensationAddress Address of a compensation asset.
+     * @param compensationAmount Amount of a compensation asset that a borrower has to pay to a lender.
      * @param duration Duration of the extension in seconds.
      * @param expiration Unix timestamp (in seconds) of an expiration date.
-     * @param proposer Address of a proposer that signed the extension offer.
-     * @param nonceSpace Nonce space of the extension offer nonce.
-     * @param nonce Nonce of the extension offer.
+     * @param proposer Address of a proposer that signed the extension proposal.
+     * @param nonceSpace Nonce space of the extension proposal nonce.
+     * @param nonce Nonce of the extension proposal.
      */
-    struct Extension {
+    struct ExtensionProposal {
         uint256 loanId;
-        uint256 price;
+        address compensationAddress;
+        uint256 compensationAmount;
         uint40 duration;
         uint40 expiration;
         address proposer;
@@ -135,9 +137,9 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     }
 
     /**
-     * Mapping of extension offers made via on-chain transaction by extension hash.
+     * Mapping of extension proposals made via on-chain transaction by extension hash.
      */
-    mapping (bytes32 => bool) public extensionOffersMade;
+    mapping (bytes32 => bool) public extensionProposalsMade;
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
@@ -169,9 +171,9 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     event LOANExtended(uint256 indexed loanId, uint40 originalDefaultTimestamp, uint40 extendedDefaultTimestamp);
 
     /**
-     * @dev Emitted when a loan extension offer is made.
+     * @dev Emitted when a loan extension proposal is made.
      */
-    event ExtensionOfferMade(bytes32 indexed extensionHash, address indexed proposer,  Extension extension);
+    event ExtensionProposalMade(bytes32 indexed extensionHash, address indexed proposer,  ExtensionProposal proposal);
 
 
     /*----------------------------------------------------------*|
@@ -771,32 +773,32 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Make an extension offer for a loan on-chain.
-     * @param extension Extension struct.
+     * @notice Make an on-chain extension proposal.
+     * @param extension Extension proposal struct.
      */
-    function makeExtensionOffer(Extension calldata extension) external {
+    function makeExtensionProposal(ExtensionProposal calldata extension) external {
         // Check that caller is a proposer
         if (msg.sender != extension.proposer)
             revert InvalidExtensionSigner({ allowed: extension.proposer, current: msg.sender });
 
-        // Mark extension offer as made
+        // Mark extension proposal as made
         bytes32 extensionHash = getExtensionHash(extension);
-        extensionOffersMade[extensionHash] = true;
+        extensionProposalsMade[extensionHash] = true;
 
-        emit ExtensionOfferMade(extensionHash, extension.proposer, extension);
+        emit ExtensionProposalMade(extensionHash, extension.proposer, extension);
     }
 
     /**
-     * @notice Extend loans default date with signed extension offer / request from borrower or LOAN token owner.
+     * @notice Extend loans default date with signed extension proposal signed by borrower or LOAN token owner.
      * @dev The function assumes a prior token approval to a contract address or a signed permit.
-     * @param extension Extension struct.
-     * @param signature Signature of the extension offer / request.
-     * @param creditPermit Permit data for a credit asset signed by a borrower.
+     * @param extension Extension proposal struct.
+     * @param signature Signature of the extension proposal.
+     * @param compensationPermit Permit data for a fungible compensation asset signed by a borrower.
      */
     function extendLOAN(
-        Extension calldata extension,
+        ExtensionProposal calldata extension,
         bytes calldata signature,
-        bytes calldata creditPermit
+        bytes calldata compensationPermit
     ) external {
         LOAN storage loan = LOANs[extension.loanId];
 
@@ -808,11 +810,15 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         // Check extension validity
         bytes32 extensionHash = getExtensionHash(extension);
-        if (!extensionOffersMade[extensionHash])
+        if (!extensionProposalsMade[extensionHash])
             if (!PWNSignatureChecker.isValidSignatureNow(extension.proposer, extensionHash, signature))
                 revert InvalidSignature({ signer: extension.proposer, digest: extensionHash });
+
+        // Check extension expiration
         if (block.timestamp >= extension.expiration)
             revert Expired({ current: block.timestamp, expiration: extension.expiration });
+
+        // Check extension nonce
         if (!revokedNonce.isNonceUsable(extension.proposer, extension.nonceSpace, extension.nonce))
             revert NonceNotUsable({ addr: extension.proposer, nonceSpace: extension.nonceSpace, nonce: extension.nonce });
 
@@ -851,7 +857,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
                 limit: MAX_EXTENSION_DURATION
             });
 
-        // Revoke extension offer nonce
+        // Revoke extension proposal nonce
         revokedNonce.revokeNonce(extension.proposer, extension.nonceSpace, extension.nonce);
 
         // Update loan
@@ -865,25 +871,32 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             extendedDefaultTimestamp: loan.defaultTimestamp
         });
 
-        // Transfer extension price to the loan owner
-        if (extension.price > 0) {
-            MultiToken.Asset memory credit = MultiToken.ERC20(loan.creditAddress, extension.price);
-            _permit(credit, loan.borrower, creditPermit);
-            _pushFrom(credit, loan.borrower, loanOwner);
+        // Skip compensation transfer if it's not set
+        if (extension.compensationAddress != address(0) && extension.compensationAmount > 0) {
+            MultiToken.Asset memory compensation = MultiToken.ERC20(
+                extension.compensationAddress, extension.compensationAmount
+            );
+
+            // Check compensation asset validity
+            _checkValidAsset(compensation);
+
+            // Transfer compensation to the loan owner
+            _permit(compensation, loan.borrower, compensationPermit);
+            _pushFrom(compensation, loan.borrower, loanOwner);
         }
     }
 
     /**
      * @notice Get the hash of the extension struct.
-     * @param extension Extension struct.
+     * @param extension Extension proposal struct.
      * @return Hash of the extension struct.
      */
-    function getExtensionHash(Extension calldata extension) public view returns (bytes32) {
+    function getExtensionHash(ExtensionProposal calldata extension) public view returns (bytes32) {
         return keccak256(abi.encodePacked(
             hex"1901",
             DOMAIN_SEPARATOR,
             keccak256(abi.encodePacked(
-                EXTENSION_TYPEHASH,
+                EXTENSION_PROPOSAL_TYPEHASH,
                 abi.encode(extension)
             ))
         ));
@@ -958,7 +971,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param asset Asset to be checked.
      * @return True if the asset is valid.
      */
-    function isValidAsset(MultiToken.Asset calldata asset) public view returns (bool) {
+    function isValidAsset(MultiToken.Asset memory asset) public view returns (bool) {
         return MultiToken.isValid(asset, categoryRegistry);
     }
 
@@ -967,7 +980,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @dev The function will revert if the asset is not valid.
      * @param asset Asset to be checked.
      */
-    function _checkValidAsset(MultiToken.Asset calldata asset) private view {
+    function _checkValidAsset(MultiToken.Asset memory asset) private view {
         if (!isValidAsset(asset)) {
             revert InvalidMultiTokenAsset({
                 category: uint8(asset.category),
