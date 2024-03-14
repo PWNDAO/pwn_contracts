@@ -44,7 +44,7 @@ abstract contract PWNSimpleLoanTest is Test {
     bytes collateralPermit = abi.encodePacked(uint256(1), uint256(2), uint256(3), uint8(4));
     bytes32 proposalHash = keccak256("proposalHash");
 
-    event LOANCreated(uint256 indexed loanId, PWNSimpleLoan.Terms terms, bytes32 indexed factoryDataHash, address indexed factoryAddress);
+    event LOANCreated(uint256 indexed loanId, PWNSimpleLoan.Terms terms, bytes32 indexed proposalHash, address indexed proposalContract, bytes extra);
     event LOANPaidBack(uint256 indexed loanId);
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
     event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
@@ -282,7 +282,8 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: simpleLoanTerms,
             creditPermit: "",
-            collateralPermit: ""
+            collateralPermit: "",
+            extra: ""
         });
     }
 
@@ -307,7 +308,8 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: simpleLoanTerms,
             creditPermit: "",
-            collateralPermit: ""
+            collateralPermit: "",
+            extra: ""
         });
     }
 
@@ -332,7 +334,8 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: simpleLoanTerms,
             creditPermit: "",
-            collateralPermit: ""
+            collateralPermit: "",
+            extra: ""
         });
     }
 
@@ -344,7 +347,8 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: simpleLoanTerms,
             creditPermit: "",
-            collateralPermit: ""
+            collateralPermit: "",
+            extra: ""
         });
     }
 
@@ -357,7 +361,8 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: simpleLoanTerms,
             creditPermit: "",
-            collateralPermit: ""
+            collateralPermit: "",
+            extra: ""
         });
 
         simpleLoan.accruingInterestDailyRate = uint40(uint256(accruingInterestAPR) * 274 / 1e5);
@@ -387,7 +392,8 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: simpleLoanTerms,
             creditPermit: "",
-            collateralPermit: collateralPermit
+            collateralPermit: collateralPermit,
+            extra: ""
         });
     }
 
@@ -429,20 +435,22 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: simpleLoanTerms,
             creditPermit: creditPermit,
-            collateralPermit: ""
+            collateralPermit: "",
+            extra: ""
         });
     }
 
     function test_shouldEmitEvent_LOANCreated() external {
         vm.expectEmit();
-        emit LOANCreated(loanId, simpleLoanTerms, proposalHash, proposalContract);
+        emit LOANCreated(loanId, simpleLoanTerms, proposalHash, proposalContract, "lil extra");
 
         vm.prank(proposalContract);
         loan.createLOAN({
             proposalHash: proposalHash,
             loanTerms: simpleLoanTerms,
             creditPermit: "",
-            collateralPermit: ""
+            collateralPermit: "",
+            extra: "lil extra"
         });
     }
 
@@ -452,7 +460,8 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: simpleLoanTerms,
             creditPermit: "",
-            collateralPermit: ""
+            collateralPermit: "",
+            extra: ""
         });
 
         assertEq(createdLoanId, loanId);
@@ -520,7 +529,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -535,7 +545,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -550,7 +561,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -564,7 +576,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -579,7 +592,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -593,7 +607,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -609,7 +624,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -624,7 +640,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -639,7 +656,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -654,7 +672,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -669,7 +688,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -682,7 +702,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -693,7 +714,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
 
         _assertLOANEq(ferinancedLoanId, refinancedLoan);
@@ -701,7 +723,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
     function test_shouldEmit_LOANCreated() external {
         vm.expectEmit();
-        emit LOANCreated(ferinancedLoanId, refinancedLoanTerms, proposalHash, proposalContract);
+        emit LOANCreated(ferinancedLoanId, refinancedLoanTerms, proposalHash, proposalContract, "lil extra");
 
         vm.prank(proposalContract);
         loan.refinanceLOAN({
@@ -709,7 +731,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: "lil extra"
         });
     }
 
@@ -720,7 +743,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
 
         assertEq(newLoanId, ferinancedLoanId);
@@ -736,7 +760,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -750,7 +775,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -761,7 +787,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
 
         _assertLOANEq(loanId, nonExistingLoan);
@@ -777,7 +804,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -807,7 +835,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
 
         // Update loan and compare
@@ -876,7 +905,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: creditPermit,
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -939,7 +969,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: creditPermit,
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -1004,7 +1035,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: creditPermit,
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
     }
 
@@ -1070,7 +1102,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: creditPermit,
-            borrowerCreditPermit: creditPermit
+            borrowerCreditPermit: creditPermit,
+            extra: ""
         });
     }
 
@@ -1136,7 +1169,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: creditPermit,
-            borrowerCreditPermit: creditPermit
+            borrowerCreditPermit: creditPermit,
+            extra: ""
         });
     }
 
@@ -1204,7 +1238,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: creditPermit,
-            borrowerCreditPermit: creditPermit
+            borrowerCreditPermit: creditPermit,
+            extra: ""
         });
     }
 
@@ -1245,7 +1280,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
 
         assertEq(fungibleAsset.balanceOf(lender), originalBalance + loanRepaymentAmount);
@@ -1291,7 +1327,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
 
         assertEq(fungibleAsset.balanceOf(feeCollector), originalBalance + feeAmount);
@@ -1317,7 +1354,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
 
         assertEq(fungibleAsset.balanceOf(borrower), originalBalance + surplus);
@@ -1341,7 +1379,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             proposalHash: proposalHash,
             loanTerms: refinancedLoanTerms,
             lenderCreditPermit: "",
-            borrowerCreditPermit: ""
+            borrowerCreditPermit: "",
+            extra: ""
         });
 
         assertEq(fungibleAsset.balanceOf(borrower), originalBalance - contribution);

@@ -1,6 +1,7 @@
 [profile.default]
 solc_version = '0.8.16'
 fs_permissions = [{ access = "read", path = "./deployments.json"}]
+via_ir = true
 
 
 [rpc_endpoints]

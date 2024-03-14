@@ -148,7 +148,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @dev Emitted when a new loan in created.
      */
-    event LOANCreated(uint256 indexed loanId, Terms terms, bytes32 indexed proposalHash, address indexed proposalContract);
+    event LOANCreated(uint256 indexed loanId, Terms terms, bytes32 indexed proposalHash, address indexed proposalContract, bytes extra);
+
+    /**
+     * @dev Emitted when a loan is refinanced.
+     */
+    event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
 
     /**
      * @dev Emitted when a loan is paid back.
@@ -159,11 +164,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @dev Emitted when a repaid or defaulted loan is claimed.
      */
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
-
-    /**
-     * @dev Emitted when a loan is refinanced.
-     */
-    event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
 
     /**
      * @dev Emitted when a LOAN token holder extends a loan.
@@ -206,13 +206,15 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loanTerms Loan terms struct.
      * @param creditPermit Permit data for a credit asset signed by a lender.
      * @param collateralPermit Permit data for a collateral signed by a borrower.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return loanId Id of the created LOAN token.
      */
     function createLOAN(
         bytes32 proposalHash,
         Terms calldata loanTerms,
         bytes calldata creditPermit,
-        bytes calldata collateralPermit
+        bytes calldata collateralPermit,
+        bytes calldata extra
     ) external returns (uint256 loanId) {
         // Check that caller is loan proposal contract
         if (!hub.hasTag(msg.sender, PWNHubTags.LOAN_PROPOSAL)) {
@@ -226,7 +228,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         loanId = _createLoan({
             proposalHash: proposalHash,
             proposalContract: msg.sender,
-            loanTerms: loanTerms
+            loanTerms: loanTerms,
+            extra: extra
         });
 
         // Transfer collateral to Vault and credit to borrower
@@ -249,11 +252,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param proposalHash Hash of a loan offer / request that is signed by a lender / borrower.
      * @param proposalContract Address of a loan proposal contract.
      * @param loanTerms Loan terms struct.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      */
     function _createLoan(
         bytes32 proposalHash,
         address proposalContract,
-        Terms calldata loanTerms
+        Terms calldata loanTerms,
+        bytes calldata extra
     ) private returns (uint256 loanId) {
         // Mint LOAN token for lender
         loanId = loanToken.mint(loanTerms.lender);
@@ -277,7 +282,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             loanId: loanId,
             terms: loanTerms,
             proposalHash: proposalHash,
-            proposalContract: proposalContract
+            proposalContract: proposalContract,
+            extra: extra
         });
     }
 
@@ -335,6 +341,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loanTerms Loan terms struct.
      * @param lenderCreditPermit Permit data for a credit asset signed by a lender.
      * @param borrowerCreditPermit Permit data for a credit asset signed by a borrower.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return refinancedLoanId Id of the refinanced LOAN token.
      */
     function refinanceLOAN(
@@ -342,7 +349,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bytes32 proposalHash,
         Terms calldata loanTerms,
         bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit
+        bytes calldata borrowerCreditPermit,
+        bytes calldata extra
     ) external returns (uint256 refinancedLoanId) {
         // Check that caller is loan proposal contract
         if (!hub.hasTag(msg.sender, PWNHubTags.LOAN_PROPOSAL)) {
@@ -361,7 +369,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         refinancedLoanId = _createLoan({
             proposalHash: proposalHash,
             proposalContract: msg.sender,
-            loanTerms: loanTerms
+            loanTerms: loanTerms,
+            extra: extra
         });
 
         // Refinance the original loan
@@ -525,8 +534,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Repay running loan.
      * @dev Any address can repay a running loan, but a collateral will be transferred to a borrower address associated with the loan.
-     *      Repay will transfer a credit asset to a vault, waiting on a LOAN token holder to claim it.
-     *      The function assumes a prior token approval to a contract address or a signed  permit.
+     *      If the LOAN token holder is the same as the original lender, the repayment credit asset will be
+     *      transferred to the LOAN token holder directly. Otherwise it will transfer the repayment credit asset to
+     *      a vault, waiting on a LOAN token holder to claim it. The function assumes a prior token approval to a contract address
+     *      or a signed permit.
      * @param loanId Id of a loan that is being repaid.
      * @param creditPermit Permit data for a credit asset signed by a borrower.
      */

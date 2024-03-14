@@ -98,7 +98,8 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         bytes calldata signature,
         bytes calldata creditPermit,
-        bytes calldata collateralPermit
+        bytes calldata collateralPermit,
+        bytes calldata extra
     ) public returns (uint256 loanId) {
         // Check if the offer is refinancing offer
         if (offer.refinancingLoanId != 0) {
@@ -112,7 +113,8 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
             proposalHash: offerHash,
             loanTerms: loanTerms,
             creditPermit: creditPermit,
-            collateralPermit: collateralPermit
+            collateralPermit: collateralPermit,
+            extra: extra
         });
     }
 
@@ -121,7 +123,8 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         bytes calldata signature,
         bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit
+        bytes calldata borrowerCreditPermit,
+        bytes calldata extra
     ) public returns (uint256 refinancedLoanId) {
         // Check if the offer is refinancing offer
         if (offer.refinancingLoanId != 0 && offer.refinancingLoanId != loanId) {
@@ -136,7 +139,8 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
             proposalHash: offerHash,
             loanTerms: loanTerms,
             lenderCreditPermit: lenderCreditPermit,
-            borrowerCreditPermit: borrowerCreditPermit
+            borrowerCreditPermit: borrowerCreditPermit,
+            extra: extra
         });
     }
 
@@ -145,11 +149,12 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
         bytes calldata signature,
         bytes calldata creditPermit,
         bytes calldata collateralPermit,
+        bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptOffer(offer, signature, creditPermit, collateralPermit);
+        return acceptOffer(offer, signature, creditPermit, collateralPermit, extra);
     }
 
     function acceptRefinanceOffer(
@@ -158,11 +163,12 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
         bytes calldata signature,
         bytes calldata lenderCreditPermit,
         bytes calldata borrowerCreditPermit,
+        bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 refinancedLoanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRefinanceOffer(loanId, offer, signature, lenderCreditPermit, borrowerCreditPermit);
+        return acceptRefinanceOffer(loanId, offer, signature, lenderCreditPermit, borrowerCreditPermit, extra);
     }
 
 

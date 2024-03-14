@@ -109,13 +109,24 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         _makeProposal(getOfferHash(offer), offer.lender, abi.encode(offer));
     }
 
-
+    /**
+     * @notice Accept an offer.
+     * @dev Function will mark an offer hash as revoked.
+     * @param offer Offer struct containing all offer data.
+     * @param offerValues OfferValues struct specifying all flexible offer values.
+     * @param signature Lender signature of an offer.
+     * @param creditPermit Permit signature for a credit asset.
+     * @param collateralPermit Permit signature for a collateral asset.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
+     * @return loanId Id of a created loan.
+     */
     function acceptOffer(
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
         bytes calldata creditPermit,
-        bytes calldata collateralPermit
+        bytes calldata collateralPermit,
+        bytes calldata extra
     ) public returns (uint256 loanId) {
         // Check if the offer is refinancing offer
         if (offer.refinancingLoanId != 0) {
@@ -129,17 +140,31 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
             proposalHash: offerHash,
             loanTerms: loanTerms,
             creditPermit: creditPermit,
-            collateralPermit: collateralPermit
+            collateralPermit: collateralPermit,
+            extra: extra
         });
     }
 
+    /**
+     * @notice Accept a refinancing offer.
+     * @dev Function will mark an offer hash as revoked.
+     * @param loanId Id of a loan to be refinanced.
+     * @param offer Offer struct containing all offer data.
+     * @param offerValues OfferValues struct specifying all flexible offer values.
+     * @param signature Lender signature of an offer.
+     * @param lenderCreditPermit Lenders permit signature for a credit asset.
+     * @param borrowerCreditPermit Borrowers permit signature for a credit asset.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
+     * @return refinancedLoanId Id of a created refinanced loan.
+     */
     function acceptRefinanceOffer(
         uint256 loanId,
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
         bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit
+        bytes calldata borrowerCreditPermit,
+        bytes calldata extra
     ) public returns (uint256 refinancedLoanId) {
         // Check if the offer is refinancing offer
         if (offer.refinancingLoanId != 0 && offer.refinancingLoanId != loanId) {
@@ -154,23 +179,52 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
             proposalHash: offerHash,
             loanTerms: loanTerms,
             lenderCreditPermit: lenderCreditPermit,
-            borrowerCreditPermit: borrowerCreditPermit
+            borrowerCreditPermit: borrowerCreditPermit,
+            extra: extra
         });
     }
 
+    /**
+     * @notice Accept an offer with a callers nonce revocation.
+     * @dev Function will mark an offer hash and callers nonce as revoked.
+     * @param offer Offer struct containing all offer data.
+     * @param offerValues OfferValues struct specifying all flexible offer values.
+     * @param signature Lender signature of an offer.
+     * @param creditPermit Permit signature for a credit asset.
+     * @param collateralPermit Permit signature for a collateral asset.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
+     * @param callersNonceSpace Nonce space of a callers nonce.
+     * @param callersNonceToRevoke Nonce to revoke.
+     * @return loanId Id of a created loan.
+     */
     function acceptOffer(
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
         bytes calldata creditPermit,
         bytes calldata collateralPermit,
+        bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptOffer(offer, offerValues, signature, creditPermit, collateralPermit);
+        return acceptOffer(offer, offerValues, signature, creditPermit, collateralPermit, extra);
     }
 
+    /**
+     * @notice Accept a refinancing offer with a callers nonce revocation.
+     * @dev Function will mark an offer hash and callers nonce as revoked.
+     * @param loanId Id of a loan to be refinanced.
+     * @param offer Offer struct containing all offer data.
+     * @param offerValues OfferValues struct specifying all flexible offer values.
+     * @param signature Lender signature of an offer.
+     * @param lenderCreditPermit Lenders permit signature for a credit asset.
+     * @param borrowerCreditPermit Borrowers permit signature for a credit asset.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
+     * @param callersNonceSpace Nonce space of a callers nonce.
+     * @param callersNonceToRevoke Nonce to revoke.
+     * @return refinancedLoanId Id of a created refinanced loan.
+     */
     function acceptRefinanceOffer(
         uint256 loanId,
         Offer calldata offer,
@@ -178,11 +232,12 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         bytes calldata signature,
         bytes calldata lenderCreditPermit,
         bytes calldata borrowerCreditPermit,
+        bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 refinancedLoanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRefinanceOffer(loanId, offer, offerValues, signature, lenderCreditPermit, borrowerCreditPermit);
+        return acceptRefinanceOffer(loanId, offer, offerValues, signature, lenderCreditPermit, borrowerCreditPermit, extra);
     }
 
 
