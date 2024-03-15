@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
+import { Permit } from "@pwn/loan/vault/Permit.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import { StateFingerprintComputerRegistry, IERC5646 } from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
 import "@pwn/PWNErrors.sol";
@@ -182,6 +183,23 @@ abstract contract PWNSimpleLoanProposal {
     function _checkLoanContractTag(address loanContract) internal view {
         if (!hub.hasTag(loanContract, PWNHubTags.ACTIVE_LOAN)) {
             revert AddressMissingHubTag({ addr: loanContract, tag: PWNHubTags.ACTIVE_LOAN });
+        }
+    }
+
+    /**
+     * @notice Check that permit data have correct owner and asset.
+     * @param caller Caller address.
+     * @param creditAddress Address of a credit to be used.
+     * @param permit Permit to be checked.
+     */
+    function _checkPermit(address caller, address creditAddress, Permit calldata permit) internal pure {
+        if (permit.asset != address(0)) {
+            if (permit.owner != caller) {
+                revert InvalidPermitOwner({ current: permit.owner, expected: caller});
+            }
+            if (creditAddress != permit.asset) {
+                revert InvalidPermitAsset({ current: permit.asset, expected: creditAddress });
+            }
         }
     }
 

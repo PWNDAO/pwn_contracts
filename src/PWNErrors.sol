@@ -52,6 +52,8 @@ error AccruingInterestAPROutOfBounds(uint256 current, uint256 limit);
 error AvailableCreditLimitExceeded(uint256 used, uint256 limit);
 error Expired(uint256 current, uint256 expiration);
 error CallerNotAllowedAcceptor(address current, address allowed);
+error InvalidPermitOwner(address current, address expected);
+error InvalidPermitAsset(address current, address expected);
 
 // Input data
 error InvalidInputData();

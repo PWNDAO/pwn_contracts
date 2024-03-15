@@ -5,6 +5,7 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import { Permit } from "@pwn/loan/vault/Permit.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -97,8 +98,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
     function acceptOffer(
         Offer calldata offer,
         bytes calldata signature,
-        bytes calldata creditPermit,
-        bytes calldata collateralPermit,
+        Permit calldata permit,
         bytes calldata extra
     ) public returns (uint256 loanId) {
         // Check if the offer is refinancing offer
@@ -106,14 +106,17 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
             revert InvalidRefinancingLoanId({ refinancingLoanId: offer.refinancingLoanId });
         }
 
+        // Check permit
+        _checkPermit(msg.sender, offer.creditAddress, permit);
+
+        // Accept offer
         (bytes32 offerHash, PWNSimpleLoan.Terms memory loanTerms) = _acceptOffer(offer, signature);
 
         // Create loan
         return PWNSimpleLoan(offer.loanContract).createLOAN({
             proposalHash: offerHash,
             loanTerms: loanTerms,
-            creditPermit: creditPermit,
-            collateralPermit: collateralPermit,
+            permit: permit,
             extra: extra
         });
     }
@@ -122,8 +125,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
         uint256 loanId,
         Offer calldata offer,
         bytes calldata signature,
-        bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit,
+        Permit calldata permit,
         bytes calldata extra
     ) public returns (uint256 refinancedLoanId) {
         // Check if the offer is refinancing offer
@@ -131,6 +133,10 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
             revert InvalidRefinancingLoanId({ refinancingLoanId: offer.refinancingLoanId });
         }
 
+        // Check permit
+        _checkPermit(msg.sender, offer.creditAddress, permit);
+
+        // Accept offer
         (bytes32 offerHash, PWNSimpleLoan.Terms memory loanTerms) = _acceptOffer(offer, signature);
 
         // Refinance loan
@@ -138,8 +144,7 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
             loanId: loanId,
             proposalHash: offerHash,
             loanTerms: loanTerms,
-            lenderCreditPermit: lenderCreditPermit,
-            borrowerCreditPermit: borrowerCreditPermit,
+            permit: permit,
             extra: extra
         });
     }
@@ -147,28 +152,26 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
     function acceptOffer(
         Offer calldata offer,
         bytes calldata signature,
-        bytes calldata creditPermit,
-        bytes calldata collateralPermit,
+        Permit calldata permit,
         bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptOffer(offer, signature, creditPermit, collateralPermit, extra);
+        return acceptOffer(offer, signature, permit, extra);
     }
 
     function acceptRefinanceOffer(
         uint256 loanId,
         Offer calldata offer,
         bytes calldata signature,
-        bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit,
+        Permit calldata permit,
         bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 refinancedLoanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRefinanceOffer(loanId, offer, signature, lenderCreditPermit, borrowerCreditPermit, extra);
+        return acceptRefinanceOffer(loanId, offer, signature, permit, extra);
     }
 
 

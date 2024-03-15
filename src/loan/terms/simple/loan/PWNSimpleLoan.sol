@@ -15,7 +15,8 @@ import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimple
 import { IERC5646 } from "@pwn/loan/token/IERC5646.sol";
 import { IPWNLoanMetadataProvider } from "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
 import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
-import { PWNVault } from "@pwn/loan/PWNVault.sol";
+import { Permit } from "@pwn/loan/vault/Permit.sol";
+import { PWNVault } from "@pwn/loan/vault/PWNVault.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import "@pwn/PWNErrors.sol";
 
@@ -204,16 +205,14 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @dev The function assumes a prior token approval to a contract address or signed permits.
      * @param proposalHash Hash of a loan offer / request that is signed by a lender / borrower.
      * @param loanTerms Loan terms struct.
-     * @param creditPermit Permit data for a credit asset signed by a lender.
-     * @param collateralPermit Permit data for a collateral signed by a borrower.
+     * @param permit Callers credit permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return loanId Id of the created LOAN token.
      */
     function createLOAN(
         bytes32 proposalHash,
         Terms calldata loanTerms,
-        bytes calldata creditPermit,
-        bytes calldata collateralPermit,
+        Permit calldata permit,
         bytes calldata extra
     ) external returns (uint256 loanId) {
         // Check that caller is loan proposal contract
@@ -233,7 +232,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         });
 
         // Transfer collateral to Vault and credit to borrower
-        _settleNewLoan(loanTerms, creditPermit, collateralPermit);
+        _settleNewLoan(loanTerms, permit);
     }
 
     /**
@@ -291,20 +290,17 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @notice Transfer collateral to Vault and credit to borrower.
      * @dev The function assumes a prior token approval to a contract address or signed permits.
      * @param loanTerms Loan terms struct.
-     * @param creditPermit Permit data for a credit asset signed by a lender.
-     * @param collateralPermit Permit data for a collateral signed by a borrower.
+     * @param permit Callers credit permit data.
      */
     function _settleNewLoan(
         Terms calldata loanTerms,
-        bytes calldata creditPermit,
-        bytes calldata collateralPermit
+        Permit calldata permit
     ) private {
-        // Transfer collateral to Vault
-        _permit(loanTerms.collateral, loanTerms.borrower, collateralPermit);
-        _pull(loanTerms.collateral, loanTerms.borrower);
+        // Execute permit for the caller
+        _tryPermit(permit);
 
-        // Permit credit spending if permit provided
-        _permit(loanTerms.credit, loanTerms.lender, creditPermit);
+        // Transfer collateral to Vault
+        _pull(loanTerms.collateral, loanTerms.borrower);
 
         MultiToken.Asset memory creditHelper = loanTerms.credit;
 
@@ -339,8 +335,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      The function assumes a prior token approval to a contract address or signed permits.
      * @param proposalHash Hash of a loan offer / request that is signed by a lender / borrower. Used to uniquely identify a loan offer / request.
      * @param loanTerms Loan terms struct.
-     * @param lenderCreditPermit Permit data for a credit asset signed by a lender.
-     * @param borrowerCreditPermit Permit data for a credit asset signed by a borrower.
+     * @param permit Callers credit permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return refinancedLoanId Id of the refinanced LOAN token.
      */
@@ -348,8 +343,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         uint256 loanId,
         bytes32 proposalHash,
         Terms calldata loanTerms,
-        bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit,
+        Permit calldata permit,
         bytes calldata extra
     ) external returns (uint256 refinancedLoanId) {
         // Check that caller is loan proposal contract
@@ -374,12 +368,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         });
 
         // Refinance the original loan
-        _refinanceOriginalLoan(
-            loanId,
-            loanTerms,
-            lenderCreditPermit,
-            borrowerCreditPermit
-        );
+        _refinanceOriginalLoan(loanId, loanTerms, permit);
 
         emit LOANRefinanced({ loanId: loanId, refinancedLoanId: refinancedLoanId });
     }
@@ -426,14 +415,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      The function assumes a prior token approval to a contract address or signed permits.
      * @param loanId Id of a loan that is being refinanced.
      * @param loanTerms Loan terms struct.
-     * @param lenderCreditPermit Permit data for a credit asset signed by a lender.
-     * @param borrowerCreditPermit Permit data for a credit asset signed by a borrower.
+     * @param permit Callers credit permit data.
      */
     function _refinanceOriginalLoan(
         uint256 loanId,
         Terms calldata loanTerms,
-        bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit
+        Permit calldata permit
     ) private {
         uint256 repaymentAmount = _loanRepaymentAmount(loanId);
 
@@ -446,8 +433,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             loanOwner: loanOwner,
             repaymentAmount: repaymentAmount,
             loanTerms: loanTerms,
-            lenderPermit: lenderCreditPermit,
-            borrowerPermit: borrowerCreditPermit
+            permit: permit
         });
     }
 
@@ -460,40 +446,31 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loanOwner Address of the current LOAN owner.
      * @param repaymentAmount Amount of the original loan to be repaid.
      * @param loanTerms Loan terms struct.
-     * @param lenderPermit Permit data for a credit asset signed by a lender.
-     * @param borrowerPermit Permit data for a credit asset signed by a borrower.
+     * @param permit Callers credit permit data.
      */
     function _settleLoanRefinance(
         bool repayLoanDirectly,
         address loanOwner,
         uint256 repaymentAmount,
         Terms calldata loanTerms,
-        bytes calldata lenderPermit,
-        bytes calldata borrowerPermit
+        Permit calldata permit
     ) private {
         MultiToken.Asset memory creditHelper = loanTerms.credit;
 
-        // Compute fee size
-        (uint256 feeAmount, uint256 newLoanAmount)
-            = PWNFeeCalculator.calculateFeeAmount(config.fee(), loanTerms.credit.amount);
-
-        // Permit lenders credit spending if permit provided
-        creditHelper.amount -= loanTerms.lender == loanOwner // Permit only the surplus transfer + fee
-            ? Math.min(repaymentAmount, newLoanAmount)
-            : 0;
-
-        if (creditHelper.amount > 0) {
-            _permit(creditHelper, loanTerms.lender, lenderPermit);
-        }
+        // Execute permit for the caller
+        _tryPermit(permit);
 
         // Collect fees
+        (uint256 feeAmount, uint256 newLoanAmount)
+            = PWNFeeCalculator.calculateFeeAmount(config.fee(), loanTerms.credit.amount);
         if (feeAmount > 0) {
             creditHelper.amount = feeAmount;
             _pushFrom(creditHelper, loanTerms.lender, config.feeCollector());
         }
 
-        // If the new lender is the LOAN token owner, don't execute the transfer at all,
-        // it would make transfer from the same address to the same address
+        // New lender repays the original loan
+        // Note: If the new lender is the LOAN token owner, don't execute the transfer at all,
+        // it would make transfer from the same address to the same address.
         if (loanTerms.lender != loanOwner) {
             creditHelper.amount = Math.min(repaymentAmount, newLoanAmount);
             _transferLoanRepayment({
@@ -504,6 +481,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             });
         }
 
+        // Handle the surplus or the missing amount
         if (newLoanAmount >= repaymentAmount) {
             // New loan covers the whole original loan, transfer surplus to the borrower if any
             uint256 surplus = newLoanAmount - repaymentAmount;
@@ -512,11 +490,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
                 _pushFrom(creditHelper, loanTerms.lender, loanTerms.borrower);
             }
         } else {
-            // Permit borrowers credit spending if permit provided
-            creditHelper.amount = repaymentAmount - newLoanAmount;
-            _permit(creditHelper, loanTerms.borrower, borrowerPermit);
-
             // New loan covers only part of the original loan, borrower needs to contribute
+            creditHelper.amount = repaymentAmount - newLoanAmount;
             _transferLoanRepayment({
                 repayLoanDirectly: repayLoanDirectly || loanTerms.lender == loanOwner,
                 repaymentCredit: creditHelper,
@@ -539,11 +514,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      a vault, waiting on a LOAN token holder to claim it. The function assumes a prior token approval to a contract address
      *      or a signed permit.
      * @param loanId Id of a loan that is being repaid.
-     * @param creditPermit Permit data for a credit asset signed by a borrower.
+     * @param permit Callers credit permit data.
      */
     function repayLOAN(
         uint256 loanId,
-        bytes calldata creditPermit
+        Permit calldata permit
     ) external {
         LOAN storage loan = LOANs[loanId];
 
@@ -562,7 +537,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             borrower: borrower,
             repaymentCredit: repaymentCredit,
             collateral: collateral,
-            creditPermit: creditPermit
+            permit: permit
         });
     }
 
@@ -626,7 +601,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param borrower Address of the borrower associated with the loan.
      * @param repaymentCredit Credit asset to be repaid.
      * @param collateral Collateral to be transferred back to the borrower.
-     * @param creditPermit Permit data for a credit asset signed by a borrower.
+     * @param permit Callers credit permit data.
      */
     function _settleLoanRepayment(
         bool repayLoanDirectly,
@@ -635,10 +610,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         address borrower,
         MultiToken.Asset memory repaymentCredit,
         MultiToken.Asset memory collateral,
-        bytes calldata creditPermit
+        Permit calldata permit
     ) private {
+        // Execute permit for the caller
+        _tryPermit(permit);
+
         // Transfer credit to the original lender or to the Vault
-        _permit(repaymentCredit, repayingAddress, creditPermit);
         _transferLoanRepayment(repayLoanDirectly, repaymentCredit, repayingAddress, loanOwner);
 
         // Transfer collateral back to borrower
@@ -804,12 +781,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @dev The function assumes a prior token approval to a contract address or a signed permit.
      * @param extension Extension proposal struct.
      * @param signature Signature of the extension proposal.
-     * @param compensationPermit Permit data for a fungible compensation asset signed by a borrower.
+     * @param permit Callers permit.
      */
     function extendLOAN(
         ExtensionProposal calldata extension,
         bytes calldata signature,
-        bytes calldata compensationPermit
+        Permit calldata permit
     ) external {
         LOAN storage loan = LOANs[extension.loanId];
 
@@ -892,7 +869,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             _checkValidAsset(compensation);
 
             // Transfer compensation to the loan owner
-            _permit(compensation, loan.borrower, compensationPermit);
+            _tryPermit(permit);
             _pushFrom(compensation, loan.borrower, loanOwner);
         }
     }

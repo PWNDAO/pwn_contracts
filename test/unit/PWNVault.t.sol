@@ -3,21 +3,13 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "MultiToken/MultiToken.sol";
-
-import "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
-import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-
-import "@pwn/loan/PWNVault.sol";
+import { PWNVault, IERC165, IERC721Receiver, IERC1155Receiver, Permit, MultiToken } from "@pwn/loan/vault/PWNVault.sol";
 import "@pwn/PWNErrors.sol";
 
-import "@pwn-test/helper/token/T721.sol";
+import { T721 } from "@pwn-test/helper/token/T721.sol";
 
 
-// The only reason for this contract is to expose internal functions of PWNVault
-// No additional logic is applied here
-contract PWNVaultExposed is PWNVault {
+contract PWNVaultHarness is PWNVault {
 
     function pull(MultiToken.Asset memory asset, address origin) external {
         _pull(asset, origin);
@@ -31,15 +23,15 @@ contract PWNVaultExposed is PWNVault {
         _pushFrom(asset, origin, beneficiary);
     }
 
-    function permit(MultiToken.Asset memory asset, address origin, bytes memory permit_) external {
-        _permit(asset, origin, permit_);
+    function exposed_tryPermit(Permit calldata permit) external {
+        _tryPermit(permit);
     }
 
 }
 
 abstract contract PWNVaultTest is Test {
 
-    PWNVaultExposed vault;
+    PWNVaultHarness vault;
     address token = makeAddr("token");
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
@@ -55,8 +47,8 @@ abstract contract PWNVaultTest is Test {
         vm.etch(token, bytes("data"));
     }
 
-    function setUp() external {
-        vault = new PWNVaultExposed();
+    function setUp() public virtual {
+        vault = new PWNVaultHarness();
         t721 = new T721();
     }
 
@@ -204,33 +196,62 @@ contract PWNVault_PushFrom_Test is PWNVaultTest {
 
 
 /*----------------------------------------------------------*|
-|*  # PERMIT                                                *|
+|*  # TRY PERMIT                                            *|
 |*----------------------------------------------------------*/
 
-contract PWNVault_Permit_Test is PWNVaultTest {
+contract PWNVault_TryPermit_Test is PWNVaultTest {
 
-    function test_shouldCallPermit_whenPermitNonZero() external {
+    Permit permit;
+    string permitSignature = "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)";
+
+    function setUp() public override {
+        super.setUp();
+
+        vm.mockCall(
+            token,
+            abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)"),
+            abi.encode("")
+        );
+
+        permit = Permit({
+            asset: token,
+            owner: alice,
+            amount: 100,
+            deadline: 1,
+            v: 4,
+            r: bytes32(uint256(2)),
+            s: bytes32(uint256(3))
+        });
+    }
+
+
+    function test_shouldCallPermit_whenPermitAssetNonZero() external {
         vm.expectCall(
             token,
             abi.encodeWithSignature(
-                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                alice, address(vault), 100, 1, uint8(4), bytes32(uint256(2)), bytes32(uint256(3)))
+                permitSignature,
+                permit.owner, address(vault), permit.amount, permit.deadline, permit.v, permit.r, permit.s
+            )
         );
 
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC20, token, 0, 100);
-        bytes memory permit = abi.encodePacked(uint256(1), bytes32(uint256(2)), bytes32(uint256(3)), uint8(4));
-        vault.permit(asset, alice, permit);
+        vault.exposed_tryPermit(permit);
     }
 
-    function testFail_shouldNotCallPermit_whenPermitIsZero() external {
-        // Should fail, because permit is not called
-        vm.expectCall(
-            token,
-            abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)")
-        );
+    function test_shouldNotCallPermit_whenPermitIsZero() external {
+        vm.expectCall({
+            callee: token,
+            data: abi.encodeWithSignature(permitSignature),
+            count: 0
+        });
 
-        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC20, token, 0, 100);
-        vault.permit(asset, alice, "");
+        permit.asset = address(0);
+        vault.exposed_tryPermit(permit);
+    }
+
+    function test_shouldNotFail_whenPermitReverts() external {
+        vm.mockCallRevert(token, abi.encodeWithSignature(permitSignature), abi.encode(""));
+
+        vault.exposed_tryPermit(permit);
     }
 
 }

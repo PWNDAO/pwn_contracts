@@ -7,6 +7,7 @@ import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography
 
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import { Permit } from "@pwn/loan/vault/Permit.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -115,8 +116,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
      * @param offer Offer struct containing all offer data.
      * @param offerValues OfferValues struct specifying all flexible offer values.
      * @param signature Lender signature of an offer.
-     * @param creditPermit Permit signature for a credit asset.
-     * @param collateralPermit Permit signature for a collateral asset.
+     * @param permit Callers permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return loanId Id of a created loan.
      */
@@ -124,8 +124,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
-        bytes calldata creditPermit,
-        bytes calldata collateralPermit,
+        Permit calldata permit,
         bytes calldata extra
     ) public returns (uint256 loanId) {
         // Check if the offer is refinancing offer
@@ -133,14 +132,17 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
             revert InvalidRefinancingLoanId({ refinancingLoanId: offer.refinancingLoanId });
         }
 
+        // Check permit
+        _checkPermit(msg.sender, offer.creditAddress, permit);
+
+        // Accept offer
         (bytes32 offerHash, PWNSimpleLoan.Terms memory loanTerms) = _acceptOffer(offer, offerValues, signature);
 
         // Create loan
         return PWNSimpleLoan(offer.loanContract).createLOAN({
             proposalHash: offerHash,
             loanTerms: loanTerms,
-            creditPermit: creditPermit,
-            collateralPermit: collateralPermit,
+            permit: permit,
             extra: extra
         });
     }
@@ -152,8 +154,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
      * @param offer Offer struct containing all offer data.
      * @param offerValues OfferValues struct specifying all flexible offer values.
      * @param signature Lender signature of an offer.
-     * @param lenderCreditPermit Lenders permit signature for a credit asset.
-     * @param borrowerCreditPermit Borrowers permit signature for a credit asset.
+     * @param permit Callers permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return refinancedLoanId Id of a created refinanced loan.
      */
@@ -162,8 +163,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
-        bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit,
+        Permit calldata permit,
         bytes calldata extra
     ) public returns (uint256 refinancedLoanId) {
         // Check if the offer is refinancing offer
@@ -171,6 +171,10 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
             revert InvalidRefinancingLoanId({ refinancingLoanId: offer.refinancingLoanId });
         }
 
+        // Check permit
+        _checkPermit(msg.sender, offer.creditAddress, permit);
+
+        // Accept offer
         (bytes32 offerHash, PWNSimpleLoan.Terms memory loanTerms) = _acceptOffer(offer, offerValues, signature);
 
         // Refinance loan
@@ -178,8 +182,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
             loanId: loanId,
             proposalHash: offerHash,
             loanTerms: loanTerms,
-            lenderCreditPermit: lenderCreditPermit,
-            borrowerCreditPermit: borrowerCreditPermit,
+            permit: permit,
             extra: extra
         });
     }
@@ -190,8 +193,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
      * @param offer Offer struct containing all offer data.
      * @param offerValues OfferValues struct specifying all flexible offer values.
      * @param signature Lender signature of an offer.
-     * @param creditPermit Permit signature for a credit asset.
-     * @param collateralPermit Permit signature for a collateral asset.
+     * @param permit Callers permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @param callersNonceSpace Nonce space of a callers nonce.
      * @param callersNonceToRevoke Nonce to revoke.
@@ -201,14 +203,13 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
-        bytes calldata creditPermit,
-        bytes calldata collateralPermit,
+        Permit calldata permit,
         bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptOffer(offer, offerValues, signature, creditPermit, collateralPermit, extra);
+        return acceptOffer(offer, offerValues, signature, permit, extra);
     }
 
     /**
@@ -218,8 +219,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
      * @param offer Offer struct containing all offer data.
      * @param offerValues OfferValues struct specifying all flexible offer values.
      * @param signature Lender signature of an offer.
-     * @param lenderCreditPermit Lenders permit signature for a credit asset.
-     * @param borrowerCreditPermit Borrowers permit signature for a credit asset.
+     * @param permit Callers permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @param callersNonceSpace Nonce space of a callers nonce.
      * @param callersNonceToRevoke Nonce to revoke.
@@ -230,14 +230,13 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         Offer calldata offer,
         OfferValues calldata offerValues,
         bytes calldata signature,
-        bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit,
+        Permit calldata permit,
         bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 refinancedLoanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRefinanceOffer(loanId, offer, offerValues, signature, lenderCreditPermit, borrowerCreditPermit, extra);
+        return acceptRefinanceOffer(loanId, offer, offerValues, signature, permit, extra);
     }
 
 

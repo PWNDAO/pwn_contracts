@@ -5,6 +5,7 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import { Permit } from "@pwn/loan/vault/Permit.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -98,8 +99,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
     function acceptRequest(
         Request calldata request,
         bytes calldata signature,
-        bytes calldata creditPermit,
-        bytes calldata collateralPermit,
+        Permit calldata permit,
         bytes calldata extra
     ) public returns (uint256 loanId) {
         // Check if the request is refinancing request
@@ -107,14 +107,17 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
             revert InvalidRefinancingLoanId({ refinancingLoanId: request.refinancingLoanId });
         }
 
+        // Check permit
+        _checkPermit(msg.sender, request.creditAddress, permit);
+
+        // Accept request
         (bytes32 requestHash, PWNSimpleLoan.Terms memory loanTerms) = _acceptRequest(request, signature);
 
         // Create loan
         return PWNSimpleLoan(request.loanContract).createLOAN({
             proposalHash: requestHash,
             loanTerms: loanTerms,
-            creditPermit: creditPermit,
-            collateralPermit: collateralPermit,
+            permit: permit,
             extra: extra
         });
     }
@@ -123,8 +126,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         uint256 loanId,
         Request calldata request,
         bytes calldata signature,
-        bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit,
+        Permit calldata permit,
         bytes calldata extra
     ) public returns (uint256 refinancedLoanId) {
         // Check if the request is refinancing request
@@ -132,6 +134,10 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
             revert InvalidRefinancingLoanId({ refinancingLoanId: request.refinancingLoanId });
         }
 
+        // Check permit
+        _checkPermit(msg.sender, request.creditAddress, permit);
+
+        // Accept request
         (bytes32 requestHash, PWNSimpleLoan.Terms memory loanTerms) = _acceptRequest(request, signature);
 
         // Refinance loan
@@ -139,8 +145,7 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
             loanId: loanId,
             proposalHash: requestHash,
             loanTerms: loanTerms,
-            lenderCreditPermit: lenderCreditPermit,
-            borrowerCreditPermit: borrowerCreditPermit,
+            permit: permit,
             extra: extra
         });
     }
@@ -148,28 +153,26 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
     function acceptRequest(
         Request calldata request,
         bytes calldata signature,
-        bytes calldata creditPermit,
-        bytes calldata collateralPermit,
+        Permit calldata permit,
         bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRequest(request, signature, creditPermit, collateralPermit, extra);
+        return acceptRequest(request, signature, permit, extra);
     }
 
     function acceptRefinanceRequest(
         uint256 loanId,
         Request calldata request,
         bytes calldata signature,
-        bytes calldata lenderCreditPermit,
-        bytes calldata borrowerCreditPermit,
+        Permit calldata permit,
         bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 refinancedLoanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRefinanceRequest(loanId, request, signature, lenderCreditPermit, borrowerCreditPermit, extra);
+        return acceptRefinanceRequest(loanId, request, signature, permit, extra);
     }
 
 

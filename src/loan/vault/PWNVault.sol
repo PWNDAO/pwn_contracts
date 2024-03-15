@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "MultiToken/MultiToken.sol";
+import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import { IERC20Permit } from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import { IERC721Receiver } from "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import { IERC1155Receiver, IERC165 } from "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
+import { Permit } from "@pwn/loan/vault/Permit.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -42,9 +44,8 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     |*----------------------------------------------------------*/
 
     /**
-     * pull
-     * @dev Function accessing an asset and pulling it INTO a vault.
-     *      The function assumes a prior token approval was made to a vault address.
+     * @notice Function pulling an asset into a vault.
+     * @dev The function assumes a prior token approval to a vault address.
      * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
      * @param origin Borrower address that is transferring collateral to Vault or repaying a loan.
      */
@@ -58,9 +59,8 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     }
 
     /**
-     * push
-     * @dev Function pushing an asset FROM a vault TO a defined recipient.
-     *      This is used for claiming a paid back loan or a defaulted collateral, or returning collateral to a borrower.
+     * @notice Function pushing an asset from a vault to a recipient.
+     * @dev This is used for claiming a paid back loan or a defaulted collateral, or returning collateral to a borrower.
      * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
      * @param beneficiary An address of a recipient of an asset.
      */
@@ -74,9 +74,8 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     }
 
     /**
-     * pushFrom
-     * @dev Function pushing an asset FROM a lender TO a borrower.
-     *      The function assumes a prior token approval was made to a vault address.
+     * @notice Function pushing an asset from an origin address to a beneficiary address.
+     * @dev The function assumes a prior token approval to a vault address.
      * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
      * @param origin An address of a lender who is providing a loan asset.
      * @param beneficiary An address of the recipient of an asset.
@@ -101,17 +100,24 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     |*----------------------------------------------------------*/
 
     /**
-     * permit
-     * @dev Function uses signed permit data to set vaults allowance for an asset.
-     * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
-     * @param origin An address who is approving an asset.
-     * @param permit Data about permit deadline (uint256) and permit signature (64/65 bytes).
-     *               Deadline and signature should be pack encoded together.
-     *               Signature can be standard (65 bytes) or compact (64 bytes) defined in EIP-2098.
+     * @notice Try to execute a permit for an ERC20 token.
+     * @dev If the permit execution fails, the function will not revert.
+     * @param permit The permit data.
      */
-    function _permit(MultiToken.Asset memory asset, address origin, bytes memory permit) internal {
-        if (permit.length > 0)
-            asset.permit(origin, address(this), permit);
+    function _tryPermit(Permit calldata permit) internal {
+        if (permit.asset != address(0)) {
+            try IERC20Permit(permit.asset).permit({
+                owner: permit.owner,
+                spender: address(this),
+                value: permit.amount,
+                deadline: permit.deadline,
+                v: permit.v,
+                r: permit.r,
+                s: permit.s
+            }) {} catch {
+                // Note: Permit execution can be frontrun, so we don't revert on failure.
+            }
+        }
     }
 
 
