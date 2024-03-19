@@ -69,6 +69,11 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         address loanContract;
     }
 
+    /**
+     * @dev Emitted when a proposal is made via an on-chain transaction.
+     */
+    event RequestMade(bytes32 indexed proposalHash, address indexed proposer, Request request);
+
     constructor(
         address _hub,
         address _revokedNonce,
@@ -90,9 +95,12 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
      * @notice Make an on-chain request.
      * @dev Function will mark a request hash as proposed. Request will become acceptable by a lender without a request signature.
      * @param request Request struct containing all needed request data.
+     * @return proposalHash Request hash.
      */
-    function makeRequest(Request calldata request) external {
-        _makeProposal(getRequestHash(request), request.borrower, abi.encode(request));
+    function makeRequest(Request calldata request) external returns (bytes32 proposalHash){
+        proposalHash = getRequestHash(request);
+        _makeProposal(proposalHash, request.borrower);
+        emit RequestMade(proposalHash, request.borrower, request);
     }
 
 
@@ -235,10 +243,6 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
             fixedInterestAmount: request.fixedInterestAmount,
             accruingInterestAPR: request.accruingInterestAPR
         });
-    }
-
-    function decodeProposal(bytes calldata proposal) external pure returns (Request memory request) {
-        return abi.decode(proposal, (Request));
     }
 
 }

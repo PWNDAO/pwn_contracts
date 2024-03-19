@@ -37,11 +37,6 @@ abstract contract PWNSimpleLoanProposal {
      */
     mapping (bytes32 => uint256) public creditUsed;
 
-    /**
-     * @dev Emitted when a proposal is made via an on-chain transaction.
-     */
-    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, bytes proposal);
-
     constructor(
         address _hub,
         address _revokedNonce,
@@ -209,14 +204,12 @@ abstract contract PWNSimpleLoanProposal {
      * @param proposalHash Proposal hash.
      * @param proposer Address of a proposal proposer.
      */
-    function _makeProposal(bytes32 proposalHash, address proposer, bytes memory proposal) internal {
+    function _makeProposal(bytes32 proposalHash, address proposer) internal {
         if (msg.sender != proposer) {
             revert CallerIsNotStatedProposer(proposer);
         }
 
         proposalsMade[proposalHash] = true;
-
-        emit ProposalMade(proposalHash, proposer, proposal);
     }
 
     /**

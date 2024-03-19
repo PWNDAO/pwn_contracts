@@ -84,6 +84,11 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         bytes32[] merkleInclusionProof;
     }
 
+    /**
+     * @dev Emitted when a proposal is made via an on-chain transaction.
+     */
+    event OfferMade(bytes32 indexed proposalHash, address indexed proposer, Offer offer);
+
     constructor(
         address _hub,
         address _revokedNonce,
@@ -105,9 +110,12 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
      * @notice Make an on-chain offer.
      * @dev Function will mark an offer hash as proposed.
      * @param offer Offer struct containing all needed offer data.
+     * @return proposalHash Offer hash.
      */
-    function makeOffer(Offer calldata offer) external {
-        _makeProposal(getOfferHash(offer), offer.lender, abi.encode(offer));
+    function makeOffer(Offer calldata offer) external returns (bytes32 proposalHash) {
+        proposalHash = getOfferHash(offer);
+        _makeProposal(proposalHash, offer.lender);
+        emit OfferMade(proposalHash, offer.lender, offer);
     }
 
     /**
@@ -322,10 +330,6 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
             fixedInterestAmount: offer.fixedInterestAmount,
             accruingInterestAPR: offer.accruingInterestAPR
         });
-    }
-
-    function decodeProposal(bytes calldata proposal) external pure returns (Offer memory offer) {
-        return abi.decode(proposal, (Offer));
     }
 
 }

@@ -32,7 +32,7 @@ abstract contract PWNSimpleLoanListOfferTest is Test {
     uint256 refinancedLoanId = 123;
     Permit permit;
 
-    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, bytes proposal);
+    event OfferMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanListOffer.Offer offer);
 
     function setUp() virtual public {
         vm.etch(hub, bytes("data"));
@@ -177,9 +177,9 @@ contract PWNSimpleLoanListOffer_MakeOffer_Test is PWNSimpleLoanListOfferTest {
         offerContract.makeOffer(offer);
     }
 
-    function test_shouldEmit_ProposalMade() external {
+    function test_shouldEmit_OfferMade() external {
         vm.expectEmit();
-        emit ProposalMade(_offerHash(offer), offer.lender, abi.encode(offer));
+        emit OfferMade(_offerHash(offer), offer.lender, offer);
 
         vm.prank(offer.lender);
         offerContract.makeOffer(offer);
@@ -190,6 +190,11 @@ contract PWNSimpleLoanListOffer_MakeOffer_Test is PWNSimpleLoanListOfferTest {
         offerContract.makeOffer(offer);
 
         assertTrue(offerContract.proposalsMade(_offerHash(offer)));
+    }
+
+    function test_shouldReturnOfferHash() external {
+        vm.prank(offer.lender);
+        assertEq(offerContract.makeOffer(offer), _offerHash(offer));
     }
 
 }
@@ -963,21 +968,6 @@ contract PWNSimpleLoanListOffer_AcceptRefinanceOfferAndRevokeCallersNonce_Test i
         });
 
         assertEq(newLoanId, refinancedLoanId);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # DECODE PROPOSAL                                       *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanListOffer_DecodeProposal_Test is PWNSimpleLoanListOfferTest {
-
-    function test_shouldReturnDecodedOfferData() external {
-        PWNSimpleLoanListOffer.Offer memory decodedOffer = offerContract.decodeProposal(abi.encode(offer));
-
-        assertEq(_offerHash(decodedOffer), _offerHash(offer));
     }
 
 }
