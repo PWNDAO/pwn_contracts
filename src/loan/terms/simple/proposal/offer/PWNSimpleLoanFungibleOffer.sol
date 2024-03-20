@@ -10,6 +10,7 @@ import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimple
 import { Permit } from "@pwn/loan/vault/Permit.sol";
 import "@pwn/PWNErrors.sol";
 
+
 /**
  * @title PWN Simple Loan Fungible Offer
  * @notice Contract for creating and accepting fungible loan offers.

@@ -103,7 +103,14 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         emit RequestMade(proposalHash, request.borrower, request);
     }
 
-
+    /**
+     * @notice Accept a request.
+     * @param request Request struct containing all needed request data.
+     * @param signature Borrower's signature of the request.
+     * @param permit Permit struct containing a credit token permit.
+     * @param extra Extra data to be passed to the loan contract.
+     * @return loanId Loan id.
+     */
     function acceptRequest(
         Request calldata request,
         bytes calldata signature,
@@ -130,6 +137,15 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         });
     }
 
+    /**
+     * @notice Accept a refinancing request.
+     * @param loanId Id of a loan which is refinanced by the request.
+     * @param request Request struct containing all needed request data.
+     * @param signature Borrower's signature of the request.
+     * @param permit Permit struct containing a credit token permit.
+     * @param extra Extra data to be passed to the loan contract.
+     * @return refinancedLoanId Refinanced loan id.
+     */
     function acceptRefinanceRequest(
         uint256 loanId,
         Request calldata request,
@@ -158,6 +174,16 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         });
     }
 
+    /**
+     * @notice Accept a request with a nonce revocation.
+     * @param request Request struct containing all needed request data.
+     * @param signature Borrower's signature of the request.
+     * @param permit Permit struct containing a credit token permit.
+     * @param extra Extra data to be passed to the loan contract.
+     * @param callersNonceSpace Nonce space of a caller's nonce to revoke.
+     * @param callersNonceToRevoke Nonce to revoke.
+     * @return loanId Loan id.
+     */
     function acceptRequest(
         Request calldata request,
         bytes calldata signature,
@@ -170,6 +196,17 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
         return acceptRequest(request, signature, permit, extra);
     }
 
+    /**
+     * @notice Accept a refinancing request with a nonce revocation.
+     * @param loanId Id of a loan which is refinanced by the request.
+     * @param request Request struct containing all needed request data.
+     * @param signature Borrower's signature of the request.
+     * @param permit Permit struct containing a credit token permit.
+     * @param extra Extra data to be passed to the loan contract.
+     * @param callersNonceSpace Nonce space of a caller's nonce to revoke.
+     * @param callersNonceToRevoke Nonce to revoke.
+     * @return refinancedLoanId Refinanced loan id.
+     */
     function acceptRefinanceRequest(
         uint256 loanId,
         Request calldata request,

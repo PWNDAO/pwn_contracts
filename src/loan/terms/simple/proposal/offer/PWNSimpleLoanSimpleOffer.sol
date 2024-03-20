@@ -103,6 +103,14 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
         emit OfferMade(proposalHash, offer.lender, offer);
     }
 
+    /**
+     * @notice Accept an offer.
+     * @param offer Offer struct containing all offer data.
+     * @param signature Lender signature of an offer.
+     * @param permit Callers permit data.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
+     * @return loanId Id of a created loan.
+     */
     function acceptOffer(
         Offer calldata offer,
         bytes calldata signature,
@@ -129,6 +137,15 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
         });
     }
 
+    /**
+     * @notice Accept a refinancing offer.
+     * @param loanId Id of a loan to be refinanced.
+     * @param offer Offer struct containing all offer data.
+     * @param signature Lender signature of an offer.
+     * @param permit Callers permit data.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
+     * @return refinancedLoanId Id of a created refinanced loan.
+     */
     function acceptRefinanceOffer(
         uint256 loanId,
         Offer calldata offer,
@@ -157,6 +174,17 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
         });
     }
 
+    /**
+     * @notice Accept an offer with a callers nonce revocation.
+     * @dev Function will mark an offer hash and callers nonce as revoked.
+     * @param offer Offer struct containing all offer data.
+     * @param signature Lender signature of an offer.
+     * @param permit Callers permit data.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
+     * @param callersNonceSpace Nonce space of a callers nonce.
+     * @param callersNonceToRevoke Nonce to revoke.
+     * @return loanId Id of a created loan.
+     */
     function acceptOffer(
         Offer calldata offer,
         bytes calldata signature,
@@ -169,6 +197,18 @@ contract PWNSimpleLoanSimpleOffer is PWNSimpleLoanProposal {
         return acceptOffer(offer, signature, permit, extra);
     }
 
+    /**
+     * @notice Accept a refinancing offer with a callers nonce revocation.
+     * @dev Function will mark an offer hash and callers nonce as revoked.
+     * @param loanId Id of a loan to be refinanced.
+     * @param offer Offer struct containing all offer data.
+     * @param signature Lender signature of an offer.
+     * @param permit Callers permit data.
+     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
+     * @param callersNonceSpace Nonce space of a callers nonce.
+     * @param callersNonceToRevoke Nonce to revoke.
+     * @return refinancedLoanId Id of a created refinanced loan.
+     */
     function acceptRefinanceOffer(
         uint256 loanId,
         Offer calldata offer,
