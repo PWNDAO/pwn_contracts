@@ -73,7 +73,7 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
     }
 
     /**
-     * Construct defining an Offer concrete values
+     * @notice Construct defining an Offer concrete values
      * @param collateralId Selected collateral id to be used as a collateral.
      * @param merkleInclusionProof Proof of inclusion, that selected collateral id is whitelisted.
      *                             This proof should create same hash as the merkle tree root given in an Offer.
@@ -120,7 +120,6 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
 
     /**
      * @notice Accept an offer.
-     * @dev Function will mark an offer hash as revoked.
      * @param offer Offer struct containing all offer data.
      * @param offerValues OfferValues struct specifying all flexible offer values.
      * @param signature Lender signature of an offer.
@@ -157,7 +156,6 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
 
     /**
      * @notice Accept a refinancing offer.
-     * @dev Function will mark an offer hash as revoked.
      * @param loanId Id of a loan to be refinanced.
      * @param offer Offer struct containing all offer data.
      * @param offerValues OfferValues struct specifying all flexible offer values.
@@ -247,6 +245,10 @@ contract PWNSimpleLoanListOffer is PWNSimpleLoanProposal {
         return acceptRefinanceOffer(loanId, offer, offerValues, signature, permit, extra);
     }
 
+
+    /*----------------------------------------------------------*|
+    |*  # INTERNALS                                             *|
+    |*----------------------------------------------------------*/
 
     function _acceptOffer(
         Offer calldata offer,

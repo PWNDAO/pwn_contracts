@@ -43,6 +43,8 @@ error InvalidSignature(address signer, bytes32 digest);
 
 // Offer
 error CollateralIdNotWhitelisted(uint256 id);
+error MinCollateralAmountNotSet();
+error InsufficientCollateralAmount(uint256 current, uint256 limit);
 
 // Proposal
 error CallerIsNotStatedProposer(address);

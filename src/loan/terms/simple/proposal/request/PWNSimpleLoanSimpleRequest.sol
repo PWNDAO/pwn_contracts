@@ -184,6 +184,10 @@ contract PWNSimpleLoanSimpleRequest is PWNSimpleLoanProposal {
     }
 
 
+    /*----------------------------------------------------------*|
+    |*  # INTERNALS                                             *|
+    |*----------------------------------------------------------*/
+
     function _acceptRequest(
         Request calldata request,
         bytes calldata signature
