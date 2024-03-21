@@ -27,7 +27,7 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
     PWNSimpleLoanFungibleProposal.Proposal proposal;
     PWNSimpleLoanFungibleProposal.ProposalValues proposalValues;
 
-    event OfferMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanFungibleProposal.Proposal proposal);
+    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanFungibleProposal.Proposal proposal);
 
     function setUp() virtual public override {
         super.setUp();
@@ -135,6 +135,90 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
     function _getProposalHashWith(Params memory _params) internal override returns (bytes32) {
         _updateProposal(_params);
         return _proposalHash(proposal);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # CREDIT USED                                           *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanFungibleProposal_CreditUsed_Test is PWNSimpleLoanFungibleProposalTest {
+
+    function testFuzz_shouldReturnUsedCredit(uint256 used) external {
+        vm.store(address(proposalContract), keccak256(abi.encode(_proposalHash(proposal), CREDIT_USED_SLOT)), bytes32(used));
+
+        assertEq(proposalContract.creditUsed(_proposalHash(proposal)), used);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # REVOKE NONCE                                          *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanFungibleProposal_RevokeNonce_Test is PWNSimpleLoanFungibleProposalTest {
+
+    function testFuzz_shouldCallRevokeNonce(address caller, uint256 nonceSpace, uint256 nonce) external {
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature("revokeNonce(address,uint256,uint256)", caller, nonceSpace, nonce)
+        );
+
+        vm.prank(caller);
+        proposalContract.revokeNonce(nonceSpace, nonce);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # GET PROPOSAL HASH                                     *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanFungibleProposal_GetProposalHash_Test is PWNSimpleLoanFungibleProposalTest {
+
+    function test_shouldReturnOfferHash() external {
+        assertEq(_proposalHash(proposal), proposalContract.getProposalHash(proposal));
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # MAKE PROPOSAL                                         *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanFungibleProposal_MakeProposal_Test is PWNSimpleLoanFungibleProposalTest {
+
+    function testFuzz_shouldFail_whenCallerIsNotProposer(address caller) external {
+        vm.assume(caller != proposal.proposer);
+
+        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedProposer.selector, proposal.proposer));
+        vm.prank(caller);
+        proposalContract.makeProposal(proposal);
+    }
+
+    function test_shouldEmit_OfferMade() external {
+        vm.expectEmit();
+        emit ProposalMade(_proposalHash(proposal), proposal.proposer, proposal);
+
+        vm.prank(proposal.proposer);
+        proposalContract.makeProposal(proposal);
+    }
+
+    function test_shouldMakeOffer() external {
+        vm.prank(proposal.proposer);
+        proposalContract.makeProposal(proposal);
+
+        assertTrue(proposalContract.proposalsMade(_proposalHash(proposal)));
+    }
+
+    function test_shouldReturnOfferHash() external {
+        vm.prank(proposal.proposer);
+        assertEq(proposalContract.makeProposal(proposal), _proposalHash(proposal));
     }
 
 }
