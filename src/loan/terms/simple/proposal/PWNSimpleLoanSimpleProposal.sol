@@ -3,8 +3,6 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 import { Permit } from "@pwn/loan/vault/Permit.sol";
@@ -12,37 +10,30 @@ import "@pwn/PWNErrors.sol";
 
 
 /**
- * @title PWN Simple Loan Fungible Proposal
- * @notice Contract for creating and accepting fungible loan proposals.
- *         Proposals are fungible, which means that they are not tied to a specific collateral or credit amount.
- *         The amount of collateral and credit is specified during the proposal acceptance.
+ * @title PWN Simple Loan Simple Proposal
+ * @notice Contract for creating and accepting simple loan proposals.
  */
-contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
+contract PWNSimpleLoanSimpleProposal is PWNSimpleLoanProposal {
 
     string public constant VERSION = "1.2";
-
-    /**
-     * @notice Credit per collateral unit denominator. It is used to calculate credit amount from collateral amount.
-     */
-    uint256 public constant CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR = 1e38;
 
     /**
      * @dev EIP-712 simple proposal struct type hash.
      */
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 minCollateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
-     * @notice Construct defining a fungible proposal.
-     * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 2 == ERC1155).
+     * @notice Construct defining a simple proposal.
+     * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
-     * @param minCollateralAmount Minimal amount of tokens used as a collateral.
-     * @param checkCollateralStateFingerprint If true, collateral state fingerprint will be checked on loan terms creation.
-     * @param collateralStateFingerprint Fingerprint of a collateral state. It is used to check if a collateral is in a valid state.
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0.
+     * @param checkCollateralStateFingerprint If true, the collateral state fingerprint has to be checked.
+     * @param collateralStateFingerprint Fingerprint of a collateral state defined by ERC5646.
      * @param creditAddress Address of an asset which is lended to a borrower.
-     * @param creditPerCollateralUnit Amount of tokens which are offered per collateral unit with 38 decimals.
+     * @param creditAmount Amount of tokens which is proposed as a loan to a borrower.
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal.
      * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
      * @param accruingInterestAPR Accruing interest APR.
@@ -54,18 +45,18 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @param refinancingLoanId Id of a loan which is refinanced by this proposal. If the id is 0 and `isOffer` is true, the proposal can refinance any loan.
      * @param nonceSpace Nonce space of a proposal nonce. All nonces in the same space can be revoked at once.
      * @param nonce Additional value to enable identical proposals in time. Without it, it would be impossible to make again proposal, which was once revoked.
-     *              Can be used to create a group of proposals, where accepting one will make others in the group invalid.
+     *              Can be used to create a group of proposals, where accepting one proposal will make other proposals in the group revoked.
      * @param loanContract Address of a loan contract that will create a loan from the proposal.
      */
     struct Proposal {
         MultiToken.Category collateralCategory;
         address collateralAddress;
         uint256 collateralId;
-        uint256 minCollateralAmount;
+        uint256 collateralAmount;
         bool checkCollateralStateFingerprint;
         bytes32 collateralStateFingerprint;
         address creditAddress;
-        uint256 creditPerCollateralUnit;
+        uint256 creditAmount;
         uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
         uint40 accruingInterestAPR;
@@ -81,14 +72,6 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @notice Construct defining proposal concrete values
-     * @param collateralAmount Amount of collateral to be used in the loan.
-     */
-    struct ProposalValues {
-        uint256 collateralAmount;
-    }
-
-    /**
      * @dev Emitted when a proposal is made via an on-chain transaction.
      */
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, Proposal proposal);
@@ -98,7 +81,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         address _revokedNonce,
         address _stateFingerprintComputerRegistry
     ) PWNSimpleLoanProposal(
-        _hub, _revokedNonce, _stateFingerprintComputerRegistry, "PWNSimpleLoanFungibleProposal", VERSION
+        _hub, _revokedNonce, _stateFingerprintComputerRegistry, "PWNSimpleLoanSimpleProposal", VERSION
     ) {}
 
     /**
@@ -125,7 +108,6 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     /**
      * @notice Accept a proposal.
      * @param proposal Proposal struct containing all proposal data.
-     * @param proposalValues ProposalValues struct specifying all flexible proposal values.
      * @param signature Proposal signature signed by a proposer.
      * @param permit Callers permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
@@ -133,7 +115,6 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      */
     function acceptProposal(
         Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
         bytes calldata signature,
         Permit calldata permit,
         bytes calldata extra
@@ -147,8 +128,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         _checkPermit(msg.sender, proposal.creditAddress, permit);
 
         // Accept proposal
-        (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms)
-            = _acceptProposal(proposal, proposalValues, signature);
+        (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms) = _acceptProposal(proposal, signature);
 
         // Create loan
         return PWNSimpleLoan(proposal.loanContract).createLOAN({
@@ -163,7 +143,6 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @notice Accept a refinancing proposal.
      * @param loanId Id of a loan to be refinanced.
      * @param proposal Proposal struct containing all proposal data.
-     * @param proposalValues ProposalValues struct specifying all flexible proposal values.
      * @param signature Proposal signature signed by a proposer.
      * @param permit Callers permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
@@ -172,7 +151,6 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     function acceptRefinanceProposal(
         uint256 loanId,
         Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
         bytes calldata signature,
         Permit calldata permit,
         bytes calldata extra
@@ -188,8 +166,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         _checkPermit(msg.sender, proposal.creditAddress, permit);
 
         // Accept proposal
-        (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms)
-            = _acceptProposal(proposal, proposalValues, signature);
+        (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms) = _acceptProposal(proposal, signature);
 
         // Refinance loan
         return PWNSimpleLoan(proposal.loanContract).refinanceLOAN({
@@ -205,7 +182,6 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @notice Accept a proposal with a callers nonce revocation.
      * @dev Function will mark callers nonce as revoked.
      * @param proposal Proposal struct containing all proposal data.
-     * @param proposalValues ProposalValues struct specifying all flexible proposal values.
      * @param signature Proposal signature signed by a proposer.
      * @param permit Callers permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
@@ -215,7 +191,6 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      */
     function acceptProposal(
         Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
         bytes calldata signature,
         Permit calldata permit,
         bytes calldata extra,
@@ -223,7 +198,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptProposal(proposal, proposalValues, signature, permit, extra);
+        return acceptProposal(proposal, signature, permit, extra);
     }
 
     /**
@@ -231,7 +206,6 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @dev Function will mark callers nonce as revoked.
      * @param loanId Id of a loan to be refinanced.
      * @param proposal Proposal struct containing all proposal data.
-     * @param proposalValues ProposalValues struct specifying all flexible proposal values.
      * @param signature Proposal signature signed by a proposer.
      * @param permit Callers permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
@@ -242,7 +216,6 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     function acceptRefinanceProposal(
         uint256 loanId,
         Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
         bytes calldata signature,
         Permit calldata permit,
         bytes calldata extra,
@@ -250,7 +223,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         uint256 callersNonceToRevoke
     ) external returns (uint256 refinancedLoanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRefinanceProposal(loanId, proposal, proposalValues, signature, permit, extra);
+        return acceptRefinanceProposal(loanId, proposal, signature, permit, extra);
     }
 
 
@@ -260,22 +233,10 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
 
     function _acceptProposal(
         Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
         bytes calldata signature
     )  private returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms) {
         // Check if the loan contract has a tag
         _checkLoanContractTag(proposal.loanContract);
-
-        // Check min collateral amount
-        if (proposal.minCollateralAmount == 0) {
-            revert MinCollateralAmountNotSet();
-        }
-        if (proposalValues.collateralAmount < proposal.minCollateralAmount) {
-            revert InsufficientCollateralAmount({
-                current: proposalValues.collateralAmount,
-                limit: proposal.minCollateralAmount
-            });
-        }
 
         // Check collateral state fingerprint if needed
         if (proposal.checkCollateralStateFingerprint) {
@@ -286,29 +247,18 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
             });
         }
 
-        // Calculate credit amount
-        uint256 creditAmount = _creditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit);
-
         // Try to accept proposal
-        proposalHash = _tryAcceptProposal(proposal, creditAmount, signature);
+        proposalHash = _tryAcceptProposal(proposal, signature);
 
         // Create loan terms object
-        loanTerms = _createLoanTerms(proposal, proposalValues.collateralAmount, creditAmount);
+        loanTerms = _createLoanTerms(proposal);
     }
 
-    function _creditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) private pure returns (uint256) {
-        return Math.mulDiv(collateralAmount, creditPerCollateralUnit, CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR);
-    }
-
-    function _tryAcceptProposal(
-        Proposal calldata proposal,
-        uint256 creditAmount,
-        bytes calldata signature
-    ) private returns (bytes32 proposalHash) {
+    function _tryAcceptProposal(Proposal calldata proposal, bytes calldata signature) private returns (bytes32 proposalHash) {
         proposalHash = getProposalHash(proposal);
         _tryAcceptProposal({
             proposalHash: proposalHash,
-            creditAmount: creditAmount,
+            creditAmount: proposal.creditAmount,
             availableCreditLimit: proposal.availableCreditLimit,
             apr: proposal.accruingInterestAPR,
             duration: proposal.duration,
@@ -322,11 +272,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         });
     }
 
-    function _createLoanTerms(
-        Proposal calldata proposal,
-        uint256 collateralAmount,
-        uint256 creditAmount
-    ) private view returns (PWNSimpleLoan.Terms memory) {
+    function _createLoanTerms(Proposal calldata proposal) private view returns (PWNSimpleLoan.Terms memory) {
         return PWNSimpleLoan.Terms({
             lender: proposal.isOffer ? proposal.proposer : msg.sender,
             borrower: proposal.isOffer ? msg.sender : proposal.proposer,
@@ -335,11 +281,11 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
                 category: proposal.collateralCategory,
                 assetAddress: proposal.collateralAddress,
                 id: proposal.collateralId,
-                amount: collateralAmount
+                amount: proposal.collateralAmount
             }),
             credit: MultiToken.ERC20({
                 assetAddress: proposal.creditAddress,
-                amount: creditAmount
+                amount: proposal.creditAmount
             }),
             fixedInterestAmount: proposal.fixedInterestAmount,
             accruingInterestAPR: proposal.accruingInterestAPR

@@ -45,30 +45,20 @@ abstract contract DeploymentTest is Deployments, Test {
             address(hub), address(loanToken), address(config), address(revokedNonce), address(categoryRegistry)
         );
 
-        simpleLoanSimpleOffer = new PWNSimpleLoanSimpleOffer(address(hub), address(revokedNonce), address(stateFingerprintComputerRegistry));
         simpleLoanListOffer = new PWNSimpleLoanListOffer(address(hub), address(revokedNonce), address(stateFingerprintComputerRegistry));
-        simpleLoanSimpleRequest = new PWNSimpleLoanSimpleRequest(address(hub), address(revokedNonce), address(stateFingerprintComputerRegistry));
 
         // Set hub tags
-        address[] memory addrs = new address[](8);
+        address[] memory addrs = new address[](4);
         addrs[0] = address(simpleLoan);
         addrs[1] = address(simpleLoan);
-        addrs[2] = address(simpleLoanSimpleOffer);
-        addrs[3] = address(simpleLoanSimpleOffer);
-        addrs[4] = address(simpleLoanListOffer);
-        addrs[5] = address(simpleLoanListOffer);
-        addrs[6] = address(simpleLoanSimpleRequest);
-        addrs[7] = address(simpleLoanSimpleRequest);
+        addrs[2] = address(simpleLoanListOffer);
+        addrs[3] = address(simpleLoanListOffer);
 
-        bytes32[] memory tags = new bytes32[](8);
+        bytes32[] memory tags = new bytes32[](4);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
         tags[1] = PWNHubTags.NONCE_MANAGER;
         tags[2] = PWNHubTags.LOAN_PROPOSAL;
         tags[3] = PWNHubTags.NONCE_MANAGER;
-        tags[4] = PWNHubTags.LOAN_PROPOSAL;
-        tags[5] = PWNHubTags.NONCE_MANAGER;
-        tags[6] = PWNHubTags.LOAN_PROPOSAL;
-        tags[7] = PWNHubTags.NONCE_MANAGER;
 
         vm.prank(protocolSafe);
         hub.setTags(addrs, tags, true);

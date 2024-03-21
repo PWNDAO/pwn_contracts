@@ -14,8 +14,7 @@ import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanListOffer } from "@pwn/loan/terms/simple/proposal/offer/PWNSimpleLoanListOffer.sol";
-import { PWNSimpleLoanSimpleOffer } from "@pwn/loan/terms/simple/proposal/offer/PWNSimpleLoanSimpleOffer.sol";
-import { PWNSimpleLoanSimpleRequest } from "@pwn/loan/terms/simple/proposal/request/PWNSimpleLoanSimpleRequest.sol";
+import { PWNSimpleLoanSimpleProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
 import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import { StateFingerprintComputerRegistry } from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
@@ -46,8 +45,6 @@ abstract contract Deployments is CommonBase {
         PWNRevokedNonce revokedNonce;
         PWNSimpleLoan simpleLoan;
         PWNSimpleLoanListOffer simpleLoanListOffer;
-        PWNSimpleLoanSimpleOffer simpleLoanSimpleOffer;
-        PWNSimpleLoanSimpleRequest simpleLoanSimpleRequest;
         StateFingerprintComputerRegistry stateFingerprintComputerRegistry;
     }
 
@@ -71,9 +68,7 @@ abstract contract Deployments is CommonBase {
     PWNLOAN loanToken;
     PWNSimpleLoan simpleLoan;
     PWNRevokedNonce revokedNonce;
-    PWNSimpleLoanSimpleOffer simpleLoanSimpleOffer;
     PWNSimpleLoanListOffer simpleLoanListOffer;
-    PWNSimpleLoanSimpleRequest simpleLoanSimpleRequest;
 
 
     function _loadDeployedAddresses() internal {
@@ -101,9 +96,7 @@ abstract contract Deployments is CommonBase {
             loanToken = deployment.loanToken;
             simpleLoan = deployment.simpleLoan;
             revokedNonce = deployment.revokedNonce;
-            simpleLoanSimpleOffer = deployment.simpleLoanSimpleOffer;
             simpleLoanListOffer = deployment.simpleLoanListOffer;
-            simpleLoanSimpleRequest = deployment.simpleLoanSimpleRequest;
             stateFingerprintComputerRegistry = deployment.stateFingerprintComputerRegistry;
             categoryRegistry = deployment.categoryRegistry;
         } else {
