@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
@@ -12,37 +12,31 @@ import "@pwn/PWNErrors.sol";
 
 
 /**
- * @title PWN Simple Loan Fungible Proposal
- * @notice Contract for creating and accepting fungible loan proposals.
- *         Proposals are fungible, which means that they are not tied to a specific collateral or credit amount.
- *         The amount of collateral and credit is specified during the proposal acceptance.
+ * @title PWN Simple Loan List Proposal
+ * @notice Contract for creating and accepting list loan proposals.
+ * @dev The proposal can define a list of acceptable collateral ids or the whole collection.
  */
-contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
+contract PWNSimpleLoanListProposal is PWNSimpleLoanProposal {
 
     string public constant VERSION = "1.2";
-
-    /**
-     * @notice Credit per collateral unit denominator. It is used to calculate credit amount from collateral amount.
-     */
-    uint256 public constant CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR = 1e38;
 
     /**
      * @dev EIP-712 simple proposal struct type hash.
      */
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 minCollateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Proposal(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
-     * @notice Construct defining a fungible proposal.
-     * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 2 == ERC1155).
+     * @notice Construct defining a list proposal.
+     * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
-     * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
-     * @param minCollateralAmount Minimal amount of tokens used as a collateral.
-     * @param checkCollateralStateFingerprint If true, collateral state fingerprint will be checked on loan terms creation.
-     * @param collateralStateFingerprint Fingerprint of a collateral state. It is used to check if a collateral is in a valid state.
-     * @param creditAddress Address of an asset which is lended to a borrower.
-     * @param creditPerCollateralUnit Amount of tokens which are offered per collateral unit with 38 decimals.
+     * @param collateralIdsWhitelistMerkleRoot Merkle tree root of a set of whitelisted collateral ids.
+     * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0.
+     * @param checkCollateralStateFingerprint If true, the collateral state fingerprint has to be checked.
+     * @param collateralStateFingerprint Fingerprint of a collateral state defined by ERC5646.
+     * @param creditAddress Address of an asset which is lender to a borrower.
+     * @param creditAmount Amount of tokens which is proposed as a loan to a borrower.
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal.
      * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
      * @param accruingInterestAPR Accruing interest APR.
@@ -54,18 +48,18 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @param refinancingLoanId Id of a loan which is refinanced by this proposal. If the id is 0 and `isOffer` is true, the proposal can refinance any loan.
      * @param nonceSpace Nonce space of a proposal nonce. All nonces in the same space can be revoked at once.
      * @param nonce Additional value to enable identical proposals in time. Without it, it would be impossible to make again proposal, which was once revoked.
-     *              Can be used to create a group of proposals, where accepting one will make others in the group invalid.
+     *              Can be used to create a group of proposals, where accepting one proposal will make other proposals in the group revoked.
      * @param loanContract Address of a loan contract that will create a loan from the proposal.
      */
     struct Proposal {
         MultiToken.Category collateralCategory;
         address collateralAddress;
-        uint256 collateralId;
-        uint256 minCollateralAmount;
+        bytes32 collateralIdsWhitelistMerkleRoot;
+        uint256 collateralAmount;
         bool checkCollateralStateFingerprint;
         bytes32 collateralStateFingerprint;
         address creditAddress;
-        uint256 creditPerCollateralUnit;
+        uint256 creditAmount;
         uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
         uint40 accruingInterestAPR;
@@ -82,10 +76,14 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
 
     /**
      * @notice Construct defining proposal concrete values.
-     * @param collateralAmount Amount of collateral to be used in the loan.
+     * @param collateralId Selected collateral id to be used as a collateral.
+     * @param merkleInclusionProof Proof of inclusion, that selected collateral id is whitelisted.
+     *                             This proof should create same hash as the merkle tree root given in the proposal.
+     *                             Can be empty for a proposal on a whole collection.
      */
     struct ProposalValues {
-        uint256 collateralAmount;
+        uint256 collateralId;
+        bytes32[] merkleInclusionProof;
     }
 
     /**
@@ -98,7 +96,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         address _revokedNonce,
         address _stateFingerprintComputerRegistry
     ) PWNSimpleLoanProposal(
-        _hub, _revokedNonce, _stateFingerprintComputerRegistry, "PWNSimpleLoanFungibleProposal", VERSION
+        _hub, _revokedNonce, _stateFingerprintComputerRegistry, "PWNSimpleLoanListProposal", VERSION
     ) {}
 
     /**
@@ -266,49 +264,46 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         // Check if the loan contract has a tag
         _checkLoanContractTag(proposal.loanContract);
 
-        // Check min collateral amount
-        if (proposal.minCollateralAmount == 0) {
-            revert MinCollateralAmountNotSet();
+        // Check provided collateral id
+        if (proposal.collateralIdsWhitelistMerkleRoot != bytes32(0)) {
+            _checkCollateralId(proposal, proposalValues);
         }
-        if (proposalValues.collateralAmount < proposal.minCollateralAmount) {
-            revert InsufficientCollateralAmount({
-                current: proposalValues.collateralAmount,
-                limit: proposal.minCollateralAmount
-            });
-        }
+
+        // Note: If the `collateralIdsWhitelistMerkleRoot` is empty, then it is a collection proposal
+        // and any collateral id can be used.
 
         // Check collateral state fingerprint if needed
         if (proposal.checkCollateralStateFingerprint) {
             _checkCollateralState({
                 addr: proposal.collateralAddress,
-                id: proposal.collateralId,
+                id: proposalValues.collateralId,
                 stateFingerprint: proposal.collateralStateFingerprint
             });
         }
 
-        // Calculate credit amount
-        uint256 creditAmount = _creditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit);
-
         // Try to accept proposal
-        proposalHash = _tryAcceptProposal(proposal, creditAmount, signature);
+        proposalHash = _tryAcceptProposal(proposal, signature);
 
         // Create loan terms object
-        loanTerms = _createLoanTerms(proposal, proposalValues.collateralAmount, creditAmount);
+        loanTerms = _createLoanTerms(proposal, proposalValues);
     }
 
-    function _creditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) private pure returns (uint256) {
-        return Math.mulDiv(collateralAmount, creditPerCollateralUnit, CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR);
+    function _checkCollateralId(Proposal calldata proposal, ProposalValues calldata proposalValues) private pure {
+        // Verify whitelisted collateral id
+        if (
+            !MerkleProof.verify({
+                proof: proposalValues.merkleInclusionProof,
+                root: proposal.collateralIdsWhitelistMerkleRoot,
+                leaf: keccak256(abi.encodePacked(proposalValues.collateralId))
+            })
+        ) revert CollateralIdNotWhitelisted({ id: proposalValues.collateralId });
     }
 
-    function _tryAcceptProposal(
-        Proposal calldata proposal,
-        uint256 creditAmount,
-        bytes calldata signature
-    ) private returns (bytes32 proposalHash) {
+    function _tryAcceptProposal(Proposal calldata proposal, bytes calldata signature) private returns (bytes32 proposalHash) {
         proposalHash = getProposalHash(proposal);
         _tryAcceptProposal({
             proposalHash: proposalHash,
-            creditAmount: creditAmount,
+            creditAmount: proposal.creditAmount,
             availableCreditLimit: proposal.availableCreditLimit,
             apr: proposal.accruingInterestAPR,
             duration: proposal.duration,
@@ -324,8 +319,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
 
     function _createLoanTerms(
         Proposal calldata proposal,
-        uint256 collateralAmount,
-        uint256 creditAmount
+        ProposalValues calldata proposalValues
     ) private view returns (PWNSimpleLoan.Terms memory) {
         return PWNSimpleLoan.Terms({
             lender: proposal.isOffer ? proposal.proposer : msg.sender,
@@ -334,12 +328,12 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
             collateral: MultiToken.Asset({
                 category: proposal.collateralCategory,
                 assetAddress: proposal.collateralAddress,
-                id: proposal.collateralId,
-                amount: collateralAmount
+                id: proposalValues.collateralId,
+                amount: proposal.collateralAmount
             }),
             credit: MultiToken.ERC20({
                 assetAddress: proposal.creditAddress,
-                amount: creditAmount
+                amount: proposal.creditAmount
             }),
             fixedInterestAmount: proposal.fixedInterestAmount,
             accruingInterestAPR: proposal.accruingInterestAPR

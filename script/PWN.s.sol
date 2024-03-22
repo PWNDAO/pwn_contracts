@@ -13,7 +13,7 @@ import { IPWNDeployer } from "@pwn/deployer/IPWNDeployer.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanListOffer } from "@pwn/loan/terms/simple/proposal/offer/PWNSimpleLoanListOffer.sol";
+import { PWNSimpleLoanListProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
 import { PWNSimpleLoanSimpleProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
 import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
@@ -40,10 +40,8 @@ library PWNContractDeployerSalt {
 
     // Proposal types
     bytes32 internal constant SIMPLE_LOAN_SIMPLE_PROPOSAL = keccak256("PWNSimpleLoanSimpleProposal");
+    bytes32 internal constant SIMPLE_LOAN_LIST_PROPOSAL = keccak256("PWNSimpleLoanListProposal");
     bytes32 internal constant SIMPLE_LOAN_FUNGIBLE_PROPOSAL = keccak256("PWNSimpleLoanFungibleProposal");
-
-    // Offer types
-    bytes32 internal constant SIMPLE_LOAN_LIST_OFFER = keccak256("PWNSimpleLoanListOffer");
 
 }
 
@@ -171,22 +169,12 @@ forge script script/PWN.s.sol:Deploy \
             )
         }));
 
-        // - Offers
-        simpleLoanListOffer = PWNSimpleLoanListOffer(_deploy({
-            salt: PWNContractDeployerSalt.SIMPLE_LOAN_LIST_OFFER,
-            bytecode: abi.encodePacked(
-                type(PWNSimpleLoanListOffer).creationCode,
-                abi.encode(address(hub), address(revokedNonce))
-            )
-        }));
-
         console2.log("PWNConfig - singleton:", configSingleton);
         console2.log("PWNConfig - proxy:", address(config));
         console2.log("PWNHub:", address(hub));
         console2.log("PWNLOAN:", address(loanToken));
         console2.log("PWNRevokedNonce:", address(revokedNonce));
         console2.log("PWNSimpleLoan:", address(simpleLoan));
-        console2.log("PWNSimpleLoanListOffer:", address(simpleLoanListOffer));
 
         vm.stopBroadcast();
     }
@@ -267,14 +255,14 @@ forge script script/PWN.s.sol:Setup \
         address[] memory addrs = new address[](4);
         addrs[0] = address(simpleLoan);
         addrs[1] = address(simpleLoan);
-        addrs[2] = address(simpleLoanListOffer);
-        addrs[3] = address(simpleLoanListOffer);
+        // addrs[2] = address(simpleLoanListOffer);
+        // addrs[3] = address(simpleLoanListOffer);
 
         bytes32[] memory tags = new bytes32[](4);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
         tags[1] = PWNHubTags.NONCE_MANAGER;
-        tags[2] = PWNHubTags.LOAN_PROPOSAL;
-        tags[3] = PWNHubTags.NONCE_MANAGER;
+        // tags[2] = PWNHubTags.LOAN_PROPOSAL;
+        // tags[3] = PWNHubTags.NONCE_MANAGER;
 
         bool success = GnosisSafeLike(protocolSafe).execTransaction({
             to: address(hub),

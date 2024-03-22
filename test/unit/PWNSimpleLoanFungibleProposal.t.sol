@@ -180,7 +180,7 @@ contract PWNSimpleLoanFungibleProposal_RevokeNonce_Test is PWNSimpleLoanFungible
 
 contract PWNSimpleLoanFungibleProposal_GetProposalHash_Test is PWNSimpleLoanFungibleProposalTest {
 
-    function test_shouldReturnOfferHash() external {
+    function test_shouldReturnProposalHash() external {
         assertEq(_proposalHash(proposal), proposalContract.getProposalHash(proposal));
     }
 
@@ -201,7 +201,7 @@ contract PWNSimpleLoanFungibleProposal_MakeProposal_Test is PWNSimpleLoanFungibl
         proposalContract.makeProposal(proposal);
     }
 
-    function test_shouldEmit_OfferMade() external {
+    function test_shouldEmit_ProposalMade() external {
         vm.expectEmit();
         emit ProposalMade(_proposalHash(proposal), proposal.proposer, proposal);
 
@@ -209,14 +209,14 @@ contract PWNSimpleLoanFungibleProposal_MakeProposal_Test is PWNSimpleLoanFungibl
         proposalContract.makeProposal(proposal);
     }
 
-    function test_shouldMakeOffer() external {
+    function test_shouldMakeProposal() external {
         vm.prank(proposal.proposer);
         proposalContract.makeProposal(proposal);
 
         assertTrue(proposalContract.proposalsMade(_proposalHash(proposal)));
     }
 
-    function test_shouldReturnOfferHash() external {
+    function test_shouldReturnProposalHash() external {
         vm.prank(proposal.proposer);
         assertEq(proposalContract.makeProposal(proposal), _proposalHash(proposal));
     }

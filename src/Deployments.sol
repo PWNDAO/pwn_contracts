@@ -13,7 +13,7 @@ import { IPWNDeployer } from "@pwn/deployer/IPWNDeployer.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanListOffer } from "@pwn/loan/terms/simple/proposal/offer/PWNSimpleLoanListOffer.sol";
+import { PWNSimpleLoanListProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
 import { PWNSimpleLoanSimpleProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
 import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
@@ -44,7 +44,6 @@ abstract contract Deployments is CommonBase {
         address protocolTimelock;
         PWNRevokedNonce revokedNonce;
         PWNSimpleLoan simpleLoan;
-        PWNSimpleLoanListOffer simpleLoanListOffer;
         StateFingerprintComputerRegistry stateFingerprintComputerRegistry;
     }
 
@@ -68,7 +67,6 @@ abstract contract Deployments is CommonBase {
     PWNLOAN loanToken;
     PWNSimpleLoan simpleLoan;
     PWNRevokedNonce revokedNonce;
-    PWNSimpleLoanListOffer simpleLoanListOffer;
 
 
     function _loadDeployedAddresses() internal {
@@ -96,7 +94,6 @@ abstract contract Deployments is CommonBase {
             loanToken = deployment.loanToken;
             simpleLoan = deployment.simpleLoan;
             revokedNonce = deployment.revokedNonce;
-            simpleLoanListOffer = deployment.simpleLoanListOffer;
             stateFingerprintComputerRegistry = deployment.stateFingerprintComputerRegistry;
             categoryRegistry = deployment.categoryRegistry;
         } else {
