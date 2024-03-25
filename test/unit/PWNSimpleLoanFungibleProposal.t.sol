@@ -81,10 +81,6 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
         ));
     }
 
-    function _creditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) internal view returns (uint256) {
-        return Math.mulDiv(collateralAmount, creditPerCollateralUnit, proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR());
-    }
-
     function _updateProposal(Params memory _params) internal {
         proposalValues.collateralAmount = _params.creditAmount;
 
@@ -225,6 +221,27 @@ contract PWNSimpleLoanFungibleProposal_MakeProposal_Test is PWNSimpleLoanFungibl
 
 
 /*----------------------------------------------------------*|
+|*  # GET CREDIT AMOUNT                                     *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanFungibleProposal_GetCreditAmount_Test is PWNSimpleLoanFungibleProposalTest {
+
+    function testFuzz_shouldReturnCreditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) external {
+        collateralAmount = bound(collateralAmount, 0, 1e70);
+        creditPerCollateralUnit = bound(
+            creditPerCollateralUnit, 1, collateralAmount == 0 ? type(uint256).max : type(uint256).max / collateralAmount
+        );
+
+        assertEq(
+            proposalContract.getCreditAmount(collateralAmount, creditPerCollateralUnit),
+            Math.mulDiv(collateralAmount, creditPerCollateralUnit, proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR())
+        );
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
 |*  # ACCEPT PROPOSAL                                       *|
 |*----------------------------------------------------------*/
 
@@ -300,7 +317,7 @@ contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungi
                 category: MultiToken.Category.ERC20,
                 assetAddress: proposal.creditAddress,
                 id: 0,
-                amount: _creditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit)
+                amount: proposalContract.getCreditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit)
             }),
             fixedInterestAmount: proposal.fixedInterestAmount,
             accruingInterestAPR: proposal.accruingInterestAPR
@@ -443,7 +460,7 @@ contract PWNSimpleLoanFungibleProposal_AcceptRefinanceProposal_Test is PWNSimple
                 category: MultiToken.Category.ERC20,
                 assetAddress: proposal.creditAddress,
                 id: 0,
-                amount: _creditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit)
+                amount: proposalContract.getCreditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit)
             }),
             fixedInterestAmount: proposal.fixedInterestAmount,
             accruingInterestAPR: proposal.accruingInterestAPR

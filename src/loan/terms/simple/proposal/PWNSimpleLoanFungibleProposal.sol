@@ -123,6 +123,16 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     }
 
     /**
+     * @notice Compute credit amount from collateral amount and credit per collateral unit.
+     * @param collateralAmount Amount of collateral.
+     * @param creditPerCollateralUnit Amount of credit per collateral unit with 38 decimals.
+     * @return Amount of credit.
+     */
+    function getCreditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) public pure returns (uint256) {
+        return Math.mulDiv(collateralAmount, creditPerCollateralUnit, CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR);
+    }
+
+    /**
      * @notice Accept a proposal.
      * @param proposal Proposal struct containing all proposal data.
      * @param proposalValues ProposalValues struct specifying all flexible proposal values.
@@ -287,17 +297,13 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         }
 
         // Calculate credit amount
-        uint256 creditAmount = _creditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit);
+        uint256 creditAmount = getCreditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit);
 
         // Try to accept proposal
         proposalHash = _tryAcceptProposal(proposal, creditAmount, signature);
 
         // Create loan terms object
         loanTerms = _createLoanTerms(proposal, proposalValues.collateralAmount, creditAmount);
-    }
-
-    function _creditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) private pure returns (uint256) {
-        return Math.mulDiv(collateralAmount, creditPerCollateralUnit, CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR);
     }
 
     function _tryAcceptProposal(
