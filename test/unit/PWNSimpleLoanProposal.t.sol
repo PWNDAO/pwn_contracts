@@ -64,7 +64,7 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         params.checkCollateralStateFingerprint = true;
         params.collateralStateFingerprint = keccak256("some state fingerprint");
         params.duration = 1 hours;
-        params.expiration = uint40(block.timestamp + 1000);
+        params.expiration = uint40(block.timestamp + 20 minutes);
         params.proposer = proposer;
         params.loanContract = activeLoanContract;
         params.signerPK = proposerPK;

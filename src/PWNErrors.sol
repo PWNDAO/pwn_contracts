@@ -41,11 +41,6 @@ error NonceNotUsable(address addr, uint256 nonceSpace, uint256 nonce);
 error InvalidSignatureLength(uint256);
 error InvalidSignature(address signer, bytes32 digest);
 
-// Offer
-error CollateralIdNotWhitelisted(uint256 id);
-error MinCollateralAmountNotSet();
-error InsufficientCollateralAmount(uint256 current, uint256 limit);
-
 // Proposal
 error CallerIsNotStatedProposer(address);
 error InvalidDuration(uint256 current, uint256 limit);
@@ -56,6 +51,14 @@ error Expired(uint256 current, uint256 expiration);
 error CallerNotAllowedAcceptor(address current, address allowed);
 error InvalidPermitOwner(address current, address expected);
 error InvalidPermitAsset(address current, address expected);
+error CollateralIdNotWhitelisted(uint256 id);
+error MinCollateralAmountNotSet();
+error InsufficientCollateralAmount(uint256 current, uint256 limit);
+error InvalidAuctionDuration(uint256 current, uint256 limit);
+error AuctionDurationNotInFullMinutes(uint256 current);
+error InvalidCreditAmountRange(uint256 minCreditAmount, uint256 maxCreditAmount);
+error InvalidCreditAmount(uint256 auctionCreditAmount, uint256 intendedCreditAmount, uint256 slippage);
+error AuctionNotInProgress(uint256 currentTimestamp, uint256 auctionStart);
 
 // Input data
 error InvalidInputData();
