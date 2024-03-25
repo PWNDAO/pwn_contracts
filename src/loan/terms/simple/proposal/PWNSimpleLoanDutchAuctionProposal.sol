@@ -329,9 +329,6 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
         // Calculate current credit amount
         uint256 creditAmount = getCreditAmount(proposal, block.timestamp);
 
-        // Invariant check
-        require(proposal.maxCreditAmount >= creditAmount && creditAmount >= proposal.minCreditAmount);
-
         // Check acceptor values
         if (proposal.isOffer) {
             if (
