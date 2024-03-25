@@ -13,11 +13,11 @@ import "@pwn/PWNErrors.sol";
 
 /**
  * @title PWN Simple Loan Dutch Auction Proposal
- * @notice Contract for creating and accepting auction loan proposals.
+ * @notice Contract for creating and accepting dutch auction loan proposals.
  */
 contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
 
-    string public constant VERSION = "1.2";
+    string public constant VERSION = "1.0";
 
     /**
      * @dev EIP-712 simple proposal struct type hash.
