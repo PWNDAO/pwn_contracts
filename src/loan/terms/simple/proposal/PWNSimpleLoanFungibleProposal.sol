@@ -19,7 +19,7 @@ import "@pwn/PWNErrors.sol";
  */
 contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
 
-    string public constant VERSION = "1.2";
+    string public constant VERSION = "1.0";
 
     /**
      * @notice Credit per collateral unit denominator. It is used to calculate credit amount from collateral amount.

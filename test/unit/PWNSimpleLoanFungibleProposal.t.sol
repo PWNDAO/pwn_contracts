@@ -70,7 +70,7 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256("PWNSimpleLoanFungibleProposal"),
-                keccak256("1.2"),
+                keccak256("1.0"),
                 block.chainid,
                 proposalContractAddr
             )),
