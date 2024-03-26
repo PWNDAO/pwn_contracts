@@ -20,7 +20,7 @@ abstract contract PWNSimpleLoanProposalTest is Test {
 
     address public hub = makeAddr("hub");
     address public revokedNonce = makeAddr("revokedNonce");
-    address public stateFingerprintComputerRegistry = makeAddr("stateFingerprintComputerRegistry");
+    address public config = makeAddr("config");
     address public stateFingerprintComputer = makeAddr("stateFingerprintComputer");
     address public activeLoanContract = makeAddr("activeLoanContract");
     address public token = makeAddr("token");
@@ -84,7 +84,7 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         );
 
         vm.mockCall(
-            stateFingerprintComputerRegistry,
+            config,
             abi.encodeWithSignature("getStateFingerprintComputer(address)"),
             abi.encode(stateFingerprintComputer)
         );
@@ -153,7 +153,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.checkCollateralStateFingerprint = false;
 
         vm.expectCall({
-            callee: stateFingerprintComputerRegistry,
+            callee: config,
             data: abi.encodeWithSignature("getStateFingerprintComputer(address)"),
             count: 0
         });
@@ -163,7 +163,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
 
     function test_shouldFail_whenComputerRegistryReturnsZeroAddress_whenShouldCheckStateFingerprint() external {
         vm.mockCall(
-            stateFingerprintComputerRegistry,
+            config,
             abi.encodeWithSignature("getStateFingerprintComputer(address)", token), // test expects `token` being used as collateral asset
             abi.encode(address(0))
         );
@@ -426,7 +426,7 @@ abstract contract PWNSimpleLoanProposal_AcceptRefinanceProposal_Test is PWNSimpl
         params.checkCollateralStateFingerprint = false;
 
         vm.expectCall({
-            callee: stateFingerprintComputerRegistry,
+            callee: config,
             data: abi.encodeWithSignature("getStateFingerprintComputer(address)"),
             count: 0
         });
@@ -436,7 +436,7 @@ abstract contract PWNSimpleLoanProposal_AcceptRefinanceProposal_Test is PWNSimpl
 
     function test_shouldFail_whenComputerRegistryReturnsZeroAddress_whenShouldCheckStateFingerprint() external {
         vm.mockCall(
-            stateFingerprintComputerRegistry,
+            config,
             abi.encodeWithSignature("getStateFingerprintComputer(address)", token), // test expects `token` being used as collateral asset
             abi.encode(address(0))
         );

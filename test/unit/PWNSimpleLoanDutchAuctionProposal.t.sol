@@ -32,7 +32,7 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
     function setUp() virtual public override {
         super.setUp();
 
-        proposalContract = new PWNSimpleLoanDutchAuctionProposal(hub, revokedNonce, stateFingerprintComputerRegistry);
+        proposalContract = new PWNSimpleLoanDutchAuctionProposal(hub, revokedNonce, config);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
         proposal = PWNSimpleLoanDutchAuctionProposal.Proposal({

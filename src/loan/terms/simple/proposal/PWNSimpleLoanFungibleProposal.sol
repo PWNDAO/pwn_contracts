@@ -96,10 +96,8 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     constructor(
         address _hub,
         address _revokedNonce,
-        address _stateFingerprintComputerRegistry
-    ) PWNSimpleLoanProposal(
-        _hub, _revokedNonce, _stateFingerprintComputerRegistry, "PWNSimpleLoanFungibleProposal", VERSION
-    ) {}
+        address _config
+    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, "PWNSimpleLoanFungibleProposal", VERSION) {}
 
     /**
      * @notice Get an proposal hash according to EIP-712

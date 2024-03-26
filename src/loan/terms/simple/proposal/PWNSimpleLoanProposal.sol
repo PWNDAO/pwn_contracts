@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
+import { PWNConfig, IERC5646 } from "@pwn/config/PWNConfig.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
 import { Permit } from "@pwn/loan/vault/Permit.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
-import { StateFingerprintComputerRegistry, IERC5646 } from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
 import "@pwn/PWNErrors.sol";
 
 /**
@@ -22,7 +22,7 @@ abstract contract PWNSimpleLoanProposal {
 
     PWNHub public immutable hub;
     PWNRevokedNonce public immutable revokedNonce;
-    StateFingerprintComputerRegistry public immutable stateFingerprintComputerRegistry;
+    PWNConfig public immutable config;
 
     /**
      * @dev Mapping of proposals made via on-chain transactions.
@@ -40,13 +40,13 @@ abstract contract PWNSimpleLoanProposal {
     constructor(
         address _hub,
         address _revokedNonce,
-        address _stateFingerprintComputerRegistry,
+        address _config,
         string memory name,
         string memory version
     ) {
         hub = PWNHub(_hub);
         revokedNonce = PWNRevokedNonce(_revokedNonce);
-        stateFingerprintComputerRegistry = StateFingerprintComputerRegistry(_stateFingerprintComputerRegistry);
+        config = PWNConfig(_config);
 
         DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -155,7 +155,7 @@ abstract contract PWNSimpleLoanProposal {
      * @param stateFingerprint Proposed state fingerprint.
      */
     function _checkCollateralState(address addr, uint256 id, bytes32 stateFingerprint) internal view {
-        IERC5646 computer = stateFingerprintComputerRegistry.getStateFingerprintComputer(addr);
+        IERC5646 computer = config.getStateFingerprintComputer(addr);
         if (address(computer) == address(0)) {
             // Asset is not implementing ERC5646 and no computer is registered
             revert MissingStateFingerprintComputer();

@@ -97,10 +97,8 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
     constructor(
         address _hub,
         address _revokedNonce,
-        address _stateFingerprintComputerRegistry
-    ) PWNSimpleLoanProposal(
-        _hub, _revokedNonce, _stateFingerprintComputerRegistry, "PWNSimpleLoanDutchAuctionProposal", VERSION
-    ) {}
+        address _config
+    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, "PWNSimpleLoanDutchAuctionProposal", VERSION) {}
 
     /**
      * @notice Get an proposal hash according to EIP-712

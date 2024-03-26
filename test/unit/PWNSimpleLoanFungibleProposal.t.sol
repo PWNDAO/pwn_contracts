@@ -32,7 +32,7 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
     function setUp() virtual public override {
         super.setUp();
 
-        proposalContract = new PWNSimpleLoanFungibleProposal(hub, revokedNonce, stateFingerprintComputerRegistry);
+        proposalContract = new PWNSimpleLoanFungibleProposal(hub, revokedNonce, config);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
         proposal = PWNSimpleLoanFungibleProposal.Proposal({
