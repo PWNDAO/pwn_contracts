@@ -181,91 +181,13 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @notice Accept a proposal.
-     * @param proposal Proposal struct containing all proposal data.
-     * @param proposalValues Proposal values struct containing concrete proposal values.
-     * @param signature Proposal signature signed by a proposer.
-     * @param permit Callers permit data.
-     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
-     * @return loanId Id of a created loan.
-     */
-    function acceptProposal(
-        Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
-        bytes calldata signature,
-        Permit calldata permit,
-        bytes calldata extra
-    ) public returns (uint256 loanId) {
-        // Check if the proposal is refinancing proposal
-        if (proposal.refinancingLoanId != 0) {
-            revert InvalidRefinancingLoanId({ refinancingLoanId: proposal.refinancingLoanId });
-        }
-
-        // Check permit
-        _checkPermit(msg.sender, proposal.creditAddress, permit);
-
-        // Accept proposal
-        (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms)
-            = _acceptProposal(proposal, proposalValues, signature);
-
-        // Create loan
-        return PWNSimpleLoan(proposal.loanContract).createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: loanTerms,
-            permit: permit,
-            extra: extra
-        });
-    }
-
-    /**
-     * @notice Accept a refinancing proposal.
-     * @param loanId Id of a loan to be refinanced.
-     * @param proposal Proposal struct containing all proposal data.
-     * @param proposalValues Proposal values struct containing concrete proposal values.
-     * @param signature Proposal signature signed by a proposer.
-     * @param permit Callers permit data.
-     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
-     * @return refinancedLoanId Id of a created refinanced loan.
-     */
-    function acceptRefinanceProposal(
-        uint256 loanId,
-        Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
-        bytes calldata signature,
-        Permit calldata permit,
-        bytes calldata extra
-    ) public returns (uint256 refinancedLoanId) {
-        // Check if the proposal is refinancing proposal
-        if (proposal.refinancingLoanId != loanId) {
-            if (proposal.refinancingLoanId != 0 || !proposal.isOffer) {
-                revert InvalidRefinancingLoanId({ refinancingLoanId: proposal.refinancingLoanId });
-            }
-        }
-
-        // Check permit
-        _checkPermit(msg.sender, proposal.creditAddress, permit);
-
-        // Accept proposal
-        (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms)
-            = _acceptProposal(proposal, proposalValues, signature);
-
-        // Refinance loan
-        return PWNSimpleLoan(proposal.loanContract).refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: loanTerms,
-            permit: permit,
-            extra: extra
-        });
-    }
-
-    /**
      * @notice Accept a proposal with a callers nonce revocation.
      * @dev Function will mark callers nonce as revoked.
      * @param proposal Proposal struct containing all proposal data.
      * @param proposalValues Proposal values struct containing concrete proposal values.
      * @param signature Proposal signature signed by a proposer.
      * @param permit Callers permit data.
+     * @param refinancingLoanId Id of a loan to be refinanced. 0 if creating a new loan.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @param callersNonceSpace Nonce space of a callers nonce.
      * @param callersNonceToRevoke Nonce to revoke.
@@ -275,40 +197,62 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
         Proposal calldata proposal,
         ProposalValues calldata proposalValues,
         bytes calldata signature,
+        uint256 refinancingLoanId,
         Permit calldata permit,
         bytes calldata extra,
         uint256 callersNonceSpace,
         uint256 callersNonceToRevoke
     ) external returns (uint256 loanId) {
         _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptProposal(proposal, proposalValues, signature, permit, extra);
+        return acceptProposal(proposal, proposalValues, signature, refinancingLoanId, permit, extra);
     }
 
     /**
-     * @notice Accept a refinancing proposal with a callers nonce revocation.
-     * @dev Function will mark callers nonce as revoked.
-     * @param loanId Id of a loan to be refinanced.
+     * @notice Accept a proposal.
      * @param proposal Proposal struct containing all proposal data.
      * @param proposalValues Proposal values struct containing concrete proposal values.
      * @param signature Proposal signature signed by a proposer.
+     * @param refinancingLoanId Id of a loan to be refinanced. 0 if creating a new loan.
      * @param permit Callers permit data.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
-     * @param callersNonceSpace Nonce space of a callers nonce.
-     * @param callersNonceToRevoke Nonce to revoke.
-     * @return refinancedLoanId Id of a created refinanced loan.
+     * @return loanId Id of a created loan.
      */
-    function acceptRefinanceProposal(
-        uint256 loanId,
+    function acceptProposal(
         Proposal calldata proposal,
         ProposalValues calldata proposalValues,
         bytes calldata signature,
+        uint256 refinancingLoanId,
         Permit calldata permit,
-        bytes calldata extra,
-        uint256 callersNonceSpace,
-        uint256 callersNonceToRevoke
-    ) external returns (uint256 refinancedLoanId) {
-        _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptRefinanceProposal(loanId, proposal, proposalValues, signature, permit, extra);
+        bytes calldata extra
+    ) public returns (uint256 loanId) {
+        // Check refinancing id
+        _checkRefinancingLoanId(refinancingLoanId, proposal.refinancingLoanId, proposal.isOffer);
+
+        // Check permit
+        _checkPermit(msg.sender, proposal.creditAddress, permit);
+
+        // Accept proposal
+        (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms)
+            = _acceptProposal(proposal, proposalValues, signature);
+
+        if (refinancingLoanId == 0) {
+            // Create loan
+            return PWNSimpleLoan(proposal.loanContract).createLOAN({
+                proposalHash: proposalHash,
+                loanTerms: loanTerms,
+                permit: permit,
+                extra: extra
+            });
+        } else {
+            // Refinance loan
+            return PWNSimpleLoan(proposal.loanContract).refinanceLOAN({
+                loanId: refinancingLoanId,
+                proposalHash: proposalHash,
+                loanTerms: loanTerms,
+                permit: permit,
+                extra: extra
+            });
+        }
     }
 
 

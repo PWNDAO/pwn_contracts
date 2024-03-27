@@ -15,9 +15,7 @@ import "@pwn/PWNErrors.sol";
 import {
     PWNSimpleLoanProposalTest,
     PWNSimpleLoanProposal_AcceptProposal_Test,
-    PWNSimpleLoanProposal_AcceptProposalAndRevokeCallersNonce_Test,
-    PWNSimpleLoanProposal_AcceptRefinanceProposal_Test,
-    PWNSimpleLoanProposal_AcceptRefinanceProposalAndRevokeCallersNonce_Test
+    PWNSimpleLoanProposal_AcceptProposalAndRevokeCallersNonce_Test
 } from "@pwn-test/unit/PWNSimpleLoanProposal.t.sol";
 
 
@@ -110,22 +108,12 @@ abstract contract PWNSimpleLoanListProposalTest is PWNSimpleLoanProposalTest {
 
     function _callAcceptProposalWith(Params memory _params, Permit memory _permit) internal override returns (uint256) {
         _updateProposal(_params);
-        return proposalContract.acceptProposal(proposal, proposalValues, _proposalSignature(params), _permit, "");
+        return proposalContract.acceptProposal(proposal, proposalValues, _proposalSignature(params), 0, _permit, "");
     }
 
     function _callAcceptProposalWith(Params memory _params, Permit memory _permit, uint256 nonceSpace, uint256 nonce) internal override returns (uint256) {
         _updateProposal(_params);
-        return proposalContract.acceptProposal(proposal, proposalValues, _proposalSignature(params), _permit, "", nonceSpace, nonce);
-    }
-
-    function _callAcceptRefinanceProposalWith(uint256 loanId, Params memory _params, Permit memory _permit) internal override returns (uint256) {
-        _updateProposal(_params);
-        return proposalContract.acceptRefinanceProposal(loanId, proposal, proposalValues, _proposalSignature(params), _permit, "");
-    }
-
-    function _callAcceptRefinanceProposalWith(uint256 loanId, Params memory _params, Permit memory _permit, uint256 nonceSpace, uint256 nonce) internal override returns (uint256) {
-        _updateProposal(_params);
-        return proposalContract.acceptRefinanceProposal(loanId, proposal, proposalValues, _proposalSignature(params), _permit, "", nonceSpace, nonce);
+        return proposalContract.acceptProposal(proposal, proposalValues, _proposalSignature(params), 0, _permit, "", nonceSpace, nonce);
     }
 
     function _getProposalHashWith(Params memory _params) internal override returns (bytes32) {
@@ -221,116 +209,6 @@ contract PWNSimpleLoanListProposal_MakeProposal_Test is PWNSimpleLoanListProposa
 
 
 /*----------------------------------------------------------*|
-|*  # ACCEPT PROPOSAL                                       *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanListProposal_AcceptProposal_Test is PWNSimpleLoanListProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test {
-
-    function setUp() virtual public override(PWNSimpleLoanListProposalTest, PWNSimpleLoanProposalTest) {
-        super.setUp();
-    }
-
-
-    function testFuzz_shouldFail_whenRefinancingLoanIdNotZero(uint256 refinancingLoanId) external {
-        vm.assume(refinancingLoanId != 0);
-        proposal.refinancingLoanId = refinancingLoanId;
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, refinancingLoanId));
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, ""
-        );
-    }
-
-    function test_shouldAcceptAnyCollateralId_whenMerkleRootIsZero() external {
-        proposalValues.collateralId = 331;
-        proposal.collateralIdsWhitelistMerkleRoot = bytes32(0);
-
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, ""
-        );
-    }
-
-    function test_shouldPass_whenGivenCollateralIdIsWhitelisted() external {
-        bytes32 id1Hash = keccak256(abi.encodePacked(uint256(331)));
-        bytes32 id2Hash = keccak256(abi.encodePacked(uint256(133)));
-        proposal.collateralIdsWhitelistMerkleRoot = keccak256(abi.encodePacked(id1Hash, id2Hash));
-
-        proposalValues.collateralId = 331;
-        proposalValues.merkleInclusionProof = new bytes32[](1);
-        proposalValues.merkleInclusionProof[0] = id2Hash;
-
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, ""
-        );
-    }
-
-    function test_shouldFail_whenGivenCollateralIdIsNotWhitelisted() external {
-        bytes32 id1Hash = keccak256(abi.encodePacked(uint256(331)));
-        bytes32 id2Hash = keccak256(abi.encodePacked(uint256(133)));
-        proposal.collateralIdsWhitelistMerkleRoot = keccak256(abi.encodePacked(id1Hash, id2Hash));
-
-        proposalValues.collateralId = 333;
-        proposalValues.merkleInclusionProof = new bytes32[](1);
-        proposalValues.merkleInclusionProof[0] = id2Hash;
-
-        vm.expectRevert(abi.encodeWithSelector(CollateralIdNotWhitelisted.selector, proposalValues.collateralId));
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, ""
-        );
-    }
-
-    function testFuzz_shouldCallLoanContractWithLoanTerms(bool isOffer) external {
-        proposal.isOffer = isOffer;
-
-        permit = Permit({
-            asset: token,
-            owner: acceptor,
-            amount: 100,
-            deadline: 1000,
-            v: 27,
-            r: bytes32(uint256(1)),
-            s: bytes32(uint256(2))
-        });
-        extra = "lil extra";
-
-        PWNSimpleLoan.Terms memory loanTerms = PWNSimpleLoan.Terms({
-            lender: isOffer ? proposal.proposer : acceptor,
-            borrower: isOffer ? acceptor : proposal.proposer,
-            duration: proposal.duration,
-            collateral: MultiToken.Asset({
-                category: proposal.collateralCategory,
-                assetAddress: proposal.collateralAddress,
-                id: proposalValues.collateralId,
-                amount: proposal.collateralAmount
-            }),
-            credit: MultiToken.Asset({
-                category: MultiToken.Category.ERC20,
-                assetAddress: proposal.creditAddress,
-                id: 0,
-                amount: proposal.creditAmount
-            }),
-            fixedInterestAmount: proposal.fixedInterestAmount,
-            accruingInterestAPR: proposal.accruingInterestAPR
-        });
-
-        vm.expectCall(
-            activeLoanContract,
-            abi.encodeWithSelector(
-                PWNSimpleLoan.createLOAN.selector,
-                _proposalHash(proposal), loanTerms, permit, extra
-            )
-        );
-
-        vm.prank(acceptor);
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, extra
-        );
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
 |*  # ACCEPT PROPOSAL AND REVOKE CALLERS NONCE              *|
 |*----------------------------------------------------------*/
 
@@ -344,54 +222,62 @@ contract PWNSimpleLoanListProposal_AcceptProposalAndRevokeCallersNonce_Test is P
 
 
 /*----------------------------------------------------------*|
-|*  # ACCEPT REFINANCE PROPOSAL                             *|
+|*  # ACCEPT PROPOSAL                                       *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanListProposal_AcceptRefinanceProposal_Test is PWNSimpleLoanListProposalTest, PWNSimpleLoanProposal_AcceptRefinanceProposal_Test {
+contract PWNSimpleLoanListProposal_AcceptProposal_Test is PWNSimpleLoanListProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test {
 
     function setUp() virtual public override(PWNSimpleLoanListProposalTest, PWNSimpleLoanProposalTest) {
         super.setUp();
-
-        proposal.refinancingLoanId = loanId;
     }
 
 
-    function testFuzz_shouldFail_whenRefinancingLoanIdIsNotEqualToLoanId_whenRefinanceingLoanIdNotZero_whenOffer(
-        uint256 _loanId, uint256 _refinancingLoanId
-    ) external {
-        vm.assume(_refinancingLoanId != 0);
-        vm.assume(_loanId != _refinancingLoanId);
-        proposal.refinancingLoanId = _refinancingLoanId;
-        proposal.isOffer = true;
+    function testFuzz_shouldFail_whenProposedRefinancingLoanIdNotZero_whenRefinancingLoanIdZero(uint256 proposedRefinancingLoanId) external {
+        vm.assume(proposedRefinancingLoanId != 0);
+        proposal.refinancingLoanId = proposedRefinancingLoanId;
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, _refinancingLoanId));
-        proposalContract.acceptRefinanceProposal(
-            _loanId, proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, extra
+        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
+        proposalContract.acceptProposal(
+            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), 0, permit, ""
         );
     }
 
-    function testFuzz_shouldPass_whenRefinancingLoanIdIsNotEqualToLoanId_whenRefinanceingLoanIdZero_whenOffer(
-        uint256 _loanId
+    function testFuzz_shouldFail_whenRefinancingLoanIdsIsNotEqual_whenProposedRefinanceingLoanIdNotZero_whenRefinancingLoanIdNotZero_whenOffer(
+        uint256 refinancingLoanId, uint256 proposedRefinancingLoanId
     ) external {
-        vm.assume(_loanId != 0);
+        vm.assume(proposedRefinancingLoanId != 0);
+        vm.assume(refinancingLoanId != proposedRefinancingLoanId);
+        proposal.refinancingLoanId = proposedRefinancingLoanId;
+        proposal.isOffer = true;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
+        proposalContract.acceptProposal(
+            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), refinancingLoanId, permit, extra
+        );
+    }
+
+    function testFuzz_shouldPass_whenRefinancingLoanIdsNotEqual_whenProposedRefinanceingLoanIdZero_whenRefinancingLoanIdNotZero_whenOffer(
+        uint256 refinancingLoanId
+    ) external {
+        vm.assume(refinancingLoanId != 0);
         proposal.refinancingLoanId = 0;
         proposal.isOffer = true;
 
-        proposalContract.acceptRefinanceProposal(
-            _loanId, proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, extra
+        proposalContract.acceptProposal(
+            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), refinancingLoanId, permit, extra
         );
     }
 
-    function testFuzz_shouldFail_whenRefinancingLoanIdIsNotEqualToLoanId_whenNotOffer(
-        uint256 _loanId, uint256 _refinancingLoanId
+    function testFuzz_shouldFail_whenRefinancingLoanIdsNotEqual_whenRefinancingLoanIdNotZero_whenRequest(
+        uint256 refinancingLoanId, uint256 proposedRefinancingLoanId
     ) external {
-        vm.assume(_loanId != _refinancingLoanId);
-        proposal.refinancingLoanId = _refinancingLoanId;
+        vm.assume(refinancingLoanId != proposedRefinancingLoanId);
+        proposal.refinancingLoanId = proposedRefinancingLoanId;
         proposal.isOffer = false;
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, _refinancingLoanId));
-        proposalContract.acceptRefinanceProposal(
-            _loanId, proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, extra
+        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
+        proposalContract.acceptProposal(
+            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), refinancingLoanId, permit, extra
         );
     }
 
@@ -399,8 +285,8 @@ contract PWNSimpleLoanListProposal_AcceptRefinanceProposal_Test is PWNSimpleLoan
         proposalValues.collateralId = 331;
         proposal.collateralIdsWhitelistMerkleRoot = bytes32(0);
 
-        proposalContract.acceptRefinanceProposal(
-            loanId, proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, extra
+        proposalContract.acceptProposal(
+            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), 0, permit, ""
         );
     }
 
@@ -413,8 +299,8 @@ contract PWNSimpleLoanListProposal_AcceptRefinanceProposal_Test is PWNSimpleLoan
         proposalValues.merkleInclusionProof = new bytes32[](1);
         proposalValues.merkleInclusionProof[0] = id2Hash;
 
-        proposalContract.acceptRefinanceProposal(
-            loanId, proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, extra
+        proposalContract.acceptProposal(
+            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), 0, permit, ""
         );
     }
 
@@ -428,13 +314,14 @@ contract PWNSimpleLoanListProposal_AcceptRefinanceProposal_Test is PWNSimpleLoan
         proposalValues.merkleInclusionProof[0] = id2Hash;
 
         vm.expectRevert(abi.encodeWithSelector(CollateralIdNotWhitelisted.selector, proposalValues.collateralId));
-        proposalContract.acceptRefinanceProposal(
-            loanId, proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, extra
+        proposalContract.acceptProposal(
+            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), 0, permit, ""
         );
     }
 
-    function testFuzz_shouldCallLoanContractWithLoanTerms(bool isOffer) external {
+    function testFuzz_shouldCallLoanContractWithLoanTerms(bool isOffer, uint256 refinancingLoanId) external {
         proposal.isOffer = isOffer;
+        proposal.refinancingLoanId = refinancingLoanId;
 
         permit = Permit({
             asset: token,
@@ -469,29 +356,19 @@ contract PWNSimpleLoanListProposal_AcceptRefinanceProposal_Test is PWNSimpleLoan
 
         vm.expectCall(
             activeLoanContract,
-            abi.encodeWithSelector(
-                PWNSimpleLoan.refinanceLOAN.selector,
-                loanId, _proposalHash(proposal), loanTerms, permit, extra
+            refinancingLoanId == 0
+            ? abi.encodeWithSelector(
+                PWNSimpleLoan.createLOAN.selector, _proposalHash(proposal), loanTerms, permit, extra
+            )
+            : abi.encodeWithSelector(
+                PWNSimpleLoan.refinanceLOAN.selector, refinancingLoanId, _proposalHash(proposal), loanTerms, permit, extra
             )
         );
 
         vm.prank(acceptor);
-        proposalContract.acceptRefinanceProposal(
-            loanId, proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), permit, extra
+        proposalContract.acceptProposal(
+            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), refinancingLoanId, permit, extra
         );
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # ACCEPT REFINANCE PROPOSAL AND REVOKE CALLERS NONCE    *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanListProposal_AcceptRefinanceProposalAndRevokeCallersNonce_Test is PWNSimpleLoanListProposalTest, PWNSimpleLoanProposal_AcceptRefinanceProposalAndRevokeCallersNonce_Test {
-
-    function setUp() virtual public override(PWNSimpleLoanListProposalTest, PWNSimpleLoanProposalTest) {
-        super.setUp();
     }
 
 }

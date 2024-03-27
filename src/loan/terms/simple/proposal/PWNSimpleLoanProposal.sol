@@ -199,6 +199,30 @@ abstract contract PWNSimpleLoanProposal {
     }
 
     /**
+     * @notice Check if refinancing loan ID is valid.
+     * @param refinancingLoanId Refinancing loan ID.
+     * @param proposalRefinancingLoanId Proposal refinancing loan ID.
+     * @param isOffer True if proposal is an offer, false if it is a request.
+     */
+    function _checkRefinancingLoanId(
+        uint256 refinancingLoanId,
+        uint256 proposalRefinancingLoanId,
+        bool isOffer
+    ) internal pure {
+        if (refinancingLoanId == 0) {
+            if (proposalRefinancingLoanId != 0) {
+                revert InvalidRefinancingLoanId({ refinancingLoanId: proposalRefinancingLoanId });
+            }
+        } else {
+            if (refinancingLoanId != proposalRefinancingLoanId) {
+                if (proposalRefinancingLoanId != 0 || !isOffer) {
+                    revert InvalidRefinancingLoanId({ refinancingLoanId: proposalRefinancingLoanId });
+                }
+            }
+        }
+    }
+
+    /**
      * @notice Make an on-chain proposal.
      * @dev Function will mark a proposal hash as proposed.
      * @param proposalHash Proposal hash.
