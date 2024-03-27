@@ -81,6 +81,16 @@ contract PWNRevokedNonce is PWNHubAccessControl {
     }
 
     /**
+     * @notice Revoke a nonce in the current nonce space on behalf of an owner.
+     * @dev Only an address with associated access tag in PWN Hub can call this function.
+     * @param owner Owner address of a revoking nonce.
+     * @param nonce Nonce to be revoked.
+     */
+    function revokeNonce(address owner, uint256 nonce) external onlyWithTag(accessTag) {
+        _revokeNonce(owner, _nonceSpace[owner], nonce);
+    }
+
+    /**
      * @notice Revoke a nonce in a nonce space on behalf of an owner.
      * @dev Only an address with associated access tag in PWN Hub can call this function.
      * @param owner Owner address of a revoking nonce.

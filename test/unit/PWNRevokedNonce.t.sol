@@ -125,6 +125,60 @@ contract PWNRevokedNonce_RevokeNonceWithOwner_Test is PWNRevokedNonceTest {
 
         vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, accessTag));
         vm.prank(caller);
+        revokedNonce.revokeNonce(caller, 1);
+    }
+
+    function testFuzz_shouldStoreNonceAsRevoked(address owner, uint256 nonceSpace, uint256 nonce) external {
+        vm.store(address(revokedNonce), _nonceSpaceSlot(owner), bytes32(nonceSpace));
+
+        vm.prank(accessEnabledAddress);
+        revokedNonce.revokeNonce(owner, nonce);
+
+        assertTrue(revokedNonce.isNonceRevoked(owner, nonceSpace, nonce));
+    }
+
+    function testFuzz_shouldEmit_NonceRevoked(address owner, uint256 nonceSpace, uint256 nonce) external {
+        vm.store(address(revokedNonce), _nonceSpaceSlot(owner), bytes32(nonceSpace));
+
+        vm.expectEmit();
+        emit NonceRevoked(owner, nonceSpace, nonce);
+
+        vm.prank(accessEnabledAddress);
+        revokedNonce.revokeNonce(owner, nonce);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # REVOKE NONCE WITH NONCE SPACE AND OWNER               *|
+|*----------------------------------------------------------*/
+
+contract PWNRevokedNonce_RevokeNonceWithNonceSpaceAndOwner_Test is PWNRevokedNonceTest {
+
+    address accessEnabledAddress = address(0x01);
+
+    function setUp() override public {
+        super.setUp();
+
+        vm.mockCall(
+            hub,
+            abi.encodeWithSignature("hasTag(address,bytes32)"),
+            abi.encode(false)
+        );
+        vm.mockCall(
+            hub,
+            abi.encodeWithSignature("hasTag(address,bytes32)", accessEnabledAddress, accessTag),
+            abi.encode(true)
+        );
+    }
+
+
+    function testFuzz_shouldFail_whenCallerIsDoesNotHaveAccessTag(address caller) external {
+        vm.assume(caller != accessEnabledAddress);
+
+        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, accessTag));
+        vm.prank(caller);
         revokedNonce.revokeNonce(caller, 1, 1);
     }
 
