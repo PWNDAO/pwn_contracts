@@ -3,11 +3,11 @@ pragma solidity 0.8.16;
 
 import "forge-std/Script.sol";
 
-import "openzeppelin-contracts/contracts/governance/TimelockController.sol";
+import { TimelockController } from "openzeppelin-contracts/contracts/governance/TimelockController.sol";
 
 import { GnosisSafeLike, GnosisSafeUtils } from "./lib/GnosisSafeUtils.sol";
 
-import "@pwn/deployer/IPWNDeployer.sol";
+import { IPWNDeployer } from "@pwn/deployer/IPWNDeployer.sol";
 import "@pwn/Deployments.sol";
 
 
@@ -31,21 +31,21 @@ contract Deploy is Deployments, Script {
     using GnosisSafeUtils for GnosisSafeLike;
 
     function _protocolNotDeployedOnSelectedChain() internal pure override {
-        revert("PWNTimelock: selected chain is not set in deployments.json");
+        revert("PWNTimelock: selected chain is not set in deployments/latest.json");
     }
 
     function _deploy(
         bytes32 salt,
         bytes memory bytecode
     ) internal returns (address) {
-        bool success = GnosisSafeLike(deployerSafe).execTransaction({
-            to: address(deployer),
+        bool success = GnosisSafeLike(deployment.deployerSafe).execTransaction({
+            to: address(deployment.deployer),
             data: abi.encodeWithSelector(
                 IPWNDeployer.deploy.selector, salt, bytecode
             )
         });
         require(success, "Deploy failed");
-        return deployer.computeAddress(salt, keccak256(bytecode));
+        return deployment.deployer.computeAddress(salt, keccak256(bytecode));
     }
 
 /*
@@ -109,7 +109,7 @@ contract Setup is Deployments, Script {
     using GnosisSafeUtils for GnosisSafeLike;
 
     function _protocolNotDeployedOnSelectedChain() internal pure override {
-        revert("PWN: selected chain is not set in deployments.json");
+        revert("PWNTimelock: selected chain is not set in deployments/latest.json");
     }
 
 /*
@@ -122,8 +122,8 @@ forge script script/PWNTimelock.s.sol:Setup \
 */
     function updateProtocolTimelockProposer() external {
         _loadDeployedAddresses();
-        console2.log("Updating protocol timelock proposer (%s)", protocolTimelock);
-        _updateProposer(TimelockController(payable(protocolTimelock)), protocolSafe);
+        console2.log("Updating protocol timelock proposer (%s)", deployment.protocolTimelock);
+        _updateProposer(TimelockController(payable(deployment.protocolTimelock)), deployment.protocolSafe);
     }
 
 /*
@@ -136,8 +136,8 @@ forge script script/PWNTimelock.s.sol:Setup \
 */
     function updateProductTimelockProposer() external {
         _loadDeployedAddresses();
-        console2.log("Updating product timelock proposer (%s)", productTimelock);
-        _updateProposer(TimelockController(payable(productTimelock)), daoSafe);
+        console2.log("Updating product timelock proposer (%s)", deployment.productTimelock);
+        _updateProposer(TimelockController(payable(deployment.productTimelock)), deployment.daoSafe);
     }
 
     /// @dev Will grant PROPOSER_ROLE & CANCELLOR_ROLE to the new address and revoke them from `0x0cfC...D6de`.
@@ -215,31 +215,31 @@ forge script script/PWNTimelock.s.sol:Setup \
 
         // set PWNConfig admin
         bool success;
-        success = GnosisSafeLike(protocolSafe).execTransaction({
-            to: address(config),
-            data: abi.encodeWithSignature("changeAdmin(address)", protocolTimelock)
+        success = GnosisSafeLike(deployment.protocolSafe).execTransaction({
+            to: address(deployment.config),
+            data: abi.encodeWithSignature("changeAdmin(address)", deployment.protocolTimelock)
         });
         require(success, "PWN: change admin failed");
 
         // transfer PWNHub owner
-        success = GnosisSafeLike(protocolSafe).execTransaction({
-            to: address(hub),
-            data: abi.encodeWithSignature("transferOwnership(address)", protocolTimelock)
+        success = GnosisSafeLike(deployment.protocolSafe).execTransaction({
+            to: address(deployment.hub),
+            data: abi.encodeWithSignature("transferOwnership(address)", deployment.protocolTimelock)
         });
         require(success, "PWN: change owner failed");
 
         // accept PWNHub owner
-        success = GnosisSafeLike(protocolSafe).execTransaction({
-            to: address(protocolTimelock),
+        success = GnosisSafeLike(deployment.protocolSafe).execTransaction({
+            to: address(deployment.protocolTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
-                address(hub), 0, abi.encodeWithSignature("acceptOwnership()"), 0, 0, 0
+                address(deployment.hub), 0, abi.encodeWithSignature("acceptOwnership()"), 0, 0, 0
             )
         });
         require(success, "PWN: schedule accept ownership failed");
 
-        TimelockController(payable(protocolTimelock)).execute({
-            target: address(hub),
+        TimelockController(payable(deployment.protocolTimelock)).execute({
+            target: address(deployment.hub),
             value: 0,
             payload: abi.encodeWithSignature("acceptOwnership()"),
             predecessor: 0,
@@ -247,17 +247,17 @@ forge script script/PWNTimelock.s.sol:Setup \
         });
 
         // set min delay
-        success = GnosisSafeLike(protocolSafe).execTransaction({
-            to: address(protocolTimelock),
+        success = GnosisSafeLike(deployment.protocolSafe).execTransaction({
+            to: address(deployment.protocolTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
-                address(protocolTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", protocolTimelockMinDelay), 0, 0, 0
+                address(deployment.protocolTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", protocolTimelockMinDelay), 0, 0, 0
             )
         });
         require(success, "PWN: schedule update delay failed");
 
-        TimelockController(payable(protocolTimelock)).execute({
-            target: protocolTimelock,
+        TimelockController(payable(deployment.protocolTimelock)).execute({
+            target: deployment.protocolTimelock,
             value: 0,
             payload: abi.encodeWithSignature("updateDelay(uint256)", protocolTimelockMinDelay),
             predecessor: 0,
@@ -288,24 +288,24 @@ forge script script/PWNTimelock.s.sol:Setup \
 
         // transfer PWNConfig owner
         bool success;
-        success = GnosisSafeLike(daoSafe).execTransaction({
-            to: address(config),
-            data: abi.encodeWithSignature("transferOwnership(address)", productTimelock)
+        success = GnosisSafeLike(deployment.daoSafe).execTransaction({
+            to: address(deployment.config),
+            data: abi.encodeWithSignature("transferOwnership(address)", deployment.productTimelock)
         });
         require(success, "PWN: change owner failed");
 
         // accept PWNConfig owner
-        success = GnosisSafeLike(daoSafe).execTransaction({
-            to: address(productTimelock),
+        success = GnosisSafeLike(deployment.daoSafe).execTransaction({
+            to: address(deployment.productTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
-                address(config), 0, abi.encodeWithSignature("acceptOwnership()"), 0, 0, 0
+                address(deployment.config), 0, abi.encodeWithSignature("acceptOwnership()"), 0, 0, 0
             )
         });
         require(success, "PWN: schedule failed");
 
-        TimelockController(payable(productTimelock)).execute({
-            target: address(config),
+        TimelockController(payable(deployment.productTimelock)).execute({
+            target: address(deployment.config),
             value: 0,
             payload: abi.encodeWithSignature("acceptOwnership()"),
             predecessor: 0,
@@ -313,17 +313,17 @@ forge script script/PWNTimelock.s.sol:Setup \
         });
 
         // set min delay
-        success = GnosisSafeLike(daoSafe).execTransaction({
-            to: address(productTimelock),
+        success = GnosisSafeLike(deployment.daoSafe).execTransaction({
+            to: address(deployment.productTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
-                address(productTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", productTimelockMinDelay), 0, 0, 0
+                address(deployment.productTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", productTimelockMinDelay), 0, 0, 0
             )
         });
         require(success, "PWN: update delay failed");
 
-        TimelockController(payable(productTimelock)).execute({
-            target: productTimelock,
+        TimelockController(payable(deployment.productTimelock)).execute({
+            target: deployment.productTimelock,
             value: 0,
             payload: abi.encodeWithSignature("updateDelay(uint256)", productTimelockMinDelay),
             predecessor: 0,

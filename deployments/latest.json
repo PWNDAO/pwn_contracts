@@ -1,0 +1,25 @@
+{
+    "deployedChains": [1],
+    "chains": {
+        "1": {
+            "dao": "0x1B8383D2726E7e18189205337424a2631A2102F4",
+            "productTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
+            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
+            "protocolSafe": "0x61a77B19b7F4dB82222625D7a969698894d77473",
+            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
+            "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
+            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
+            "categoryRegistry": "0x0c93666Bf6359951Ade361D6E19f2DB240dA392f",
+            "configSingleton": "0x1E53eC63395576d23770b00E86053aBf0b9a3a21",
+            "config": "0x9C432a1A229ef87b138da29dE930B3d8EC2C67Fa",
+            "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+            "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+            "revokedNonce": "0x32353ecC81dE2d8c710a5295B96c0d315a0bb563",
+            "simpleLoan": "0xBE8A45A4d82A0D7181E6A37E13aE22143336D7DE",
+            "simpleLoanSimpleProposal": "0x430CC773C5C4931518CFeFf8d8563e01A8a1Da99",
+            "simpleLoanListProposal": "0xFFcC4E9D8CDefb34Fa80A3DD85712EfF6071a768",
+            "simpleLoanFungibleProposal": "0x036bcD053344Cf34ef33efa81cCA832AE998336d",
+            "simpleLoanDutchAuctionProposal": "0x3ecde871cB34231F946136EfF5010Bcc4800FA75"
+        }
+    }
+}

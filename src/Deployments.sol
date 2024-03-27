@@ -13,11 +13,12 @@ import { IPWNDeployer } from "@pwn/deployer/IPWNDeployer.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { PWNSimpleLoanDutchAuctionProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
+import { PWNSimpleLoanFungibleProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
 import { PWNSimpleLoanListProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
 import { PWNSimpleLoanSimpleProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
 import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
-import { StateFingerprintComputerRegistry } from "@pwn/state-fingerprint/StateFingerprintComputerRegistry.sol";
 
 
 abstract contract Deployments is CommonBase {
@@ -36,7 +37,6 @@ abstract contract Deployments is CommonBase {
         address daoSafe;
         IPWNDeployer deployer;
         address deployerSafe;
-        address feeCollector;
         PWNHub hub;
         PWNLOAN loanToken;
         address productTimelock;
@@ -44,34 +44,16 @@ abstract contract Deployments is CommonBase {
         address protocolTimelock;
         PWNRevokedNonce revokedNonce;
         PWNSimpleLoan simpleLoan;
-        StateFingerprintComputerRegistry stateFingerprintComputerRegistry;
+        PWNSimpleLoanDutchAuctionProposal simpleLoanDutchAuctionProposal;
+        PWNSimpleLoanFungibleProposal simpleLoanFungibleProposal;
+        PWNSimpleLoanListProposal simpleLoanListProposal;
+        PWNSimpleLoanSimpleProposal simpleLoanSimpleProposal;
     }
-
-    address dao;
-
-    address productTimelock;
-    address protocolTimelock;
-
-    address deployerSafe;
-    address protocolSafe;
-    address daoSafe;
-    address feeCollector;
-
-    IMultiTokenCategoryRegistry categoryRegistry;
-    StateFingerprintComputerRegistry stateFingerprintComputerRegistry;
-
-    IPWNDeployer deployer;
-    PWNHub hub;
-    PWNConfig configSingleton;
-    PWNConfig config;
-    PWNLOAN loanToken;
-    PWNSimpleLoan simpleLoan;
-    PWNRevokedNonce revokedNonce;
 
 
     function _loadDeployedAddresses() internal {
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/deployments.json");
+        string memory path = string.concat(root, "/deployments/latest.json");
         string memory json = vm.readFile(path);
         bytes memory rawDeployedChains = json.parseRaw(".deployedChains");
         deployedChains = abi.decode(rawDeployedChains, (uint256[]));
@@ -79,23 +61,6 @@ abstract contract Deployments is CommonBase {
         if (_contains(deployedChains, block.chainid)) {
             bytes memory rawDeployment = json.parseRaw(string.concat(".chains.", block.chainid.toString()));
             deployment = abi.decode(rawDeployment, (Deployment));
-
-            dao = deployment.dao;
-            productTimelock = deployment.productTimelock;
-            protocolTimelock = deployment.protocolTimelock;
-            deployerSafe = deployment.deployerSafe;
-            protocolSafe = deployment.protocolSafe;
-            daoSafe = deployment.daoSafe;
-            feeCollector = deployment.feeCollector;
-            deployer = deployment.deployer;
-            hub = deployment.hub;
-            configSingleton = deployment.configSingleton;
-            config = deployment.config;
-            loanToken = deployment.loanToken;
-            simpleLoan = deployment.simpleLoan;
-            revokedNonce = deployment.revokedNonce;
-            stateFingerprintComputerRegistry = deployment.stateFingerprintComputerRegistry;
-            categoryRegistry = deployment.categoryRegistry;
         } else {
             _protocolNotDeployedOnSelectedChain();
         }

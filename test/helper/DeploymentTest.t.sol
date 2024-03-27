@@ -18,48 +18,92 @@ abstract contract DeploymentTest is Deployments, Test {
     }
 
     function _protocolNotDeployedOnSelectedChain() internal override {
-        protocolSafe = makeAddr("protocolSafe");
-        daoSafe = makeAddr("daoSafe");
-        feeCollector = makeAddr("feeCollector");
+        deployment.protocolSafe = makeAddr("protocolSafe");
+        deployment.daoSafe = makeAddr("daoSafe");
 
         // Deploy category registry
-        vm.prank(protocolSafe);
-        categoryRegistry = IMultiTokenCategoryRegistry(new MultiTokenCategoryRegistry());
+        vm.prank(deployment.protocolSafe);
+        deployment.categoryRegistry = IMultiTokenCategoryRegistry(new MultiTokenCategoryRegistry());
 
         // Deploy protocol
-        configSingleton = new PWNConfig();
+        deployment.configSingleton = new PWNConfig();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(configSingleton),
-            protocolSafe,
-            abi.encodeWithSignature("initialize(address,uint16,address)", address(this), 0, feeCollector)
+            address(deployment.configSingleton),
+            deployment.protocolSafe,
+            abi.encodeWithSignature("initialize(address,uint16,address)", address(this), 0, deployment.daoSafe)
         );
-        config = PWNConfig(address(proxy));
+        deployment.config = PWNConfig(address(proxy));
 
-        vm.prank(protocolSafe);
-        hub = new PWNHub();
+        vm.prank(deployment.protocolSafe);
+        deployment.hub = new PWNHub();
 
-        revokedNonce = new PWNRevokedNonce(address(hub), PWNHubTags.NONCE_MANAGER);
+        deployment.revokedNonce = new PWNRevokedNonce(address(deployment.hub), PWNHubTags.NONCE_MANAGER);
 
-        loanToken = new PWNLOAN(address(hub));
-        simpleLoan = new PWNSimpleLoan(
-            address(hub), address(loanToken), address(config), address(revokedNonce), address(categoryRegistry)
+        deployment.loanToken = new PWNLOAN(address(deployment.hub));
+        deployment.simpleLoan = new PWNSimpleLoan(
+            address(deployment.hub),
+            address(deployment.loanToken),
+            address(deployment.config),
+            address(deployment.revokedNonce),
+            address(deployment.categoryRegistry)
+        );
+
+        deployment.simpleLoanSimpleProposal = new PWNSimpleLoanSimpleProposal(
+            address(deployment.hub),
+            address(deployment.revokedNonce),
+            address(deployment.config)
+        );
+        deployment.simpleLoanListProposal = new PWNSimpleLoanListProposal(
+            address(deployment.hub),
+            address(deployment.revokedNonce),
+            address(deployment.config)
+        );
+        deployment.simpleLoanFungibleProposal = new PWNSimpleLoanFungibleProposal(
+            address(deployment.hub),
+            address(deployment.revokedNonce),
+            address(deployment.config)
+        );
+        deployment.simpleLoanDutchAuctionProposal = new PWNSimpleLoanDutchAuctionProposal(
+            address(deployment.hub),
+            address(deployment.revokedNonce),
+            address(deployment.config)
         );
 
         // Set hub tags
-        address[] memory addrs = new address[](4);
-        addrs[0] = address(simpleLoan);
-        addrs[1] = address(simpleLoan);
-        // addrs[2] = address(simpleLoanListOffer);
-        // addrs[3] = address(simpleLoanListOffer);
+        address[] memory addrs = new address[](10);
+        addrs[0] = address(deployment.simpleLoan);
+        addrs[1] = address(deployment.simpleLoan);
 
-        bytes32[] memory tags = new bytes32[](4);
+        addrs[2] = address(deployment.simpleLoanSimpleProposal);
+        addrs[3] = address(deployment.simpleLoanSimpleProposal);
+
+        addrs[4] = address(deployment.simpleLoanListProposal);
+        addrs[5] = address(deployment.simpleLoanListProposal);
+
+        addrs[6] = address(deployment.simpleLoanFungibleProposal);
+        addrs[7] = address(deployment.simpleLoanFungibleProposal);
+
+        addrs[8] = address(deployment.simpleLoanDutchAuctionProposal);
+        addrs[9] = address(deployment.simpleLoanDutchAuctionProposal);
+
+        bytes32[] memory tags = new bytes32[](10);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
         tags[1] = PWNHubTags.NONCE_MANAGER;
-        // tags[2] = PWNHubTags.LOAN_PROPOSAL;
-        // tags[3] = PWNHubTags.NONCE_MANAGER;
 
-        vm.prank(protocolSafe);
-        hub.setTags(addrs, tags, true);
+        tags[2] = PWNHubTags.LOAN_PROPOSAL;
+        tags[3] = PWNHubTags.NONCE_MANAGER;
+
+        tags[4] = PWNHubTags.LOAN_PROPOSAL;
+        tags[5] = PWNHubTags.NONCE_MANAGER;
+
+        tags[6] = PWNHubTags.LOAN_PROPOSAL;
+        tags[7] = PWNHubTags.NONCE_MANAGER;
+
+        tags[8] = PWNHubTags.LOAN_PROPOSAL;
+        tags[9] = PWNHubTags.NONCE_MANAGER;
+
+        vm.prank(deployment.protocolSafe);
+        deployment.hub.setTags(addrs, tags, true);
     }
 
 }
