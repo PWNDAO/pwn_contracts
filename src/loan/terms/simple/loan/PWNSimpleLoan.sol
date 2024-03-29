@@ -34,6 +34,9 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
+    uint32 public constant MIN_LOAN_DURATION = 10 minutes;
+    uint40 public constant MAX_ACCRUING_INTEREST_APR = 1e11; // 1,000,000% APR
+
     uint256 public constant APR_INTEREST_DENOMINATOR = 1e4;
     uint256 public constant DAILY_INTEREST_DENOMINATOR = 1e10;
 
@@ -80,6 +83,32 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         MultiToken.Asset credit;
         uint256 fixedInterestAmount;
         uint40 accruingInterestAPR;
+    }
+
+    /**
+     * @notice Loan proposal specification during loan creation.
+     * @param proposalContract Address of a loan proposal contract.
+     * @param proposalData Encoded proposal data that is passed to the loan proposal contract.
+     * @param signature Signature of the proposal.
+     */
+    struct ProposalSpec {
+        address proposalContract;
+        bytes proposalData;
+        bytes signature;
+    }
+
+    /**
+     * @notice Caller specification during loan creation.
+     * @param refinancingLoanId Id of a loan to be refinanced. 0 if creating a new loan.
+     * @param revokeNonce Flag if the callers nonce should be revoked.
+     * @param nonce Callers nonce to be revoked. Nonce is revoked from the current nonce space.
+     * @param permit Callers permit data for a loans credit asset.
+     */
+    struct CallerSpec {
+        uint256 refinancingLoanId;
+        bool revokeNonce;
+        uint256 nonce;
+        Permit permit;
     }
 
     /**
@@ -142,6 +171,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     mapping (bytes32 => bool) public extensionProposalsMade;
 
+
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
     |*----------------------------------------------------------*/
@@ -203,47 +233,131 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Create a new loan.
      * @dev The function assumes a prior token approval to a contract address or signed permits.
-     * @param proposalHash Hash of a loan offer / request that is signed by a lender / borrower.
-     * @param loanTerms Loan terms struct.
-     * @param permit Callers credit permit data.
+     * @param proposalSpec Proposal specification struct.
+     * @param callerSpec Caller specification struct.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return loanId Id of the created LOAN token.
      */
     function createLOAN(
-        bytes32 proposalHash,
-        Terms calldata loanTerms,
-        Permit calldata permit,
+        ProposalSpec calldata proposalSpec,
+        CallerSpec calldata callerSpec,
         bytes calldata extra
     ) external returns (uint256 loanId) {
-        // Check that caller is loan proposal contract
-        if (!hub.hasTag(msg.sender, PWNHubTags.LOAN_PROPOSAL)) {
-            revert CallerMissingHubTag(PWNHubTags.LOAN_PROPOSAL);
+        // Check provided proposal contract
+        if (!hub.hasTag(proposalSpec.proposalContract, PWNHubTags.LOAN_PROPOSAL)) {
+            revert AddressMissingHubTag({ addr: proposalSpec.proposalContract, tag: PWNHubTags.LOAN_PROPOSAL });
         }
 
-        // Check loan terms
-        _checkLoanTerms(loanTerms);
+        // Revoke nonce if needed
+        if (callerSpec.revokeNonce) {
+            revokedNonce.revokeNonce(msg.sender, callerSpec.nonce);
+        }
+
+        // If refinancing a loan, check that the loan can be repaid
+        if (callerSpec.refinancingLoanId != 0) {
+            LOAN storage loan = LOANs[callerSpec.refinancingLoanId];
+            _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
+        }
+
+        // Accept proposal and get loan terms
+        (bytes32 proposalHash, Terms memory loanTerms) = PWNSimpleLoanProposal(proposalSpec.proposalContract)
+            .acceptProposal({
+                acceptor: msg.sender,
+                refinancingLoanId: callerSpec.refinancingLoanId,
+                proposalData: proposalSpec.proposalData,
+                signature: proposalSpec.signature
+            });
+
+        // Check minimum loan duration
+        if (loanTerms.duration < MIN_LOAN_DURATION) {
+            revert InvalidDuration({ current: loanTerms.duration, limit: MIN_LOAN_DURATION });
+        }
+        // Check maximum accruing interest APR
+        if (loanTerms.accruingInterestAPR > MAX_ACCRUING_INTEREST_APR) {
+            revert AccruingInterestAPROutOfBounds({ current: loanTerms.accruingInterestAPR, limit: MAX_ACCRUING_INTEREST_APR });
+        }
+
+        if (callerSpec.refinancingLoanId == 0) {
+            // Check loan credit and collateral validity
+            _checkValidAsset(loanTerms.credit);
+            _checkValidAsset(loanTerms.collateral);
+        } else {
+            // Check refinance loan terms
+            _checkRefinanceLoanTerms(callerSpec.refinancingLoanId, loanTerms);
+        }
 
         // Create a new loan
         loanId = _createLoan({
             proposalHash: proposalHash,
-            proposalContract: msg.sender,
+            proposalContract: proposalSpec.proposalContract,
             loanTerms: loanTerms,
             extra: extra
         });
 
-        // Transfer collateral to Vault and credit to borrower
-        _settleNewLoan(loanTerms, permit);
+        // Execute permit for the caller
+        _checkPermit(msg.sender, loanTerms.credit.assetAddress, callerSpec.permit);
+        _tryPermit(callerSpec.permit);
+
+        if (callerSpec.refinancingLoanId == 0) {
+            // Transfer collateral to Vault and credit to borrower
+            _settleNewLoan(loanTerms);
+        } else {
+            // Refinance the original loan
+            _refinanceOriginalLoan(callerSpec.refinancingLoanId, loanTerms);
+
+            emit LOANRefinanced({ loanId: callerSpec.refinancingLoanId, refinancedLoanId: loanId });
+        }
     }
 
     /**
-     * @notice Check loan terms validity.
-     * @dev The function will revert if the loan terms are not valid.
-     * @param loanTerms Loan terms struct.
+     * @notice Check that permit data have correct owner and asset.
+     * @param caller Caller address.
+     * @param creditAddress Address of a credit to be used.
+     * @param permit Permit to be checked.
      */
-    function _checkLoanTerms(Terms calldata loanTerms) private view {
-        // Check loan credit and collateral validity
-        _checkValidAsset(loanTerms.credit);
-        _checkValidAsset(loanTerms.collateral);
+    function _checkPermit(address caller, address creditAddress, Permit calldata permit) private pure {
+        if (permit.asset != address(0)) {
+            if (permit.owner != caller) {
+                revert InvalidPermitOwner({ current: permit.owner, expected: caller});
+            }
+            if (permit.asset != creditAddress) {
+                revert InvalidPermitAsset({ current: permit.asset, expected: creditAddress });
+            }
+        }
+    }
+
+    /**
+     * @notice Check if the loan terms are valid for refinancing.
+     * @dev The function will revert if the loan terms are not valid for refinancing.
+     * @param loanId Original loan id.
+     * @param loanTerms Refinancing loan terms struct.
+     */
+    function _checkRefinanceLoanTerms(uint256 loanId, Terms memory loanTerms) private view {
+        LOAN storage loan = LOANs[loanId];
+
+        // Check that the credit asset is the same as in the original loan
+        // Note: Address check is enough because the asset has always ERC20 category and zero id.
+        // Amount can be different, but nonzero.
+        if (
+            loan.creditAddress != loanTerms.credit.assetAddress ||
+            loanTerms.credit.amount == 0
+        ) revert RefinanceCreditMismatch();
+
+        // Check that the collateral is identical to the original one
+        if (
+            loan.collateral.category != loanTerms.collateral.category ||
+            loan.collateral.assetAddress != loanTerms.collateral.assetAddress ||
+            loan.collateral.id != loanTerms.collateral.id ||
+            loan.collateral.amount != loanTerms.collateral.amount
+        ) revert RefinanceCollateralMismatch();
+
+        // Check that the borrower is the same as in the original loan
+        if (loan.borrower != loanTerms.borrower) {
+            revert RefinanceBorrowerMismatch({
+                currentBorrower: loan.borrower,
+                newBorrower: loanTerms.borrower
+            });
+        }
     }
 
     /**
@@ -256,7 +370,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     function _createLoan(
         bytes32 proposalHash,
         address proposalContract,
-        Terms calldata loanTerms,
+        Terms memory loanTerms,
         bytes calldata extra
     ) private returns (uint256 loanId) {
         // Mint LOAN token for lender
@@ -290,15 +404,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @notice Transfer collateral to Vault and credit to borrower.
      * @dev The function assumes a prior token approval to a contract address or signed permits.
      * @param loanTerms Loan terms struct.
-     * @param permit Callers credit permit data.
      */
-    function _settleNewLoan(
-        Terms calldata loanTerms,
-        Permit calldata permit
-    ) private {
-        // Execute permit for the caller
-        _tryPermit(permit);
-
+    function _settleNewLoan(Terms memory loanTerms) private {
         // Transfer collateral to Vault
         _pull(loanTerms.collateral, loanTerms.borrower);
 
@@ -322,91 +429,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         _pushFrom(creditHelper, loanTerms.lender, loanTerms.borrower);
     }
 
-
-    /*----------------------------------------------------------*|
-    |*  # REFINANCE LOAN                                        *|
-    |*----------------------------------------------------------*/
-
-    /**
-     * @notice Refinance a loan by repaying the original loan and creating a new one.
-     * @dev If the new lender is the same as the current LOAN owner,
-     *      the function will transfer only the surplus to the borrower, if any.
-     *      If the new loan amount is not enough to cover the original loan, the borrower needs to contribute.
-     *      The function assumes a prior token approval to a contract address or signed permits.
-     * @param proposalHash Hash of a loan offer / request that is signed by a lender / borrower. Used to uniquely identify a loan offer / request.
-     * @param loanTerms Loan terms struct.
-     * @param permit Callers credit permit data.
-     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
-     * @return refinancedLoanId Id of the refinanced LOAN token.
-     */
-    function refinanceLOAN(
-        uint256 loanId,
-        bytes32 proposalHash,
-        Terms calldata loanTerms,
-        Permit calldata permit,
-        bytes calldata extra
-    ) external returns (uint256 refinancedLoanId) {
-        // Check that caller is loan proposal contract
-        if (!hub.hasTag(msg.sender, PWNHubTags.LOAN_PROPOSAL)) {
-            revert CallerMissingHubTag(PWNHubTags.LOAN_PROPOSAL);
-        }
-
-        LOAN storage loan = LOANs[loanId];
-
-        // Check that the original loan can be repaid, revert if not
-        _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
-
-        // Check refinance loan terms
-        _checkRefinanceLoanTerms(loanId, loanTerms);
-
-        // Create a new loan
-        refinancedLoanId = _createLoan({
-            proposalHash: proposalHash,
-            proposalContract: msg.sender,
-            loanTerms: loanTerms,
-            extra: extra
-        });
-
-        // Refinance the original loan
-        _refinanceOriginalLoan(loanId, loanTerms, permit);
-
-        emit LOANRefinanced({ loanId: loanId, refinancedLoanId: refinancedLoanId });
-    }
-
-    /**
-     * @notice Check if the loan terms are valid for refinancing.
-     * @dev The function will revert if the loan terms are not valid for refinancing.
-     * @param loanId Original loan id.
-     * @param loanTerms Refinancing loan terms struct.
-     */
-    function _checkRefinanceLoanTerms(uint256 loanId, Terms calldata loanTerms) private view {
-        LOAN storage loan = LOANs[loanId];
-
-        // Check that the credit asset is the same as in the original loan
-        // Note: Address check is enough because the asset has always ERC20 category and zero id.
-        // Amount can be different, but nonzero.
-        if (
-            loan.creditAddress != loanTerms.credit.assetAddress ||
-            loanTerms.credit.amount == 0
-        ) revert RefinanceCreditMismatch();
-
-        // Check that the collateral is identical to the original one
-        if (
-            loan.collateral.category != loanTerms.collateral.category ||
-            loan.collateral.assetAddress != loanTerms.collateral.assetAddress ||
-            loan.collateral.id != loanTerms.collateral.id ||
-            loan.collateral.amount != loanTerms.collateral.amount
-        ) revert RefinanceCollateralMismatch();
-
-        // Check that the borrower is the same as in the original loan
-        if (loan.borrower != loanTerms.borrower) {
-            revert RefinanceBorrowerMismatch({
-                currentBorrower: loan.borrower,
-                newBorrower: loanTerms.borrower
-            });
-        }
-    }
-
     /**
      * @notice Repay the original loan and transfer the surplus to the borrower if any.
      * @dev If the new lender is the same as the current LOAN owner,
@@ -415,12 +437,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      The function assumes a prior token approval to a contract address or signed permits.
      * @param loanId Id of a loan that is being refinanced.
      * @param loanTerms Loan terms struct.
-     * @param permit Callers credit permit data.
      */
     function _refinanceOriginalLoan(
         uint256 loanId,
-        Terms calldata loanTerms,
-        Permit calldata permit
+        Terms memory loanTerms
     ) private {
         uint256 repaymentAmount = _loanRepaymentAmount(loanId);
 
@@ -432,8 +452,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             repayLoanDirectly: repayLoanDirectly,
             loanOwner: loanOwner,
             repaymentAmount: repaymentAmount,
-            loanTerms: loanTerms,
-            permit: permit
+            loanTerms: loanTerms
         });
     }
 
@@ -446,19 +465,14 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param loanOwner Address of the current LOAN owner.
      * @param repaymentAmount Amount of the original loan to be repaid.
      * @param loanTerms Loan terms struct.
-     * @param permit Callers credit permit data.
      */
     function _settleLoanRefinance(
         bool repayLoanDirectly,
         address loanOwner,
         uint256 repaymentAmount,
-        Terms calldata loanTerms,
-        Permit calldata permit
+        Terms memory loanTerms
     ) private {
         MultiToken.Asset memory creditHelper = loanTerms.credit;
-
-        // Execute permit for the caller
-        _tryPermit(permit);
 
         // Collect fees
         (uint256 feeAmount, uint256 newLoanAmount)
@@ -530,15 +544,15 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         (bool repayLoanDirectly, address loanOwner) = _deleteOrUpdateRepaidLoan(loanId);
 
-        _settleLoanRepayment({
-            repayLoanDirectly: repayLoanDirectly,
-            loanOwner: loanOwner,
-            repayingAddress: msg.sender,
-            borrower: borrower,
-            repaymentCredit: repaymentCredit,
-            collateral: collateral,
-            permit: permit
-        });
+        // Execute permit for the caller
+        _checkPermit(msg.sender, repaymentCredit.assetAddress, permit);
+        _tryPermit(permit);
+
+        // Transfer credit to the original lender or to the Vault
+        _transferLoanRepayment(repayLoanDirectly, repaymentCredit, msg.sender, loanOwner);
+
+        // Transfer collateral back to borrower
+        _push(collateral, borrower);
     }
 
     /**
@@ -590,36 +604,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             // to have the value at the time of claim and stop accruing new interest.
             loan.accruingInterestDailyRate = 0;
         }
-    }
-
-    /**
-     * @notice Settle the loan repayment.
-     * @dev The function assumes a prior token approval to a contract address or a signed permit.
-     * @param repayLoanDirectly If the loan can be repaid directly to the current LOAN owner.
-     * @param loanOwner Address of the current LOAN owner.
-     * @param repayingAddress Address of the account repaying the loan.
-     * @param borrower Address of the borrower associated with the loan.
-     * @param repaymentCredit Credit asset to be repaid.
-     * @param collateral Collateral to be transferred back to the borrower.
-     * @param permit Callers credit permit data.
-     */
-    function _settleLoanRepayment(
-        bool repayLoanDirectly,
-        address loanOwner,
-        address repayingAddress,
-        address borrower,
-        MultiToken.Asset memory repaymentCredit,
-        MultiToken.Asset memory collateral,
-        Permit calldata permit
-    ) private {
-        // Execute permit for the caller
-        _tryPermit(permit);
-
-        // Transfer credit to the original lender or to the Vault
-        _transferLoanRepayment(repayLoanDirectly, repaymentCredit, repayingAddress, loanOwner);
-
-        // Transfer collateral back to borrower
-        _push(collateral, borrower);
     }
 
     /**
@@ -869,6 +853,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             _checkValidAsset(compensation);
 
             // Transfer compensation to the loan owner
+            _checkPermit(msg.sender, extension.compensationAddress, permit);
             _tryPermit(permit);
             _pushFrom(compensation, loan.borrower, loanOwner);
         }

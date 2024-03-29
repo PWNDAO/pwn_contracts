@@ -7,7 +7,6 @@ import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import { Permit } from "@pwn/loan/vault/Permit.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -122,13 +121,36 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
     }
 
     /**
+     * @notice Encode proposal data.
+     * @param proposal Proposal struct to be encoded.
+     * @param proposalValues ProposalValues struct to be encoded.
+     * @return Encoded proposal data.
+     */
+    function encodeProposalData(
+        Proposal memory proposal,
+        ProposalValues memory proposalValues
+    ) external pure returns (bytes memory) {
+        return abi.encode(proposal, proposalValues);
+    }
+
+    /**
+     * @notice Decode proposal data.
+     * @param proposalData Encoded proposal data.
+     * @return Decoded proposal struct.
+     * @return Decoded proposal values struct.
+     */
+    function decodeProposalData(bytes memory proposalData) public pure returns (Proposal memory, ProposalValues memory) {
+        return abi.decode(proposalData, (Proposal, ProposalValues));
+    }
+
+    /**
      * @notice Get credit amount for an auction in a specific timestamp.
      * @dev Auction runs one minute longer than `auctionDuration` to have `maxCreditAmount` value in the last minute.
      * @param proposal Proposal struct containing all proposal data.
      * @param timestamp Timestamp to calculate auction credit amount for.
      * @return Credit amount in the auction for provided timestamp.
      */
-    function getCreditAmount(Proposal calldata proposal, uint256 timestamp) public pure returns (uint256) {
+    function getCreditAmount(Proposal memory proposal, uint256 timestamp) public pure returns (uint256) {
         // Check proposal
         if (proposal.auctionDuration < 1 minutes) {
             revert InvalidAuctionDuration({
@@ -181,92 +203,19 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @notice Accept a proposal with a callers nonce revocation.
-     * @dev Function will mark callers nonce as revoked.
-     * @param proposal Proposal struct containing all proposal data.
-     * @param proposalValues Proposal values struct containing concrete proposal values.
-     * @param signature Proposal signature signed by a proposer.
-     * @param permit Callers permit data.
-     * @param refinancingLoanId Id of a loan to be refinanced. 0 if creating a new loan.
-     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
-     * @param callersNonceSpace Nonce space of a callers nonce.
-     * @param callersNonceToRevoke Nonce to revoke.
-     * @return loanId Id of a created loan.
+     * @inheritdoc PWNSimpleLoanProposal
      */
     function acceptProposal(
-        Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
-        bytes calldata signature,
+        address acceptor,
         uint256 refinancingLoanId,
-        Permit calldata permit,
-        bytes calldata extra,
-        uint256 callersNonceSpace,
-        uint256 callersNonceToRevoke
-    ) external returns (uint256 loanId) {
-        _revokeCallersNonce(msg.sender, callersNonceSpace, callersNonceToRevoke);
-        return acceptProposal(proposal, proposalValues, signature, refinancingLoanId, permit, extra);
-    }
-
-    /**
-     * @notice Accept a proposal.
-     * @param proposal Proposal struct containing all proposal data.
-     * @param proposalValues Proposal values struct containing concrete proposal values.
-     * @param signature Proposal signature signed by a proposer.
-     * @param refinancingLoanId Id of a loan to be refinanced. 0 if creating a new loan.
-     * @param permit Callers permit data.
-     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
-     * @return loanId Id of a created loan.
-     */
-    function acceptProposal(
-        Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
-        bytes calldata signature,
-        uint256 refinancingLoanId,
-        Permit calldata permit,
-        bytes calldata extra
-    ) public returns (uint256 loanId) {
-        // Check refinancing id
-        _checkRefinancingLoanId(refinancingLoanId, proposal.refinancingLoanId, proposal.isOffer);
-
-        // Check permit
-        _checkPermit(msg.sender, proposal.creditAddress, permit);
-
-        // Accept proposal
-        (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms)
-            = _acceptProposal(proposal, proposalValues, signature);
-
-        if (refinancingLoanId == 0) {
-            // Create loan
-            return PWNSimpleLoan(proposal.loanContract).createLOAN({
-                proposalHash: proposalHash,
-                loanTerms: loanTerms,
-                permit: permit,
-                extra: extra
-            });
-        } else {
-            // Refinance loan
-            return PWNSimpleLoan(proposal.loanContract).refinanceLOAN({
-                loanId: refinancingLoanId,
-                proposalHash: proposalHash,
-                loanTerms: loanTerms,
-                permit: permit,
-                extra: extra
-            });
-        }
-    }
-
-
-    /*----------------------------------------------------------*|
-    |*  # INTERNALS                                             *|
-    |*----------------------------------------------------------*/
-
-    function _acceptProposal(
-        Proposal calldata proposal,
-        ProposalValues calldata proposalValues,
+        bytes calldata proposalData,
         bytes calldata signature
-    )  private returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms) {
-        // Check if the loan contract has a tag
-        _checkLoanContractTag(proposal.loanContract);
+    ) override external returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms) {
+        // Decode proposal data
+        (Proposal memory proposal, ProposalValues memory proposalValues) = decodeProposalData(proposalData);
+
+        // Make proposal hash
+        proposalHash = _getProposalHash(PROPOSAL_TYPEHASH, abi.encode(proposal));
 
         // Calculate current credit amount
         uint256 creditAmount = getCreditAmount(proposal, block.timestamp);
@@ -296,51 +245,34 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
             }
         }
 
-        // Check collateral state fingerprint if needed
-        if (proposal.checkCollateralStateFingerprint) {
-            _checkCollateralState({
-                addr: proposal.collateralAddress,
-                id: proposal.collateralId,
-                stateFingerprint: proposal.collateralStateFingerprint
-            });
-        }
-
         // Try to accept proposal
-        proposalHash = _tryAcceptProposal(proposal, creditAmount, signature);
+        _acceptProposal(
+            acceptor,
+            refinancingLoanId,
+            proposalHash,
+            signature,
+            ProposalBase({
+                collateralAddress: proposal.collateralAddress,
+                collateralId: proposal.collateralId,
+                checkCollateralStateFingerprint: proposal.checkCollateralStateFingerprint,
+                collateralStateFingerprint: proposal.collateralStateFingerprint,
+                creditAmount: creditAmount,
+                availableCreditLimit: proposal.availableCreditLimit,
+                expiration: proposal.auctionStart + proposal.auctionDuration + 1 minutes,
+                allowedAcceptor: proposal.allowedAcceptor,
+                proposer: proposal.proposer,
+                isOffer: proposal.isOffer,
+                refinancingLoanId: proposal.refinancingLoanId,
+                nonceSpace: proposal.nonceSpace,
+                nonce: proposal.nonce,
+                loanContract: proposal.loanContract
+            })
+        );
 
         // Create loan terms object
-        loanTerms = _createLoanTerms(proposal, creditAmount);
-    }
-
-    function _tryAcceptProposal(
-        Proposal calldata proposal,
-        uint256 creditAmount,
-        bytes calldata signature
-    ) private returns (bytes32 proposalHash) {
-        proposalHash = getProposalHash(proposal);
-        _tryAcceptProposal({
-            proposalHash: proposalHash,
-            creditAmount: creditAmount,
-            availableCreditLimit: proposal.availableCreditLimit,
-            apr: proposal.accruingInterestAPR,
-            duration: proposal.duration,
-            expiration: proposal.auctionStart + proposal.auctionDuration + 1 minutes,
-            nonceSpace: proposal.nonceSpace,
-            nonce: proposal.nonce,
-            allowedAcceptor: proposal.allowedAcceptor,
-            acceptor: msg.sender,
-            signer: proposal.proposer,
-            signature: signature
-        });
-    }
-
-    function _createLoanTerms(
-        Proposal calldata proposal,
-        uint256 creditAmount
-    ) private view returns (PWNSimpleLoan.Terms memory) {
-        return PWNSimpleLoan.Terms({
-            lender: proposal.isOffer ? proposal.proposer : msg.sender,
-            borrower: proposal.isOffer ? msg.sender : proposal.proposer,
+        loanTerms = PWNSimpleLoan.Terms({
+            lender: proposal.isOffer ? proposal.proposer : acceptor,
+            borrower: proposal.isOffer ? acceptor : proposal.proposer,
             duration: proposal.duration,
             collateral: MultiToken.Asset({
                 category: proposal.collateralCategory,

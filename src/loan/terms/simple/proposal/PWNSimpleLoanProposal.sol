@@ -5,7 +5,7 @@ import { PWNConfig, IERC5646 } from "@pwn/config/PWNConfig.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
-import { Permit } from "@pwn/loan/vault/Permit.sol";
+import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import "@pwn/PWNErrors.sol";
 
@@ -15,14 +15,28 @@ import "@pwn/PWNErrors.sol";
  */
 abstract contract PWNSimpleLoanProposal {
 
-    uint32 public constant MIN_LOAN_DURATION = 10 minutes;
-    uint40 public constant MAX_ACCRUING_INTEREST_APR = 1e11; // 1,000,000% APR
-
     bytes32 public immutable DOMAIN_SEPARATOR;
 
     PWNHub public immutable hub;
     PWNRevokedNonce public immutable revokedNonce;
     PWNConfig public immutable config;
+
+    struct ProposalBase {
+        address collateralAddress;
+        uint256 collateralId;
+        bool checkCollateralStateFingerprint;
+        bytes32 collateralStateFingerprint;
+        uint256 creditAmount;
+        uint256 availableCreditLimit;
+        uint40 expiration;
+        address allowedAcceptor;
+        address proposer;
+        bool isOffer;
+        uint256 refinancingLoanId;
+        uint256 nonceSpace;
+        uint256 nonce;
+        address loanContract;
+    }
 
     /**
      * @dev Mapping of proposals made via on-chain transactions.
@@ -58,6 +72,10 @@ abstract contract PWNSimpleLoanProposal {
     }
 
 
+    /*----------------------------------------------------------*|
+    |*  # EXTERNALS                                             *|
+    |*----------------------------------------------------------*/
+
     /**
      * @notice Helper function for revoking a proposal nonce on behalf of a caller.
      * @param nonceSpace Nonce space of a proposal nonce to be revoked.
@@ -67,174 +85,26 @@ abstract contract PWNSimpleLoanProposal {
         revokedNonce.revokeNonce(msg.sender, nonceSpace, nonce);
     }
 
+    /**
+     * @notice Accept a proposal and create new loan terms.
+     * @dev Function can be called only by a loan contract with appropriate PWN Hub tag.
+     * @param acceptor Address of a proposal acceptor.
+     * @param refinancingLoanId Id of a loan to be refinanced. 0 if creating a new loan.
+     * @param proposalData Encoded proposal data with signature.
+     * @return proposalHash Proposal hash.
+     * @return loanTerms Loan terms.
+     */
+    function acceptProposal(
+        address acceptor,
+        uint256 refinancingLoanId,
+        bytes calldata proposalData,
+        bytes calldata signature
+    ) virtual external returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms);
+
 
     /*----------------------------------------------------------*|
     |*  # INTERNALS                                             *|
     |*----------------------------------------------------------*/
-
-    /**
-     * @notice Try to accept a proposal.
-     * @param proposalHash Proposal hash.
-     * @param creditAmount Amount of credit to be used.
-     * @param availableCreditLimit Available credit limit.
-     * @param apr Accruing interest APR.
-     * @param duration Loan duration.
-     * @param expiration Proposal expiration.
-     * @param nonceSpace Nonce space of a proposal nonce.
-     * @param nonce Proposal nonce.
-     * @param allowedAcceptor Allowed acceptor address.
-     * @param acceptor Acctual acceptor address.
-     * @param signer Signer address.
-     * @param signature Signature of a proposal.
-     */
-    function _tryAcceptProposal(
-        bytes32 proposalHash,
-        uint256 creditAmount,
-        uint256 availableCreditLimit,
-        uint40 apr,
-        uint32 duration,
-        uint40 expiration,
-        uint256 nonceSpace,
-        uint256 nonce,
-        address allowedAcceptor,
-        address acceptor,
-        address signer,
-        bytes memory signature
-    ) internal {
-        // Check proposal has been made via on-chain tx, EIP-1271 or signed off-chain
-        if (!proposalsMade[proposalHash]) {
-            if (!PWNSignatureChecker.isValidSignatureNow(signer, proposalHash, signature)) {
-                revert InvalidSignature({ signer: signer, digest: proposalHash });
-            }
-        }
-
-        // Check proposal is not expired
-        if (block.timestamp >= expiration) {
-            revert Expired({ current: block.timestamp, expiration: expiration });
-        }
-
-        // Check proposal is not revoked
-        if (!revokedNonce.isNonceUsable(signer, nonceSpace, nonce)) {
-            revert NonceNotUsable({ addr: signer, nonceSpace: nonceSpace, nonce: nonce });
-        }
-
-        // Check propsal is accepted by an allowed address
-        if (allowedAcceptor != address(0) && acceptor != allowedAcceptor) {
-            revert CallerNotAllowedAcceptor({ current: acceptor, allowed: allowedAcceptor });
-        }
-
-        // Check minimum loan duration
-        if (duration < MIN_LOAN_DURATION) {
-            revert InvalidDuration({ current: duration, limit: MIN_LOAN_DURATION });
-        }
-
-        // Check maximum accruing interest APR
-        if (apr > MAX_ACCRUING_INTEREST_APR) {
-            revert AccruingInterestAPROutOfBounds({ current: apr, limit: MAX_ACCRUING_INTEREST_APR });
-        }
-
-        if (availableCreditLimit == 0) {
-            // Revoke nonce if credit limit is 0, proposal can be accepted only once
-            revokedNonce.revokeNonce(signer, nonceSpace, nonce);
-        } else if (creditUsed[proposalHash] + creditAmount <= availableCreditLimit) {
-            // Increase used credit if credit limit is not exceeded
-            creditUsed[proposalHash] += creditAmount;
-        } else {
-            // Revert if credit limit is exceeded
-            revert AvailableCreditLimitExceeded({
-                used: creditUsed[proposalHash] + creditAmount,
-                limit: availableCreditLimit
-            });
-        }
-    }
-
-    /**
-     * @notice Check if a collateral state fingerprint is valid.
-     * @param addr Address of a collateral contract.
-     * @param id Collateral ID.
-     * @param stateFingerprint Proposed state fingerprint.
-     */
-    function _checkCollateralState(address addr, uint256 id, bytes32 stateFingerprint) internal view {
-        IERC5646 computer = config.getStateFingerprintComputer(addr);
-        if (address(computer) == address(0)) {
-            // Asset is not implementing ERC5646 and no computer is registered
-            revert MissingStateFingerprintComputer();
-        }
-
-        bytes32 currentFingerprint = computer.getStateFingerprint(id);
-        if (stateFingerprint != currentFingerprint) {
-            // Fingerprint mismatch
-            revert InvalidCollateralStateFingerprint({
-                current: currentFingerprint,
-                proposed: stateFingerprint
-            });
-        }
-    }
-
-    /**
-     * @notice Check if a loan contract has an active loan tag.
-     * @param loanContract Loan contract address.
-     */
-    function _checkLoanContractTag(address loanContract) internal view {
-        if (!hub.hasTag(loanContract, PWNHubTags.ACTIVE_LOAN)) {
-            revert AddressMissingHubTag({ addr: loanContract, tag: PWNHubTags.ACTIVE_LOAN });
-        }
-    }
-
-    /**
-     * @notice Check that permit data have correct owner and asset.
-     * @param caller Caller address.
-     * @param creditAddress Address of a credit to be used.
-     * @param permit Permit to be checked.
-     */
-    function _checkPermit(address caller, address creditAddress, Permit calldata permit) internal pure {
-        if (permit.asset != address(0)) {
-            if (permit.owner != caller) {
-                revert InvalidPermitOwner({ current: permit.owner, expected: caller});
-            }
-            if (creditAddress != permit.asset) {
-                revert InvalidPermitAsset({ current: permit.asset, expected: creditAddress });
-            }
-        }
-    }
-
-    /**
-     * @notice Check if refinancing loan ID is valid.
-     * @param refinancingLoanId Refinancing loan ID.
-     * @param proposalRefinancingLoanId Proposal refinancing loan ID.
-     * @param isOffer True if proposal is an offer, false if it is a request.
-     */
-    function _checkRefinancingLoanId(
-        uint256 refinancingLoanId,
-        uint256 proposalRefinancingLoanId,
-        bool isOffer
-    ) internal pure {
-        if (refinancingLoanId == 0) {
-            if (proposalRefinancingLoanId != 0) {
-                revert InvalidRefinancingLoanId({ refinancingLoanId: proposalRefinancingLoanId });
-            }
-        } else {
-            if (refinancingLoanId != proposalRefinancingLoanId) {
-                if (proposalRefinancingLoanId != 0 || !isOffer) {
-                    revert InvalidRefinancingLoanId({ refinancingLoanId: proposalRefinancingLoanId });
-                }
-            }
-        }
-    }
-
-    /**
-     * @notice Make an on-chain proposal.
-     * @dev Function will mark a proposal hash as proposed.
-     * @param proposalHash Proposal hash.
-     * @param proposer Address of a proposal proposer.
-     */
-    function _makeProposal(bytes32 proposalHash, address proposer) internal {
-        if (msg.sender != proposer) {
-            revert CallerIsNotStatedProposer(proposer);
-        }
-
-        proposalsMade[proposalHash] = true;
-    }
 
     /**
      * @notice Get a proposal hash according to EIP-712.
@@ -253,16 +123,108 @@ abstract contract PWNSimpleLoanProposal {
     }
 
     /**
-     * @notice Revoke a nonce of a caller.
-     * @param caller Caller address.
-     * @param nonceSpace Nonce space of a nonce to be revoked.
-     * @param nonce Nonce to be revoked.
+     * @notice Make an on-chain proposal.
+     * @dev Function will mark a proposal hash as proposed.
+     * @param proposalHash Proposal hash.
+     * @param proposer Address of a proposal proposer.
      */
-    function _revokeCallersNonce(address caller, uint256 nonceSpace, uint256 nonce) internal {
-        if (!revokedNonce.isNonceUsable(caller, nonceSpace, nonce)) {
-            revert NonceNotUsable({ addr: caller, nonceSpace: nonceSpace, nonce: nonce });
+    function _makeProposal(bytes32 proposalHash, address proposer) internal {
+        if (msg.sender != proposer) {
+            revert CallerIsNotStatedProposer(proposer);
         }
-        revokedNonce.revokeNonce(caller, nonceSpace, nonce);
+
+        proposalsMade[proposalHash] = true;
+    }
+
+    /**
+     * @notice Try to accept proposal base.
+     * @param acceptor Address of a proposal acceptor.
+     * @param refinancingLoanId Refinancing loan ID.
+     * @param proposalHash Proposal hash.
+     * @param signature Signature of a proposal.
+     * @param proposal Proposal base struct.
+     */
+    function _acceptProposal(
+        address acceptor,
+        uint256 refinancingLoanId,
+        bytes32 proposalHash,
+        bytes memory signature,
+        ProposalBase memory proposal
+    ) internal {
+        // Check loan contract
+        if (msg.sender != proposal.loanContract) {
+            revert CallerNotLoanContract({ caller: msg.sender, loanContract: proposal.loanContract });
+        }
+        if (!hub.hasTag(proposal.loanContract, PWNHubTags.ACTIVE_LOAN)) {
+            revert AddressMissingHubTag({ addr: proposal.loanContract, tag: PWNHubTags.ACTIVE_LOAN });
+        }
+
+        // Check proposal has been made via on-chain tx, EIP-1271 or signed off-chain
+        if (!proposalsMade[proposalHash]) {
+            if (!PWNSignatureChecker.isValidSignatureNow(proposal.proposer, proposalHash, signature)) {
+                revert InvalidSignature({ signer: proposal.proposer, digest: proposalHash });
+            }
+        }
+
+        // Check refinancing proposal
+        if (refinancingLoanId == 0) {
+            if (proposal.refinancingLoanId != 0) {
+                revert InvalidRefinancingLoanId({ refinancingLoanId: proposal.refinancingLoanId });
+            }
+        } else {
+            if (refinancingLoanId != proposal.refinancingLoanId) {
+                if (proposal.refinancingLoanId != 0 || !proposal.isOffer) {
+                    revert InvalidRefinancingLoanId({ refinancingLoanId: proposal.refinancingLoanId });
+                }
+            }
+        }
+
+        // Check proposal is not expired
+        if (block.timestamp >= proposal.expiration) {
+            revert Expired({ current: block.timestamp, expiration: proposal.expiration });
+        }
+
+        // Check proposal is not revoked
+        if (!revokedNonce.isNonceUsable(proposal.proposer, proposal.nonceSpace, proposal.nonce)) {
+            revert NonceNotUsable({ addr: proposal.proposer, nonceSpace: proposal.nonceSpace, nonce: proposal.nonce });
+        }
+
+        // Check propsal is accepted by an allowed address
+        if (proposal.allowedAcceptor != address(0) && acceptor != proposal.allowedAcceptor) {
+            revert CallerNotAllowedAcceptor({ current: acceptor, allowed: proposal.allowedAcceptor });
+        }
+
+        if (proposal.availableCreditLimit == 0) {
+            // Revoke nonce if credit limit is 0, proposal can be accepted only once
+            revokedNonce.revokeNonce(proposal.proposer, proposal.nonceSpace, proposal.nonce);
+        } else if (creditUsed[proposalHash] + proposal.creditAmount <= proposal.availableCreditLimit) {
+            // Increase used credit if credit limit is not exceeded
+            creditUsed[proposalHash] += proposal.creditAmount;
+        } else {
+            // Revert if credit limit is exceeded
+            revert AvailableCreditLimitExceeded({
+                used: creditUsed[proposalHash] + proposal.creditAmount,
+                limit: proposal.availableCreditLimit
+            });
+        }
+
+        // Check collateral state fingerprint if needed
+        if (proposal.checkCollateralStateFingerprint) {
+            IERC5646 computer = config.getStateFingerprintComputer(proposal.collateralAddress);
+            if (address(computer) == address(0)) {
+                // Asset is not implementing ERC5646 and no computer is registered
+                revert MissingStateFingerprintComputer();
+            }
+
+            bytes32 currentFingerprint = computer.getStateFingerprint(proposal.collateralId);
+            if (proposal.collateralStateFingerprint != currentFingerprint) {
+                // Fingerprint mismatch
+                revert InvalidCollateralStateFingerprint({
+                    current: currentFingerprint,
+                    proposed: proposal.collateralStateFingerprint
+                });
+            }
+        }
     }
 
 }

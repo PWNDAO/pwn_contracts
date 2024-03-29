@@ -24,6 +24,8 @@ abstract contract PWNSimpleLoanTest is Test {
     address feeCollector = makeAddr("feeCollector");
     address alice = makeAddr("alice");
     address proposalContract = makeAddr("proposalContract");
+    bytes proposalData = bytes("proposalData");
+    bytes signature = bytes("signature");
     uint256 loanId = 42;
     address lender = makeAddr("lender");
     address borrower = makeAddr("borrower");
@@ -31,6 +33,8 @@ abstract contract PWNSimpleLoanTest is Test {
     PWNSimpleLoan.LOAN simpleLoan;
     PWNSimpleLoan.LOAN nonExistingLoan;
     PWNSimpleLoan.Terms simpleLoanTerms;
+    PWNSimpleLoan.ProposalSpec proposalSpec;
+    PWNSimpleLoan.CallerSpec callerSpec;
     PWNSimpleLoan.ExtensionProposal extension;
     T20 fungibleAsset;
     T721 nonFungibleAsset;
@@ -96,6 +100,12 @@ abstract contract PWNSimpleLoanTest is Test {
             accruingInterestAPR: 0
         });
 
+        proposalSpec = PWNSimpleLoan.ProposalSpec({
+            proposalContract: proposalContract,
+            proposalData: proposalData,
+            signature: signature
+        });
+
         nonExistingLoan = PWNSimpleLoan.LOAN({
             status: 0,
             creditAddress: address(0),
@@ -142,6 +152,7 @@ abstract contract PWNSimpleLoanTest is Test {
             abi.encode(true)
         );
 
+        _mockLoanTerms(simpleLoanTerms);
         _mockLOANMint(loanId);
         _mockLOANTokenOwner(loanId, lender);
 
@@ -210,6 +221,14 @@ abstract contract PWNSimpleLoanTest is Test {
         _storeLOANWord(loanSlot + 7, abi.encodePacked(_simpleLoan.collateral.amount));
     }
 
+    function _mockLoanTerms(PWNSimpleLoan.Terms memory _terms) internal {
+        vm.mockCall(
+            proposalContract,
+            abi.encodeWithSignature("acceptProposal(address,uint256,bytes,bytes)"),
+            abi.encode(proposalHash, _terms)
+        );
+    }
+
     function _mockLOANMint(uint256 _loanId) internal {
         vm.mockCall(loanToken, abi.encodeWithSignature("mint(address)"), abi.encode(_loanId));
     }
@@ -267,15 +286,93 @@ abstract contract PWNSimpleLoanTest is Test {
 
 contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 
-    function testFuzz_shouldFail_whenCallerNotTagged_LOAN_PROPOSAL(address caller) external {
-        vm.assume(caller != proposalContract);
+    function testFuzz_shouldFail_whenProposalContractNotTagged_LOAN_PROPOSAL(address _proposalContract) external {
+        vm.assume(_proposalContract != proposalContract);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.LOAN_PROPOSAL));
+        proposalSpec.proposalContract = _proposalContract;
+
+        vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, _proposalContract, PWNHubTags.LOAN_PROPOSAL));
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldRevokeCallersNonce_whenFlagIsTrue(address caller, uint256 nonce) external {
+        callerSpec.revokeNonce = true;
+        callerSpec.nonce = nonce;
+
+        vm.expectCall(
+            revokedNonce,
+            abi.encodeWithSignature("revokeNonce(address,uint256)", caller, nonce)
+        );
+
         vm.prank(caller);
         loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldNotRevokeCallersNonce_whenFlagIsTrue(address caller, uint256 nonce) external {
+        callerSpec.revokeNonce = false;
+        callerSpec.nonce = nonce;
+
+        vm.expectCall({
+            callee: revokedNonce,
+            data: abi.encodeWithSignature("revokeNonce(address,uint256)", caller, nonce),
+            count: 0
+        });
+
+        vm.prank(caller);
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldCallProposalContract(address caller) external {
+        vm.expectCall(
+            proposalContract,
+            abi.encodeWithSignature("acceptProposal(address,uint256,bytes,bytes)", caller, 0, proposalData, signature)
+        );
+
+        vm.prank(caller);
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldFail_whenLoanTermsDurationLessThanMin(uint256 duration) external {
+        uint256 minDuration = loan.MIN_LOAN_DURATION();
+        vm.assume(duration < minDuration);
+        duration = bound(duration, 0, minDuration - 1);
+        simpleLoanTerms.duration = uint32(duration);
+        _mockLoanTerms(simpleLoanTerms);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidDuration.selector, duration, minDuration));
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldFail_whenLoanTermsAccruingInterestAPROutOfBounds(uint256 interestAPR) external {
+        uint256 maxInterest = loan.MAX_ACCRUING_INTEREST_APR();
+        interestAPR = bound(interestAPR, maxInterest + 1, type(uint40).max);
+        simpleLoanTerms.accruingInterestAPR = uint40(interestAPR);
+        _mockLoanTerms(simpleLoanTerms);
+
+        vm.expectRevert(abi.encodeWithSelector(AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest));
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -296,11 +393,9 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
                 simpleLoanTerms.credit.amount
             )
         );
-        vm.prank(proposalContract);
         loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -321,11 +416,9 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
                 simpleLoanTerms.collateral.amount
             )
         );
-        vm.prank(proposalContract);
         loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -333,11 +426,9 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
     function test_shouldMintLOANToken() external {
         vm.expectCall(address(loanToken), abi.encodeWithSignature("mint(address)", lender));
 
-        vm.prank(proposalContract);
         loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -345,17 +436,48 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldStoreLoanData(uint40 accruingInterestAPR) external {
         accruingInterestAPR = uint40(bound(accruingInterestAPR, 0, 1e11));
         simpleLoanTerms.accruingInterestAPR = accruingInterestAPR;
+        _mockLoanTerms(simpleLoanTerms);
 
-        vm.prank(proposalContract);
         loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
 
         simpleLoan.accruingInterestDailyRate = uint40(uint256(accruingInterestAPR) * 274 / 1e5);
         _assertLOANEq(loanId, simpleLoan);
+    }
+
+    function testFuzz_shouldFail_whenInvalidPermitData_permitOwner(address permitOwner) external {
+        vm.assume(permitOwner != borrower && permitOwner != address(0));
+        permit.asset = simpleLoan.creditAddress;
+        permit.owner = permitOwner;
+
+        callerSpec.permit = permit;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidPermitOwner.selector, permitOwner, borrower));
+        vm.prank(borrower);
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldFail_whenInvalidPermitData_permitAsset(address permitAsset) external {
+        vm.assume(permitAsset != simpleLoan.creditAddress && permitAsset != address(0));
+        permit.asset = permitAsset;
+        permit.owner = borrower;
+
+        callerSpec.permit = permit;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidPermitAsset.selector, permitAsset, simpleLoan.creditAddress));
+        vm.prank(borrower);
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
     }
 
     function test_shouldCallPermit_whenProvided() external {
@@ -367,6 +489,8 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         permit.r = bytes32(uint256(2));
         permit.s = bytes32(uint256(3));
 
+        callerSpec.permit = permit;
+
         vm.expectCall(
             permit.asset,
             abi.encodeWithSignature(
@@ -375,11 +499,10 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             )
         );
 
-        vm.prank(proposalContract);
+        vm.prank(borrower);
         loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -389,17 +512,18 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         simpleLoanTerms.collateral.assetAddress = address(fungibleAsset);
         simpleLoanTerms.collateral.id = 0;
         simpleLoanTerms.collateral.amount = 100;
+        _mockLoanTerms(simpleLoanTerms);
 
         vm.expectCall(
             simpleLoanTerms.collateral.assetAddress,
-            abi.encodeWithSignature("transferFrom(address,address,uint256)", borrower, address(loan), simpleLoanTerms.collateral.amount)
+            abi.encodeWithSignature(
+                "transferFrom(address,address,uint256)", borrower, address(loan), simpleLoanTerms.collateral.amount
+            )
         );
 
-        vm.prank(proposalContract);
         loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -413,6 +537,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         simpleLoanTerms.credit.amount = loanAmount;
         fungibleAsset.mint(lender, loanAmount);
 
+        _mockLoanTerms(simpleLoanTerms);
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         uint256 feeAmount = Math.mulDiv(loanAmount, fee, 1e4);
@@ -430,11 +555,9 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, newAmount)
         );
 
-        vm.prank(proposalContract);
         loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -443,25 +566,23 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         vm.expectEmit();
         emit LOANCreated(loanId, simpleLoanTerms, proposalHash, proposalContract, "lil extra");
 
-        vm.prank(proposalContract);
         loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: "lil extra"
         });
     }
 
-    function test_shouldReturnCreatedLoanId() external {
-        vm.prank(proposalContract);
+    function testFuzz_shouldReturnNewLoanId(uint256 _loanId) external {
+        _mockLOANMint(_loanId);
+
         uint256 createdLoanId = loan.createLOAN({
-            proposalHash: proposalHash,
-            loanTerms: simpleLoanTerms,
-            permit: permit,
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
 
-        assertEq(createdLoanId, loanId);
+        assertEq(createdLoanId, _loanId);
     }
 
 }
@@ -471,11 +592,12 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 |*  # REFINANCE LOAN                                        *|
 |*----------------------------------------------------------*/
 
+/// @dev This contract tests only different behaviour of `createLOAN` with refinancingLoanId >0.
 contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
     PWNSimpleLoan.LOAN refinancedLoan;
     PWNSimpleLoan.Terms refinancedLoanTerms;
-    uint256 ferinancedLoanId = 44;
+    uint256 refinancingLoanId = 44;
     address newLender = makeAddr("newLender");
 
     function setUp() override public {
@@ -508,54 +630,36 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             accruingInterestAPR: 0
         });
 
-        _mockLOAN(loanId, simpleLoan);
-        _mockLOANMint(ferinancedLoanId);
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOAN(refinancingLoanId, simpleLoan);
+        _mockLOANTokenOwner(refinancingLoanId, lender);
+        callerSpec.refinancingLoanId = refinancingLoanId;
 
         vm.prank(newLender);
         fungibleAsset.approve(address(loan), type(uint256).max);
     }
 
 
-    function testFuzz_shouldFail_whenCallerNotTagged_LOAN_PROPOSAL(address caller) external {
-        vm.assume(caller != proposalContract);
-
-        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, PWNHubTags.LOAN_PROPOSAL));
-        vm.prank(caller);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
-            extra: ""
-        });
-    }
-
     function test_shouldFail_whenLoanDoesNotExist() external {
         simpleLoan.status = 0;
-        _mockLOAN(loanId, simpleLoan);
+        _mockLOAN(refinancingLoanId, simpleLoan);
 
         vm.expectRevert(abi.encodeWithSelector(NonExistingLoan.selector));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
 
     function test_shouldFail_whenLoanIsNotRunning() external {
         simpleLoan.status = 3;
-        _mockLOAN(loanId, simpleLoan);
+        _mockLOAN(refinancingLoanId, simpleLoan);
 
         vm.expectRevert(abi.encodeWithSelector(InvalidLoanStatus.selector, 3));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -564,12 +668,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         vm.warp(simpleLoan.defaultTimestamp);
 
         vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.defaultTimestamp));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -577,28 +678,24 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldFail_whenCreditAssetMismatch(address _assetAddress) external {
         vm.assume(_assetAddress != simpleLoan.creditAddress);
         refinancedLoanTerms.credit.assetAddress = _assetAddress;
+        _mockLoanTerms(refinancedLoanTerms);
 
         vm.expectRevert(abi.encodeWithSelector(RefinanceCreditMismatch.selector));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
 
     function test_shouldFail_whenCreditAssetAmountZero() external {
         refinancedLoanTerms.credit.amount = 0;
+        _mockLoanTerms(refinancedLoanTerms);
 
         vm.expectRevert(abi.encodeWithSelector(RefinanceCreditMismatch.selector));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -607,14 +704,12 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         _category = _category % 4;
         vm.assume(_category != uint8(simpleLoan.collateral.category));
         refinancedLoanTerms.collateral.category = MultiToken.Category(_category);
+        _mockLoanTerms(refinancedLoanTerms);
 
         vm.expectRevert(abi.encodeWithSelector(RefinanceCollateralMismatch.selector));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -622,14 +717,12 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldFail_whenCollateralAddressMismatch(address _assetAddress) external {
         vm.assume(_assetAddress != simpleLoan.collateral.assetAddress);
         refinancedLoanTerms.collateral.assetAddress = _assetAddress;
+        _mockLoanTerms(refinancedLoanTerms);
 
         vm.expectRevert(abi.encodeWithSelector(RefinanceCollateralMismatch.selector));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -637,14 +730,12 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldFail_whenCollateralIdMismatch(uint256 _id) external {
         vm.assume(_id != simpleLoan.collateral.id);
         refinancedLoanTerms.collateral.id = _id;
+        _mockLoanTerms(refinancedLoanTerms);
 
         vm.expectRevert(abi.encodeWithSelector(RefinanceCollateralMismatch.selector));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -652,14 +743,12 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldFail_whenCollateralAmountMismatch(uint256 _amount) external {
         vm.assume(_amount != simpleLoan.collateral.amount);
         refinancedLoanTerms.collateral.amount = _amount;
+        _mockLoanTerms(refinancedLoanTerms);
 
         vm.expectRevert(abi.encodeWithSelector(RefinanceCollateralMismatch.selector));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -667,149 +756,55 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldFail_whenBorrowerMismatch(address _borrower) external {
         vm.assume(_borrower != simpleLoan.borrower);
         refinancedLoanTerms.borrower = _borrower;
+        _mockLoanTerms(refinancedLoanTerms);
 
         vm.expectRevert(abi.encodeWithSelector(RefinanceBorrowerMismatch.selector, simpleLoan.borrower, _borrower));
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
-    }
-
-    function test_shouldMintLOANToken() external {
-        vm.expectCall(address(loanToken), abi.encodeWithSignature("mint(address)"));
-
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
-            extra: ""
-        });
-    }
-
-    function test_shouldStoreRefinancedLoanData() external {
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
-            extra: ""
-        });
-
-        _assertLOANEq(ferinancedLoanId, refinancedLoan);
-    }
-
-    function test_shouldEmit_LOANCreated() external {
-        vm.expectEmit();
-        emit LOANCreated(ferinancedLoanId, refinancedLoanTerms, proposalHash, proposalContract, "lil extra");
-
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
-            extra: "lil extra"
-        });
-    }
-
-    function test_shouldReturnNewLoanId() external {
-        vm.prank(proposalContract);
-        uint256 newLoanId = loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
-            extra: ""
-        });
-
-        assertEq(newLoanId, ferinancedLoanId);
     }
 
     function test_shouldEmit_LOANPaidBack() external {
         vm.expectEmit();
-        emit LOANPaidBack(loanId);
+        emit LOANPaidBack(refinancingLoanId);
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
 
     function test_shouldEmit_LOANRefinanced() external {
         vm.expectEmit();
-        emit LOANRefinanced(loanId, ferinancedLoanId);
+        emit LOANRefinanced(refinancingLoanId, loanId);
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
 
     function test_shouldDeleteOldLoanData_whenLOANOwnerIsOriginalLender() external {
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
 
-        _assertLOANEq(loanId, nonExistingLoan);
+        _assertLOANEq(refinancingLoanId, nonExistingLoan);
     }
 
     function test_shouldEmit_LOANClaimed_whenLOANOwnerIsOriginalLender() external {
         vm.expectEmit();
-        emit LOANClaimed(loanId, false);
+        emit LOANClaimed(refinancingLoanId, false);
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
-            extra: ""
-        });
-    }
-
-    function test_shouldCallPermit_whenProvided() external {
-        permit.asset = simpleLoan.creditAddress;
-        permit.owner = borrower;
-        permit.amount = 321;
-        permit.deadline = 2;
-        permit.v = 3;
-        permit.r = bytes32(uint256(4));
-        permit.s = bytes32(uint256(5));
-
-        vm.expectCall(
-            permit.asset,
-            abi.encodeWithSignature(
-                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                permit.owner, address(loan), permit.amount, permit.deadline, permit.v, permit.r, permit.s
-            )
-        );
-
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -817,7 +812,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldUpdateLoanData_whenLOANOwnerIsNotOriginalLender(
         uint256 _days, uint256 principal, uint256 fixedInterest, uint256 dailyInterest
     ) external {
-        _mockLOANTokenOwner(loanId, makeAddr("notOriginalLender"));
+        _mockLOANTokenOwner(refinancingLoanId, makeAddr("notOriginalLender"));
 
         _days = bound(_days, 0, loanDurationInDays - 1);
         principal = bound(principal, 1, 1e40);
@@ -827,19 +822,16 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.principalAmount = principal;
         simpleLoan.fixedInterestAmount = fixedInterest;
         simpleLoan.accruingInterestDailyRate = uint40(dailyInterest);
-        _mockLOAN(loanId, simpleLoan);
+        _mockLOAN(refinancingLoanId, simpleLoan);
 
         vm.warp(simpleLoan.startTimestamp + _days * 1 days);
 
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         fungibleAsset.mint(borrower, loanRepaymentAmount);
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
 
@@ -847,13 +839,13 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 3; // move loan to repaid state
         simpleLoan.fixedInterestAmount = loanRepaymentAmount - principal; // stored accrued interest at the time of repayment
         simpleLoan.accruingInterestDailyRate = 0; // stop accruing interest
-        _assertLOANEq(loanId, simpleLoan);
+        _assertLOANEq(refinancingLoanId, simpleLoan);
     }
 
     function testFuzz_shouldTransferOriginalLoanRepaymentDirectly_andTransferSurplusToBorrower_whenLOANOwnerIsOriginalLender_whenRefinanceLoanMoreThanOrEqualToOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
         uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(
@@ -866,7 +858,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, simpleLoan.originalLender);
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, simpleLoan.originalLender);
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         fungibleAsset.mint(newLender, refinanceAmount);
@@ -895,12 +888,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             count: borrowerSurplus > 0 ? 1 : 0
         });
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -908,7 +898,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldTransferOriginalLoanRepaymentToVault_andTransferSurplusToBorrower_whenLOANOwnerIsNotOriginalLender_whenRefinanceLoanMoreThanOrEqualToOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
         uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(
@@ -921,7 +911,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, makeAddr("notOriginalLender"));
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, makeAddr("notOriginalLender"));
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         fungibleAsset.mint(newLender, refinanceAmount);
@@ -950,12 +941,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             count: borrowerSurplus > 0 ? 1 : 0
         });
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -963,7 +951,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldNotTransferOriginalLoanRepayment_andTransferSurplusToBorrower_whenLOANOwnerIsNewLender_whenRefinanceLoanMoreThanOrEqualOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
         uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(
@@ -976,7 +964,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, newLender);
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, newLender);
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         fungibleAsset.mint(newLender, refinanceAmount);
@@ -1006,12 +995,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             count: borrowerSurplus > 0 ? 1 : 0
         });
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -1019,7 +1005,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldTransferOriginalLoanRepaymentDirectly_andContributeFromBorrower_whenLOANOwnerIsOriginalLender_whenRefinanceLoanLessThanOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
         uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(refinanceAmount, 1, minRefinanceAmount - 1);
@@ -1028,7 +1014,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, simpleLoan.originalLender);
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, simpleLoan.originalLender);
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         fungibleAsset.mint(newLender, refinanceAmount);
@@ -1057,12 +1044,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             count: borrowerContribution > 0 ? 1 : 0
         });
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -1070,7 +1054,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldTransferOriginalLoanRepaymentToVault_andContributeFromBorrower_whenLOANOwnerIsNotOriginalLender_whenRefinanceLoanLessThanOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
         uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(refinanceAmount, 1, minRefinanceAmount - 1);
@@ -1079,7 +1063,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, makeAddr("notOriginalLender"));
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, makeAddr("notOriginalLender"));
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         fungibleAsset.mint(newLender, refinanceAmount);
@@ -1108,12 +1093,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             count: borrowerContribution > 0 ? 1 : 0
         });
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -1121,7 +1103,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldNotTransferOriginalLoanRepayment_andContributeFromBorrower_whenLOANOwnerIsNewLender_whenRefinanceLoanLessThanOriginalLoan(
         uint256 refinanceAmount, uint256 fee
     ) external {
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         fee = bound(fee, 0, 9999); // 0 - 99.99%
         uint256 minRefinanceAmount = Math.mulDiv(loanRepaymentAmount, 1e4, 1e4 - fee);
         refinanceAmount = bound(refinanceAmount, 1, minRefinanceAmount - 1);
@@ -1130,7 +1112,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, newLender);
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, newLender);
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         fungibleAsset.mint(newLender, refinanceAmount);
@@ -1160,12 +1143,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             count: borrowerContribution > 0 ? 1 : 0
         });
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
     }
@@ -1181,18 +1161,19 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.principalAmount = principal;
         simpleLoan.fixedInterestAmount = fixedInterest;
         simpleLoan.accruingInterestDailyRate = uint40(dailyInterest);
-        _mockLOAN(loanId, simpleLoan);
+        _mockLOAN(refinancingLoanId, simpleLoan);
 
         vm.warp(simpleLoan.startTimestamp + _days * 1 days);
 
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         refinanceAmount = bound(
             refinanceAmount, 1, type(uint256).max - loanRepaymentAmount - fungibleAsset.totalSupply()
         );
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, lender);
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, lender);
 
         fungibleAsset.mint(newLender, refinanceAmount);
         if (loanRepaymentAmount > refinanceAmount) {
@@ -1201,12 +1182,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         uint256 originalBalance = fungibleAsset.balanceOf(lender);
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
 
@@ -1224,11 +1202,11 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.principalAmount = principal;
         simpleLoan.fixedInterestAmount = fixedInterest;
         simpleLoan.accruingInterestDailyRate = uint40(dailyInterest);
-        _mockLOAN(loanId, simpleLoan);
+        _mockLOAN(refinancingLoanId, simpleLoan);
 
         vm.warp(simpleLoan.startTimestamp + _days * 1 days);
 
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         fee = bound(fee, 1, 9999); // 0 - 99.99%
         refinanceAmount = bound(
             refinanceAmount, 1, type(uint256).max - loanRepaymentAmount - fungibleAsset.totalSupply()
@@ -1237,7 +1215,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, lender);
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, lender);
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         fungibleAsset.mint(newLender, refinanceAmount);
@@ -1247,12 +1226,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         uint256 originalBalance = fungibleAsset.balanceOf(feeCollector);
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
 
@@ -1260,7 +1236,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     }
 
     function testFuzz_shouldTransferSurplusToBorrower(uint256 refinanceAmount) external {
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         refinanceAmount = bound(
             refinanceAmount, loanRepaymentAmount + 1, type(uint256).max - loanRepaymentAmount - fungibleAsset.totalSupply()
         );
@@ -1268,17 +1244,15 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, lender);
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, lender);
 
         fungibleAsset.mint(newLender, refinanceAmount);
         uint256 originalBalance = fungibleAsset.balanceOf(borrower);
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
 
@@ -1286,23 +1260,21 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     }
 
     function testFuzz_shouldContributeFromBorrower(uint256 refinanceAmount) external {
-        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
+        uint256 loanRepaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
         refinanceAmount = bound(refinanceAmount, 1, loanRepaymentAmount - 1);
         uint256 contribution = loanRepaymentAmount - refinanceAmount;
 
         refinancedLoanTerms.credit.amount = refinanceAmount;
         refinancedLoanTerms.lender = newLender;
-        _mockLOANTokenOwner(loanId, lender);
+        _mockLoanTerms(refinancedLoanTerms);
+        _mockLOANTokenOwner(refinancingLoanId, lender);
 
         fungibleAsset.mint(newLender, refinanceAmount);
         uint256 originalBalance = fungibleAsset.balanceOf(borrower);
 
-        vm.prank(proposalContract);
-        loan.refinanceLOAN({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            loanTerms: refinancedLoanTerms,
-            permit: permit,
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            callerSpec: callerSpec,
             extra: ""
         });
 
@@ -1351,6 +1323,30 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         vm.warp(simpleLoan.defaultTimestamp);
 
         vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.defaultTimestamp));
+        loan.repayLOAN(loanId, permit);
+    }
+
+    function testFuzz_shouldFail_whenInvalidPermitData_permitOwner(address permitOwner) external {
+        vm.assume(permitOwner != borrower && permitOwner != address(0));
+        permit.asset = simpleLoan.creditAddress;
+        permit.owner = permitOwner;
+
+        callerSpec.permit = permit;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidPermitOwner.selector, permitOwner, borrower));
+        vm.prank(borrower);
+        loan.repayLOAN(loanId, permit);
+    }
+
+    function testFuzz_shouldFail_whenInvalidPermitData_permitAsset(address permitAsset) external {
+        vm.assume(permitAsset != simpleLoan.creditAddress && permitAsset != address(0));
+        permit.asset = permitAsset;
+        permit.owner = borrower;
+
+        callerSpec.permit = permit;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidPermitAsset.selector, permitAsset, simpleLoan.creditAddress));
+        vm.prank(borrower);
         loan.repayLOAN(loanId, permit);
     }
 
@@ -1963,11 +1959,39 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         loan.extendLOAN(extension, "", permit);
     }
 
+    function testFuzz_shouldFail_whenInvalidPermitData_permitOwner(address permitOwner) external {
+        _mockExtensionProposalMade(extension);
+
+        vm.assume(permitOwner != lender && permitOwner != address(0));
+        permit.asset = extension.compensationAddress;
+        permit.owner = permitOwner;
+
+        callerSpec.permit = permit;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidPermitOwner.selector, permitOwner, lender));
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", permit);
+    }
+
+    function testFuzz_shouldFail_whenInvalidPermitData_permitAsset(address permitAsset) external {
+        _mockExtensionProposalMade(extension);
+
+        vm.assume(permitAsset != extension.compensationAddress && permitAsset != address(0));
+        permit.asset = permitAsset;
+        permit.owner = lender;
+
+        callerSpec.permit = permit;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidPermitAsset.selector, permitAsset, extension.compensationAddress));
+        vm.prank(lender);
+        loan.extendLOAN(extension, "", permit);
+    }
+
     function test_shouldCallPermit_whenProvided() external {
         _mockExtensionProposalMade(extension);
 
         permit.asset = extension.compensationAddress;
-        permit.owner = borrower;
+        permit.owner = lender;
         permit.amount = 321;
         permit.deadline = 2;
         permit.v = 3;

@@ -8,14 +8,13 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
-import { PWNSimpleLoanDutchAuctionProposal, PWNSimpleLoanProposal, PWNSimpleLoan, Permit }
+import { PWNSimpleLoanDutchAuctionProposal, PWNSimpleLoanProposal, PWNSimpleLoan }
     from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
 import "@pwn/PWNErrors.sol";
 
 import {
     PWNSimpleLoanProposalTest,
-    PWNSimpleLoanProposal_AcceptProposal_Test,
-    PWNSimpleLoanProposal_AcceptProposalAndRevokeCallersNonce_Test
+    PWNSimpleLoanProposal_AcceptProposal_Test
 } from "@pwn-test/unit/PWNSimpleLoanProposal.t.sol";
 
 
@@ -47,8 +46,8 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
             fixedInterestAmount: 1,
             accruingInterestAPR: 0,
             duration: 1000,
-            auctionStart: 1,
-            auctionDuration: 1 minutes,
+            auctionStart: uint40(block.timestamp),
+            auctionDuration: 100 minutes,
             allowedAcceptor: address(0),
             proposer: proposer,
             isOffer: true,
@@ -83,26 +82,29 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
     }
 
     function _updateProposal(Params memory _params) internal {
-        proposal.checkCollateralStateFingerprint = _params.checkCollateralStateFingerprint;
-        proposal.collateralStateFingerprint = _params.collateralStateFingerprint;
-        if (proposal.isOffer) {
-            proposal.minCreditAmount = _params.creditAmount;
-            proposal.maxCreditAmount = proposal.minCreditAmount + 1000;
+        if (_params.base.isOffer) {
+            proposal.minCreditAmount = _params.base.creditAmount;
+            proposal.maxCreditAmount = proposal.minCreditAmount * 10;
             proposalValues.intendedCreditAmount = proposal.minCreditAmount;
         } else {
-            proposal.maxCreditAmount = _params.creditAmount;
-            proposal.minCreditAmount = proposal.maxCreditAmount - 1000;
+            proposal.maxCreditAmount = _params.base.creditAmount;
+            proposal.minCreditAmount = proposal.maxCreditAmount / 10;
             proposalValues.intendedCreditAmount = proposal.maxCreditAmount;
         }
-        proposal.availableCreditLimit = _params.availableCreditLimit;
-        proposal.duration = _params.duration;
-        proposal.accruingInterestAPR = _params.accruingInterestAPR;
-        proposal.auctionDuration = _params.expiration - proposal.auctionStart - 1 minutes;
-        proposal.allowedAcceptor = _params.allowedAcceptor;
-        proposal.proposer = _params.proposer;
-        proposal.loanContract = _params.loanContract;
-        proposal.nonceSpace = _params.nonceSpace;
-        proposal.nonce = _params.nonce;
+
+        proposal.collateralAddress = _params.base.collateralAddress;
+        proposal.collateralId = _params.base.collateralId;
+        proposal.checkCollateralStateFingerprint = _params.base.checkCollateralStateFingerprint;
+        proposal.collateralStateFingerprint = _params.base.collateralStateFingerprint;
+        proposal.availableCreditLimit = _params.base.availableCreditLimit;
+        proposal.auctionDuration = _params.base.expiration - proposal.auctionStart - 1 minutes;
+        proposal.allowedAcceptor = _params.base.allowedAcceptor;
+        proposal.proposer = _params.base.proposer;
+        proposal.isOffer = _params.base.isOffer;
+        proposal.refinancingLoanId = _params.base.refinancingLoanId;
+        proposal.nonceSpace = _params.base.nonceSpace;
+        proposal.nonce = _params.base.nonce;
+        proposal.loanContract = _params.base.loanContract;
     }
 
     function _proposalSignature(Params memory _params) internal view returns (bytes memory signature) {
@@ -116,14 +118,14 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
     }
 
 
-    function _callAcceptProposalWith(Params memory _params, Permit memory _permit) internal override returns (uint256) {
+    function _callAcceptProposalWith(Params memory _params) internal override returns (bytes32, PWNSimpleLoan.Terms memory) {
         _updateProposal(_params);
-        return proposalContract.acceptProposal(proposal, proposalValues, _proposalSignature(params), 0, _permit, "");
-    }
-
-    function _callAcceptProposalWith(Params memory _params, Permit memory _permit, uint256 nonceSpace, uint256 nonce) internal override returns (uint256) {
-        _updateProposal(_params);
-        return proposalContract.acceptProposal(proposal, proposalValues, _proposalSignature(params), 0, _permit, "", nonceSpace, nonce);
+        return proposalContract.acceptProposal({
+            acceptor: _params.acceptor,
+            refinancingLoanId: _params.refinancingLoanId,
+            proposalData: abi.encode(proposal, proposalValues),
+            signature: _proposalSignature(_params)
+        });
     }
 
     function _getProposalHashWith(Params memory _params) internal override returns (bytes32) {
@@ -213,6 +215,64 @@ contract PWNSimpleLoanDutchAuctionProposal_MakeProposal_Test is PWNSimpleLoanDut
     function test_shouldReturnProposalHash() external {
         vm.prank(proposal.proposer);
         assertEq(proposalContract.makeProposal(proposal), _proposalHash(proposal));
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # ENCODE PROPOSAL DATA                                  *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanDutchAuctionProposal_EncodeProposalData_Test is PWNSimpleLoanDutchAuctionProposalTest {
+
+    function test_shouldReturnEncodedProposalData() external {
+        assertEq(
+            proposalContract.encodeProposalData(proposal, proposalValues),
+            abi.encode(proposal, proposalValues)
+        );
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # DECODE PROPOSAL DATA                                  *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanDutchAuctionProposal_DecodeProposalData_Test is PWNSimpleLoanDutchAuctionProposalTest {
+
+    function test_shouldReturnDecodedProposalData() external {
+        (
+            PWNSimpleLoanDutchAuctionProposal.Proposal memory _proposal,
+            PWNSimpleLoanDutchAuctionProposal.ProposalValues memory _proposalValues
+        ) = proposalContract.decodeProposalData(abi.encode(proposal, proposalValues));
+
+        assertEq(uint8(_proposal.collateralCategory), uint8(proposal.collateralCategory));
+        assertEq(_proposal.collateralAddress, proposal.collateralAddress);
+        assertEq(_proposal.collateralId, proposal.collateralId);
+        assertEq(_proposal.collateralAmount, proposal.collateralAmount);
+        assertEq(_proposal.checkCollateralStateFingerprint, proposal.checkCollateralStateFingerprint);
+        assertEq(_proposal.collateralStateFingerprint, proposal.collateralStateFingerprint);
+        assertEq(_proposal.creditAddress, proposal.creditAddress);
+        assertEq(_proposal.minCreditAmount, proposal.minCreditAmount);
+        assertEq(_proposal.maxCreditAmount, proposal.maxCreditAmount);
+        assertEq(_proposal.availableCreditLimit, proposal.availableCreditLimit);
+        assertEq(_proposal.fixedInterestAmount, proposal.fixedInterestAmount);
+        assertEq(_proposal.accruingInterestAPR, proposal.accruingInterestAPR);
+        assertEq(_proposal.duration, proposal.duration);
+        assertEq(_proposal.auctionStart, proposal.auctionStart);
+        assertEq(_proposal.auctionDuration, proposal.auctionDuration);
+        assertEq(_proposal.allowedAcceptor, proposal.allowedAcceptor);
+        assertEq(_proposal.proposer, proposal.proposer);
+        assertEq(_proposal.isOffer, proposal.isOffer);
+        assertEq(_proposal.refinancingLoanId, proposal.refinancingLoanId);
+        assertEq(_proposal.nonceSpace, proposal.nonceSpace);
+        assertEq(_proposal.nonce, proposal.nonce);
+        assertEq(_proposal.loanContract, proposal.loanContract);
+
+        assertEq(_proposalValues.intendedCreditAmount, proposalValues.intendedCreditAmount);
+        assertEq(_proposalValues.slippage, proposalValues.slippage);
     }
 
 }
@@ -329,19 +389,6 @@ contract PWNSimpleLoanDutchAuctionProposal_GetCreditAmount_Test is PWNSimpleLoan
 
 
 /*----------------------------------------------------------*|
-|*  # ACCEPT PROPOSAL AND REVOKE CALLERS NONCE              *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanDutchAuctionProposal_AcceptProposalAndRevokeCallersNonce_Test is PWNSimpleLoanDutchAuctionProposalTest, PWNSimpleLoanProposal_AcceptProposalAndRevokeCallersNonce_Test {
-
-    function setUp() virtual public override(PWNSimpleLoanDutchAuctionProposalTest, PWNSimpleLoanProposalTest) {
-        super.setUp();
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
 |*  # ACCEPT PROPOSAL                                       *|
 |*----------------------------------------------------------*/
 
@@ -351,55 +398,6 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
         super.setUp();
     }
 
-
-    function testFuzz_shouldFail_whenProposedRefinancingLoanIdNotZero_whenRefinancingLoanIdZero(uint256 proposedRefinancingLoanId) external {
-        vm.assume(proposedRefinancingLoanId != 0);
-        proposal.refinancingLoanId = proposedRefinancingLoanId;
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), 0, permit, ""
-        );
-    }
-
-    function testFuzz_shouldFail_whenRefinancingLoanIdsIsNotEqual_whenProposedRefinanceingLoanIdNotZero_whenRefinancingLoanIdNotZero_whenOffer(
-        uint256 refinancingLoanId, uint256 proposedRefinancingLoanId
-    ) external {
-        vm.assume(proposedRefinancingLoanId != 0);
-        vm.assume(refinancingLoanId != proposedRefinancingLoanId);
-        proposal.refinancingLoanId = proposedRefinancingLoanId;
-        proposal.isOffer = true;
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), refinancingLoanId, permit, extra
-        );
-    }
-
-    function testFuzz_shouldPass_whenRefinancingLoanIdsNotEqual_whenProposedRefinanceingLoanIdZero_whenRefinancingLoanIdNotZero_whenOffer(
-        uint256 refinancingLoanId
-    ) external {
-        vm.assume(refinancingLoanId != 0);
-        proposal.refinancingLoanId = 0;
-        proposal.isOffer = true;
-
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), refinancingLoanId, permit, extra
-        );
-    }
-
-    function testFuzz_shouldFail_whenRefinancingLoanIdsNotEqual_whenRefinancingLoanIdNotZero_whenRequest(
-        uint256 refinancingLoanId, uint256 proposedRefinancingLoanId
-    ) external {
-        vm.assume(refinancingLoanId != proposedRefinancingLoanId);
-        proposal.refinancingLoanId = proposedRefinancingLoanId;
-        proposal.isOffer = false;
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), refinancingLoanId, permit, extra
-        );
-    }
 
     function testFuzz_shouldFail_whenCurrentAuctionCreditAmountNotInIntendedCreditAmountRange_whenOffer(
         uint256 intendedCreditAmount
@@ -426,9 +424,13 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
         vm.expectRevert(abi.encodeWithSelector(
             InvalidCreditAmount.selector, auctionCreditAmount, proposalValues.intendedCreditAmount, proposalValues.slippage
         ));
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), 0, permit, ""
-        );
+        vm.prank(activeLoanContract);
+        proposalContract.acceptProposal({
+            acceptor: acceptor,
+            refinancingLoanId: 0,
+            proposalData: abi.encode(proposal, proposalValues),
+            signature: _signProposalHash(proposerPK, _proposalHash(proposal))
+        });
     }
 
     function testFuzz_shouldFail_whenCurrentAuctionCreditAmountNotInIntendedCreditAmountRange_whenRequest(
@@ -456,9 +458,13 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
         vm.expectRevert(abi.encodeWithSelector(
             InvalidCreditAmount.selector, auctionCreditAmount, proposalValues.intendedCreditAmount, proposalValues.slippage
         ));
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), 0, permit, ""
-        );
+        vm.prank(activeLoanContract);
+        proposalContract.acceptProposal({
+            acceptor: acceptor,
+            refinancingLoanId: 0,
+            proposalData: abi.encode(proposal, proposalValues),
+            signature: _signProposalHash(proposerPK, _proposalHash(proposal))
+        });
     }
 
     function testFuzz_shouldCallLoanContractWithLoanTerms(
@@ -466,15 +472,13 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
         uint256 maxCreditAmount,
         uint40 auctionDuration,
         uint256 timeInAuction,
-        bool isOffer,
-        uint256 refinancingLoanId
+        bool isOffer
     ) external {
         vm.assume(minCreditAmount < maxCreditAmount);
         auctionDuration = uint40(bound(auctionDuration, 1, type(uint40).max / 1 minutes - 1)) * 1 minutes;
         timeInAuction = bound(timeInAuction, 0, auctionDuration - 1);
 
         proposal.isOffer = isOffer;
-        proposal.refinancingLoanId = refinancingLoanId;
         proposal.minCreditAmount = minCreditAmount;
         proposal.maxCreditAmount = maxCreditAmount;
         proposal.auctionStart = 1;
@@ -482,55 +486,32 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
 
         vm.warp(proposal.auctionStart + timeInAuction);
 
-        proposalValues.intendedCreditAmount = proposalContract.getCreditAmount(proposal, block.timestamp);
+        uint256 creditAmount = proposalContract.getCreditAmount(proposal, block.timestamp);
+        proposalValues.intendedCreditAmount = creditAmount;
         proposalValues.slippage = 0;
 
-        permit = Permit({
-            asset: token,
-            owner: acceptor,
-            amount: 100,
-            deadline: 1000,
-            v: 27,
-            r: bytes32(uint256(1)),
-            s: bytes32(uint256(2))
-        });
-        extra = "lil extra";
-
-        PWNSimpleLoan.Terms memory loanTerms = PWNSimpleLoan.Terms({
-            lender: isOffer ? proposal.proposer : acceptor,
-            borrower: isOffer ? acceptor : proposal.proposer,
-            duration: proposal.duration,
-            collateral: MultiToken.Asset({
-                category: proposal.collateralCategory,
-                assetAddress: proposal.collateralAddress,
-                id: proposal.collateralId,
-                amount: proposal.collateralAmount
-            }),
-            credit: MultiToken.Asset({
-                category: MultiToken.Category.ERC20,
-                assetAddress: proposal.creditAddress,
-                id: 0,
-                amount: proposalValues.intendedCreditAmount
-            }),
-            fixedInterestAmount: proposal.fixedInterestAmount,
-            accruingInterestAPR: proposal.accruingInterestAPR
+        vm.prank(activeLoanContract);
+        (bytes32 proposalHash, PWNSimpleLoan.Terms memory terms) = proposalContract.acceptProposal({
+            acceptor: acceptor,
+            refinancingLoanId: 0,
+            proposalData: abi.encode(proposal, proposalValues),
+            signature: _signProposalHash(proposerPK, _proposalHash(proposal))
         });
 
-        vm.expectCall(
-            activeLoanContract,
-            refinancingLoanId == 0
-            ? abi.encodeWithSelector(
-                PWNSimpleLoan.createLOAN.selector, _proposalHash(proposal), loanTerms, permit, extra
-            )
-            : abi.encodeWithSelector(
-                PWNSimpleLoan.refinanceLOAN.selector, refinancingLoanId, _proposalHash(proposal), loanTerms, permit, extra
-            )
-        );
-
-        vm.prank(acceptor);
-        proposalContract.acceptProposal(
-            proposal, proposalValues, _signProposalHash(proposerPK, _proposalHash(proposal)), refinancingLoanId, permit, extra
-        );
+        assertEq(proposalHash, _proposalHash(proposal));
+        assertEq(terms.lender, isOffer ? proposal.proposer : acceptor);
+        assertEq(terms.borrower, isOffer ? acceptor : proposal.proposer);
+        assertEq(terms.duration, proposal.duration);
+        assertEq(uint8(terms.collateral.category), uint8(proposal.collateralCategory));
+        assertEq(terms.collateral.assetAddress, proposal.collateralAddress);
+        assertEq(terms.collateral.id, proposal.collateralId);
+        assertEq(terms.collateral.amount, proposal.collateralAmount);
+        assertEq(uint8(terms.credit.category), uint8(MultiToken.Category.ERC20));
+        assertEq(terms.credit.assetAddress, proposal.creditAddress);
+        assertEq(terms.credit.id, 0);
+        assertEq(terms.credit.amount, creditAmount);
+        assertEq(terms.fixedInterestAmount, proposal.fixedInterestAmount);
+        assertEq(terms.accruingInterestAPR, proposal.accruingInterestAPR);
     }
 
 }

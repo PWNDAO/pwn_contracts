@@ -60,6 +60,7 @@ error AuctionDurationNotInFullMinutes(uint256 current);
 error InvalidCreditAmountRange(uint256 minCreditAmount, uint256 maxCreditAmount);
 error InvalidCreditAmount(uint256 auctionCreditAmount, uint256 intendedCreditAmount, uint256 slippage);
 error AuctionNotInProgress(uint256 currentTimestamp, uint256 auctionStart);
+error CallerNotLoanContract(address caller, address loanContract);
 
 // Input data
 error InvalidInputData();
