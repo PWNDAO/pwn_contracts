@@ -105,6 +105,9 @@ contract PWNRevokedNonce is PWNHubAccessControl {
      * @notice Internal function to revoke a nonce in a nonce space.
      */
     function _revokeNonce(address owner, uint256 nonceSpace, uint256 nonce) private {
+        if (_revokedNonce[owner][nonceSpace][nonce]) {
+            revert NonceAlreadyRevoked({ addr: owner, nonceSpace: nonceSpace, nonce: nonce });
+        }
         _revokedNonce[owner][nonceSpace][nonce] = true;
         emit NonceRevoked(owner, nonceSpace, nonce);
     }

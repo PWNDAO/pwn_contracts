@@ -35,6 +35,7 @@ error UnsupportedTransferFunction();
 error IncompleteTransfer();
 
 // Nonce
+error NonceAlreadyRevoked(address addr, uint256 nonceSpace, uint256 nonce);
 error NonceNotUsable(address addr, uint256 nonceSpace, uint256 nonce);
 
 // Signature checks
