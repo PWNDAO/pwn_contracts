@@ -11,7 +11,6 @@ import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNFeeCalculator } from "@pwn/loan/lib/PWNFeeCalculator.sol";
 import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
-import { ICometLike } from "@pwn/loan/terms/simple/loan/ICometLike.sol";
 import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 import { IERC5646 } from "@pwn/loan/token/IERC5646.sol";
 import { IPWNLoanMetadataProvider } from "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
@@ -475,9 +474,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             // Note: Lender is not source of funds.
             // Withdraw credit asset to the loan contract and use it as a credit provider.
 
-            ICometLike(lenderSpec.sourceOfFunds).withdrawFrom(
-                loanTerms.lender, address(this), loanTerms.credit.assetAddress, loanTerms.credit.amount
-            );
+            _withdrawFromCompound(loanTerms.credit, lenderSpec.sourceOfFunds, loanTerms.lender);
             creditProvider = address(this);
         }
 
@@ -533,6 +530,9 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             loanTerms.lender != loanOwner ||
             (loan.originalLender == loanOwner && loan.originalSourceOfFunds != lenderSpec.sourceOfFunds);
 
+        // Note: `creditHelper` must not be used before updating the amount.
+        MultiToken.Asset memory creditHelper = loanTerms.credit;
+
         // Decide credit provider
         address creditProvider = loanTerms.lender;
         if (lenderSpec.sourceOfFunds != loanTerms.lender) {
@@ -540,20 +540,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             // Note: Lender is not the source of funds. Withdraw credit asset to the Vault and use it
             // as a credit provider to minimize the number of withdrawals.
 
-            {
-                address creditAddr = loanTerms.credit.assetAddress;
-                uint256 withdrawAmount = feeAmount + (shouldTransferCommon ? common : 0) + surplus;
-                if (withdrawAmount > 0) {
-                    ICometLike(lenderSpec.sourceOfFunds).withdrawFrom(
-                        loanTerms.lender, address(this), creditAddr, withdrawAmount
-                    );
-                }
+            creditHelper.amount = feeAmount + (shouldTransferCommon ? common : 0) + surplus;
+            if (creditHelper.amount > 0) {
+                _withdrawFromCompound(creditHelper, lenderSpec.sourceOfFunds, loanTerms.lender);
             }
             creditProvider = address(this);
         }
-
-        // Note: `creditHelper` must not be used before updating the amount.
-        MultiToken.Asset memory creditHelper = loanTerms.credit;
 
         // Collect fees
         if (feeAmount > 0) {
@@ -778,14 +770,9 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         if (destinationOfFunds == loanOwner) {
             _push(repaymentCredit, loanOwner);
         } else {
-            MultiToken.approveAsset(repaymentCredit, destinationOfFunds);
             // Supply the repaid credit to the Compound pool
-            ICometLike(destinationOfFunds).supplyFrom({
-                from: address(this),
-                dst: loanOwner,
-                asset: repaymentCredit.assetAddress,
-                amount: repaymentCredit.amount
-            });
+            MultiToken.approveAsset(repaymentCredit, destinationOfFunds);
+            _supplyToCompound(repaymentCredit, destinationOfFunds, loanOwner);
         }
 
         // Note: If the transfer fails, the LOAN token will remain in repaid state and the LOAN token owner

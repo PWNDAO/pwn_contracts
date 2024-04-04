@@ -8,6 +8,7 @@ import "@pwn/PWNErrors.sol";
 
 import { T20 } from "@pwn-test/helper/token/T20.sol";
 import { T721 } from "@pwn-test/helper/token/T721.sol";
+import { DummyCompoundPool } from "@pwn-test/helper/DummyCompoundPool.sol";
 
 
 abstract contract PWNSimpleLoanTest is Test {
@@ -29,7 +30,7 @@ abstract contract PWNSimpleLoanTest is Test {
     uint256 loanId = 42;
     address lender = makeAddr("lender");
     address borrower = makeAddr("borrower");
-    address sourceOfFunds = makeAddr("sourceOfFunds");
+    address sourceOfFunds = address(new DummyCompoundPool());
     uint256 loanDurationInDays = 101;
     PWNSimpleLoan.LenderSpec lenderSpec;
     PWNSimpleLoan.LOAN simpleLoan;
@@ -65,6 +66,7 @@ abstract contract PWNSimpleLoanTest is Test {
         fungibleAsset.mint(borrower, 6831);
         fungibleAsset.mint(address(this), 6831);
         fungibleAsset.mint(address(loan), 6831);
+        fungibleAsset.mint(sourceOfFunds, 1e30);
         nonFungibleAsset.mint(borrower, 2);
 
         vm.prank(lender);
@@ -165,13 +167,6 @@ abstract contract PWNSimpleLoanTest is Test {
             hub,
             abi.encodeWithSignature("hasTag(address,bytes32)", sourceOfFunds, PWNHubTags.COMPOUND_V3_POOL),
             abi.encode(true)
-        );
-
-        vm.mockCall(
-            sourceOfFunds, abi.encodeWithSignature("supplyFrom(address,address,address,uint256)"), abi.encode("")
-        );
-        vm.mockCall(
-            sourceOfFunds, abi.encodeWithSignature("withdrawFrom(address,address,address,uint256)"), abi.encode("")
         );
 
         _mockLoanTerms(simpleLoanTerms);
@@ -670,7 +665,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         lenderSpec.sourceOfFunds = sourceOfFunds;
         simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
         simpleLoanTerms.credit.amount = loanAmount;
-        fungibleAsset.mint(address(loan), loanAmount);
+        fungibleAsset.mint(sourceOfFunds, loanAmount);
 
         _mockLoanTerms(simpleLoanTerms);
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
@@ -700,7 +695,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         lenderSpec.sourceOfFunds = sourceOfFunds;
         simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
         simpleLoanTerms.credit.amount = loanAmount;
-        fungibleAsset.mint(address(loan), loanAmount);
+        fungibleAsset.mint(sourceOfFunds, loanAmount);
 
         _mockLoanTerms(simpleLoanTerms);
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
