@@ -196,7 +196,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @dev Emitted when a new loan in created.
      */
-    event LOANCreated(uint256 indexed loanId, Terms terms, bytes32 indexed proposalHash, address indexed proposalContract, bytes extra);
+    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, Terms terms, LenderSpec lenderSpec, bytes extra);
 
     /**
      * @dev Emitted when a loan is refinanced.
@@ -448,9 +448,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         emit LOANCreated({
             loanId: loanId,
-            terms: loanTerms,
             proposalHash: proposalHash,
             proposalContract: proposalContract,
+            terms: loanTerms,
+            lenderSpec: lenderSpec,
             extra: extra
         });
     }
