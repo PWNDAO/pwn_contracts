@@ -14,6 +14,10 @@ error CallerNotLOANTokenHolder();
 error RefinanceBorrowerMismatch(address currentBorrower, address newBorrower);
 error RefinanceCreditMismatch();
 error RefinanceCollateralMismatch();
+error InvalidLenderSpecHash(bytes32 current, bytes32 expected);
+error InvalidDuration(uint256 current, uint256 limit);
+error AccruingInterestAPROutOfBounds(uint256 current, uint256 limit);
+error CallerNotVault();
 
 // Loan extension
 error InvalidExtensionDuration(uint256 duration, uint256 limit);
@@ -44,9 +48,7 @@ error InvalidSignature(address signer, bytes32 digest);
 
 // Proposal
 error CallerIsNotStatedProposer(address);
-error InvalidDuration(uint256 current, uint256 limit);
 error InvalidRefinancingLoanId(uint256 refinancingLoanId);
-error AccruingInterestAPROutOfBounds(uint256 current, uint256 limit);
 error AvailableCreditLimitExceeded(uint256 used, uint256 limit);
 error Expired(uint256 current, uint256 expiration);
 error CallerNotAllowedAcceptor(address current, address allowed);

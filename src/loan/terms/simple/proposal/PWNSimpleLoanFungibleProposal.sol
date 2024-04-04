@@ -29,7 +29,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @dev EIP-712 simple proposal struct type hash.
      */
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 minCollateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 minCollateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
@@ -49,6 +49,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @param expiration Proposal expiration timestamp in seconds.
      * @param allowedAcceptor Address that is allowed to accept proposal. If the address is zero address, anybody can accept the proposal.
      * @param proposer Address of a proposal signer. If `isOffer` is true, the proposer is the lender. If `isOffer` is false, the proposer is the borrower.
+     * @param proposerSpecHash Hash of a proposer specification. It is a hash of a proposer specific data, which must be provided during a loan creation.
      * @param isOffer If true, the proposal is an offer. If false, the proposal is a request.
      * @param refinancingLoanId Id of a loan which is refinanced by this proposal. If the id is 0 and `isOffer` is true, the proposal can refinance any loan.
      * @param nonceSpace Nonce space of a proposal nonce. All nonces in the same space can be revoked at once.
@@ -72,6 +73,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         uint40 expiration;
         address allowedAcceptor;
         address proposer;
+        bytes32 proposerSpecHash;
         bool isOffer;
         uint256 refinancingLoanId;
         uint256 nonceSpace;
@@ -221,7 +223,9 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
                 amount: creditAmount
             }),
             fixedInterestAmount: proposal.fixedInterestAmount,
-            accruingInterestAPR: proposal.accruingInterestAPR
+            accruingInterestAPR: proposal.accruingInterestAPR,
+            lenderSpecHash: proposal.isOffer ? proposal.proposerSpecHash : bytes32(0),
+            borrowerSpecHash: proposal.isOffer ? bytes32(0) : proposal.proposerSpecHash
         });
     }
 

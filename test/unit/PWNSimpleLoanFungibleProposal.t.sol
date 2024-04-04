@@ -48,6 +48,7 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
             expiration: 60303,
             allowedAcceptor: address(0),
             proposer: proposer,
+            proposerSpecHash: keccak256("proposer spec"),
             isOffer: true,
             refinancingLoanId: 0,
             nonceSpace: 1,
@@ -72,7 +73,7 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
                 proposalContractAddr
             )),
             keccak256(abi.encodePacked(
-                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 minCollateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
+                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 minCollateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
                 abi.encode(_proposal)
             ))
         ));
@@ -356,6 +357,8 @@ contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungi
         assertEq(terms.credit.amount, proposalContract.getCreditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit));
         assertEq(terms.fixedInterestAmount, proposal.fixedInterestAmount);
         assertEq(terms.accruingInterestAPR, proposal.accruingInterestAPR);
+        assertEq(terms.lenderSpecHash, isOffer ? proposal.proposerSpecHash : bytes32(0));
+        assertEq(terms.borrowerSpecHash, isOffer ? bytes32(0) : proposal.proposerSpecHash);
     }
 
 }
