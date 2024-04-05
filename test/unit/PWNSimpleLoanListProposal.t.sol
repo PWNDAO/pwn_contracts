@@ -80,47 +80,38 @@ abstract contract PWNSimpleLoanListProposalTest is PWNSimpleLoanProposalTest {
         ));
     }
 
-    function _updateProposal(Params memory _params) internal {
-        proposal.collateralAddress = _params.base.collateralAddress;
-        proposal.checkCollateralStateFingerprint = _params.base.checkCollateralStateFingerprint;
-        proposal.collateralStateFingerprint = _params.base.collateralStateFingerprint;
-        proposal.creditAmount = _params.base.creditAmount;
-        proposal.availableCreditLimit = _params.base.availableCreditLimit;
-        proposal.expiration = _params.base.expiration;
-        proposal.allowedAcceptor = _params.base.allowedAcceptor;
-        proposal.proposer = _params.base.proposer;
-        proposal.isOffer = _params.base.isOffer;
-        proposal.refinancingLoanId = _params.base.refinancingLoanId;
-        proposal.nonceSpace = _params.base.nonceSpace;
-        proposal.nonce = _params.base.nonce;
-        proposal.loanContract = _params.base.loanContract;
+    function _updateProposal(PWNSimpleLoanProposal.ProposalBase memory _proposal) internal {
+        proposal.collateralAddress = _proposal.collateralAddress;
+        proposal.checkCollateralStateFingerprint = _proposal.checkCollateralStateFingerprint;
+        proposal.collateralStateFingerprint = _proposal.collateralStateFingerprint;
+        proposal.creditAmount = _proposal.creditAmount;
+        proposal.availableCreditLimit = _proposal.availableCreditLimit;
+        proposal.expiration = _proposal.expiration;
+        proposal.allowedAcceptor = _proposal.allowedAcceptor;
+        proposal.proposer = _proposal.proposer;
+        proposal.isOffer = _proposal.isOffer;
+        proposal.refinancingLoanId = _proposal.refinancingLoanId;
+        proposal.nonceSpace = _proposal.nonceSpace;
+        proposal.nonce = _proposal.nonce;
+        proposal.loanContract = _proposal.loanContract;
 
-        proposalValues.collateralId = _params.base.collateralId;
-    }
-
-    function _proposalSignature(Params memory _params) internal view returns (bytes memory signature) {
-        if (_params.signerPK != 0) {
-            if (_params.compactSignature) {
-                signature = _signProposalHashCompact(_params.signerPK, _proposalHash(proposal));
-            } else {
-                signature = _signProposalHash(_params.signerPK, _proposalHash(proposal));
-            }
-        }
+        proposalValues.collateralId = _proposal.collateralId;
     }
 
 
     function _callAcceptProposalWith(Params memory _params) internal override returns (bytes32, PWNSimpleLoan.Terms memory) {
-        _updateProposal(_params);
+        _updateProposal(_params.base);
         return proposalContract.acceptProposal({
             acceptor: _params.acceptor,
             refinancingLoanId: _params.refinancingLoanId,
             proposalData: abi.encode(proposal, proposalValues),
-            signature: _proposalSignature(_params)
+            proposalInclusionProof: _params.proposalInclusionProof,
+            signature: _params.signature
         });
     }
 
     function _getProposalHashWith(Params memory _params) internal override returns (bytes32) {
-        _updateProposal(_params);
+        _updateProposal(_params.base);
         return _proposalHash(proposal);
     }
 
@@ -290,7 +281,8 @@ contract PWNSimpleLoanListProposal_AcceptProposal_Test is PWNSimpleLoanListPropo
             acceptor: acceptor,
             refinancingLoanId: 0,
             proposalData: abi.encode(proposal, proposalValues),
-            signature: _signProposalHash(proposerPK, _proposalHash(proposal))
+            proposalInclusionProof: new bytes32[](0),
+            signature: _sign(proposerPK, _proposalHash(proposal))
         });
     }
 
@@ -312,7 +304,8 @@ contract PWNSimpleLoanListProposal_AcceptProposal_Test is PWNSimpleLoanListPropo
             acceptor: acceptor,
             refinancingLoanId: 0,
             proposalData: abi.encode(proposal, proposalValues),
-            signature: _signProposalHash(proposerPK, _proposalHash(proposal))
+            proposalInclusionProof: new bytes32[](0),
+            signature: _sign(proposerPK, _proposalHash(proposal))
         });
     }
 
@@ -339,7 +332,8 @@ contract PWNSimpleLoanListProposal_AcceptProposal_Test is PWNSimpleLoanListPropo
             acceptor: acceptor,
             refinancingLoanId: 0,
             proposalData: abi.encode(proposal, proposalValues),
-            signature: _signProposalHash(proposerPK, _proposalHash(proposal))
+            proposalInclusionProof: new bytes32[](0),
+            signature: _sign(proposerPK, _proposalHash(proposal))
         });
     }
 
@@ -351,7 +345,8 @@ contract PWNSimpleLoanListProposal_AcceptProposal_Test is PWNSimpleLoanListPropo
             acceptor: acceptor,
             refinancingLoanId: 0,
             proposalData: abi.encode(proposal, proposalValues),
-            signature: _signProposalHash(proposerPK, _proposalHash(proposal))
+            proposalInclusionProof: new bytes32[](0),
+            signature: _sign(proposerPK, _proposalHash(proposal))
         });
 
         assertEq(proposalHash, _proposalHash(proposal));

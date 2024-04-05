@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
+import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
@@ -39,8 +40,8 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         PWNSimpleLoanProposal.ProposalBase base;
         address acceptor;
         uint256 refinancingLoanId;
-        uint256 signerPK;
-        bool compactSignature;
+        bytes32[] proposalInclusionProof;
+        bytes signature;
     }
 
     function setUp() virtual public {
@@ -56,8 +57,6 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         params.base.loanContract = activeLoanContract;
         params.acceptor = acceptor;
         params.refinancingLoanId = 0;
-        params.signerPK = proposerPK;
-        params.compactSignature = false;
 
         vm.mockCall(
             revokedNonce,
@@ -84,12 +83,12 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         );
     }
 
-    function _signProposalHash(uint256 pk, bytes32 proposalHash) internal pure returns (bytes memory) {
+    function _sign(uint256 pk, bytes32 proposalHash) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, proposalHash);
         return abi.encodePacked(r, s, v);
     }
 
-    function _signProposalHashCompact(uint256 pk, bytes32 proposalHash) internal pure returns (bytes memory) {
+    function _signCompact(uint256 pk, bytes32 proposalHash) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, proposalHash);
         return abi.encodePacked(r, bytes32(uint256(v) - 27) << 255 | s);
     }
@@ -118,6 +117,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function testFuzz_shouldFail_whenCallerIsNotProposedLoanContract(address caller) external {
         vm.assume(caller != activeLoanContract);
         params.base.loanContract = activeLoanContract;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectRevert(abi.encodeWithSelector(CallerNotLoanContract.selector, caller, activeLoanContract));
         vm.prank(caller);
@@ -127,25 +127,93 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function testFuzz_shouldFail_whenCallerNotTagged_ACTIVE_LOAN(address caller) external {
         vm.assume(caller != activeLoanContract);
         params.base.loanContract = caller;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, caller, PWNHubTags.ACTIVE_LOAN));
         vm.prank(caller);
         _callAcceptProposalWith();
     }
 
-    function test_shouldFail_whenInvalidSignature_whenEOA() external {
-        params.signerPK = 1;
+    function testFuzz_shouldFail_whenInvalidSignature_whenEOA(uint256 randomPK) external {
+        randomPK = boundPrivateKey(randomPK);
+        vm.assume(randomPK != proposerPK);
+        params.signature = _sign(randomPK, _getProposalHashWith());
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, _getProposalHashWith(params)));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, _getProposalHashWith()));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
 
     function test_shouldFail_whenInvalidSignature_whenContractAccount() external {
         vm.etch(proposer, bytes("data"));
-        params.signerPK = 0;
+        params.signature = "";
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, _getProposalHashWith(params)));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, _getProposalHashWith()));
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function testFuzz_shouldFail_withInvalidSignature_whenEOA_whenMultiproposal(uint256 randomPK) external {
+        randomPK = boundPrivateKey(randomPK);
+        vm.assume(randomPK != proposerPK);
+
+        bytes32 proposalHash = _getProposalHashWith();
+        bytes32[] memory proposalInclusionProof = new bytes32[](1);
+        proposalInclusionProof[0] = keccak256("leaf1");
+        bytes32 root = keccak256(
+            uint256(proposalHash) < uint256(proposalInclusionProof[0])
+                ? abi.encode(proposalHash, proposalInclusionProof[0])
+                : abi.encode(proposalInclusionProof[0], proposalHash)
+        );
+        bytes32 multiproposalHash = proposalContractAddr.getMultiproposalHash(PWNSimpleLoanProposal.Multiproposal(root));
+        params.signature = _sign(randomPK, multiproposalHash);
+        params.proposalInclusionProof = proposalInclusionProof;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, multiproposalHash));
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldFail_whenInvalidSignature_whenContractAccount_whenMultiproposal() external {
+        vm.etch(proposer, bytes("data"));
+        bytes32 proposalHash = _getProposalHashWith();
+        bytes32[] memory proposalInclusionProof = new bytes32[](1);
+        proposalInclusionProof[0] = keccak256("leaf1");
+        bytes32 root = keccak256(
+            uint256(proposalHash) < uint256(proposalInclusionProof[0])
+                ? abi.encode(proposalHash, proposalInclusionProof[0])
+                : abi.encode(proposalInclusionProof[0], proposalHash)
+        );
+        bytes32 multiproposalHash = proposalContractAddr.getMultiproposalHash(PWNSimpleLoanProposal.Multiproposal(root));
+        params.signature = "";
+        params.proposalInclusionProof = proposalInclusionProof;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, multiproposalHash));
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldFail_withInvalidInclusionProof() external {
+        bytes32 proposalHash = _getProposalHashWith();
+        bytes32[] memory proposalInclusionProof = new bytes32[](1);
+        proposalInclusionProof[0] = keccak256("other leaf1");
+        bytes32 leaf = keccak256("leaf1");
+        bytes32 root = keccak256(
+            uint256(proposalHash) < uint256(leaf)
+                ? abi.encode(proposalHash, leaf)
+                : abi.encode(leaf, proposalHash)
+        );
+        bytes32 multiproposalHash = proposalContractAddr.getMultiproposalHash(PWNSimpleLoanProposal.Multiproposal(root));
+        params.signature = _sign(proposerPK, multiproposalHash);
+        params.proposalInclusionProof = proposalInclusionProof;
+
+        bytes32 actualRoot = keccak256(
+            uint256(proposalHash) < uint256(proposalInclusionProof[0])
+                ? abi.encode(proposalHash, proposalInclusionProof[0])
+                : abi.encode(proposalInclusionProof[0], proposalHash)
+        );
+        bytes32 actualMultiproposalHash = proposalContractAddr.getMultiproposalHash(PWNSimpleLoanProposal.Multiproposal(actualRoot));
+        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, actualMultiproposalHash));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -153,24 +221,24 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function test_shouldPass_whenProposalMadeOnchain() external {
         vm.store(
             address(proposalContractAddr),
-            keccak256(abi.encode(_getProposalHashWith(params), PROPOSALS_MADE_SLOT)),
+            keccak256(abi.encode(_getProposalHashWith(), PROPOSALS_MADE_SLOT)),
             bytes32(uint256(1))
         );
-        params.signerPK = 0;
+        params.signature = "";
 
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
 
     function test_shouldPass_withValidSignature_whenEOA_whenStandardSignature() external {
-        params.compactSignature = false;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
 
     function test_shouldPass_withValidSignature_whenEOA_whenCompactEIP2098Signature() external {
-        params.compactSignature = true;
+        params.signature = _signCompact(proposerPK, _getProposalHashWith());
 
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
@@ -178,11 +246,71 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
 
     function test_shouldPass_whenValidSignature_whenContractAccount() external {
         vm.etch(proposer, bytes("data"));
-        params.signerPK = 0;
+        params.signature = bytes("some signature");
+
+        bytes32 proposalHash = _getProposalHashWith();
 
         vm.mockCall(
             proposer,
-            abi.encodeWithSignature("isValidSignature(bytes32,bytes)"),
+            abi.encodeWithSignature("isValidSignature(bytes32,bytes)", proposalHash, params.signature),
+            abi.encode(bytes4(0x1626ba7e))
+        );
+
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldPass_withValidSignature_whenEOA_whenStandardSignature_whenMultiproposal() external {
+        bytes32 proposalHash = _getProposalHashWith();
+        bytes32[] memory proposalInclusionProof = new bytes32[](1);
+        proposalInclusionProof[0] = keccak256("leaf1");
+        bytes32 root = keccak256(
+            uint256(proposalHash) < uint256(proposalInclusionProof[0])
+                ? abi.encode(proposalHash, proposalInclusionProof[0])
+                : abi.encode(proposalInclusionProof[0], proposalHash)
+        );
+        bytes32 multiproposalHash = proposalContractAddr.getMultiproposalHash(PWNSimpleLoanProposal.Multiproposal(root));
+        params.signature = _sign(proposerPK, multiproposalHash);
+        params.proposalInclusionProof = proposalInclusionProof;
+
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldPass_withValidSignature_whenEOA_whenCompactEIP2098Signature_whenMultiproposal() external {
+        bytes32 proposalHash = _getProposalHashWith();
+        bytes32[] memory proposalInclusionProof = new bytes32[](1);
+        proposalInclusionProof[0] = keccak256("leaf1");
+        bytes32 root = keccak256(
+            uint256(proposalHash) < uint256(proposalInclusionProof[0])
+                ? abi.encode(proposalHash, proposalInclusionProof[0])
+                : abi.encode(proposalInclusionProof[0], proposalHash)
+        );
+        bytes32 multiproposalHash = proposalContractAddr.getMultiproposalHash(PWNSimpleLoanProposal.Multiproposal(root));
+        params.signature = _signCompact(proposerPK, multiproposalHash);
+        params.proposalInclusionProof = proposalInclusionProof;
+
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldPass_whenValidSignature_whenContractAccount_whenMultiproposal() external {
+        vm.etch(proposer, bytes("data"));
+        bytes32 proposalHash = _getProposalHashWith();
+        bytes32[] memory proposalInclusionProof = new bytes32[](1);
+        proposalInclusionProof[0] = keccak256("leaf1");
+        bytes32 root = keccak256(
+            uint256(proposalHash) < uint256(proposalInclusionProof[0])
+                ? abi.encode(proposalHash, proposalInclusionProof[0])
+                : abi.encode(proposalInclusionProof[0], proposalHash)
+        );
+        bytes32 multiproposalHash = proposalContractAddr.getMultiproposalHash(PWNSimpleLoanProposal.Multiproposal(root));
+        params.signature = bytes("some random string");
+        params.proposalInclusionProof = proposalInclusionProof;
+
+        vm.mockCall(
+            proposer,
+            abi.encodeWithSignature("isValidSignature(bytes32,bytes)", multiproposalHash, params.signature),
             abi.encode(bytes4(0x1626ba7e))
         );
 
@@ -194,6 +322,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         vm.assume(proposedRefinancingLoanId != 0);
         params.base.refinancingLoanId = proposedRefinancingLoanId;
         params.refinancingLoanId = 0;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
         vm.prank(activeLoanContract);
@@ -208,6 +337,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.base.refinancingLoanId = proposedRefinancingLoanId;
         params.base.isOffer = true;
         params.refinancingLoanId = refinancingLoanId;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
         vm.prank(activeLoanContract);
@@ -221,6 +351,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.base.refinancingLoanId = 0;
         params.base.isOffer = true;
         params.refinancingLoanId = refinancingLoanId;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
@@ -233,6 +364,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.base.refinancingLoanId = proposedRefinancingLoanId;
         params.base.isOffer = false;
         params.refinancingLoanId = refinancingLoanId;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
         vm.prank(activeLoanContract);
@@ -243,6 +375,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         timestamp = bound(timestamp, params.base.expiration, type(uint256).max);
         vm.warp(timestamp);
 
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
         vm.expectRevert(abi.encodeWithSelector(Expired.selector, timestamp, params.base.expiration));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
@@ -251,6 +385,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function testFuzz_shouldFail_whenOfferNonceNotUsable(uint256 nonceSpace, uint256 nonce) external {
         params.base.nonceSpace = nonceSpace;
         params.base.nonce = nonce;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
             revokedNonce,
@@ -272,6 +407,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         vm.assume(caller != allowedAcceptor);
         params.base.allowedAcceptor = allowedAcceptor;
         params.acceptor = caller;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectRevert(abi.encodeWithSelector(CallerNotAllowedAcceptor.selector, caller, allowedAcceptor));
         vm.prank(activeLoanContract);
@@ -282,6 +418,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.base.availableCreditLimit = 0;
         params.base.nonceSpace = nonceSpace;
         params.base.nonce = nonce;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectCall(
             revokedNonce,
@@ -297,10 +434,11 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         limit = bound(limit, used, used + params.base.creditAmount - 1);
 
         params.base.availableCreditLimit = limit;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.store(
             address(proposalContractAddr),
-            keccak256(abi.encode(_getProposalHashWith(params), CREDIT_USED_SLOT)),
+            keccak256(abi.encode(_getProposalHashWith(), CREDIT_USED_SLOT)),
             bytes32(used)
         );
 
@@ -316,8 +454,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         limit = bound(limit, used + params.base.creditAmount, type(uint256).max);
 
         params.base.availableCreditLimit = limit;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        bytes32 proposalHash = _getProposalHashWith(params);
+        bytes32 proposalHash = _getProposalHashWith();
 
         vm.store(
             address(proposalContractAddr),
@@ -333,6 +472,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
 
     function test_shouldNotCallComputerRegistry_whenShouldNotCheckStateFingerprint() external {
         params.base.checkCollateralStateFingerprint = false;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectCall({
             callee: config,
@@ -346,6 +486,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
 
     function test_shouldFail_whenComputerRegistryReturnsZeroAddress_whenShouldCheckStateFingerprint() external {
         params.base.collateralAddress = token;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
             config,
@@ -362,6 +503,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         bytes32 stateFingerprint
     ) external {
         vm.assume(stateFingerprint != params.base.collateralStateFingerprint);
+        params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
             stateFingerprintComputer,

@@ -161,6 +161,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         address acceptor,
         uint256 refinancingLoanId,
         bytes calldata proposalData,
+        bytes32[] calldata proposalInclusionProof,
         bytes calldata signature
     ) override external returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms) {
         // Decode proposal data
@@ -188,6 +189,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
             acceptor,
             refinancingLoanId,
             proposalHash,
+            proposalInclusionProof,
             signature,
             ProposalBase({
                 collateralAddress: proposal.collateralAddress,

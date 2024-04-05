@@ -94,11 +94,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @notice Loan proposal specification during loan creation.
      * @param proposalContract Address of a loan proposal contract.
      * @param proposalData Encoded proposal data that is passed to the loan proposal contract.
+     * @param proposalInclusionProof Inclusion proof of the proposal in the proposal contract.
      * @param signature Signature of the proposal.
      */
     struct ProposalSpec {
         address proposalContract;
         bytes proposalData;
+        bytes32[] proposalInclusionProof;
         bytes signature;
     }
 
@@ -297,6 +299,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
                 acceptor: msg.sender,
                 refinancingLoanId: callerSpec.refinancingLoanId,
                 proposalData: proposalSpec.proposalData,
+                proposalInclusionProof: proposalSpec.proposalInclusionProof,
                 signature: proposalSpec.signature
             });
 

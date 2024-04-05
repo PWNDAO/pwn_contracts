@@ -32,11 +32,11 @@ abstract contract PWNSimpleLoanTest is Test {
     address borrower = makeAddr("borrower");
     address sourceOfFunds = address(new DummyCompoundPool());
     uint256 loanDurationInDays = 101;
-    PWNSimpleLoan.LenderSpec lenderSpec;
     PWNSimpleLoan.LOAN simpleLoan;
     PWNSimpleLoan.LOAN nonExistingLoan;
     PWNSimpleLoan.Terms simpleLoanTerms;
     PWNSimpleLoan.ProposalSpec proposalSpec;
+    PWNSimpleLoan.LenderSpec lenderSpec;
     PWNSimpleLoan.CallerSpec callerSpec;
     PWNSimpleLoan.ExtensionProposal extension;
     T20 fungibleAsset;
@@ -114,6 +114,7 @@ abstract contract PWNSimpleLoanTest is Test {
         proposalSpec = PWNSimpleLoan.ProposalSpec({
             proposalContract: proposalContract,
             proposalData: proposalData,
+            proposalInclusionProof: new bytes32[](0),
             signature: signature
         });
 
@@ -246,7 +247,7 @@ abstract contract PWNSimpleLoanTest is Test {
     function _mockLoanTerms(PWNSimpleLoan.Terms memory _terms) internal {
         vm.mockCall(
             proposalContract,
-            abi.encodeWithSignature("acceptProposal(address,uint256,bytes,bytes)"),
+            abi.encodeWithSignature("acceptProposal(address,uint256,bytes,bytes32[],bytes)"),
             abi.encode(proposalHash, _terms)
         );
     }
@@ -372,10 +373,19 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function testFuzz_shouldCallProposalContract(address caller) external {
+    function testFuzz_shouldCallProposalContract(
+        address caller, bytes memory _proposalData, bytes32[] memory _proposalInclusionProof, bytes memory _signature
+    ) external {
+        proposalSpec.proposalData = _proposalData;
+        proposalSpec.proposalInclusionProof = _proposalInclusionProof;
+        proposalSpec.signature = _signature;
+
         vm.expectCall(
             proposalContract,
-            abi.encodeWithSignature("acceptProposal(address,uint256,bytes,bytes)", caller, 0, proposalData, signature)
+            abi.encodeWithSignature(
+                "acceptProposal(address,uint256,bytes,bytes32[],bytes)",
+                caller, 0, _proposalData, _proposalInclusionProof, _signature
+            )
         );
 
         vm.prank(caller);

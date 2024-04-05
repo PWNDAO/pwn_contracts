@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
+import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
+
 import { PWNConfig, IERC5646 } from "@pwn/config/PWNConfig.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
@@ -16,10 +18,17 @@ import "@pwn/PWNErrors.sol";
 abstract contract PWNSimpleLoanProposal {
 
     bytes32 public immutable DOMAIN_SEPARATOR;
+    bytes32 public immutable MULTIPROPOSAL_DOMAIN_SEPARATOR;
 
     PWNHub public immutable hub;
     PWNRevokedNonce public immutable revokedNonce;
     PWNConfig public immutable config;
+
+    bytes32 public constant MULTIPROPOSAL_TYPEHASH = keccak256("Multiproposal(bytes32 multiproposalMerkleRoot)");
+
+    struct Multiproposal {
+        bytes32 multiproposalMerkleRoot;
+    }
 
     struct ProposalBase {
         address collateralAddress;
@@ -69,12 +78,30 @@ abstract contract PWNSimpleLoanProposal {
             block.chainid,
             address(this)
         ));
+
+        MULTIPROPOSAL_DOMAIN_SEPARATOR = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name)"),
+            keccak256("PWNMultiproposal")
+        ));
     }
 
 
     /*----------------------------------------------------------*|
     |*  # EXTERNALS                                             *|
     |*----------------------------------------------------------*/
+
+    /**
+     * @notice Get a multiproposal hash according to EIP-712.
+     * @param multiproposal Multiproposal struct.
+     * @return Multiproposal hash.
+     */
+    function getMultiproposalHash(Multiproposal memory multiproposal) public view returns (bytes32) {
+        return keccak256(abi.encodePacked(
+            hex"1901", MULTIPROPOSAL_DOMAIN_SEPARATOR, keccak256(abi.encodePacked(
+                MULTIPROPOSAL_TYPEHASH, abi.encode(multiproposal)
+            ))
+        ));
+    }
 
     /**
      * @notice Helper function for revoking a proposal nonce on behalf of a caller.
@@ -91,6 +118,7 @@ abstract contract PWNSimpleLoanProposal {
      * @param acceptor Address of a proposal acceptor.
      * @param refinancingLoanId Id of a loan to be refinanced. 0 if creating a new loan.
      * @param proposalData Encoded proposal data with signature.
+     * @param proposalInclusionProof Multiproposal inclusion proof. Empty if single proposal.
      * @return proposalHash Proposal hash.
      * @return loanTerms Loan terms.
      */
@@ -98,6 +126,7 @@ abstract contract PWNSimpleLoanProposal {
         address acceptor,
         uint256 refinancingLoanId,
         bytes calldata proposalData,
+        bytes32[] calldata proposalInclusionProof,
         bytes calldata signature
     ) virtual external returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms);
 
@@ -141,6 +170,7 @@ abstract contract PWNSimpleLoanProposal {
      * @param acceptor Address of a proposal acceptor.
      * @param refinancingLoanId Refinancing loan ID.
      * @param proposalHash Proposal hash.
+     * @param proposalInclusionProof Multiproposal inclusion proof. Empty if single proposal.
      * @param signature Signature of a proposal.
      * @param proposal Proposal base struct.
      */
@@ -148,7 +178,8 @@ abstract contract PWNSimpleLoanProposal {
         address acceptor,
         uint256 refinancingLoanId,
         bytes32 proposalHash,
-        bytes memory signature,
+        bytes32[] calldata proposalInclusionProof,
+        bytes calldata signature,
         ProposalBase memory proposal
     ) internal {
         // Check loan contract
@@ -159,10 +190,26 @@ abstract contract PWNSimpleLoanProposal {
             revert AddressMissingHubTag({ addr: proposal.loanContract, tag: PWNHubTags.ACTIVE_LOAN });
         }
 
-        // Check proposal has been made via on-chain tx, EIP-1271 or signed off-chain
-        if (!proposalsMade[proposalHash]) {
-            if (!PWNSignatureChecker.isValidSignatureNow(proposal.proposer, proposalHash, signature)) {
-                revert InvalidSignature({ signer: proposal.proposer, digest: proposalHash });
+        // Check proposal signature or that it was made on-chain
+        if (proposalInclusionProof.length == 0) {
+            // Single proposal signature
+            if (!proposalsMade[proposalHash]) {
+                if (!PWNSignatureChecker.isValidSignatureNow(proposal.proposer, proposalHash, signature)) {
+                    revert InvalidSignature({ signer: proposal.proposer, digest: proposalHash });
+                }
+            }
+        } else {
+            // Multiproposal signature
+            bytes32 multiproposalHash = getMultiproposalHash(
+                Multiproposal({
+                    multiproposalMerkleRoot: MerkleProof.processProofCalldata({
+                        proof: proposalInclusionProof,
+                        leaf: proposalHash
+                    })
+                })
+            );
+            if (!PWNSignatureChecker.isValidSignatureNow(proposal.proposer, multiproposalHash, signature)) {
+                revert InvalidSignature({ signer: proposal.proposer, digest: multiproposalHash });
             }
         }
 
