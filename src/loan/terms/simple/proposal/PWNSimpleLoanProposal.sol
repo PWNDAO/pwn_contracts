@@ -2,12 +2,14 @@
 pragma solidity 0.8.16;
 
 import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
+import { ERC165Checker } from "openzeppelin-contracts/contracts/utils/introspection/ERC165Checker.sol";
 
-import { PWNConfig, IERC5646 } from "@pwn/config/PWNConfig.sol";
+import { PWNConfig, IStateFingerpringComputer } from "@pwn/config/PWNConfig.sol";
 import { PWNHub } from "@pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { IERC5646 } from "@pwn/loan/token/IERC5646.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import "@pwn/PWNErrors.sol";
 
@@ -257,13 +259,21 @@ abstract contract PWNSimpleLoanProposal {
 
         // Check collateral state fingerprint if needed
         if (proposal.checkCollateralStateFingerprint) {
-            IERC5646 computer = config.getStateFingerprintComputer(proposal.collateralAddress);
-            if (address(computer) == address(0)) {
+            bytes32 currentFingerprint;
+            IStateFingerpringComputer computer = config.getStateFingerprintComputer(proposal.collateralAddress);
+            if (address(computer) != address(0)) {
+                // Asset has registered computer
+                currentFingerprint = computer.computeStateFingerprint({
+                    token: proposal.collateralAddress, tokenId: proposal.collateralId
+                });
+            } else if (ERC165Checker.supportsInterface(proposal.collateralAddress, type(IERC5646).interfaceId)) {
+                // Asset implements ERC5646
+                currentFingerprint = IERC5646(proposal.collateralAddress).getStateFingerprint(proposal.collateralId);
+            } else {
                 // Asset is not implementing ERC5646 and no computer is registered
                 revert MissingStateFingerprintComputer();
             }
 
-            bytes32 currentFingerprint = computer.getStateFingerprint(proposal.collateralId);
             if (proposal.collateralStateFingerprint != currentFingerprint) {
                 // Fingerprint mismatch
                 revert InvalidCollateralStateFingerprint({

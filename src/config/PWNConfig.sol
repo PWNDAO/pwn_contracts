@@ -3,9 +3,8 @@ pragma solidity 0.8.16;
 
 import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import { Initializable } from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
-import { ERC165Checker } from "openzeppelin-contracts/contracts/utils/introspection/ERC165Checker.sol";
 
-import { IERC5646 } from "@pwn/loan/token/IERC5646.sol";
+import { IStateFingerpringComputer } from "@pwn/state-fingerprint-computer/IStateFingerpringComputer.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -73,7 +72,7 @@ contract PWNConfig is Ownable2Step, Initializable {
     event DefaultLOANMetadataUriUpdated(string newUri);
 
     /**
-     * @notice Error emitted when registering a computer which does not implement the IERC5646 interface.
+     * @notice Error emitted when registering a computer which does not support the asset it is registered for.
      */
     error InvalidComputerContract();
 
@@ -184,28 +183,22 @@ contract PWNConfig is Ownable2Step, Initializable {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Returns the ERC5646 computer for a given asset.
+     * @notice Returns the state fingerprint computer for a given asset.
      * @param asset The asset for which the computer is requested.
      * @return The computer for the given asset.
      */
-    function getStateFingerprintComputer(address asset) external view returns (IERC5646) {
-        address computer = _computerRegistry[asset];
-        if (computer == address(0))
-            if (ERC165Checker.supportsInterface(asset, type(IERC5646).interfaceId))
-                computer = asset;
-
-        return IERC5646(computer);
+    function getStateFingerprintComputer(address asset) external view returns (IStateFingerpringComputer) {
+        return IStateFingerpringComputer(_computerRegistry[asset]);
     }
 
     /**
      * @notice Registers a state fingerprint computer for a given asset.
-     * @dev Only owner can register a computer. Computer can be set to address(0) to remove the computer.
      * @param asset The asset for which the computer is registered.
-     * @param computer The computer to be registered.
+     * @param computer The computer to be registered. Use address(0) to remove a computer.
      */
     function registerStateFingerprintComputer(address asset, address computer) external onlyOwner {
         if (computer != address(0))
-            if (!ERC165Checker.supportsInterface(computer, type(IERC5646).interfaceId))
+            if (!IStateFingerpringComputer(computer).supportsToken(asset))
                 revert InvalidComputerContract();
 
         _computerRegistry[asset] = computer;

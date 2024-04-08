@@ -3,9 +3,7 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import { IERC165 } from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
-
-import { PWNConfig, IERC5646 } from "@pwn/config/PWNConfig.sol";
+import { PWNConfig } from "@pwn/config/PWNConfig.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -38,16 +36,10 @@ abstract contract PWNConfigTest is Test {
         vm.store(address(config), FEE_COLLECTOR_SLOT, bytes32(uint256(uint160(feeCollector))));
     }
 
-    function _mockERC5646Support(address asset, bool result) internal {
-        _mockERC165Call(asset, type(IERC165).interfaceId, true);
-        _mockERC165Call(asset, hex"ffffffff", false);
-        _mockERC165Call(asset, type(IERC5646).interfaceId, result);
-    }
-
-    function _mockERC165Call(address asset, bytes4 interfaceId, bool result) internal {
+    function _mockSupportsToken(address computer, address token, bool result) internal {
         vm.mockCall(
-            asset,
-            abi.encodeWithSignature("supportsInterface(bytes4)", interfaceId),
+            computer,
+            abi.encodeWithSignature("supportsToken(address)", token),
             abi.encode(result)
         );
     }
@@ -381,18 +373,6 @@ contract PWNConfig_GetStateFingerprintComputer_Test is PWNConfigTest {
         assertEq(address(config.getStateFingerprintComputer(asset)), computer);
     }
 
-    function testFuzz_shouldReturnAsset_whenComputerIsNotRegistered_whenAssetImplementsERC5646(address asset) external {
-        assumeAddressIsNot(asset, AddressType.ForgeAddress, AddressType.Precompile);
-
-        _mockERC5646Support(asset, true);
-
-        assertEq(address(config.getStateFingerprintComputer(asset)), asset);
-    }
-
-    function testFuzz_shouldReturnZeroAddress_whenComputerIsNotRegistered_whenAssetNotImplementsERC5646(address asset) external {
-        assertEq(address(config.getStateFingerprintComputer(asset)), address(0));
-    }
-
 }
 
 
@@ -428,17 +408,9 @@ contract PWNConfig_RegisterStateFingerprintComputer_Test is PWNConfigTest {
         assertEq(address(config.getStateFingerprintComputer(asset)), address(0));
     }
 
-    function testFuzz_shouldFail_whenComputerDoesNotImplementERC165(address asset, address computer) external {
+    function testFuzz_shouldFail_whenComputerDoesNotSupportToken(address asset, address computer) external {
         assumeAddressIsNot(computer, AddressType.ForgeAddress, AddressType.Precompile, AddressType.ZeroAddress);
-
-        vm.expectRevert(abi.encodeWithSelector(PWNConfig.InvalidComputerContract.selector));
-        vm.prank(owner);
-        config.registerStateFingerprintComputer(asset, computer);
-    }
-
-    function testFuzz_shouldFail_whenComputerDoesNotImplementERC5646(address asset, address computer) external {
-        assumeAddressIsNot(computer, AddressType.ForgeAddress, AddressType.Precompile, AddressType.ZeroAddress);
-        _mockERC5646Support(computer, false);
+        _mockSupportsToken(computer, asset, false);
 
         vm.expectRevert(abi.encodeWithSelector(PWNConfig.InvalidComputerContract.selector));
         vm.prank(owner);
@@ -447,7 +419,7 @@ contract PWNConfig_RegisterStateFingerprintComputer_Test is PWNConfigTest {
 
     function testFuzz_shouldRegisterComputer(address asset, address computer) external {
         assumeAddressIsNot(computer, AddressType.ForgeAddress, AddressType.Precompile, AddressType.ZeroAddress);
-        _mockERC5646Support(computer, true);
+        _mockSupportsToken(computer, asset, true);
 
         vm.prank(owner);
         config.registerStateFingerprintComputer(asset, computer);

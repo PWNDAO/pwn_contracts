@@ -6,11 +6,15 @@ import "forge-std/Test.sol";
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
 import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
+import { IERC165 } from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import {
+    PWNSimpleLoanProposal,
+    IERC5646
+} from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -78,8 +82,22 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         );
         vm.mockCall(
             stateFingerprintComputer,
-            abi.encodeWithSignature("getStateFingerprint(uint256)"),
+            abi.encodeWithSignature("computeStateFingerprint(address,uint256)"),
             abi.encode(params.base.collateralStateFingerprint)
+        );
+    }
+
+    function _mockERC5646Support(address asset, bool result) internal {
+        _mockERC165Call(asset, type(IERC165).interfaceId, true);
+        _mockERC165Call(asset, hex"ffffffff", false);
+        _mockERC165Call(asset, type(IERC5646).interfaceId, result);
+    }
+
+    function _mockERC165Call(address asset, bytes4 interfaceId, bool result) internal {
+        vm.mockCall(
+            asset,
+            abi.encodeWithSignature("supportsInterface(bytes4)", interfaceId),
+            abi.encode(result)
         );
     }
 
@@ -484,14 +502,69 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         _callAcceptProposalWith();
     }
 
-    function test_shouldFail_whenComputerRegistryReturnsZeroAddress_whenShouldCheckStateFingerprint() external {
+    function test_shouldCallComputerRegistry_whenShouldCheckStateFingerprint() external {
+        params.base.checkCollateralStateFingerprint = true;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.expectCall(
+            config,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", params.base.collateralAddress)
+        );
+
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldFail_whenComputerRegistryReturnsComputer_whenComputerFails() external {
+        params.base.collateralAddress = token;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.mockCallRevert(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("computeStateFingerprint(address,uint256)"),
+            "some error"
+        );
+
+        vm.expectRevert("some error");
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function testFuzz_shouldFail_whenComputerRegistryReturnsComputer_whenComputerReturnsDifferentStateFingerprint(
+        bytes32 stateFingerprint
+    ) external {
+        params.base.collateralAddress = token;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.mockCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature(
+                "computeStateFingerprint(address,uint256)",
+                params.base.collateralAddress, params.base.collateralId
+            ),
+            abi.encode(stateFingerprint)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(
+            InvalidCollateralStateFingerprint.selector, stateFingerprint, params.base.collateralStateFingerprint
+        ));
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldFail_whenNoComputerRegistered_whenAssetDoesNotImplementERC165() external {
         params.base.collateralAddress = token;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
             config,
-            abi.encodeWithSignature("getStateFingerprintComputer(address)", token),
+            abi.encodeWithSignature("getStateFingerprintComputer(address)"),
             abi.encode(address(0))
+        );
+        vm.mockCallRevert(
+            params.base.collateralAddress,
+            abi.encodeWithSignature("supportsInterface(bytes4)"),
+            abi.encode("not implementing ERC165")
         );
 
         vm.expectRevert(abi.encodeWithSelector(MissingStateFingerprintComputer.selector));
@@ -499,14 +572,35 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         _callAcceptProposalWith();
     }
 
-    function testFuzz_shouldFail_whenComputerReturnsDifferentStateFingerprint_whenShouldCheckStateFingerprint(
+    function test_shouldFail_whenNoComputerRegistered_whenAssetDoesNotImplementERC5646() external {
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.mockCall(
+            config,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)"),
+            abi.encode(address(0))
+        );
+        _mockERC5646Support(params.base.collateralAddress, false);
+
+        vm.expectRevert(abi.encodeWithSelector(MissingStateFingerprintComputer.selector));
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function testFuzz_shouldFail_whenAssetImplementsERC5646_whenComputerReturnsDifferentStateFingerprint(
         bytes32 stateFingerprint
     ) external {
         vm.assume(stateFingerprint != params.base.collateralStateFingerprint);
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
-            stateFingerprintComputer,
+            config,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)"),
+            abi.encode(address(0))
+        );
+        _mockERC5646Support(params.base.collateralAddress, true);
+        vm.mockCall(
+            params.base.collateralAddress,
             abi.encodeWithSignature("getStateFingerprint(uint256)"),
             abi.encode(stateFingerprint)
         );
@@ -514,6 +608,43 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         vm.expectRevert(abi.encodeWithSelector(
             InvalidCollateralStateFingerprint.selector, stateFingerprint, params.base.collateralStateFingerprint
         ));
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldPass_whenComputerReturnsMatchingFingerprint() external {
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.mockCall(
+            config,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)"),
+            abi.encode(stateFingerprintComputer)
+        );
+        vm.mockCall(
+            stateFingerprintComputer,
+            abi.encodeWithSignature("computeStateFingerprint(address,uint256)"),
+            abi.encode(params.base.collateralStateFingerprint)
+        );
+
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldPass_whenAssetImplementsERC5646_whenReturnsMatchingFingerprint() external {
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.mockCall(
+            config,
+            abi.encodeWithSignature("getStateFingerprintComputer(address)"),
+            abi.encode(address(0))
+        );
+        _mockERC5646Support(params.base.collateralAddress, true);
+        vm.mockCall(
+            params.base.collateralAddress,
+            abi.encodeWithSignature("getStateFingerprint(uint256)"),
+            abi.encode(params.base.collateralStateFingerprint)
+        );
+
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
