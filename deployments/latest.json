@@ -10,16 +10,16 @@
             "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
             "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "categoryRegistry": "0x0c93666Bf6359951Ade361D6E19f2DB240dA392f",
-            "configSingleton": "0x1E53eC63395576d23770b00E86053aBf0b9a3a21",
+            "configSingleton": "0xD1f71974aAdc34FcC66C992E0A09b1E64D4C3E33",
             "config": "0x9C432a1A229ef87b138da29dE930B3d8EC2C67Fa",
             "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
             "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
-            "revokedNonce": "0x32353ecC81dE2d8c710a5295B96c0d315a0bb563",
-            "simpleLoan": "0xBE8A45A4d82A0D7181E6A37E13aE22143336D7DE",
-            "simpleLoanSimpleProposal": "0x430CC773C5C4931518CFeFf8d8563e01A8a1Da99",
-            "simpleLoanListProposal": "0xFFcC4E9D8CDefb34Fa80A3DD85712EfF6071a768",
-            "simpleLoanFungibleProposal": "0x036bcD053344Cf34ef33efa81cCA832AE998336d",
-            "simpleLoanDutchAuctionProposal": "0x3ecde871cB34231F946136EfF5010Bcc4800FA75"
+            "revokedNonce": "0x870A65689f4AF5ecb05064D5A5C601274602d313",
+            "simpleLoan": "0x30f8D71f79B785A72b621DeD5665387CcE4f910C",
+            "simpleLoanSimpleProposal": "0x33F5b26ede842322E60433ec6e32F547cEA90A5C",
+            "simpleLoanListProposal": "0x94dA12676b3909BeeFbF01F66F3DFC824D67DBB5",
+            "simpleLoanFungibleProposal": "0x1C3911Ef03dEBeFc9b8567Ec4Dc1766F1C7Cf3f1",
+            "simpleLoanDutchAuctionProposal": "0x2850CB3D78389D1A5aa485EcD8D6472Fe1Dd6fa4"
         }
     }
 }

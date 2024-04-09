@@ -90,7 +90,8 @@ contract Deploy is Deployments, Script {
 /*
 forge script script/PWN.s.sol:Deploy \
 --sig "deployNewProtocolVersion()" \
---rpc-url $RPCURL \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
@@ -423,6 +424,7 @@ contract Setup is Deployments, Script {
 forge script script/PWN.s.sol:Setup \
 --sig "setupNewProtocolVersion()" \
 --rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
