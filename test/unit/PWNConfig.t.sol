@@ -15,7 +15,8 @@ abstract contract PWNConfigTest is Test {
     bytes32 internal constant FEE_SLOT = bytes32(uint256(1)); // `fee` property position
     bytes32 internal constant FEE_COLLECTOR_SLOT = bytes32(uint256(2)); // `feeCollector` property position
     bytes32 internal constant LOAN_METADATA_URI_SLOT = bytes32(uint256(3)); // `loanMetadataUri` mapping position
-    bytes32 internal constant REGISTRY_SLOT = bytes32(uint256(4)); // `_computerRegistry` mapping position
+    bytes32 internal constant SFC_REGISTRY_SLOT = bytes32(uint256(4)); // `_sfComputerRegistry` mapping position
+    bytes32 internal constant POOL_ADAPTER_REGISTRY_SLOT = bytes32(uint256(5)); // `_poolAdapterRegistry` mapping position
 
     PWNConfig config;
     address owner = makeAddr("owner");
@@ -367,7 +368,7 @@ contract PWNConfig_GetStateFingerprintComputer_Test is PWNConfigTest {
 
 
     function testFuzz_shouldReturnStoredComputer_whenIsRegistered(address asset, address computer) external {
-        bytes32 assetSlot = keccak256(abi.encode(asset, REGISTRY_SLOT));
+        bytes32 assetSlot = keccak256(abi.encode(asset, SFC_REGISTRY_SLOT));
         vm.store(address(config), assetSlot, bytes32(uint256(uint160(computer))));
 
         assertEq(address(config.getStateFingerprintComputer(asset)), computer);
@@ -399,7 +400,7 @@ contract PWNConfig_RegisterStateFingerprintComputer_Test is PWNConfigTest {
 
     function testFuzz_shouldUnregisterComputer_whenComputerIsZeroAddress(address asset) external {
         address computer = makeAddr("computer");
-        bytes32 assetSlot = keccak256(abi.encode(asset, REGISTRY_SLOT));
+        bytes32 assetSlot = keccak256(abi.encode(asset, SFC_REGISTRY_SLOT));
         vm.store(address(config), assetSlot, bytes32(uint256(uint160(computer))));
 
         vm.prank(owner);
@@ -425,6 +426,60 @@ contract PWNConfig_RegisterStateFingerprintComputer_Test is PWNConfigTest {
         config.registerStateFingerprintComputer(asset, computer);
 
         assertEq(address(config.getStateFingerprintComputer(asset)), computer);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # GET POOL ADAPTER                                      *|
+|*----------------------------------------------------------*/
+
+contract PWNConfig_GetPoolAdapter_Test is PWNConfigTest {
+
+    function setUp() override public {
+        super.setUp();
+
+        _initialize();
+    }
+
+
+    function testFuzz_shouldReturnStoredAdapter_whenIsRegistered(address pool, address adapter) external {
+        bytes32 poolSlot = keccak256(abi.encode(pool, POOL_ADAPTER_REGISTRY_SLOT));
+        vm.store(address(config), poolSlot, bytes32(uint256(uint160(adapter))));
+
+        assertEq(address(config.getPoolAdapter(pool)), adapter);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # REGISTER POOL ADAPTER                                 *|
+|*----------------------------------------------------------*/
+
+contract PWNConfig_RegisterPoolAdapter_Test is PWNConfigTest {
+
+    function setUp() override public {
+        super.setUp();
+
+        _initialize();
+    }
+
+
+    function testFuzz_shouldFail_whenCallerIsNotOwner(address caller) external {
+        vm.assume(caller != owner);
+
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(caller);
+        config.registerPoolAdapter(address(0), address(0));
+    }
+
+    function testFuzz_shouldStoreAdapter(address pool, address adapter) external {
+        vm.prank(owner);
+        config.registerPoolAdapter(pool, adapter);
+
+        assertEq(address(config.getPoolAdapter(pool)), adapter);
     }
 
 }

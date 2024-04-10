@@ -4,6 +4,7 @@ pragma solidity 0.8.16;
 import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import { Initializable } from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
+import { IPoolAdapter } from "@pwn/pool-adapter/IPoolAdapter.sol";
 import { IStateFingerpringComputer } from "@pwn/state-fingerprint-computer/IStateFingerpringComputer.sol";
 import "@pwn/PWNErrors.sol";
 
@@ -42,10 +43,16 @@ contract PWNConfig is Ownable2Step, Initializable {
     mapping (address => string) private _loanMetadataUri;
 
     /**
-     * @notice Mapping holding registered computer to an asset.
+     * @notice Mapping holding registered state fingerprint computer to an asset.
      * @dev Only owner can update the mapping.
      */
-    mapping (address => address) private _computerRegistry;
+    mapping (address => address) private _sfComputerRegistry;
+
+    /**
+     * @notice Mapping holding registered pool adapter to a pool address.
+     * @dev Only owner can update the mapping.
+     */
+    mapping (address => address) private _poolAdapterRegistry;
 
     /*----------------------------------------------------------*|
     |*  # EVENTS & ERRORS DEFINITIONS                           *|
@@ -188,7 +195,7 @@ contract PWNConfig is Ownable2Step, Initializable {
      * @return The computer for the given asset.
      */
     function getStateFingerprintComputer(address asset) external view returns (IStateFingerpringComputer) {
-        return IStateFingerpringComputer(_computerRegistry[asset]);
+        return IStateFingerpringComputer(_sfComputerRegistry[asset]);
     }
 
     /**
@@ -201,7 +208,30 @@ contract PWNConfig is Ownable2Step, Initializable {
             if (!IStateFingerpringComputer(computer).supportsToken(asset))
                 revert InvalidComputerContract();
 
-        _computerRegistry[asset] = computer;
+        _sfComputerRegistry[asset] = computer;
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # POOL ADAPTER                                          *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Returns the pool adapter for a given pool.
+     * @param pool The pool for which the adapter is requested.
+     * @return The adapter for the given pool.
+     */
+    function getPoolAdapter(address pool) external view returns (IPoolAdapter) {
+        return IPoolAdapter(_poolAdapterRegistry[pool]);
+    }
+
+    /**
+     * @notice Registers a pool adapter for a given pool.
+     * @param pool The pool for which the adapter is registered.
+     * @param adapter The adapter to be registered.
+     */
+    function registerPoolAdapter(address pool, address adapter) external onlyOwner {
+        _poolAdapterRegistry[pool] = adapter;
     }
 
 }
