@@ -12,7 +12,4 @@ library PWNHubTags {
     /// @dev Address can revoke nonces on other addresses behalf.
     bytes32 internal constant NONCE_MANAGER = keccak256("PWN_NONCE_MANAGER");
 
-    /// @dev Address is valid Compound pool and can be used as a source of funds.
-    bytes32 internal constant COMPOUND_V3_POOL = keccak256("COMPOUND_V3_POOL");
-
 }

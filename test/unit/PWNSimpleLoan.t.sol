@@ -8,7 +8,7 @@ import "@pwn/PWNErrors.sol";
 
 import { T20 } from "@pwn-test/helper/token/T20.sol";
 import { T721 } from "@pwn-test/helper/token/T721.sol";
-import { DummyCompoundPool } from "@pwn-test/helper/DummyCompoundPool.sol";
+import { DummyPoolAdapter } from "@pwn-test/helper/DummyPoolAdapter.sol";
 
 
 abstract contract PWNSimpleLoanTest is Test {
@@ -30,7 +30,8 @@ abstract contract PWNSimpleLoanTest is Test {
     uint256 loanId = 42;
     address lender = makeAddr("lender");
     address borrower = makeAddr("borrower");
-    address sourceOfFunds = address(new DummyCompoundPool());
+    address sourceOfFunds = makeAddr("sourceOfFunds");
+    address poolAdapter = address(new DummyPoolAdapter());
     uint256 loanDurationInDays = 101;
     PWNSimpleLoan.LOAN simpleLoan;
     PWNSimpleLoan.LOAN nonExistingLoan;
@@ -77,6 +78,9 @@ abstract contract PWNSimpleLoanTest is Test {
 
         vm.prank(address(this));
         fungibleAsset.approve(address(loan), type(uint256).max);
+
+        vm.prank(sourceOfFunds);
+        fungibleAsset.approve(poolAdapter, type(uint256).max);
 
         vm.prank(borrower);
         nonFungibleAsset.approve(address(loan), 2);
@@ -157,16 +161,12 @@ abstract contract PWNSimpleLoanTest is Test {
 
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(0));
         vm.mockCall(config, abi.encodeWithSignature("feeCollector()"), abi.encode(feeCollector));
+        vm.mockCall(config, abi.encodeWithSignature("getPoolAdapter(address)"), abi.encode(poolAdapter));
 
         vm.mockCall(hub, abi.encodeWithSignature("hasTag(address,bytes32)"), abi.encode(false));
         vm.mockCall(
             hub,
             abi.encodeWithSignature("hasTag(address,bytes32)", proposalContract, PWNHubTags.LOAN_PROPOSAL),
-            abi.encode(true)
-        );
-        vm.mockCall(
-            hub,
-            abi.encodeWithSignature("hasTag(address,bytes32)", sourceOfFunds, PWNHubTags.COMPOUND_V3_POOL),
             abi.encode(true)
         );
 
@@ -426,21 +426,6 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function testFuzz_shouldFail_whenSourceOfFundsNotTaggedInHub(address _sourceOfFunds) external {
-        vm.assume(_sourceOfFunds != lender && _sourceOfFunds != sourceOfFunds);
-        lenderSpec.sourceOfFunds = _sourceOfFunds;
-        simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
-        _mockLoanTerms(simpleLoanTerms);
-
-        vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, _sourceOfFunds, PWNHubTags.COMPOUND_V3_POOL));
-        loan.createLOAN({
-            proposalSpec: proposalSpec,
-            lenderSpec: lenderSpec,
-            callerSpec: callerSpec,
-            extra: ""
-        });
-    }
-
     function testFuzz_shouldFail_whenLoanTermsDurationLessThanMin(uint256 duration) external {
         uint256 minDuration = loan.MIN_LOAN_DURATION();
         vm.assume(duration < minDuration);
@@ -666,7 +651,23 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function testFuzz_shouldWithdrawCredit_fromSourceOfFunds_whenPoolSourceOfFunds(
+    function test_shouldFail_whenPoolAdapterNotRegistered_whenPoolSourceOfFunds() external {
+        lenderSpec.sourceOfFunds = sourceOfFunds;
+        simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
+        _mockLoanTerms(simpleLoanTerms);
+
+        vm.mockCall(config, abi.encodeWithSignature("getPoolAdapter(address)", sourceOfFunds), abi.encode(address(0)));
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidSourceOfFunds.selector, sourceOfFunds));
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldWithdrawCredit_fromSourceOfFunds_toVault_whenPoolSourceOfFunds(
         uint256 fee, uint256 loanAmount
     ) external {
         fee = bound(fee, 0, 9999);
@@ -681,10 +682,10 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
 
         vm.expectCall(
-            sourceOfFunds,
+            poolAdapter,
             abi.encodeWithSignature(
-                "withdrawFrom(address,address,address,uint256)",
-                lender, address(loan), simpleLoanTerms.credit.assetAddress, loanAmount
+                "withdraw(address,address,address,uint256)",
+                sourceOfFunds, lender, simpleLoanTerms.credit.assetAddress, loanAmount
             )
         );
 
@@ -1043,16 +1044,32 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
     // Pool withdraw
 
+    function test_shouldFail_whenPoolAdapterNotRegistered_whenPoolSourceOfFunds() external {
+        lenderSpec.sourceOfFunds = sourceOfFunds;
+        simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
+        _mockLoanTerms(simpleLoanTerms);
+
+        vm.mockCall(config, abi.encodeWithSignature("getPoolAdapter(address)", sourceOfFunds), abi.encode(address(0)));
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidSourceOfFunds.selector, sourceOfFunds));
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
     function test_shouldWithdrawFullCreditAmountToVault_whenShouldTransferCommon_whenPoolSourceOfFunds() external {
         lenderSpec.sourceOfFunds = sourceOfFunds;
         refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
         _mockLoanTerms(refinancedLoanTerms);
 
         vm.expectCall(
-            sourceOfFunds,
+            poolAdapter,
             abi.encodeWithSignature(
-                "withdrawFrom(address,address,address,uint256)",
-                lender, address(loan), refinancedLoanTerms.credit.assetAddress, refinancedLoanTerms.credit.amount
+                "withdraw(address,address,address,uint256)",
+                sourceOfFunds, lender, refinancedLoanTerms.credit.assetAddress, refinancedLoanTerms.credit.amount
             )
         );
 
@@ -1079,10 +1096,10 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         );
 
         vm.expectCall(
-            sourceOfFunds,
+            poolAdapter,
             abi.encodeWithSignature(
-                "withdrawFrom(address,address,address,uint256)",
-                newLender, address(loan), refinancedLoanTerms.credit.assetAddress, refinancedLoanTerms.credit.amount - common
+                "withdraw(address,address,address,uint256)",
+                sourceOfFunds, newLender, refinancedLoanTerms.credit.assetAddress, refinancedLoanTerms.credit.amount - common
             )
         );
 
@@ -1103,8 +1120,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         _mockLOANTokenOwner(refinancingLoanId, newLender);
 
         vm.expectCall({
-            callee: sourceOfFunds,
-            data: abi.encodeWithSignature("withdrawFrom(address,address,address,uint256)"),
+            callee: poolAdapter,
+            data: abi.encodeWithSignature("withdraw(address,address,address,uint256)"),
             count: 0
         });
 
@@ -2066,6 +2083,9 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
     }
 
     function test_shouldTransferToOriginalLender_whenSourceOfFundsEqualToOriginalLender() external {
+        simpleLoan.originalSourceOfFunds = lender;
+        _mockLOAN(loanId, simpleLoan);
+
         vm.expectCall(
             simpleLoan.creditAddress,
             abi.encodeWithSignature("transfer(address,uint256)", lender, loan.loanRepaymentAmount(loanId))
@@ -2075,31 +2095,41 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
         loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
     }
 
-    function test_shouldApproveSourceOfFundsToTransferAmount_whenSourceOfFundsNotEqualToOriginalLender() external {
+    function test_shouldFail_whenPoolAdapterNotRegistered_whenSourceOfFundsNotEqualToOriginalLender() external {
+        simpleLoan.originalSourceOfFunds = sourceOfFunds;
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.mockCall(
+            config, abi.encodeWithSignature("getPoolAdapter(address)", sourceOfFunds), abi.encode(address(0))
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidSourceOfFunds.selector, sourceOfFunds));
+        vm.prank(address(loan));
+        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+    }
+
+    function test_shouldTransferAmountToPoolAdapter_whenSourceOfFundsNotEqualToOriginalLender() external {
         simpleLoan.originalSourceOfFunds = sourceOfFunds;
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectCall(
             simpleLoan.creditAddress,
-            abi.encodeWithSignature(
-                "approve(address,uint256)",
-                sourceOfFunds, loan.loanRepaymentAmount(loanId)
-            )
+            abi.encodeWithSignature("transfer(address,uint256)", poolAdapter, loan.loanRepaymentAmount(loanId))
         );
 
         vm.prank(address(loan));
         loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
     }
 
-    function test_shouldTransferToSourceOfFunds_whenSourceOfFundsNotEqualToOriginalLender() external {
+    function test_shouldCallSupplyOnPoolAdapter_whenSourceOfFundsNotEqualToOriginalLender() external {
         simpleLoan.originalSourceOfFunds = sourceOfFunds;
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectCall(
-            sourceOfFunds,
+            poolAdapter,
             abi.encodeWithSignature(
-                "supplyFrom(address,address,address,uint256)",
-                address(loan), lender, simpleLoan.creditAddress, loan.loanRepaymentAmount(loanId)
+                "supply(address,address,address,uint256)",
+                sourceOfFunds, lender, simpleLoan.creditAddress, loan.loanRepaymentAmount(loanId)
             )
         );
 
@@ -2108,6 +2138,9 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
     }
 
     function test_shouldFail_whenTransferFails_whenSourceOfFundsEqualToOriginalLender() external {
+        simpleLoan.originalSourceOfFunds = lender;
+        _mockLOAN(loanId, simpleLoan);
+
         vm.mockCallRevert(simpleLoan.creditAddress, abi.encodeWithSignature("transfer(address,uint256)"), "");
 
         vm.expectRevert();
@@ -2119,7 +2152,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
         simpleLoan.originalSourceOfFunds = sourceOfFunds;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.mockCallRevert(sourceOfFunds, abi.encodeWithSignature("supplyFrom(address,address,address,uint256)"), "");
+        vm.mockCallRevert(poolAdapter, abi.encodeWithSignature("supply(address,address,address,uint256)"), "");
 
         vm.expectRevert();
         vm.prank(address(loan));

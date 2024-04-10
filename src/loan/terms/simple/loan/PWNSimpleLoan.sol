@@ -18,6 +18,7 @@ import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
 import { Permit } from "@pwn/loan/vault/Permit.sol";
 import { PWNVault } from "@pwn/loan/vault/PWNVault.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
+import { IPoolAdapter } from "@pwn/pool-adapter/IPoolAdapter.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -106,8 +107,8 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     /**
      * @notice Lender specification during loan creation.
-     * @param sourceOfFunds Address of a source of funds. This address can be an address of a Compound v3 pool or
-     *                      lender address if lender is funding the loan directly.
+     * @param sourceOfFunds Address of a source of funds. This can be the lenders address, if the loan is funded directly,
+     *                      or a pool address from with the funds are withdrawn on the lenders behalf.
      */
     struct LenderSpec {
         address sourceOfFunds;
@@ -307,17 +308,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         if (msg.sender != loanTerms.lender && loanTerms.lenderSpecHash != getLenderSpecHash(lenderSpec)) {
             revert InvalidLenderSpecHash({ current: loanTerms.lenderSpecHash, expected: getLenderSpecHash(lenderSpec) });
         }
-        // Check that the lender is the source of funds or the source of funds is a Compound pool
-        if (lenderSpec.sourceOfFunds != loanTerms.lender) {
-            if (!hub.hasTag(lenderSpec.sourceOfFunds, PWNHubTags.COMPOUND_V3_POOL)) {
-                revert AddressMissingHubTag({ addr: lenderSpec.sourceOfFunds, tag: PWNHubTags.COMPOUND_V3_POOL });
-            }
-        }
 
         // Check minimum loan duration
         if (loanTerms.duration < MIN_LOAN_DURATION) {
             revert InvalidDuration({ current: loanTerms.duration, limit: MIN_LOAN_DURATION });
         }
+
         // Check maximum accruing interest APR
         if (loanTerms.accruingInterestAPR > MAX_ACCRUING_INTEREST_APR) {
             revert AccruingInterestAPROutOfBounds({ current: loanTerms.accruingInterestAPR, limit: MAX_ACCRUING_INTEREST_APR });
@@ -474,10 +470,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         address creditProvider = loanTerms.lender;
         if (lenderSpec.sourceOfFunds != loanTerms.lender) {
 
-            // Note: Lender is not source of funds.
-            // Withdraw credit asset to the loan contract and use it as a credit provider.
+            // Note: Lender is not the source of funds. Withdraw credit asset to the Vault and use it
+            // as a credit provider to minimize the number of withdrawals.
 
-            _withdrawFromCompound(loanTerms.credit, lenderSpec.sourceOfFunds, loanTerms.lender);
+            _pullCreditFromPool(loanTerms.credit, loanTerms, lenderSpec);
             creditProvider = address(this);
         }
 
@@ -544,9 +540,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             // as a credit provider to minimize the number of withdrawals.
 
             creditHelper.amount = feeAmount + (shouldTransferCommon ? common : 0) + surplus;
-            if (creditHelper.amount > 0) {
-                _withdrawFromCompound(creditHelper, lenderSpec.sourceOfFunds, loanTerms.lender);
-            }
+            _pullCreditFromPool(creditHelper, loanTerms, lenderSpec);
             creditProvider = address(this);
         }
 
@@ -578,6 +572,28 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             // Note: Safe transfer or supply to a pool can fail. In that case the LOAN token stays in repaid state and
             // waits for the LOAN token owner to claim the repaid credit. Otherwise lender would be able to prevent
             // anybody from repaying the loan.
+        }
+    }
+
+    /**
+     * @notice Pull a credit asset from a pool to the Vault.
+     * @dev The function will revert if pool doesn't have registered pool adapter.
+     * @param credit Asset to be pulled from the pool.
+     * @param loanTerms Loan terms struct.
+     * @param lenderSpec Lender specification struct.
+     */
+    function _pullCreditFromPool(
+        MultiToken.Asset memory credit,
+        Terms memory loanTerms,
+        LenderSpec calldata lenderSpec
+    ) private {
+        IPoolAdapter poolAdapter = config.getPoolAdapter(lenderSpec.sourceOfFunds);
+        if (address(poolAdapter) == address(0)) {
+            revert InvalidSourceOfFunds({ sourceOfFunds: lenderSpec.sourceOfFunds });
+        }
+
+        if (credit.amount > 0) {
+            _withdrawFromPool(credit, poolAdapter, lenderSpec.sourceOfFunds, loanTerms.lender);
         }
     }
 
@@ -773,9 +789,18 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         if (destinationOfFunds == loanOwner) {
             _push(repaymentCredit, loanOwner);
         } else {
-            // Supply the repaid credit to the Compound pool
-            MultiToken.approveAsset(repaymentCredit, destinationOfFunds);
-            _supplyToCompound(repaymentCredit, destinationOfFunds, loanOwner);
+            IPoolAdapter poolAdapter = config.getPoolAdapter(destinationOfFunds);
+            // Check that pool has registered adapter
+            if (address(poolAdapter) == address(0)) {
+
+                // Note: Adapter can be unregistered during the loan lifetime, so the pool might not have an adapter.
+                // In that case, the loan owner will be able to claim the repaid credit.
+
+                revert InvalidSourceOfFunds({ sourceOfFunds: destinationOfFunds });
+            }
+
+            // Supply the repaid credit to the original pool
+            _supplyToPool(repaymentCredit, poolAdapter, destinationOfFunds, loanOwner);
         }
 
         // Note: If the transfer fails, the LOAN token will remain in repaid state and the LOAN token owner

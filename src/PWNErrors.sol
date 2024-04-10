@@ -18,6 +18,7 @@ error InvalidLenderSpecHash(bytes32 current, bytes32 expected);
 error InvalidDuration(uint256 current, uint256 limit);
 error AccruingInterestAPROutOfBounds(uint256 current, uint256 limit);
 error CallerNotVault();
+error InvalidSourceOfFunds(address sourceOfFunds);
 
 // Loan extension
 error InvalidExtensionDuration(uint256 duration, uint256 limit);

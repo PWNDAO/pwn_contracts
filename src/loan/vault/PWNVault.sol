@@ -7,8 +7,8 @@ import { IERC20Permit } from "openzeppelin-contracts/contracts/token/ERC20/exten
 import { IERC721Receiver } from "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import { IERC1155Receiver, IERC165 } from "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-import { ICometLike } from "@pwn/loan/vault/ICometLike.sol";
 import { Permit } from "@pwn/loan/vault/Permit.sol";
+import { IPoolAdapter } from "@pwn/pool-adapter/IPoolAdapter.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -92,30 +92,35 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
 
     /**
      * @notice Function withdrawing an asset from a Compound pool to a vault.
-     * @dev The function assumes a prior token approval to a vault address and check for a valid pool address.
+     * @dev The function assumes a prior check for a valid pool address.
      * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
-     * @param pool An address of a Compound pool.
-     * @param from An address on which behalf the asset is withdrawn.
+     * @param poolAdapter An address of a pool adapter.
+     * @param pool An address of a pool.
+     * @param owner An address on which behalf the asset is withdrawn.
      */
-    function _withdrawFromCompound(MultiToken.Asset memory asset, address pool, address from) internal {
+    function _withdrawFromPool(MultiToken.Asset memory asset, IPoolAdapter poolAdapter, address pool, address owner) internal {
         uint256 originalBalance = asset.balanceOf(address(this));
 
-        ICometLike(pool).withdrawFrom(from, address(this), asset.assetAddress, asset.amount);
+        poolAdapter.withdraw(pool, owner, asset.assetAddress, asset.amount);
         _checkTransfer(asset, originalBalance, address(this), true);
     }
 
     /**
-     * @notice Function supplying an asset to a Compound pool from a vault.
-     * @dev The function assumes a prior token approval to a vault address and check for a valid pool address.
+     * @notice Function supplying an asset to a pool from a vault via a pool adapter.
+     * @dev The function assumes a prior check for a valid pool address.
      * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
-     * @param pool An address of a Compound pool.
-     * @param dst An address on which behalf the asset is supplied.
+     * @param poolAdapter An address of a pool adapter.
+     * @param pool An address of a pool.
+     * @param owner An address on which behalf the asset is supplied.
      */
-    function _supplyToCompound(MultiToken.Asset memory asset, address pool, address dst) internal {
+    function _supplyToPool(MultiToken.Asset memory asset, IPoolAdapter poolAdapter, address pool, address owner) internal {
         uint256 originalBalance = asset.balanceOf(address(this));
 
-        ICometLike(pool).supplyFrom(address(this), dst, asset.assetAddress, asset.amount);
+        asset.transferAssetFrom(address(this), address(poolAdapter));
+        poolAdapter.supply(pool, owner, asset.assetAddress, asset.amount);
         _checkTransfer(asset, originalBalance, address(this), false);
+
+        // Note: Assuming pool will revert supply transaction if it fails.
     }
 
     function _checkTransfer(
