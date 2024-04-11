@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 import { PWNVault, IERC165, IERC721Receiver, IERC1155Receiver, Permit, MultiToken } from "@pwn/loan/vault/PWNVault.sol";
 import "@pwn/PWNErrors.sol";
 
-import { T721 } from "@pwn-test/helper/token/T721.sol";
+import { T721 } from "@pwn-test/helper/T721.sol";
 
 
 contract PWNVaultHarness is PWNVault {

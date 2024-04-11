@@ -23,9 +23,9 @@ import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
 import { Deployments } from "@pwn/Deployments.sol";
 
-import { T20 } from "@pwn-test/helper/token/T20.sol";
-import { T721 } from "@pwn-test/helper/token/T721.sol";
-import { T1155 } from "@pwn-test/helper/token/T1155.sol";
+import { T20 } from "@pwn-test/helper/T20.sol";
+import { T721 } from "@pwn-test/helper/T721.sol";
+import { T1155 } from "@pwn-test/helper/T1155.sol";
 
 
 library PWNContractDeployerSalt {

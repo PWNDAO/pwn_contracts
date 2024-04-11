@@ -6,8 +6,8 @@ import "forge-std/Test.sol";
 import { PWNSimpleLoan, PWNHubTags, Math, MultiToken, Permit } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import "@pwn/PWNErrors.sol";
 
-import { T20 } from "@pwn-test/helper/token/T20.sol";
-import { T721 } from "@pwn-test/helper/token/T721.sol";
+import { T20 } from "@pwn-test/helper/T20.sol";
+import { T721 } from "@pwn-test/helper/T721.sol";
 import { DummyPoolAdapter } from "@pwn-test/helper/DummyPoolAdapter.sol";
 
 
