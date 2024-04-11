@@ -3,10 +3,13 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "MultiToken/interfaces/ICryptoKitties.sol";
+import { MultiToken, ICryptoKitties, IERC721 } from "MultiToken/MultiToken.sol";
 
-import "@pwn-test/helper/token/T20.sol";
-import "@pwn-test/helper/DeploymentTest.t.sol";
+import { Permit } from "@pwn/loan/vault/Permit.sol";
+import "@pwn/PWNErrors.sol";
+
+import { T20 } from "@pwn-test/helper/T20.sol";
+import "@pwn-test/DeploymentTest.t.sol";
 
 
 abstract contract UseCasesTest is DeploymentTest {
@@ -24,11 +27,11 @@ abstract contract UseCasesTest is DeploymentTest {
     address lender = makeAddr("lender");
     address borrower = makeAddr("borrower");
 
-    PWNSimpleLoanSimpleOffer.Offer offer;
+    PWNSimpleLoanSimpleProposal.Proposal proposal;
 
 
     function setUp() public override {
-        vm.createSelectFork("mainnet");
+        vm.createSelectFork("tenderly");
 
         super.setUp();
 
@@ -37,25 +40,33 @@ abstract contract UseCasesTest is DeploymentTest {
         loanAsset.mint(borrower, 100e18);
 
         vm.prank(lender);
-        loanAsset.approve(address(simpleLoan), type(uint256).max);
+        loanAsset.approve(address(deployment.simpleLoan), type(uint256).max);
 
         vm.prank(borrower);
-        loanAsset.approve(address(simpleLoan), type(uint256).max);
+        loanAsset.approve(address(deployment.simpleLoan), type(uint256).max);
 
-        offer = PWNSimpleLoanSimpleOffer.Offer({
+        proposal = PWNSimpleLoanSimpleProposal.Proposal({
             collateralCategory: MultiToken.Category.ERC20,
             collateralAddress: address(loanAsset),
             collateralId: 0,
             collateralAmount: 10e18,
-            loanAssetAddress: address(loanAsset),
-            loanAmount: 1e18,
-            loanYield: 0,
-            duration: 3600,
-            expiration: 0,
-            allowedBorrower: address(0),
-            lender: lender,
-            isPersistent: false,
-            nonce: 0
+            checkCollateralStateFingerprint: false,
+            collateralStateFingerprint: bytes32(0),
+            creditAddress: address(loanAsset),
+            creditAmount: 1e18,
+            availableCreditLimit: 0,
+            fixedInterestAmount: 0,
+            accruingInterestAPR: 0,
+            duration: 1 days,
+            expiration: uint40(block.timestamp + 7 days),
+            allowedAcceptor: address(0),
+            proposer: lender,
+            proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
+            isOffer: true,
+            refinancingLoanId: 0,
+            nonceSpace: 0,
+            nonce: 0,
+            loanContract: address(deployment.simpleLoan)
         });
     }
 
@@ -65,23 +76,40 @@ abstract contract UseCasesTest is DeploymentTest {
     }
 
     function _createLoanRevertWith(bytes memory revertData) internal returns (uint256) {
-        // Make offer
+        // Make proposal
         vm.prank(lender);
-        simpleLoanSimpleOffer.makeOffer(offer);
+        deployment.simpleLoanSimpleProposal.makeProposal(proposal);
 
-        bytes memory factoryData = simpleLoanSimpleOffer.encodeLoanTermsFactoryData(offer);
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
 
         // Create a loan
         if (revertData.length > 0) {
             vm.expectRevert(revertData);
         }
         vm.prank(borrower);
-        return simpleLoan.createLOAN({
-            loanTermsFactoryContract: address(simpleLoanSimpleOffer),
-            loanTermsFactoryData: factoryData,
-            signature: "",
-            loanAssetPermit: "",
-            collateralPermit: ""
+        return deployment.simpleLoan.createLOAN({
+            proposalSpec: PWNSimpleLoan.ProposalSpec({
+                proposalContract: address(deployment.simpleLoanSimpleProposal),
+                proposalData: proposalData,
+                proposalInclusionProof: new bytes32[](0),
+                signature: ""
+            }),
+            lenderSpec: PWNSimpleLoan.LenderSpec({
+                sourceOfFunds: lender
+            }),
+            callerSpec: PWNSimpleLoan.CallerSpec({
+                refinancingLoanId: 0,
+                revokeNonce: false,
+                nonce: 0,
+                permit: Permit({
+                    asset: address(0),
+                    owner: address(0),
+                    amount: 0,
+                    deadline: 0,
+                    v: 0, r: 0, s: 0
+                })
+            }),
+            extra: ""
         });
     }
 
@@ -94,28 +122,28 @@ contract InvalidCollateralAssetCategoryTest is UseCasesTest {
     function testUseCase_shouldFail_when20CollateralPassedWith721Category() external {
         // Borrower has not ZRX tokens
 
-        // Define offer
-        offer.collateralCategory = MultiToken.Category.ERC721;
-        offer.collateralAddress = ZRX;
-        offer.collateralId = 10e18;
-        offer.collateralAmount = 0;
+        // Define proposal
+        proposal.collateralCategory = MultiToken.Category.ERC721;
+        proposal.collateralAddress = ZRX;
+        proposal.collateralId = 10e18;
+        proposal.collateralAmount = 0;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidCollateralAsset.selector));
+        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 1, ZRX, 10e18, 0));
     }
 
     // Borrower can steal lender’s assets by using WETH as collateral
     function testUseCase_shouldFail_when20CollateralPassedWith1155Category() external {
         // Borrower has not WETH tokens
 
-        // Define offer
-        offer.collateralCategory = MultiToken.Category.ERC1155;
-        offer.collateralAddress = WETH;
-        offer.collateralId = 0;
-        offer.collateralAmount = 10e18;
+        // Define proposal
+        proposal.collateralCategory = MultiToken.Category.ERC1155;
+        proposal.collateralAddress = WETH;
+        proposal.collateralId = 0;
+        proposal.collateralAmount = 10e18;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidCollateralAsset.selector));
+        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 2, WETH, 0, 10e18));
     }
 
     // CryptoKitties token is locked when using it as ERC721 type collateral
@@ -128,16 +156,16 @@ contract InvalidCollateralAssetCategoryTest is UseCasesTest {
         ICryptoKitties(CK).transfer(borrower, ckId);
 
         vm.prank(borrower);
-        ICryptoKitties(CK).approve(address(simpleLoan), ckId);
+        ICryptoKitties(CK).approve(address(deployment.simpleLoan), ckId);
 
-        // Define offer
-        offer.collateralCategory = MultiToken.Category.ERC721;
-        offer.collateralAddress = CK;
-        offer.collateralId = ckId;
-        offer.collateralAmount = 0;
+        // Define proposal
+        proposal.collateralCategory = MultiToken.Category.ERC721;
+        proposal.collateralAddress = CK;
+        proposal.collateralId = ckId;
+        proposal.collateralAmount = 0;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidCollateralAsset.selector));
+        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 1, CK, ckId, 0));
     }
 
 }
@@ -154,14 +182,14 @@ contract InvalidLoanAssetTest is UseCasesTest {
         IERC721(DOODLE).transferFrom(originalDoodleOwner, lender, doodleId);
 
         vm.prank(lender);
-        IERC721(DOODLE).approve(address(simpleLoan), doodleId);
+        IERC721(DOODLE).approve(address(deployment.simpleLoan), doodleId);
 
-        // Define offer
-        offer.loanAssetAddress = DOODLE;
-        offer.loanAmount = doodleId;
+        // Define proposal
+        proposal.creditAddress = DOODLE;
+        proposal.creditAmount = doodleId;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidLoanAsset.selector));
+        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 0, DOODLE, 0, doodleId));
     }
 
     function testUseCase_shouldFail_whenUsingCryptoKittiesAsLoanAsset() external {
@@ -173,14 +201,14 @@ contract InvalidLoanAssetTest is UseCasesTest {
         ICryptoKitties(CK).transfer(lender, ckId);
 
         vm.prank(lender);
-        ICryptoKitties(CK).approve(address(simpleLoan), ckId);
+        ICryptoKitties(CK).approve(address(deployment.simpleLoan), ckId);
 
-        // Define offer
-        offer.loanAssetAddress = CK;
-        offer.loanAmount = ckId;
+        // Define proposal
+        proposal.creditAddress = CK;
+        proposal.creditAmount = ckId;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidLoanAsset.selector));
+        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 0, CK, 0, ckId));
     }
 
 }
@@ -195,13 +223,13 @@ contract TaxTokensTest is UseCasesTest {
         T20(CULT).transfer(borrower, 20e18);
 
         vm.prank(borrower);
-        T20(CULT).approve(address(simpleLoan), type(uint256).max);
+        T20(CULT).approve(address(deployment.simpleLoan), type(uint256).max);
 
-        // Define offer
-        offer.collateralCategory = MultiToken.Category.ERC20;
-        offer.collateralAddress = CULT;
-        offer.collateralId = 0;
-        offer.collateralAmount = 10e18;
+        // Define proposal
+        proposal.collateralCategory = MultiToken.Category.ERC20;
+        proposal.collateralAddress = CULT;
+        proposal.collateralId = 0;
+        proposal.collateralAmount = 10e18;
 
         // Create loan
         _createLoanRevertWith(abi.encodeWithSelector(IncompleteTransfer.selector));
@@ -214,11 +242,11 @@ contract TaxTokensTest is UseCasesTest {
         T20(CULT).transfer(lender, 20e18);
 
         vm.prank(lender);
-        T20(CULT).approve(address(simpleLoan), type(uint256).max);
+        T20(CULT).approve(address(deployment.simpleLoan), type(uint256).max);
 
-        // Define offer
-        offer.loanAssetAddress = CULT;
-        offer.loanAmount = 10e18;
+        // Define proposal
+        proposal.creditAddress = CULT;
+        proposal.creditAmount = 10e18;
 
         // Create loan
         _createLoanRevertWith(abi.encodeWithSelector(IncompleteTransfer.selector));
@@ -239,36 +267,42 @@ contract IncompleteERC20TokensTest is UseCasesTest {
         require(success);
 
         vm.prank(borrower);
-        (success, ) = USDT.call(abi.encodeWithSignature("approve(address,uint256)", address(simpleLoan), type(uint256).max));
+        (success, ) = USDT.call(abi.encodeWithSignature("approve(address,uint256)", address(deployment.simpleLoan), type(uint256).max));
         require(success);
 
-        // Define offer
-        offer.collateralCategory = MultiToken.Category.ERC20;
-        offer.collateralAddress = USDT;
-        offer.collateralId = 0;
-        offer.collateralAmount = 10e6; // USDT has 6 decimals
+        // Define proposal
+        proposal.collateralCategory = MultiToken.Category.ERC20;
+        proposal.collateralAddress = USDT;
+        proposal.collateralId = 0;
+        proposal.collateralAmount = 10e6; // USDT has 6 decimals
 
         // Check balance
         assertEq(T20(USDT).balanceOf(borrower), 10e6);
-        assertEq(T20(USDT).balanceOf(address(simpleLoan)), 0);
+        assertEq(T20(USDT).balanceOf(address(deployment.simpleLoan)), 0);
 
         // Create loan
         uint256 loanId = _createLoan();
 
         // Check balance
         assertEq(T20(USDT).balanceOf(borrower), 0);
-        assertEq(T20(USDT).balanceOf(address(simpleLoan)), 10e6);
+        assertEq(T20(USDT).balanceOf(address(deployment.simpleLoan)), 10e6);
 
         // Repay loan
         vm.prank(borrower);
-        simpleLoan.repayLOAN({
+        deployment.simpleLoan.repayLOAN({
             loanId: loanId,
-            loanAssetPermit: ""
+            permit: Permit({
+                asset: address(0),
+                owner: address(0),
+                amount: 0,
+                deadline: 0,
+                v: 0, r: 0, s: 0
+            })
         });
 
         // Check balance
         assertEq(T20(USDT).balanceOf(borrower), 10e6);
-        assertEq(T20(USDT).balanceOf(address(simpleLoan)), 0);
+        assertEq(T20(USDT).balanceOf(address(deployment.simpleLoan)), 0);
     }
 
     function testUseCase_shouldPass_when20TokenTransferNotReturnsBool_whenUsedAsCredit() external {
@@ -281,16 +315,16 @@ contract IncompleteERC20TokensTest is UseCasesTest {
         require(success);
 
         vm.prank(lender);
-        (success, ) = USDT.call(abi.encodeWithSignature("approve(address,uint256)", address(simpleLoan), type(uint256).max));
+        (success, ) = USDT.call(abi.encodeWithSignature("approve(address,uint256)", address(deployment.simpleLoan), type(uint256).max));
         require(success);
 
         vm.prank(borrower);
-        (success, ) = USDT.call(abi.encodeWithSignature("approve(address,uint256)", address(simpleLoan), type(uint256).max));
+        (success, ) = USDT.call(abi.encodeWithSignature("approve(address,uint256)", address(deployment.simpleLoan), type(uint256).max));
         require(success);
 
-        // Define offer
-        offer.loanAssetAddress = USDT;
-        offer.loanAmount = 10e6; // USDT has 6 decimals
+        // Define proposal
+        proposal.creditAddress = USDT;
+        proposal.creditAmount = 10e6; // USDT has 6 decimals
 
         // Check balance
         assertEq(T20(USDT).balanceOf(lender), 10e6);
@@ -305,22 +339,20 @@ contract IncompleteERC20TokensTest is UseCasesTest {
 
         // Repay loan
         vm.prank(borrower);
-        simpleLoan.repayLOAN({
+        deployment.simpleLoan.repayLOAN({
             loanId: loanId,
-            loanAssetPermit: ""
+            permit: Permit({
+                asset: address(0),
+                owner: address(0),
+                amount: 0,
+                deadline: 0,
+                v: 0, r: 0, s: 0
+            })
         });
 
-        // Check balance
-        assertEq(T20(USDT).balanceOf(lender), 0);
-        assertEq(T20(USDT).balanceOf(address(simpleLoan)), 10e6);
-
-        // Claim repaid loan
-        vm.prank(lender);
-        simpleLoan.claimLOAN(loanId);
-
-        // Check balance
+        // Check balance - repaid directly to lender
         assertEq(T20(USDT).balanceOf(lender), 10e6);
-        assertEq(T20(USDT).balanceOf(address(simpleLoan)), 0);
+        assertEq(T20(USDT).balanceOf(address(deployment.simpleLoan)), 0);
     }
 
 }
