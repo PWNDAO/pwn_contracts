@@ -140,7 +140,7 @@ contract PWNRevokedNonce_RevokeNonceWithOwner_Test is PWNRevokedNonceTest {
     function testFuzz_shouldFail_whenCallerIsDoesNotHaveAccessTag(address caller) external {
         vm.assume(caller != accessEnabledAddress);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, accessTag));
+        vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, caller, accessTag));
         vm.prank(caller);
         revokedNonce.revokeNonce(caller, 1);
     }
@@ -203,7 +203,7 @@ contract PWNRevokedNonce_RevokeNonceWithNonceSpaceAndOwner_Test is PWNRevokedNon
     function testFuzz_shouldFail_whenCallerIsDoesNotHaveAccessTag(address caller) external {
         vm.assume(caller != accessEnabledAddress);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerMissingHubTag.selector, accessTag));
+        vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, caller, accessTag));
         vm.prank(caller);
         revokedNonce.revokeNonce(caller, 1, 1);
     }

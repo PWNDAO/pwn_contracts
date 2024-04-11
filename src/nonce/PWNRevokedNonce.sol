@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { PWNHubAccessControl } from "@pwn/hub/PWNHubAccessControl.sol";
+import { PWNHub } from "@pwn/hub/PWNHub.sol";
+import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
 import "@pwn/PWNErrors.sol";
 
 
@@ -9,7 +10,7 @@ import "@pwn/PWNErrors.sol";
  * @title PWN Revoked Nonce
  * @notice Contract holding revoked nonces.
  */
-contract PWNRevokedNonce is PWNHubAccessControl {
+contract PWNRevokedNonce {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -20,6 +21,12 @@ contract PWNRevokedNonce is PWNHubAccessControl {
      *         to call functions that revoke nonces on behalf of an owner.
      */
     bytes32 public immutable accessTag;
+
+    /**
+     * @notice PWN Hub contract.
+     * @dev Addresses revoking nonces on behalf of an owner need to have an access tag in PWN Hub.
+     */
+    PWNHub public immutable hub;
 
     /**
      * @notice Mapping of revoked nonces by an address. Every address has its own nonce space.
@@ -49,11 +56,23 @@ contract PWNRevokedNonce is PWNHubAccessControl {
 
 
     /*----------------------------------------------------------*|
+    |*  # MODIFIERS                                             *|
+    |*----------------------------------------------------------*/
+
+    modifier onlyWithHubTag() {
+        if (!hub.hasTag(msg.sender, accessTag))
+            revert AddressMissingHubTag({ addr: msg.sender, tag: accessTag });
+        _;
+    }
+
+
+    /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor(address hub, bytes32 _accessTag) PWNHubAccessControl(hub) {
+    constructor(address _hub, bytes32 _accessTag) {
         accessTag = _accessTag;
+        hub = PWNHub(_hub);
     }
 
 
@@ -86,7 +105,7 @@ contract PWNRevokedNonce is PWNHubAccessControl {
      * @param owner Owner address of a revoking nonce.
      * @param nonce Nonce to be revoked.
      */
-    function revokeNonce(address owner, uint256 nonce) external onlyWithTag(accessTag) {
+    function revokeNonce(address owner, uint256 nonce) external onlyWithHubTag {
         _revokeNonce(owner, _nonceSpace[owner], nonce);
     }
 
@@ -97,7 +116,7 @@ contract PWNRevokedNonce is PWNHubAccessControl {
      * @param nonceSpace Nonce space where a nonce will be revoked.
      * @param nonce Nonce to be revoked.
      */
-    function revokeNonce(address owner, uint256 nonceSpace, uint256 nonce) external onlyWithTag(accessTag) {
+    function revokeNonce(address owner, uint256 nonceSpace, uint256 nonce) external onlyWithHubTag {
         _revokeNonce(owner, nonceSpace, nonce);
     }
 
