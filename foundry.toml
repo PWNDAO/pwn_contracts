@@ -21,4 +21,5 @@ base_goerli = "${BASE_GOERLI_URL}"
 cronos_testnet = "${CRONOS_TESTNET_URL}"
 mantle_testnet = "${MANTLE_TESTNET_URL}"
 
+tenderly = "${TENDERLY_URL}"
 local = "${LOCAL_URL}"
