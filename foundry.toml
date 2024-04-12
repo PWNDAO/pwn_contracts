@@ -1,6 +1,7 @@
 [profile.default]
 solc_version = '0.8.16'
 fs_permissions = [{ access = "read", path = "./deployments/latest.json"}]
+gas_reports = ["PWNSimpleLoan"]
 
 
 [rpc_endpoints]
@@ -21,5 +22,5 @@ base_goerli = "${BASE_GOERLI_URL}"
 cronos_testnet = "${CRONOS_TESTNET_URL}"
 mantle_testnet = "${MANTLE_TESTNET_URL}"
 
-tenderly = "${TENDERLY_URL}"
+tenderly = "${TENDERLY_URL}" # chain_id = 162314
 local = "${LOCAL_URL}"

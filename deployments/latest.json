@@ -1,7 +1,7 @@
 {
-    "deployedChains": [1],
+    "deployedChains": [162314],
     "chains": {
-        "1": {
+        "162314": {
             "dao": "0x1B8383D2726E7e18189205337424a2631A2102F4",
             "productTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
             "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",

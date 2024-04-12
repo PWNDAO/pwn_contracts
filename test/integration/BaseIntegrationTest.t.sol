@@ -160,13 +160,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
                 refinancingLoanId: 0,
                 revokeNonce: false,
                 nonce: 0,
-                permit: Permit({
-                    asset: address(0),
-                    owner: address(0),
-                    amount: 0,
-                    deadline: 0,
-                    v: 0, r: 0, s: 0
-                })
+                permitData: ""
             }),
             extra: ""
         });
@@ -193,13 +187,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         vm.prank(borrower);
         deployment.simpleLoan.repayLOAN({
             loanId: loanId,
-            permit: Permit({
-                asset: address(0),
-                owner: address(0),
-                amount: 0,
-                deadline: 0,
-                v: 0, r: 0, s: 0
-            })
+            permitData: ""
         });
     }
 

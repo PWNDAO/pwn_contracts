@@ -119,13 +119,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param refinancingLoanId Id of a loan to be refinanced. 0 if creating a new loan.
      * @param revokeNonce Flag if the callers nonce should be revoked.
      * @param nonce Callers nonce to be revoked. Nonce is revoked from the current nonce space.
-     * @param permit Callers permit data for a loans credit asset.
+     * @param permitData Callers permit data for a loans credit asset.
      */
     struct CallerSpec {
         uint256 refinancingLoanId;
         bool revokeNonce;
         uint256 nonce;
-        Permit permit;
+        bytes permitData;
     }
 
     /**
@@ -338,8 +338,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         });
 
         // Execute permit for the caller
-        _checkPermit(msg.sender, loanTerms.credit.assetAddress, callerSpec.permit);
-        _tryPermit(callerSpec.permit);
+        if (callerSpec.permitData.length > 0) {
+            Permit memory permit = abi.decode(callerSpec.permitData, (Permit));
+            _checkPermit(msg.sender, loanTerms.credit.assetAddress, permit);
+            _tryPermit(permit);
+        }
 
         // Settle the loan
         if (callerSpec.refinancingLoanId == 0) {
@@ -366,10 +369,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param creditAddress Address of a credit to be used.
      * @param permit Permit to be checked.
      */
-    function _checkPermit(address caller, address creditAddress, Permit calldata permit) private pure {
+    function _checkPermit(address caller, address creditAddress, Permit memory permit) private pure {
         if (permit.asset != address(0)) {
             if (permit.owner != caller) {
-                revert InvalidPermitOwner({ current: permit.owner, expected: caller});
+                revert InvalidPermitOwner({ current: permit.owner, expected: caller });
             }
             if (permit.asset != creditAddress) {
                 revert InvalidPermitAsset({ current: permit.asset, expected: creditAddress });
@@ -610,11 +613,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      a vault, waiting on a LOAN token holder to claim it. The function assumes a prior token approval to a contract address
      *      or a signed permit.
      * @param loanId Id of a loan that is being repaid.
-     * @param permit Callers credit permit data.
+     * @param permitData Callers credit permit data.
      */
     function repayLOAN(
         uint256 loanId,
-        Permit calldata permit
+        bytes calldata permitData
+        // Permit calldata permit
     ) external {
         LOAN storage loan = LOANs[loanId];
 
@@ -624,8 +628,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         _updateRepaidLoan(loanId);
 
         // Execute permit for the caller
-        _checkPermit(msg.sender, loan.creditAddress, permit);
-        _tryPermit(permit);
+        if (permitData.length > 0) {
+            Permit memory permit = abi.decode(permitData, (Permit));
+            _checkPermit(msg.sender, loan.creditAddress, permit);
+            _tryPermit(permit);
+        }
 
         // Transfer the repaid credit to the Vault
         _pull(loan.creditAddress.ERC20(_loanRepaymentAmount(loanId)), msg.sender);
@@ -868,12 +875,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @dev The function assumes a prior token approval to a contract address or a signed permit.
      * @param extension Extension proposal struct.
      * @param signature Signature of the extension proposal.
-     * @param permit Callers permit.
+     * @param permitData Callers credit permit data.
      */
     function extendLOAN(
         ExtensionProposal calldata extension,
         bytes calldata signature,
-        Permit calldata permit
+        bytes calldata permitData
     ) external {
         LOAN storage loan = LOANs[extension.loanId];
 
@@ -954,8 +961,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             _checkValidAsset(compensation);
 
             // Transfer compensation to the loan owner
-            _checkPermit(msg.sender, extension.compensationAddress, permit);
-            _tryPermit(permit);
+            if (permitData.length > 0) {
+                Permit memory permit = abi.decode(permitData, (Permit));
+                _checkPermit(msg.sender, extension.compensationAddress, permit);
+                _tryPermit(permit);
+            }
             _pushFrom(compensation, loan.borrower, loanOwner);
         }
     }

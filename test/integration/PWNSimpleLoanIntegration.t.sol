@@ -73,13 +73,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
                 refinancingLoanId: 0,
                 revokeNonce: false,
                 nonce: 0,
-                permit: Permit({
-                    asset: address(0),
-                    owner: address(0),
-                    amount: 0,
-                    deadline: 0,
-                    v: 0, r: 0, s: 0
-                })
+                permitData: ""
             }),
             extra: ""
         });
@@ -170,13 +164,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
                 refinancingLoanId: 0,
                 revokeNonce: false,
                 nonce: 0,
-                permit: Permit({
-                    asset: address(0),
-                    owner: address(0),
-                    amount: 0,
-                    deadline: 0,
-                    v: 0, r: 0, s: 0
-                })
+                permitData: ""
             }),
             extra: ""
         });
@@ -262,13 +250,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
                 refinancingLoanId: 0,
                 revokeNonce: false,
                 nonce: 0,
-                permit: Permit({
-                    asset: address(0),
-                    owner: address(0),
-                    amount: 0,
-                    deadline: 0,
-                    v: 0, r: 0, s: 0
-                })
+                permitData: ""
             }),
             extra: ""
         });
@@ -362,13 +344,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
                 refinancingLoanId: 0,
                 revokeNonce: false,
                 nonce: 0,
-                permit: Permit({
-                    asset: address(0),
-                    owner: address(0),
-                    amount: 0,
-                    deadline: 0,
-                    v: 0, r: 0, s: 0
-                })
+                permitData: ""
             }),
             extra: ""
         });

@@ -150,7 +150,7 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      * @dev If the permit execution fails, the function will not revert.
      * @param permit The permit data.
      */
-    function _tryPermit(Permit calldata permit) internal {
+    function _tryPermit(Permit memory permit) internal {
         if (permit.asset != address(0)) {
             try IERC20Permit(permit.asset).permit({
                 owner: permit.owner,
