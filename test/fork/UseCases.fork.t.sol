@@ -23,7 +23,7 @@ abstract contract UseCasesTest is DeploymentTest {
     address BNB = 0xB8c77482e45F1F44dE1745F52C74426C631bDD52; // bool return only on transfer
     address DOODLE = 0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e;
 
-    T20 loanAsset;
+    T20 credit;
     address lender = makeAddr("lender");
     address borrower = makeAddr("borrower");
 
@@ -35,24 +35,24 @@ abstract contract UseCasesTest is DeploymentTest {
 
         super.setUp();
 
-        loanAsset = new T20();
-        loanAsset.mint(lender, 100e18);
-        loanAsset.mint(borrower, 100e18);
+        credit = new T20();
+        credit.mint(lender, 100e18);
+        credit.mint(borrower, 100e18);
 
         vm.prank(lender);
-        loanAsset.approve(address(deployment.simpleLoan), type(uint256).max);
+        credit.approve(address(deployment.simpleLoan), type(uint256).max);
 
         vm.prank(borrower);
-        loanAsset.approve(address(deployment.simpleLoan), type(uint256).max);
+        credit.approve(address(deployment.simpleLoan), type(uint256).max);
 
         proposal = PWNSimpleLoanSimpleProposal.Proposal({
             collateralCategory: MultiToken.Category.ERC20,
-            collateralAddress: address(loanAsset),
+            collateralAddress: address(credit),
             collateralId: 0,
             collateralAmount: 10e18,
             checkCollateralStateFingerprint: false,
             collateralStateFingerprint: bytes32(0),
-            creditAddress: address(loanAsset),
+            creditAddress: address(credit),
             creditAmount: 1e18,
             availableCreditLimit: 0,
             fixedInterestAmount: 0,
@@ -171,9 +171,9 @@ contract InvalidCollateralAssetCategoryTest is UseCasesTest {
 }
 
 
-contract InvalidLoanAssetTest is UseCasesTest {
+contract InvalidCreditTest is UseCasesTest {
 
-    function testUseCase_shouldFail_whenUsingERC721AsLoanAsset() external {
+    function testUseCase_shouldFail_whenUsingERC721AsCredit() external {
         uint256 doodleId = 42;
 
         // Mock DOODLE
@@ -192,7 +192,7 @@ contract InvalidLoanAssetTest is UseCasesTest {
         _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 0, DOODLE, 0, doodleId));
     }
 
-    function testUseCase_shouldFail_whenUsingCryptoKittiesAsLoanAsset() external {
+    function testUseCase_shouldFail_whenUsingCryptoKittiesAsCredit() external {
         uint256 ckId = 42;
 
         // Mock CK
