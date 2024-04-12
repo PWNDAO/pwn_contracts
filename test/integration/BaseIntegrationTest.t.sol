@@ -18,7 +18,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
     T20 t20;
     T721 t721;
     T1155 t1155;
-    T20 loanAsset;
+    T20 credit;
 
     uint256 lenderPK = uint256(777);
     address lender = vm.addr(lenderPK);
@@ -33,7 +33,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         t20 = new T20();
         t721 = new T721();
         t1155 = new T1155();
-        loanAsset = new T20();
+        credit = new T20();
 
         // Default offer
         simpleProposal = PWNSimpleLoanSimpleProposal.Proposal({
@@ -43,7 +43,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             collateralAmount: 10e18,
             checkCollateralStateFingerprint: false,
             collateralStateFingerprint: bytes32(0),
-            creditAddress: address(loanAsset),
+            creditAddress: address(credit),
             creditAmount: 100e18,
             availableCreditLimit: 0,
             fixedInterestAmount: 10e18,
@@ -132,11 +132,11 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         bytes memory signature = _sign(lenderPK, deployment.simpleLoanSimpleProposal.getProposalHash(_proposal));
 
         // Mint initial state
-        loanAsset.mint(lender, 100e18);
+        credit.mint(lender, 100e18);
 
         // Approve loan asset
         vm.prank(lender);
-        loanAsset.approve(address(deployment.simpleLoan), 100e18);
+        credit.approve(address(deployment.simpleLoan), 100e18);
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
         bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(_proposal);
@@ -180,11 +180,11 @@ abstract contract BaseIntegrationTest is DeploymentTest {
 
     function _repayLoanFailing(uint256 loanId, bytes memory revertData) internal {
         // Get the yield by farming 100000% APR food tokens
-        loanAsset.mint(borrower, 10e18);
+        credit.mint(borrower, 10e18);
 
         // Approve loan asset
         vm.prank(borrower);
-        loanAsset.approve(address(deployment.simpleLoan), 110e18);
+        credit.approve(address(deployment.simpleLoan), 110e18);
 
         // Repay loan
         if (keccak256(revertData) != keccak256("")) {

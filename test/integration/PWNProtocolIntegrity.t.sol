@@ -37,9 +37,9 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         vm.expectRevert("ERC721: invalid token ID");
         deployment.loanToken.ownerOf(loanId);
 
-        assertEq(loanAsset.balanceOf(lender), 110e18);
-        assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 110e18);
+        assertEq(credit.balanceOf(borrower), 0);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 10e18);
@@ -66,10 +66,10 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         // Assert final state
         assertEq(deployment.loanToken.ownerOf(loanId), lender2);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(lender2), 0);
-        assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 110e18);
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(lender2), 0);
+        assertEq(credit.balanceOf(borrower), 0);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 110e18);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(lender2, 42), 0);
@@ -102,10 +102,10 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         vm.expectRevert("ERC721: invalid token ID");
         deployment.loanToken.ownerOf(loanId);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(lender2), 110e18);
-        assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(lender2), 110e18);
+        assertEq(credit.balanceOf(borrower), 0);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(lender2, 42), 0);

@@ -20,13 +20,13 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             collateralAmount: 10e18,
             checkCollateralStateFingerprint: false,
             collateralStateFingerprint: bytes32(0),
-            creditAddress: address(loanAsset),
+            creditAddress: address(credit),
             creditAmount: 100e18,
             availableCreditLimit: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 3600,
-            expiration: uint40(block.timestamp + 7 days),
+            duration: 7 days,
+            expiration: uint40(block.timestamp + 1 days),
             allowedAcceptor: borrower,
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
@@ -48,11 +48,11 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         bytes memory signature = _sign(lenderPK, deployment.simpleLoanSimpleProposal.getProposalHash(proposal));
 
         // Mint initial state
-        loanAsset.mint(lender, 100e18);
+        credit.mint(lender, 100e18);
 
         // Approve loan asset
         vm.prank(lender);
-        loanAsset.approve(address(deployment.simpleLoan), 100e18);
+        credit.approve(address(deployment.simpleLoan), 100e18);
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
         bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
@@ -87,9 +87,9 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         // Assert final state
         assertEq(deployment.loanToken.ownerOf(loanId), lender);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(borrower), 100e18);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 0);
@@ -111,13 +111,13 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             collateralAmount: 10e18,
             checkCollateralStateFingerprint: false,
             collateralStateFingerprint: bytes32(0),
-            creditAddress: address(loanAsset),
+            creditAddress: address(credit),
             creditAmount: 100e18,
             availableCreditLimit: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 3600,
-            expiration: uint40(block.timestamp + 7 days),
+            duration: 7 days,
+            expiration: uint40(block.timestamp + 1 days),
             allowedAcceptor: borrower,
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
@@ -145,11 +145,11 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         bytes memory signature = _sign(lenderPK, deployment.simpleLoanListProposal.getProposalHash(proposal));
 
         // Mint initial state
-        loanAsset.mint(lender, 100e18);
+        credit.mint(lender, 100e18);
 
         // Approve loan asset
         vm.prank(lender);
-        loanAsset.approve(address(deployment.simpleLoan), 100e18);
+        credit.approve(address(deployment.simpleLoan), 100e18);
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
         bytes memory proposalData = deployment.simpleLoanListProposal.encodeProposalData(proposal, proposalValues);
@@ -184,9 +184,9 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         // Assert final state
         assertEq(deployment.loanToken.ownerOf(loanId), lender);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(borrower), 100e18);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 0);
@@ -196,8 +196,197 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         assertEq(deployment.loanToken.loanContract(loanId), address(deployment.simpleLoan));
     }
 
-    // TODO: fungible, dutch auction
+    function test_shouldCreateLOAN_fromFungibleProposal() external {
+        PWNSimpleLoanFungibleProposal.Proposal memory proposal = PWNSimpleLoanFungibleProposal.Proposal({
+            collateralCategory: MultiToken.Category.ERC1155,
+            collateralAddress: address(t1155),
+            collateralId: 42,
+            minCollateralAmount: 1,
+            checkCollateralStateFingerprint: false,
+            collateralStateFingerprint: bytes32(0),
+            creditAddress: address(credit),
+            creditPerCollateralUnit: 10e18 * deployment.simpleLoanFungibleProposal.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR(),
+            availableCreditLimit: 100e18,
+            fixedInterestAmount: 10e18,
+            accruingInterestAPR: 0,
+            duration: 7 days,
+            expiration: uint40(block.timestamp + 1 days),
+            allowedAcceptor: borrower,
+            proposer: lender,
+            proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
+            isOffer: true,
+            refinancingLoanId: 0,
+            nonceSpace: 0,
+            nonce: 0,
+            loanContract: address(deployment.simpleLoan)
+        });
 
+        PWNSimpleLoanFungibleProposal.ProposalValues memory proposalValues = PWNSimpleLoanFungibleProposal.ProposalValues({
+            collateralAmount: 7
+        });
+
+        // Mint initial state
+        t1155.mint(borrower, 42, 10);
+
+        // Approve collateral
+        vm.prank(borrower);
+        t1155.setApprovalForAll(address(deployment.simpleLoan), true);
+
+        // Sign proposal
+        bytes32 proposalHash = deployment.simpleLoanFungibleProposal.getProposalHash(proposal);
+        bytes memory signature = _sign(lenderPK, proposalHash);
+
+        // Mint initial state
+        credit.mint(lender, 100e18);
+
+        // Approve loan asset
+        vm.prank(lender);
+        credit.approve(address(deployment.simpleLoan), 100e18);
+
+        // Proposal data (need for vm.prank to work properly when creating a loan)
+        bytes memory proposalData = deployment.simpleLoanFungibleProposal.encodeProposalData(proposal, proposalValues);
+
+        // Create LOAN
+        vm.prank(borrower);
+        uint256 loanId = deployment.simpleLoan.createLOAN({
+            proposalSpec: PWNSimpleLoan.ProposalSpec({
+                proposalContract: address(deployment.simpleLoanFungibleProposal),
+                proposalData: proposalData,
+                proposalInclusionProof: new bytes32[](0),
+                signature: signature
+            }),
+            lenderSpec: PWNSimpleLoan.LenderSpec({
+                sourceOfFunds: lender
+            }),
+            callerSpec: PWNSimpleLoan.CallerSpec({
+                refinancingLoanId: 0,
+                revokeNonce: false,
+                nonce: 0,
+                permit: Permit({
+                    asset: address(0),
+                    owner: address(0),
+                    amount: 0,
+                    deadline: 0,
+                    v: 0, r: 0, s: 0
+                })
+            }),
+            extra: ""
+        });
+
+        // Assert final state
+        assertEq(deployment.loanToken.ownerOf(loanId), lender);
+
+        assertEq(credit.balanceOf(lender), 30e18);
+        assertEq(credit.balanceOf(borrower), 70e18);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
+
+        assertEq(t1155.balanceOf(lender, 42), 0);
+        assertEq(t1155.balanceOf(borrower, 42), 3);
+        assertEq(t1155.balanceOf(address(deployment.simpleLoan), 42), 7);
+
+        assertEq(deployment.revokedNonce.isNonceRevoked(lender, proposal.nonceSpace, proposal.nonce), false);
+        assertEq(deployment.simpleLoanFungibleProposal.creditUsed(proposalHash), 70e18);
+        assertEq(deployment.loanToken.loanContract(loanId), address(deployment.simpleLoan));
+    }
+
+    function test_shouldCreateLOAN_fromDutchAuctionProposal() external {
+        PWNSimpleLoanDutchAuctionProposal.Proposal memory proposal = PWNSimpleLoanDutchAuctionProposal.Proposal({
+            collateralCategory: MultiToken.Category.ERC1155,
+            collateralAddress: address(t1155),
+            collateralId: 42,
+            collateralAmount: 10,
+            checkCollateralStateFingerprint: false,
+            collateralStateFingerprint: bytes32(0),
+            creditAddress: address(credit),
+            minCreditAmount: 10e18,
+            maxCreditAmount: 100e18,
+            availableCreditLimit: 0,
+            fixedInterestAmount: 10e18,
+            accruingInterestAPR: 0,
+            duration: 7 days,
+            auctionStart: uint40(block.timestamp),
+            auctionDuration: 30 hours,
+            allowedAcceptor: lender,
+            proposer: borrower,
+            proposerSpecHash: bytes32(0),
+            isOffer: false,
+            refinancingLoanId: 0,
+            nonceSpace: 0,
+            nonce: 0,
+            loanContract: address(deployment.simpleLoan)
+        });
+
+        PWNSimpleLoanDutchAuctionProposal.ProposalValues memory proposalValues = PWNSimpleLoanDutchAuctionProposal.ProposalValues({
+            intendedCreditAmount: 90e18,
+            slippage: 10e18
+        });
+
+        // Mint initial state
+        t1155.mint(borrower, 42, 10);
+
+        // Approve collateral
+        vm.prank(borrower);
+        t1155.setApprovalForAll(address(deployment.simpleLoan), true);
+
+        // Sign proposal
+        bytes32 proposalHash = deployment.simpleLoanDutchAuctionProposal.getProposalHash(proposal);
+        bytes memory signature = _sign(borrowerPK, proposalHash);
+
+        // Mint initial state
+        credit.mint(lender, 100e18);
+
+        // Approve loan asset
+        vm.prank(lender);
+        credit.approve(address(deployment.simpleLoan), 100e18);
+
+        // Proposal data (need for vm.prank to work properly when creating a loan)
+        bytes memory proposalData = deployment.simpleLoanDutchAuctionProposal.encodeProposalData(proposal, proposalValues);
+
+        vm.warp(proposal.auctionStart + 4 hours);
+
+        uint256 creditAmount = deployment.simpleLoanDutchAuctionProposal.getCreditAmount(proposal, block.timestamp);
+
+        // Create LOAN
+        vm.prank(lender);
+        uint256 loanId = deployment.simpleLoan.createLOAN({
+            proposalSpec: PWNSimpleLoan.ProposalSpec({
+                proposalContract: address(deployment.simpleLoanDutchAuctionProposal),
+                proposalData: proposalData,
+                proposalInclusionProof: new bytes32[](0),
+                signature: signature
+            }),
+            lenderSpec: PWNSimpleLoan.LenderSpec({
+                sourceOfFunds: lender
+            }),
+            callerSpec: PWNSimpleLoan.CallerSpec({
+                refinancingLoanId: 0,
+                revokeNonce: false,
+                nonce: 0,
+                permit: Permit({
+                    asset: address(0),
+                    owner: address(0),
+                    amount: 0,
+                    deadline: 0,
+                    v: 0, r: 0, s: 0
+                })
+            }),
+            extra: ""
+        });
+
+        // Assert final state
+        assertEq(deployment.loanToken.ownerOf(loanId), lender);
+
+        assertEq(credit.balanceOf(lender), 100e18 - creditAmount);
+        assertEq(credit.balanceOf(borrower), creditAmount);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
+
+        assertEq(t1155.balanceOf(lender, 42), 0);
+        assertEq(t1155.balanceOf(borrower, 42), 0);
+        assertEq(t1155.balanceOf(address(deployment.simpleLoan), 42), 10);
+
+        assertEq(deployment.revokedNonce.isNonceRevoked(borrower, proposal.nonceSpace, proposal.nonce), true);
+        assertEq(deployment.loanToken.loanContract(loanId), address(deployment.simpleLoan));
+    }
 
     // Different collateral types
 
@@ -208,9 +397,9 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         // Assert final state
         assertEq(deployment.loanToken.ownerOf(loanId), lender);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(borrower), 100e18);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t20.balanceOf(lender), 0);
         assertEq(t20.balanceOf(borrower), 0);
@@ -227,9 +416,9 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         // Assert final state
         assertEq(deployment.loanToken.ownerOf(loanId), lender);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(borrower), 100e18);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t721.ownerOf(42), address(deployment.simpleLoan));
 
@@ -244,9 +433,9 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         // Assert final state
         assertEq(deployment.loanToken.ownerOf(loanId), lender);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(borrower), 100e18);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 0);
@@ -274,9 +463,9 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         vm.expectRevert("ERC721: invalid token ID");
         deployment.loanToken.ownerOf(loanId);
 
-        assertEq(loanAsset.balanceOf(lender), 110e18);
-        assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 110e18);
+        assertEq(credit.balanceOf(borrower), 0);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 10e18);
@@ -322,10 +511,10 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         vm.expectRevert("ERC721: invalid token ID");
         deployment.loanToken.ownerOf(loanId);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(lender2), 110e18);
-        assertEq(loanAsset.balanceOf(borrower), 0);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(lender2), 110e18);
+        assertEq(credit.balanceOf(borrower), 0);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(lender2, 42), 0);
@@ -348,9 +537,9 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         vm.expectRevert("ERC721: invalid token ID");
         deployment.loanToken.ownerOf(loanId);
 
-        assertEq(loanAsset.balanceOf(lender), 0);
-        assertEq(loanAsset.balanceOf(borrower), 100e18);
-        assertEq(loanAsset.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(borrower), 100e18);
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 10e18);
         assertEq(t1155.balanceOf(borrower, 42), 0);
