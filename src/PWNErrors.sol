@@ -49,6 +49,7 @@ error InvalidSignature(address signer, bytes32 digest);
 
 // Proposal
 error CallerIsNotStatedProposer(address);
+error AcceptorIsProposer(address addr);
 error InvalidRefinancingLoanId(uint256 refinancingLoanId);
 error AvailableCreditLimitExceeded(uint256 used, uint256 limit);
 error Expired(uint256 current, uint256 expiration);

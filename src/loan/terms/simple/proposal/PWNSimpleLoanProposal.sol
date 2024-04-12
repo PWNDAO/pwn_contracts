@@ -215,6 +215,11 @@ abstract contract PWNSimpleLoanProposal {
             }
         }
 
+        // Check proposer is not acceptor
+        if (proposal.proposer == acceptor) {
+            revert AcceptorIsProposer({ addr: acceptor});
+        }
+
         // Check refinancing proposal
         if (refinancingLoanId == 0) {
             if (proposal.refinancingLoanId != 0) {

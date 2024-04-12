@@ -336,6 +336,15 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         _callAcceptProposalWith();
     }
 
+    function test_shouldFail_whenProposerIsSameAsAcceptor() external {
+        params.acceptor = proposer;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.expectRevert(abi.encodeWithSelector(AcceptorIsProposer.selector, proposer));
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
     function testFuzz_shouldFail_whenProposedRefinancingLoanIdNotZero_whenRefinancingLoanIdZero(uint256 proposedRefinancingLoanId) external {
         vm.assume(proposedRefinancingLoanId != 0);
         params.base.refinancingLoanId = proposedRefinancingLoanId;
@@ -533,6 +542,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function testFuzz_shouldFail_whenComputerRegistryReturnsComputer_whenComputerReturnsDifferentStateFingerprint(
         bytes32 stateFingerprint
     ) external {
+        vm.assume(stateFingerprint != params.base.collateralStateFingerprint);
         params.base.collateralAddress = token;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
