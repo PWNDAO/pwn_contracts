@@ -30,6 +30,7 @@ abstract contract Deployments is CommonBase {
 
     // Properties need to be in alphabetical order
     struct Deployment {
+        address adminTimelock;
         IMultiTokenCategoryRegistry categoryRegistry;
         PWNConfig config;
         PWNConfig configSingleton;
@@ -39,7 +40,6 @@ abstract contract Deployments is CommonBase {
         address deployerSafe;
         PWNHub hub;
         PWNLOAN loanToken;
-        address productTimelock;
         address protocolSafe;
         address protocolTimelock;
         PWNRevokedNonce revokedNonce;

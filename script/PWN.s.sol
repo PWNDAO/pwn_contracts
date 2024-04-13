@@ -103,7 +103,8 @@ forge script script/PWN.s.sol:Deploy \
 
         require(address(deployment.deployer) != address(0), "Deployer not set");
         require(deployment.deployerSafe != address(0), "Deployer safe not set");
-        require(deployment.protocolSafe != address(0), "Protocol safe not set");
+        require(deployment.adminTimelock != address(0), "Admin timelock not set");
+        require(deployment.protocolTimelock != address(0), "Protocol timelock not set");
         require(deployment.daoSafe != address(0), "DAO safe not set");
         require(address(deployment.hub) != address(0), "Hub not set");
         require(address(deployment.loanToken) != address(0), "LOAN token not set");
@@ -138,9 +139,9 @@ forge script script/PWN.s.sol:Deploy \
         vm.startBroadcast(initialConfigHelper);
         ITransparentUpgradeableProxy(address(deployment.config)).upgradeToAndCall(
             configSingleton,
-            abi.encodeWithSelector(PWNConfig.initialize.selector, deployment.daoSafe, 0, deployment.daoSafe)
+            abi.encodeWithSelector(PWNConfig.initialize.selector, deployment.protocolTimelock, 0, deployment.daoSafe)
         );
-        ITransparentUpgradeableProxy(address(deployment.config)).changeAdmin(deployment.protocolSafe);
+        ITransparentUpgradeableProxy(address(deployment.config)).changeAdmin(deployment.adminTimelock);
         vm.stopBroadcast();
 
 
@@ -149,7 +150,7 @@ forge script script/PWN.s.sol:Deploy \
         // - MultiToken category registry
         deployment.categoryRegistry = MultiTokenCategoryRegistry(_deployAndTransferOwnership({ // Need ownership acceptance from the new owner
             salt: PWNContractDeployerSalt.CONFIG,
-            owner: deployment.protocolSafe,
+            owner: deployment.protocolTimelock,
             bytecode: type(MultiTokenCategoryRegistry).creationCode
         }));
 
@@ -257,9 +258,9 @@ forge script script/PWN.s.sol:Deploy \
 
         require(address(deployment.deployer) != address(0), "Deployer not set");
         require(deployment.deployerSafe != address(0), "Deployer safe not set");
-        require(deployment.protocolSafe != address(0), "Protocol safe not set");
+        require(deployment.adminTimelock != address(0), "Admin timelock not set");
+        require(deployment.protocolTimelock != address(0), "Protocol timelock not set");
         require(deployment.daoSafe != address(0), "DAO safe not set");
-        require(address(deployment.categoryRegistry) != address(0), "Category registry not set");
 
         uint256 initialConfigHelper = vmSafe.envUint("INITIAL_CONFIG_HELPER");
 
@@ -291,9 +292,9 @@ forge script script/PWN.s.sol:Deploy \
         vm.startBroadcast(initialConfigHelper);
         ITransparentUpgradeableProxy(address(deployment.config)).upgradeToAndCall(
             configSingleton,
-            abi.encodeWithSelector(PWNConfig.initialize.selector, deployment.daoSafe, 0, deployment.daoSafe)
+            abi.encodeWithSelector(PWNConfig.initialize.selector, deployment.protocolTimelock, 0, deployment.daoSafe)
         );
-        ITransparentUpgradeableProxy(address(deployment.config)).changeAdmin(deployment.protocolSafe);
+        ITransparentUpgradeableProxy(address(deployment.config)).changeAdmin(deployment.adminTimelock);
         vm.stopBroadcast();
 
 
@@ -302,14 +303,14 @@ forge script script/PWN.s.sol:Deploy \
         // - MultiToken category registry
         deployment.categoryRegistry = MultiTokenCategoryRegistry(_deployAndTransferOwnership({ // Need ownership acceptance from the new owner
             salt: PWNContractDeployerSalt.CONFIG,
-            owner: deployment.protocolSafe,
+            owner: deployment.protocolTimelock,
             bytecode: type(MultiTokenCategoryRegistry).creationCode
         }));
 
         // - Hub
         deployment.hub = PWNHub(_deployAndTransferOwnership({ // Need ownership acceptance from the new owner
             salt: PWNContractDeployerSalt.HUB,
-            owner: deployment.protocolSafe,
+            owner: deployment.protocolTimelock,
             bytecode: type(PWNHub).creationCode
         }));
 

@@ -21,8 +21,9 @@ library PWNDeployerSalt {
 
     // 0x608ebbaa27bfbe8dd5ce387b0590cab114c16a47f29d4df2aff471dff0da44cc
     bytes32 internal constant PROTOCOL_TIMELOCK = keccak256("PWNProtocolTimelock");
+    // Note: Just renaming product timelock, thus using the same salt because it's already deployed on several chains.
     // 0xd7150558706b0331a55357de4d842961470f283908b8ca35618c3cdbb470da18
-    bytes32 internal constant PRODUCT_TIMELOCK = keccak256("PWNProductTimelock");
+    bytes32 internal constant ADMIN_TIMELOCK = keccak256("PWNProductTimelock");
 
 }
 
@@ -64,16 +65,16 @@ forge script script/PWNTimelock.s.sol:Deploy \
 
 /*
 forge script script/PWNTimelock.s.sol:Deploy \
---sig "deployProductTimelock()" \
+--sig "deployAdminTimelock()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
-    function deployProductTimelock() external {
-        console2.log("Deploying product timelock");
-        _deployTimelock(PWNDeployerSalt.PRODUCT_TIMELOCK);
+    function deployAdminTimelock() external {
+        console2.log("Deploying admin timelock");
+        _deployTimelock(PWNDeployerSalt.ADMIN_TIMELOCK);
     }
 
     /// @dev Expecting to have deployer & deployerSafe addresses set in the `deployments.json`
@@ -123,21 +124,21 @@ forge script script/PWNTimelock.s.sol:Setup \
     function updateProtocolTimelockProposer() external {
         _loadDeployedAddresses();
         console2.log("Updating protocol timelock proposer (%s)", deployment.protocolTimelock);
-        _updateProposer(TimelockController(payable(deployment.protocolTimelock)), deployment.protocolSafe);
+        _updateProposer(TimelockController(payable(deployment.protocolTimelock)), deployment.daoSafe);
     }
 
 /*
 forge script script/PWNTimelock.s.sol:Setup \
---sig "updateProductTimelockProposer()" \
+--sig "updateAdminTimelockProposer()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
-    function updateProductTimelockProposer() external {
+    function updateAdminTimelockProposer() external {
         _loadDeployedAddresses();
-        console2.log("Updating product timelock proposer (%s)", deployment.productTimelock);
-        _updateProposer(TimelockController(payable(deployment.productTimelock)), deployment.daoSafe);
+        console2.log("Updating product timelock proposer (%s)", deployment.adminTimelock);
+        _updateProposer(TimelockController(payable(deployment.adminTimelock)), deployment.daoSafe);
     }
 
     /// @dev Will grant PROPOSER_ROLE & CANCELLOR_ROLE to the new address and revoke them from `0x0cfC...D6de`.
@@ -209,7 +210,7 @@ forge script script/PWNTimelock.s.sol:Setup \
     function setupProtocolTimelock() external {
         _loadDeployedAddresses();
 
-        uint256 protocolTimelockMinDelay = 345_600; // 4 days
+        uint256 protocolTimelockMinDelay = 4 days;
 
         vm.startBroadcast();
 
@@ -271,18 +272,18 @@ forge script script/PWNTimelock.s.sol:Setup \
 
 /*
 forge script script/PWNTimelock.s.sol:Setup \
---sig "setProductTimelock()" \
+--sig "setAdminTimelock()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
-    /// @dev Expecting to have protocol, daoSafe & productTimelock addresses set in the `deployments.json`
+    /// @dev Expecting to have protocol, daoSafe & adminTimelock addresses set in the `deployments.json`
     /// Expecting `0x0cfC...D6de` to be a proposer for the timelock
-    function setProductTimelock() external {
+    function setAdminTimelock() external {
         _loadDeployedAddresses();
 
-        uint256 productTimelockMinDelay = 345_600; // 4 days
+        uint256 adminTimelockMinDelay = 4 days;
 
         vm.startBroadcast();
 
@@ -290,13 +291,13 @@ forge script script/PWNTimelock.s.sol:Setup \
         bool success;
         success = GnosisSafeLike(deployment.daoSafe).execTransaction({
             to: address(deployment.config),
-            data: abi.encodeWithSignature("transferOwnership(address)", deployment.productTimelock)
+            data: abi.encodeWithSignature("transferOwnership(address)", deployment.adminTimelock)
         });
         require(success, "PWN: change owner failed");
 
         // accept PWNConfig owner
         success = GnosisSafeLike(deployment.daoSafe).execTransaction({
-            to: address(deployment.productTimelock),
+            to: address(deployment.adminTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
                 address(deployment.config), 0, abi.encodeWithSignature("acceptOwnership()"), 0, 0, 0
@@ -304,7 +305,7 @@ forge script script/PWNTimelock.s.sol:Setup \
         });
         require(success, "PWN: schedule failed");
 
-        TimelockController(payable(deployment.productTimelock)).execute({
+        TimelockController(payable(deployment.adminTimelock)).execute({
             target: address(deployment.config),
             value: 0,
             payload: abi.encodeWithSignature("acceptOwnership()"),
@@ -314,18 +315,18 @@ forge script script/PWNTimelock.s.sol:Setup \
 
         // set min delay
         success = GnosisSafeLike(deployment.daoSafe).execTransaction({
-            to: address(deployment.productTimelock),
+            to: address(deployment.adminTimelock),
             data: abi.encodeWithSignature(
                 "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
-                address(deployment.productTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", productTimelockMinDelay), 0, 0, 0
+                address(deployment.adminTimelock), 0, abi.encodeWithSignature("updateDelay(uint256)", adminTimelockMinDelay), 0, 0, 0
             )
         });
         require(success, "PWN: update delay failed");
 
-        TimelockController(payable(deployment.productTimelock)).execute({
-            target: deployment.productTimelock,
+        TimelockController(payable(deployment.adminTimelock)).execute({
+            target: deployment.adminTimelock,
             value: 0,
-            payload: abi.encodeWithSignature("updateDelay(uint256)", productTimelockMinDelay),
+            payload: abi.encodeWithSignature("updateDelay(uint256)", adminTimelockMinDelay),
             predecessor: 0,
             salt: 0
         });

@@ -27,40 +27,43 @@ contract DeployedProtocolTest is DeploymentTest {
         }
 
         // TIMELOCK CONTROLLERS
-        address protocolTimelockOwner = deployment.dao == address(0) ? deployment.protocolSafe : deployment.dao;
+        address timelockOwner = deployment.dao == address(0) ? deployment.daoSafe : deployment.dao;
         TimelockController protocolTimelockController = TimelockController(payable(deployment.protocolTimelock));
         // - protocol timelock has min delay of 4 days
         assertEq(protocolTimelockController.getMinDelay(), 4 days);
-        // - protocol safe has PROPOSER role in protocol timelock
-        assertTrue(protocolTimelockController.hasRole(PROPOSER_ROLE, protocolTimelockOwner));
-        // - protocol safe has CANCELLER role in protocol timelock
-        assertTrue(protocolTimelockController.hasRole(CANCELLER_ROLE, protocolTimelockOwner));
+        // - dao or dao safe has PROPOSER role in protocol timelock
+        assertTrue(protocolTimelockController.hasRole(PROPOSER_ROLE, timelockOwner));
+        // - dao or dao safe has CANCELLER role in protocol timelock
+        assertTrue(protocolTimelockController.hasRole(CANCELLER_ROLE, timelockOwner));
         // - everybody has EXECUTOR role in protocol timelock
         assertTrue(protocolTimelockController.hasRole(EXECUTOR_ROLE, address(0)));
 
-        address productTimelockOwner = deployment.dao == address(0) ? deployment.daoSafe : deployment.dao;
-        TimelockController productTimelockController = TimelockController(payable(deployment.productTimelock));
-        // - product timelock has min delay of 4 days
-        assertEq(productTimelockController.getMinDelay(), 4 days);
-        // - dao safe has PROPOSER role in product timelock
-        assertTrue(productTimelockController.hasRole(PROPOSER_ROLE, productTimelockOwner));
-        // - dao safe has CANCELLER role in product timelock
-        assertTrue(productTimelockController.hasRole(CANCELLER_ROLE, productTimelockOwner));
+        TimelockController adminTimelockController = TimelockController(payable(deployment.adminTimelock));
+        // - admin timelock has min delay of 4 days
+        assertEq(adminTimelockController.getMinDelay(), 4 days);
+        // - dao or dao safe has PROPOSER role in product timelock
+        assertTrue(adminTimelockController.hasRole(PROPOSER_ROLE, timelockOwner));
+        // - dao or dao safe has CANCELLER role in product timelock
+        assertTrue(adminTimelockController.hasRole(CANCELLER_ROLE, timelockOwner));
         // - everybody has EXECUTOR role in product timelock
-        assertTrue(productTimelockController.hasRole(EXECUTOR_ROLE, address(0)));
+        assertTrue(adminTimelockController.hasRole(EXECUTOR_ROLE, address(0)));
 
         // CONFIG
-        // - admin is protocol timelock
-        assertEq(vm.load(address(deployment.config), PROXY_ADMIN_SLOT), bytes32(uint256(uint160(deployment.protocolTimelock))));
-        // - owner is product timelock
-        assertEq(deployment.config.owner(), deployment.productTimelock);
-        // - feeCollector is feeCollector
+        // - admin is admin timelock
+        assertEq(vm.load(address(deployment.config), PROXY_ADMIN_SLOT), bytes32(uint256(uint160(deployment.adminTimelock))));
+        // - owner is protocol timelock
+        assertEq(deployment.config.owner(), deployment.protocolTimelock);
+        // - feeCollector is dao safe
         assertEq(deployment.config.feeCollector(), deployment.daoSafe);
         // - is initialized
         assertEq(vm.load(address(deployment.config), bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(1)));
         // - implementation is initialized
         address configImplementation = address(uint160(uint256(vm.load(address(deployment.config), PROXY_IMPLEMENTATION_SLOT))));
         assertEq(vm.load(configImplementation, bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(1)));
+
+        // CATEGORY REGISTRY
+        // - owner is protocol timelock
+        // assertTrue(deployment.categoryRegistry.owner(), deployment.protocolTimelock);
 
         // HUB
         // - owner is protocol timelock
