@@ -3,12 +3,12 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import { PWNSimpleLoan, PWNHubTags, Math, MultiToken, Permit } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import "@pwn/PWNErrors.sol";
+import { PWNSimpleLoan, PWNHubTags, Math, MultiToken, Permit } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import "src/PWNErrors.sol";
 
-import { T20 } from "@pwn-test/helper/T20.sol";
-import { T721 } from "@pwn-test/helper/T721.sol";
-import { DummyPoolAdapter } from "@pwn-test/helper/DummyPoolAdapter.sol";
+import { T20 } from "test/helper/T20.sol";
+import { T721 } from "test/helper/T721.sol";
+import { DummyPoolAdapter } from "test/helper/DummyPoolAdapter.sol";
 
 
 abstract contract PWNSimpleLoanTest is Test {

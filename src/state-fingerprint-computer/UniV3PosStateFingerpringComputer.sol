@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { IStateFingerpringComputer } from "@pwn/state-fingerprint-computer/IStateFingerpringComputer.sol";
+import { IStateFingerpringComputer } from "src/state-fingerprint-computer/IStateFingerpringComputer.sol";
 
 
 interface UniswapNonFungiblePositionManagerLike {

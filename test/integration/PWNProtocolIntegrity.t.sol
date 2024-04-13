@@ -3,10 +3,10 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
-import "@pwn/PWNErrors.sol";
+import { PWNHubTags } from "src/hub/PWNHubTags.sol";
+import "src/PWNErrors.sol";
 
-import "@pwn-test/integration/BaseIntegrationTest.t.sol";
+import "test/integration/BaseIntegrationTest.t.sol";
 
 
 contract PWNProtocolIntegrityTest is BaseIntegrationTest {

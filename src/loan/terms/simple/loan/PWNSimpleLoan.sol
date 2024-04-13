@@ -6,20 +6,20 @@ import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.s
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import { SafeCast } from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 
-import { PWNConfig } from "@pwn/config/PWNConfig.sol";
-import { PWNHub } from "@pwn/hub/PWNHub.sol";
-import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
-import { PWNFeeCalculator } from "@pwn/loan/lib/PWNFeeCalculator.sol";
-import { PWNSignatureChecker } from "@pwn/loan/lib/PWNSignatureChecker.sol";
-import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import { IERC5646 } from "@pwn/loan/token/IERC5646.sol";
-import { IPWNLoanMetadataProvider } from "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
-import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
-import { Permit } from "@pwn/loan/vault/Permit.sol";
-import { PWNVault } from "@pwn/loan/vault/PWNVault.sol";
-import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
-import { IPoolAdapter } from "@pwn/pool-adapter/IPoolAdapter.sol";
-import "@pwn/PWNErrors.sol";
+import { PWNConfig } from "src/config/PWNConfig.sol";
+import { PWNHub } from "src/hub/PWNHub.sol";
+import { PWNHubTags } from "src/hub/PWNHubTags.sol";
+import { PWNFeeCalculator } from "src/loan/lib/PWNFeeCalculator.sol";
+import { PWNSignatureChecker } from "src/loan/lib/PWNSignatureChecker.sol";
+import { PWNSimpleLoanProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import { IERC5646 } from "src/loan/token/IERC5646.sol";
+import { IPWNLoanMetadataProvider } from "src/loan/token/IPWNLoanMetadataProvider.sol";
+import { PWNLOAN } from "src/loan/token/PWNLOAN.sol";
+import { Permit } from "src/loan/vault/Permit.sol";
+import { PWNVault } from "src/loan/vault/PWNVault.sol";
+import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
+import { IPoolAdapter } from "src/pool-adapter/IPoolAdapter.sol";
+import "src/PWNErrors.sol";
 
 
 /**

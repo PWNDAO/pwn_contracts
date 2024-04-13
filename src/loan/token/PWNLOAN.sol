@@ -3,10 +3,10 @@ pragma solidity 0.8.16;
 
 import { ERC721 } from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
-import { PWNHubAccessControl } from "@pwn/hub/PWNHubAccessControl.sol";
-import { IERC5646 } from "@pwn/loan/token/IERC5646.sol";
-import { IPWNLoanMetadataProvider } from "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
-import "@pwn/PWNErrors.sol";
+import { PWNHubAccessControl } from "src/hub/PWNHubAccessControl.sol";
+import { IERC5646 } from "src/loan/token/IERC5646.sol";
+import { IPWNLoanMetadataProvider } from "src/loan/token/IPWNLoanMetadataProvider.sol";
+import "src/PWNErrors.sol";
 
 
 /**

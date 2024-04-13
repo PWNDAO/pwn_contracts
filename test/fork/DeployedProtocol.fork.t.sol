@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import { TimelockController } from "openzeppelin-contracts/contracts/governance/TimelockController.sol";
 
-import "@pwn-test/DeploymentTest.t.sol";
+import "test/DeploymentTest.t.sol";
 
 
 contract DeployedProtocolTest is DeploymentTest {

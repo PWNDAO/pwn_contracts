@@ -7,8 +7,8 @@ import { TimelockController } from "openzeppelin-contracts/contracts/governance/
 
 import { GnosisSafeLike, GnosisSafeUtils } from "./lib/GnosisSafeUtils.sol";
 
-import { IPWNDeployer } from "@pwn/deployer/IPWNDeployer.sol";
-import "@pwn/Deployments.sol";
+import { IPWNDeployer } from "src/deployer/IPWNDeployer.sol";
+import "src/Deployments.sol";
 
 
 library PWNDeployerSalt {

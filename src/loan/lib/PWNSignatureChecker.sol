@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 
-import "@pwn/PWNErrors.sol";
+import "src/PWNErrors.sol";
 
 
 /**

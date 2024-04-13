@@ -4,9 +4,9 @@ pragma solidity 0.8.16;
 import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import { Initializable } from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
-import { IPoolAdapter } from "@pwn/pool-adapter/IPoolAdapter.sol";
-import { IStateFingerpringComputer } from "@pwn/state-fingerprint-computer/IStateFingerpringComputer.sol";
-import "@pwn/PWNErrors.sol";
+import { IPoolAdapter } from "src/pool-adapter/IPoolAdapter.sol";
+import { IStateFingerpringComputer } from "src/state-fingerprint-computer/IStateFingerpringComputer.sol";
+import "src/PWNErrors.sol";
 
 
 /**

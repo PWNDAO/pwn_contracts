@@ -1,8 +1,3 @@
-@MT/=lib/MultiToken/src/
-@openzeppelin/=lib/openzeppelin-contracts/contracts/
-@pwn-test/=test/
-@pwn/=src/
-
 MultiToken/=lib/MultiToken/src/
 ds-test/=lib/forge-std/lib/ds-test/src/
 forge-std/=lib/forge-std/src/

@@ -8,7 +8,7 @@ import { MultiTokenCategoryRegistry, IMultiTokenCategoryRegistry } from "MultiTo
 import { TransparentUpgradeableProxy }
     from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import "@pwn/Deployments.sol";
+import "src/Deployments.sol";
 
 
 abstract contract DeploymentTest is Deployments, Test {

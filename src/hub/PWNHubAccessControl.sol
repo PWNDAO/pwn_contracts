@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "@pwn/hub/PWNHub.sol";
-import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/PWNErrors.sol";
+import "src/hub/PWNHub.sol";
+import "src/hub/PWNHubTags.sol";
+import "src/PWNErrors.sol";
 
 
 /**

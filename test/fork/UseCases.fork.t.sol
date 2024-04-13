@@ -8,8 +8,8 @@ import { MultiToken, ICryptoKitties, IERC721 } from "MultiToken/MultiToken.sol";
 import { Permit } from "@pwn/loan/vault/Permit.sol";
 import "@pwn/PWNErrors.sol";
 
-import { T20 } from "@pwn-test/helper/T20.sol";
-import "@pwn-test/DeploymentTest.t.sol";
+import { T20 } from "test/helper/T20.sol";
+import "test/DeploymentTest.t.sol";
 
 
 abstract contract UseCasesTest is DeploymentTest {

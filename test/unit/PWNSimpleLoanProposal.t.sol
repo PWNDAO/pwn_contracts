@@ -9,13 +9,13 @@ import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography
 import { IERC165 } from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
-import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { PWNHubTags } from "src/hub/PWNHubTags.sol";
+import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import {
     PWNSimpleLoanProposal,
     IERC5646
-} from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import "@pwn/PWNErrors.sol";
+} from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import "src/PWNErrors.sol";
 
 
 abstract contract PWNSimpleLoanProposalTest is Test {

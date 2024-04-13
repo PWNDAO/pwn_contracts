@@ -10,22 +10,22 @@ import { MultiTokenCategoryRegistry } from "MultiToken/MultiTokenCategoryRegistr
 
 import { GnosisSafeLike, GnosisSafeUtils } from "./lib/GnosisSafeUtils.sol";
 
-import { PWNConfig } from "@pwn/config/PWNConfig.sol";
-import { IPWNDeployer } from "@pwn/deployer/IPWNDeployer.sol";
-import { PWNHub } from "@pwn/hub/PWNHub.sol";
-import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
-import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanSimpleProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
-import { PWNSimpleLoanListProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
-import { PWNSimpleLoanFungibleProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
-import { PWNSimpleLoanDutchAuctionProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
-import { PWNLOAN } from "@pwn/loan/token/PWNLOAN.sol";
-import { PWNRevokedNonce } from "@pwn/nonce/PWNRevokedNonce.sol";
-import { Deployments } from "@pwn/Deployments.sol";
+import { PWNConfig } from "src/config/PWNConfig.sol";
+import { IPWNDeployer } from "src/deployer/IPWNDeployer.sol";
+import { PWNHub } from "src/hub/PWNHub.sol";
+import { PWNHubTags } from "src/hub/PWNHubTags.sol";
+import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { PWNSimpleLoanSimpleProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
+import { PWNSimpleLoanListProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
+import { PWNSimpleLoanFungibleProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
+import { PWNSimpleLoanDutchAuctionProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
+import { PWNLOAN } from "src/loan/token/PWNLOAN.sol";
+import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
+import { Deployments } from "src/Deployments.sol";
 
-import { T20 } from "@pwn-test/helper/T20.sol";
-import { T721 } from "@pwn-test/helper/T721.sol";
-import { T1155 } from "@pwn-test/helper/T1155.sol";
+import { T20 } from "test/helper/T20.sol";
+import { T721 } from "test/helper/T721.sol";
+import { T1155 } from "test/helper/T1155.sol";
 
 
 library PWNContractDeployerSalt {

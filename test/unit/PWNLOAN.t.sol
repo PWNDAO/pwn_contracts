@@ -3,10 +3,10 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import "@pwn/hub/PWNHubTags.sol";
-import "@pwn/loan/token/IERC5646.sol";
-import "@pwn/loan/token/PWNLOAN.sol";
-import "@pwn/PWNErrors.sol";
+import "src/hub/PWNHubTags.sol";
+import "src/loan/token/IERC5646.sol";
+import "src/loan/token/PWNLOAN.sol";
+import "src/PWNErrors.sol";
 
 
 abstract contract PWNLOANTest is Test {

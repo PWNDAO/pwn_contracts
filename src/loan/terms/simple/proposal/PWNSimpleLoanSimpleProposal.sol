@@ -3,9 +3,9 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { PWNSimpleLoan } from "@pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanProposal } from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import "@pwn/PWNErrors.sol";
+import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { PWNSimpleLoanProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import "src/PWNErrors.sol";
 
 
 /**

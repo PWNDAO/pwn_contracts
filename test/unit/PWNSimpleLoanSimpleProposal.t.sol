@@ -5,15 +5,15 @@ import "forge-std/Test.sol";
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
+import { PWNHubTags } from "src/hub/PWNHubTags.sol";
 import { PWNSimpleLoanSimpleProposal, PWNSimpleLoanProposal, PWNSimpleLoan }
-    from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
-import "@pwn/PWNErrors.sol";
+    from "src/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
+import "src/PWNErrors.sol";
 
 import {
     PWNSimpleLoanProposalTest,
     PWNSimpleLoanProposal_AcceptProposal_Test
-} from "@pwn-test/unit/PWNSimpleLoanProposal.t.sol";
+} from "test/unit/PWNSimpleLoanProposal.t.sol";
 
 
 abstract contract PWNSimpleLoanSimpleProposalTest is PWNSimpleLoanProposalTest {

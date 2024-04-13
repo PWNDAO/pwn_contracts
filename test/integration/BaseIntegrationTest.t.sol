@@ -5,12 +5,12 @@ import "forge-std/Test.sol";
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { Permit } from "@pwn/loan/vault/Permit.sol";
+import { Permit } from "src/loan/vault/Permit.sol";
 
-import { T20 } from "@pwn-test/helper/T20.sol";
-import { T721 } from "@pwn-test/helper/T721.sol";
-import { T1155 } from "@pwn-test/helper/T1155.sol";
-import "@pwn-test/DeploymentTest.t.sol";
+import { T20 } from "test/helper/T20.sol";
+import { T721 } from "test/helper/T721.sol";
+import { T1155 } from "test/helper/T1155.sol";
+import "test/DeploymentTest.t.sol";
 
 
 abstract contract BaseIntegrationTest is DeploymentTest {

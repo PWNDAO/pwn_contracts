@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
-import { IPoolAdapter } from "@pwn/pool-adapter/IPoolAdapter.sol";
+import { IPoolAdapter } from "src/pool-adapter/IPoolAdapter.sol";
 
 
 contract DummyPoolAdapter is IPoolAdapter {

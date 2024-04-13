@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 
-import "@pwn/PWNErrors.sol";
+import "src/PWNErrors.sol";
 
 
 /**

@@ -7,15 +7,15 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-import { PWNHubTags } from "@pwn/hub/PWNHubTags.sol";
+import { PWNHubTags } from "src/hub/PWNHubTags.sol";
 import { PWNSimpleLoanFungibleProposal, PWNSimpleLoanProposal, PWNSimpleLoan }
-    from "@pwn/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
-import "@pwn/PWNErrors.sol";
+    from "src/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
+import "src/PWNErrors.sol";
 
 import {
     PWNSimpleLoanProposalTest,
     PWNSimpleLoanProposal_AcceptProposal_Test
-} from "@pwn-test/unit/PWNSimpleLoanProposal.t.sol";
+} from "test/unit/PWNSimpleLoanProposal.t.sol";
 
 
 abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest {

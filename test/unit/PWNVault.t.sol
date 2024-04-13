@@ -3,10 +3,10 @@ pragma solidity 0.8.16;
 
 import "forge-std/Test.sol";
 
-import { PWNVault, IERC165, IERC721Receiver, IERC1155Receiver, Permit, MultiToken } from "@pwn/loan/vault/PWNVault.sol";
-import "@pwn/PWNErrors.sol";
+import { PWNVault, IERC165, IERC721Receiver, IERC1155Receiver, Permit, MultiToken } from "src/loan/vault/PWNVault.sol";
+import "src/PWNErrors.sol";
 
-import { T721 } from "@pwn-test/helper/T721.sol";
+import { T721 } from "test/helper/T721.sol";
 
 
 contract PWNVaultHarness is PWNVault {
