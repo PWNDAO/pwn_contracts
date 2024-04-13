@@ -9,16 +9,16 @@ import { SafeCast } from "openzeppelin/utils/math/SafeCast.sol";
 import { PWNConfig } from "src/config/PWNConfig.sol";
 import { PWNHub } from "src/hub/PWNHub.sol";
 import { PWNHubTags } from "src/hub/PWNHubTags.sol";
+import { IERC5646 } from "src/interfaces/IERC5646.sol";
+import { IPoolAdapter } from "src/interfaces/IPoolAdapter.sol";
+import { IPWNLoanMetadataProvider } from "src/interfaces/IPWNLoanMetadataProvider.sol";
 import { PWNFeeCalculator } from "src/loan/lib/PWNFeeCalculator.sol";
 import { PWNSignatureChecker } from "src/loan/lib/PWNSignatureChecker.sol";
 import { PWNSimpleLoanProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import { IERC5646 } from "src/loan/token/IERC5646.sol";
-import { IPWNLoanMetadataProvider } from "src/loan/token/IPWNLoanMetadataProvider.sol";
 import { PWNLOAN } from "src/loan/token/PWNLOAN.sol";
 import { Permit } from "src/loan/vault/Permit.sol";
 import { PWNVault } from "src/loan/vault/PWNVault.sol";
 import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
-import { IPoolAdapter } from "src/pool-adapter/IPoolAdapter.sol";
 import "src/PWNErrors.sol";
 
 

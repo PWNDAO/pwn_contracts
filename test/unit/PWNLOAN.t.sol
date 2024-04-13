@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import { Test } from "forge-std/Test.sol";
 
 import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import { IERC5646 } from "src/loan/token/IERC5646.sol";
+import { IERC5646 } from "src/interfaces/IERC5646.sol";
 import { PWNLOAN } from "src/loan/token/PWNLOAN.sol";
 import "src/PWNErrors.sol";
 

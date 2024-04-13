@@ -7,8 +7,8 @@ import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.s
 import { IERC721Receiver } from "openzeppelin/token/ERC721/IERC721Receiver.sol";
 import { IERC1155Receiver, IERC165 } from "openzeppelin/token/ERC1155/IERC1155Receiver.sol";
 
+import { IPoolAdapter } from "src/interfaces/IPoolAdapter.sol";
 import { Permit } from "src/loan/vault/Permit.sol";
-import { IPoolAdapter } from "src/pool-adapter/IPoolAdapter.sol";
 import "src/PWNErrors.sol";
 
 

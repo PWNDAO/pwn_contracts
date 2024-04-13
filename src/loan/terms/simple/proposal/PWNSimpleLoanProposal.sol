@@ -7,9 +7,9 @@ import { ERC165Checker } from "openzeppelin/utils/introspection/ERC165Checker.so
 import { PWNConfig, IStateFingerpringComputer } from "src/config/PWNConfig.sol";
 import { PWNHub } from "src/hub/PWNHub.sol";
 import { PWNHubTags } from "src/hub/PWNHubTags.sol";
+import { IERC5646 } from "src/interfaces/IERC5646.sol";
 import { PWNSignatureChecker } from "src/loan/lib/PWNSignatureChecker.sol";
 import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { IERC5646 } from "src/loan/token/IERC5646.sol";
 import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
 import "src/PWNErrors.sol";
 

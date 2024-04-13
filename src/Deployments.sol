@@ -9,9 +9,9 @@ import { MultiTokenCategoryRegistry } from "MultiToken/MultiTokenCategoryRegistr
 import { Strings } from "openzeppelin/utils/Strings.sol";
 
 import { PWNConfig } from "src/config/PWNConfig.sol";
-import { IPWNDeployer } from "src/deployer/IPWNDeployer.sol";
 import { PWNHub } from "src/hub/PWNHub.sol";
 import { PWNHubTags } from "src/hub/PWNHubTags.sol";
+import { IPWNDeployer } from "src/interfaces/IPWNDeployer.sol";
 import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanDutchAuctionProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
 import { PWNSimpleLoanFungibleProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
