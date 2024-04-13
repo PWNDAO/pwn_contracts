@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
+import { ECDSA } from "openzeppelin/utils/cryptography/ECDSA.sol";
+import { IERC1271 } from "openzeppelin/interfaces/IERC1271.sol";
 
 import "src/PWNErrors.sol";
 

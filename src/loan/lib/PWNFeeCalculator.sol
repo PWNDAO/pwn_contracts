@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { Math } from "openzeppelin/utils/math/Math.sol";
 
 
 /**

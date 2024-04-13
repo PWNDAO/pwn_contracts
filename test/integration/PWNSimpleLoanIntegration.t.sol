@@ -1,11 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/Test.sol";
-
 import "src/PWNErrors.sol";
 
-import "test/integration/BaseIntegrationTest.t.sol";
+import {
+    MultiToken,
+    MultiTokenCategoryRegistry,
+    BaseIntegrationTest,
+    PWNConfig,
+    IPWNDeployer,
+    PWNHub,
+    PWNHubTags,
+    PWNSimpleLoan,
+    PWNSimpleLoanDutchAuctionProposal,
+    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanListProposal,
+    PWNSimpleLoanSimpleProposal,
+    PWNLOAN,
+    PWNRevokedNonce
+} from "test/integration/BaseIntegrationTest.t.sol";
 
 
 contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {

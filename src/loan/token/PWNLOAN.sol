@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { ERC721 } from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
+import { ERC721 } from "openzeppelin/token/ERC721/ERC721.sol";
 
 import { PWNHubAccessControl } from "src/hub/PWNHubAccessControl.sol";
 import { IERC5646 } from "src/loan/token/IERC5646.sol";

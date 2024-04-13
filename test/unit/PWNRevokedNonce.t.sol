@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import "src/hub/PWNHubTags.sol";
-import "src/nonce/PWNRevokedNonce.sol";
+import { PWNHubTags } from "src/hub/PWNHubTags.sol";
+import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
 import "src/PWNErrors.sol";
 
 

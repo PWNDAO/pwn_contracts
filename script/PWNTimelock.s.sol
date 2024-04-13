@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/Script.sol";
+import { Script, console2 } from "forge-std/Script.sol";
 
-import { TimelockController } from "openzeppelin-contracts/contracts/governance/TimelockController.sol";
+import { TimelockController } from "openzeppelin/governance/TimelockController.sol";
 
 import { GnosisSafeLike, GnosisSafeUtils } from "./lib/GnosisSafeUtils.sol";
 
-import { IPWNDeployer } from "src/deployer/IPWNDeployer.sol";
-import "src/Deployments.sol";
+import {
+    Deployments,
+    PWNConfig,
+    IPWNDeployer,
+    PWNHub
+} from "src/Deployments.sol";
+
 
 
 library PWNDeployerSalt {

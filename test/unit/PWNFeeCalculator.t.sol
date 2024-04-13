@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import "src/loan/lib/PWNFeeCalculator.sol";
+import { PWNFeeCalculator } from "src/loan/lib/PWNFeeCalculator.sol";
 
 
 contract PWNFeeCalculator_CalculateFeeAmount_Test is Test {

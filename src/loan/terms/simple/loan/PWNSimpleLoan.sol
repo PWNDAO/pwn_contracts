@@ -3,8 +3,8 @@ pragma solidity 0.8.16;
 
 import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.sol";
 
-import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-import { SafeCast } from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import { Math } from "openzeppelin/utils/math/Math.sol";
+import { SafeCast } from "openzeppelin/utils/math/SafeCast.sol";
 
 import { PWNConfig } from "src/config/PWNConfig.sol";
 import { PWNHub } from "src/hub/PWNHub.sol";

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
-import { ERC165Checker } from "openzeppelin-contracts/contracts/utils/introspection/ERC165Checker.sol";
+import { MerkleProof } from "openzeppelin/utils/cryptography/MerkleProof.sol";
+import { ERC165Checker } from "openzeppelin/utils/introspection/ERC165Checker.sol";
 
 import { PWNConfig, IStateFingerpringComputer } from "src/config/PWNConfig.sol";
 import { PWNHub } from "src/hub/PWNHub.sol";

@@ -3,9 +3,9 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { IERC20Permit } from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import { IERC721Receiver } from "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import { IERC1155Receiver, IERC165 } from "openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
+import { IERC721Receiver } from "openzeppelin/token/ERC721/IERC721Receiver.sol";
+import { IERC1155Receiver, IERC165 } from "openzeppelin/token/ERC1155/IERC1155Receiver.sol";
 
 import { Permit } from "src/loan/vault/Permit.sol";
 import { IPoolAdapter } from "src/pool-adapter/IPoolAdapter.sol";

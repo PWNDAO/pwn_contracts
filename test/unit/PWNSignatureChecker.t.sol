@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import "src/loan/lib/PWNSignatureChecker.sol";
+import { PWNSignatureChecker } from "src/loan/lib/PWNSignatureChecker.sol";
 import "src/PWNErrors.sol";
 
 

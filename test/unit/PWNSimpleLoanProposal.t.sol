@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
-import { IERC165 } from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
-import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { MerkleProof } from "openzeppelin/utils/cryptography/MerkleProof.sol";
+import { IERC165 } from "openzeppelin/utils/introspection/IERC165.sol";
+import { Math } from "openzeppelin/utils/math/Math.sol";
 
 import { PWNHubTags } from "src/hub/PWNHubTags.sol";
 import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";

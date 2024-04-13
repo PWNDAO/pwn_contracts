@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/Test.sol";
-
-import { MultiToken } from "MultiToken/MultiToken.sol";
-
-import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-
 import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import { PWNSimpleLoanFungibleProposal, PWNSimpleLoanProposal, PWNSimpleLoan }
-    from "src/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
+import {
+    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanProposal,
+    PWNSimpleLoan
+} from "src/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
 import "src/PWNErrors.sol";
 
 import {
+    MultiToken,
+    Math,
     PWNSimpleLoanProposalTest,
     PWNSimpleLoanProposal_AcceptProposal_Test
 } from "test/unit/PWNSimpleLoanProposal.t.sol";

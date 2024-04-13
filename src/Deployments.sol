@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/StdJson.sol";
-import "forge-std/Base.sol";
+import { stdJson } from "forge-std/StdJson.sol";
+import { CommonBase } from "forge-std/Base.sol";
 
-import { IMultiTokenCategoryRegistry } from "MultiToken/interfaces/IMultiTokenCategoryRegistry.sol";
+import { MultiTokenCategoryRegistry } from "MultiToken/MultiTokenCategoryRegistry.sol";
 
-import { Strings } from "openzeppelin-contracts/contracts/utils/Strings.sol";
+import { Strings } from "openzeppelin/utils/Strings.sol";
 
 import { PWNConfig } from "src/config/PWNConfig.sol";
 import { IPWNDeployer } from "src/deployer/IPWNDeployer.sol";
@@ -31,7 +31,7 @@ abstract contract Deployments is CommonBase {
     // Properties need to be in alphabetical order
     struct Deployment {
         address adminTimelock;
-        IMultiTokenCategoryRegistry categoryRegistry;
+        MultiTokenCategoryRegistry categoryRegistry;
         PWNConfig config;
         PWNConfig configSingleton;
         address dao;

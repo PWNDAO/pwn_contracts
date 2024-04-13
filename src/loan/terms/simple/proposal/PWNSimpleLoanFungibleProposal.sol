@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { Math } from "openzeppelin/utils/math/Math.sol";
 
 import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";

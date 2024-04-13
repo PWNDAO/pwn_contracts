@@ -1,14 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import { MultiTokenCategoryRegistry, IMultiTokenCategoryRegistry } from "MultiToken/MultiTokenCategoryRegistry.sol";
+import { TransparentUpgradeableProxy } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import { TransparentUpgradeableProxy }
-    from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-
-import "src/Deployments.sol";
+import {
+    Deployments,
+    PWNConfig,
+    IPWNDeployer,
+    PWNHub,
+    PWNHubTags,
+    PWNSimpleLoan,
+    PWNSimpleLoanDutchAuctionProposal,
+    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanListProposal,
+    PWNSimpleLoanSimpleProposal,
+    PWNLOAN,
+    PWNRevokedNonce,
+    MultiTokenCategoryRegistry
+} from "src/Deployments.sol";
 
 
 abstract contract DeploymentTest is Deployments, Test {
@@ -23,7 +34,7 @@ abstract contract DeploymentTest is Deployments, Test {
 
         // Deploy category registry
         vm.prank(deployment.protocolSafe);
-        deployment.categoryRegistry = IMultiTokenCategoryRegistry(new MultiTokenCategoryRegistry());
+        deployment.categoryRegistry = new MultiTokenCategoryRegistry();
 
         // Deploy protocol
         deployment.configSingleton = new PWNConfig();

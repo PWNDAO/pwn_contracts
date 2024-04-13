@@ -1,27 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "forge-std/Script.sol";
+import { Script, console2 } from "forge-std/Script.sol";
 
 import { TransparentUpgradeableProxy, ITransparentUpgradeableProxy }
-    from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-
-import { MultiTokenCategoryRegistry } from "MultiToken/MultiTokenCategoryRegistry.sol";
+    from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { GnosisSafeLike, GnosisSafeUtils } from "./lib/GnosisSafeUtils.sol";
 
-import { PWNConfig } from "src/config/PWNConfig.sol";
-import { IPWNDeployer } from "src/deployer/IPWNDeployer.sol";
-import { PWNHub } from "src/hub/PWNHub.sol";
-import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanSimpleProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
-import { PWNSimpleLoanListProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
-import { PWNSimpleLoanFungibleProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
-import { PWNSimpleLoanDutchAuctionProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
-import { PWNLOAN } from "src/loan/token/PWNLOAN.sol";
-import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
-import { Deployments } from "src/Deployments.sol";
+import {
+    Deployments,
+    PWNConfig,
+    IPWNDeployer,
+    PWNHub,
+    PWNHubTags,
+    PWNSimpleLoan,
+    PWNSimpleLoanDutchAuctionProposal,
+    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanListProposal,
+    PWNSimpleLoanSimpleProposal,
+    PWNLOAN,
+    PWNRevokedNonce,
+    MultiTokenCategoryRegistry
+} from "src/Deployments.sol";
 
 import { T20 } from "test/helper/T20.sol";
 import { T721 } from "test/helper/T721.sol";
