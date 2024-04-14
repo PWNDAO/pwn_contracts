@@ -431,7 +431,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
 
     function testFuzz_shouldFail_whenCallerIsNotAllowedAcceptor(address caller) external {
         address allowedAcceptor = makeAddr("allowedAcceptor");
-        vm.assume(caller != allowedAcceptor);
+        vm.assume(caller != allowedAcceptor && caller != proposer);
         params.base.allowedAcceptor = allowedAcceptor;
         params.acceptor = caller;
         params.signature = _sign(proposerPK, _getProposalHashWith());
