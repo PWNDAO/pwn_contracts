@@ -5,14 +5,17 @@ import { Test } from "forge-std/Test.sol";
 
 import {
     MultiToken,
-    PWNVault,
     IERC165,
     IERC721Receiver,
     IERC1155Receiver,
+    PWNVault,
+    IPoolAdapter,
     Permit
 } from "src/loan/vault/PWNVault.sol";
 import "src/PWNErrors.sol";
 
+import { DummyPoolAdapter } from "test/helper/DummyPoolAdapter.sol";
+import { T20 } from "test/helper/T20.sol";
 import { T721 } from "test/helper/T721.sol";
 
 
@@ -30,6 +33,14 @@ contract PWNVaultHarness is PWNVault {
         _pushFrom(asset, origin, beneficiary);
     }
 
+    function withdrawFromPool(MultiToken.Asset memory asset, IPoolAdapter poolAdapter, address pool, address owner) external {
+        _withdrawFromPool(asset, poolAdapter, pool, owner);
+    }
+
+    function supplyToPool(MultiToken.Asset memory asset, IPoolAdapter poolAdapter, address pool, address owner) external {
+        _supplyToPool(asset, poolAdapter, pool, owner);
+    }
+
     function exposed_tryPermit(Permit calldata permit) external {
         _tryPermit(permit);
     }
@@ -43,12 +54,14 @@ abstract contract PWNVaultTest is Test {
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
 
+    T20 t20;
     T721 t721;
 
     event VaultPull(MultiToken.Asset asset, address indexed origin);
     event VaultPush(MultiToken.Asset asset, address indexed beneficiary);
     event VaultPushFrom(MultiToken.Asset asset, address indexed origin, address indexed beneficiary);
-
+    event PoolWithdraw(MultiToken.Asset asset, address indexed poolAdapter, address indexed pool, address indexed owner);
+    event PoolSupply(MultiToken.Asset asset, address indexed poolAdapter, address indexed pool, address indexed owner);
 
     constructor() {
         vm.etch(token, bytes("data"));
@@ -56,6 +69,7 @@ abstract contract PWNVaultTest is Test {
 
     function setUp() public virtual {
         vault = new PWNVaultHarness();
+        t20 = new T20();
         t721 = new T721();
     }
 
@@ -197,6 +211,117 @@ contract PWNVault_PushFrom_Test is PWNVaultTest {
         emit VaultPushFrom(asset, alice, bob);
 
         vault.pushFrom(asset, alice, bob);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # WITHDRAW FROM POOL                                    *|
+|*----------------------------------------------------------*/
+
+contract PWNVault_WithdrawFromPool_Test is PWNVaultTest {
+    using MultiToken for address;
+
+    IPoolAdapter poolAdapter = IPoolAdapter(new DummyPoolAdapter());
+    address pool = makeAddr("pool");
+    MultiToken.Asset asset;
+
+    function setUp() override public {
+        super.setUp();
+
+        asset = address(t20).ERC20(42e18);
+
+        t20.mint(pool, asset.amount);
+        vm.prank(pool);
+        t20.approve(address(poolAdapter), asset.amount);
+    }
+
+
+    function test_shouldCallWithdrawOnPoolAdapter() external {
+        vm.expectCall(
+            address(poolAdapter),
+            abi.encodeWithSelector(IPoolAdapter.withdraw.selector, pool, alice, asset.assetAddress, asset.amount)
+        );
+
+        vault.withdrawFromPool(asset, poolAdapter, pool, alice);
+    }
+
+    function test_shouldFail_whenIncompleteTransaction() external {
+        vm.mockCall(
+            asset.assetAddress,
+            abi.encodeWithSignature("balanceOf(address)", alice),
+            abi.encode(asset.amount)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        vault.withdrawFromPool(asset, poolAdapter, pool, alice);
+    }
+
+    function test_shouldEmitEvent_PoolWithdraw() external {
+        vm.expectEmit();
+        emit PoolWithdraw(asset, address(poolAdapter), pool, alice);
+
+        vault.withdrawFromPool(asset, poolAdapter, pool, alice);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # SUPPLY TO POOL                                        *|
+|*----------------------------------------------------------*/
+
+contract PWNVault_SupplyToPool_Test is PWNVaultTest {
+    using MultiToken for address;
+
+    IPoolAdapter poolAdapter = IPoolAdapter(new DummyPoolAdapter());
+    address pool = makeAddr("pool");
+    MultiToken.Asset asset;
+
+    function setUp() override public {
+        super.setUp();
+
+        asset = address(t20).ERC20(42e18);
+
+        t20.mint(address(vault), asset.amount);
+    }
+
+
+    function test_shouldTransferAssetToPoolAdapter() external {
+        vm.expectCall(
+            asset.assetAddress,
+            abi.encodeWithSignature("transfer(address,uint256)", address(poolAdapter), asset.amount)
+        );
+
+        vault.supplyToPool(asset, poolAdapter, pool, alice);
+    }
+
+    function test_shouldCallSupplyOnPoolAdapter() external {
+        vm.expectCall(
+            address(poolAdapter),
+            abi.encodeWithSelector(IPoolAdapter.supply.selector, pool, alice, asset.assetAddress, asset.amount)
+        );
+
+        vault.supplyToPool(asset, poolAdapter, pool, alice);
+    }
+
+    function test_shouldFail_whenIncompleteTransaction() external {
+        vm.mockCall(
+            asset.assetAddress,
+            abi.encodeWithSignature("balanceOf(address)", address(vault)),
+            abi.encode(asset.amount)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        vault.supplyToPool(asset, poolAdapter, pool, alice);
+    }
+
+    function test_shouldEmitEvent_PoolSupply() external {
+        vm.expectEmit();
+        emit PoolSupply(asset, address(poolAdapter), pool, alice);
+
+        vault.supplyToPool(asset, poolAdapter, pool, alice);
     }
 
 }

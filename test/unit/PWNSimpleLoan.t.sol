@@ -616,7 +616,49 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function testFuzz_shouldTransferCredit_fromSourceOfFunds_toBorrowerAndFeeCollector_whenDirectSourceOfFunds(
+    function test_shouldFail_whenPoolAdapterNotRegistered_whenPoolSourceOfFunds() external {
+        lenderSpec.sourceOfFunds = sourceOfFunds;
+        simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
+        _mockLoanTerms(simpleLoanTerms);
+
+        vm.mockCall(config, abi.encodeWithSignature("getPoolAdapter(address)", sourceOfFunds), abi.encode(address(0)));
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidSourceOfFunds.selector, sourceOfFunds));
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldCallWithdraw_whenPoolSourceOfFunds(uint256 loanAmount) external {
+        loanAmount = bound(loanAmount, 1, 1e40);
+
+        lenderSpec.sourceOfFunds = sourceOfFunds;
+        simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
+        simpleLoanTerms.credit.amount = loanAmount;
+        _mockLoanTerms(simpleLoanTerms);
+
+        fungibleAsset.mint(sourceOfFunds, loanAmount);
+
+        vm.expectCall(
+            poolAdapter,
+            abi.encodeWithSignature(
+                "withdraw(address,address,address,uint256)",
+                sourceOfFunds, lender, simpleLoanTerms.credit.assetAddress, loanAmount
+            )
+        );
+
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldTransferCredit_toBorrowerAndFeeCollector(
         uint256 fee, uint256 loanAmount
     ) external {
         fee = bound(fee, 0, 9999);
@@ -641,89 +683,6 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         vm.expectCall(
             simpleLoanTerms.credit.assetAddress,
             abi.encodeWithSignature("transferFrom(address,address,uint256)", lender, borrower, newAmount)
-        );
-
-        loan.createLOAN({
-            proposalSpec: proposalSpec,
-            lenderSpec: lenderSpec,
-            callerSpec: callerSpec,
-            extra: ""
-        });
-    }
-
-    function test_shouldFail_whenPoolAdapterNotRegistered_whenPoolSourceOfFunds() external {
-        lenderSpec.sourceOfFunds = sourceOfFunds;
-        simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
-        _mockLoanTerms(simpleLoanTerms);
-
-        vm.mockCall(config, abi.encodeWithSignature("getPoolAdapter(address)", sourceOfFunds), abi.encode(address(0)));
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidSourceOfFunds.selector, sourceOfFunds));
-        loan.createLOAN({
-            proposalSpec: proposalSpec,
-            lenderSpec: lenderSpec,
-            callerSpec: callerSpec,
-            extra: ""
-        });
-    }
-
-    function testFuzz_shouldWithdrawCredit_fromSourceOfFunds_toVault_whenPoolSourceOfFunds(
-        uint256 fee, uint256 loanAmount
-    ) external {
-        fee = bound(fee, 0, 9999);
-        loanAmount = bound(loanAmount, 1, 1e40);
-
-        lenderSpec.sourceOfFunds = sourceOfFunds;
-        simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
-        simpleLoanTerms.credit.amount = loanAmount;
-        fungibleAsset.mint(sourceOfFunds, loanAmount);
-
-        _mockLoanTerms(simpleLoanTerms);
-        vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
-
-        vm.expectCall(
-            poolAdapter,
-            abi.encodeWithSignature(
-                "withdraw(address,address,address,uint256)",
-                sourceOfFunds, lender, simpleLoanTerms.credit.assetAddress, loanAmount
-            )
-        );
-
-        loan.createLOAN({
-            proposalSpec: proposalSpec,
-            lenderSpec: lenderSpec,
-            callerSpec: callerSpec,
-            extra: ""
-        });
-    }
-
-    function testFuzz_shouldTransferCredit_fromVault_toBorrowerAndFeeCollector_whenPoolSourceOfFunds(
-        uint256 fee, uint256 loanAmount
-    ) external {
-        fee = bound(fee, 0, 9999);
-        loanAmount = bound(loanAmount, 1, 1e40);
-
-        lenderSpec.sourceOfFunds = sourceOfFunds;
-        simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
-        simpleLoanTerms.credit.amount = loanAmount;
-        fungibleAsset.mint(sourceOfFunds, loanAmount);
-
-        _mockLoanTerms(simpleLoanTerms);
-        vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
-
-        uint256 feeAmount = Math.mulDiv(loanAmount, fee, 1e4);
-        uint256 newAmount = loanAmount - feeAmount;
-
-        // Fee transfer
-        vm.expectCall({
-            callee: simpleLoanTerms.credit.assetAddress,
-            data: abi.encodeWithSignature("transfer(address,uint256)", feeCollector, feeAmount),
-            count: feeAmount > 0 ? 1 : 0
-        });
-        // Updated amount transfer
-        vm.expectCall(
-            simpleLoanTerms.credit.assetAddress,
-            abi.encodeWithSignature("transfer(address,uint256)", borrower, newAmount)
         );
 
         loan.createLOAN({
@@ -1023,7 +982,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         _assertLOANEq(refinancingLoanId, simpleLoan);
     }
 
-    function test_shouldUpdateLoanData_whenLOANOwnerIsOriginalLender_whenDirectTransferFails() external {
+    function test_shouldUpdateLoanData_whenLOANOwnerIsOriginalLender_whenDirectRepaymentFails() external {
         _mockLOANTokenOwner(refinancingLoanId, lender);
 
         vm.mockCallRevert(simpleLoan.creditAddress, abi.encodeWithSignature("transfer(address,uint256)"), "");
@@ -1060,7 +1019,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function test_shouldWithdrawFullCreditAmountToVault_whenShouldTransferCommon_whenPoolSourceOfFunds() external {
+    function test_shouldWithdrawFullCreditAmount_whenShouldTransferCommon_whenPoolSourceOfFunds() external {
         lenderSpec.sourceOfFunds = sourceOfFunds;
         refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
         _mockLoanTerms(refinancedLoanTerms);
@@ -1081,7 +1040,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function test_shouldWithdrawCreditWithoutCommonToVault_whenShouldNotTransferCommon_whenPoolSourceOfFunds() external {
+    function test_shouldWithdrawCreditWithoutCommon_whenShouldNotTransferCommon_whenPoolSourceOfFunds() external {
         lenderSpec.sourceOfFunds = sourceOfFunds;
         refinancedLoanTerms.lender = newLender;
         refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
@@ -1111,7 +1070,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function test_shouldNotWithdrawCreditToVault_whenShouldNotTransferCommon_whenNoSurplus_whenNoFee_whenPoolSourceOfFunds() external {
+    function test_shouldNotWithdrawCredit_whenShouldNotTransferCommon_whenNoSurplus_whenNoFee_whenPoolSourceOfFunds() external {
         lenderSpec.sourceOfFunds = sourceOfFunds;
         refinancedLoanTerms.lender = newLender;
         refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
@@ -1135,7 +1094,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
     // Fee
 
-    function testFuzz_shouldTransferFeeToCollector_fromLender_whenDirectSourceOfFunds(uint256 fee) external {
+    function testFuzz_shouldTransferFeeToCollector(uint256 fee) external {
         fee = bound(fee, 1, 9999); // 0.01 - 99.99%
 
         uint256 feeAmount = Math.mulDiv(refinancedLoanTerms.credit.amount, fee, 1e4);
@@ -1155,33 +1114,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function testFuzz_shouldTransferFeeToCollector_fromVault_whenPoolSourceOfFunds(uint256 fee) external {
-        fee = bound(fee, 1, 9999); // 0.01 - 99.99%
+    // Transfer of common
 
-        lenderSpec.sourceOfFunds = sourceOfFunds;
-        refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
-        _mockLoanTerms(refinancedLoanTerms);
-
-        uint256 feeAmount = Math.mulDiv(refinancedLoanTerms.credit.amount, fee, 1e4);
-
-        vm.mockCall(config, abi.encodeWithSignature("fee()"), abi.encode(fee));
-
-        vm.expectCall(
-            refinancedLoanTerms.credit.assetAddress,
-            abi.encodeWithSignature("transfer(address,uint256)", feeCollector, feeAmount)
-        );
-
-        loan.createLOAN({
-            proposalSpec: proposalSpec,
-            lenderSpec: lenderSpec,
-            callerSpec: callerSpec,
-            extra: ""
-        });
-    }
-
-    // Transfer of common - should
-
-    function test_shouldTransferCommonToVaul_whenLenderNotLoanOwner_whenDirectSourceOfFunds() external {
+    function test_shouldTransferCommonToVaul_whenLenderNotLoanOwner() external {
         lenderSpec.sourceOfFunds = newLender;
         refinancedLoanTerms.lender = newLender;
         refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
@@ -1206,7 +1141,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function testFuzz_shouldTransferCommonToVaul_whenLenderOriginalLender_whenDifferentSourceOfFunds_whenDirectSourceOfFunds() external {
+    function testFuzz_shouldTransferCommonToVaul_whenLenderOriginalLender_whenDifferentSourceOfFunds() external {
         lenderSpec.sourceOfFunds = newLender;
         refinancedLoanTerms.lender = newLender;
         refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
@@ -1234,62 +1169,14 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    // Transfer of common - should not
-
-    function test_shouldNotTransferCommonToVaul_whenLenderNotLoanOwner_whenPoolSourceOfFunds() external {
-        lenderSpec.sourceOfFunds = sourceOfFunds;
-        refinancedLoanTerms.lender = newLender;
-        refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
-        _mockLoanTerms(refinancedLoanTerms);
-        _mockLOANTokenOwner(refinancingLoanId, makeAddr("loanOwner"));
-
-        vm.expectCall({
-            callee: refinancedLoanTerms.credit.assetAddress,
-            data: abi.encodeWithSignature("transferFrom(address,address,uint256)", address(loan), address(loan)),
-            count: 0
-        });
-
-        loan.createLOAN({
-            proposalSpec: proposalSpec,
-            lenderSpec: lenderSpec,
-            callerSpec: callerSpec,
-            extra: ""
-        });
-    }
-
-    function test_shouldNotTransferCommonToVaul_whenLenderOriginalLender_whenDifferentSourceOfFunds_whenPoolSourceOfFunds() external {
-        lenderSpec.sourceOfFunds = sourceOfFunds;
-        refinancedLoanTerms.lender = newLender;
-        refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
-        _mockLoanTerms(refinancedLoanTerms);
-        simpleLoan.originalLender = newLender;
-        simpleLoan.originalSourceOfFunds = newLender;
-        _mockLOAN(refinancingLoanId, simpleLoan);
-        _mockLOANTokenOwner(refinancingLoanId, newLender);
-
-        vm.expectCall({
-            callee: refinancedLoanTerms.credit.assetAddress,
-            data: abi.encodeWithSignature("transferFrom(address,address,uint256)", address(loan), address(loan)),
-            count: 0
-        });
-
-        loan.createLOAN({
-            proposalSpec: proposalSpec,
-            lenderSpec: lenderSpec,
-            callerSpec: callerSpec,
-            extra: ""
-        });
-
-    }
-
     /// forge-config: default.fuzz.runs = 2
-    function testFuzz_shouldNoTransferCommonToVaul_whenLenderLoanOwner_whenLenderOriginalLender_whenSameSourceOfFunds(bool flag) external {
-        lenderSpec.sourceOfFunds = flag ? newLender : sourceOfFunds;
+    function testFuzz_shouldNotTransferCommonToVaul_whenLenderLoanOwner_whenLenderOriginalLender_whenSameSourceOfFunds(bool sourceOfFundsflag) external {
+        lenderSpec.sourceOfFunds = sourceOfFundsflag ? newLender : sourceOfFunds;
         refinancedLoanTerms.lender = newLender;
         refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
         _mockLoanTerms(refinancedLoanTerms);
         simpleLoan.originalLender = newLender;
-        simpleLoan.originalSourceOfFunds = flag ? newLender : sourceOfFunds;
+        simpleLoan.originalSourceOfFunds = sourceOfFundsflag ? newLender : sourceOfFunds;
         _mockLOAN(refinancingLoanId, simpleLoan);
         _mockLOANTokenOwner(refinancingLoanId, newLender);
 
@@ -1309,7 +1196,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
     // Surplus
 
-    function test_shouldTransferSurplusToBorrower_fromNewLender_whenDirectSourceOfFunds() external {
+    function test_shouldTransferSurplusToBorrower() external {
         lenderSpec.sourceOfFunds = newLender;
         refinancedLoanTerms.lender = newLender;
         refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
@@ -1330,39 +1217,15 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function test_shouldTransferSurplusToBorrower_fromVault_whenPoolSourceOfFunds() external {
-        lenderSpec.sourceOfFunds = sourceOfFunds;
-        refinancedLoanTerms.lender = newLender;
-        refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
-        _mockLoanTerms(refinancedLoanTerms);
-
-        uint256 surplus = refinancedLoanTerms.credit.amount - loan.loanRepaymentAmount(refinancingLoanId);
-
-        vm.expectCall(
-            refinancedLoanTerms.credit.assetAddress,
-            abi.encodeWithSignature("transfer(address,uint256)", borrower, surplus)
-        );
-
-        loan.createLOAN({
-            proposalSpec: proposalSpec,
-            lenderSpec: lenderSpec,
-            callerSpec: callerSpec,
-            extra: ""
-        });
-    }
-
-    /// forge-config: default.fuzz.runs = 2
-    function testFuzz_shouldNotTransferSurplusToBorrower_whenNoSurplus(bool flag) external {
-        lenderSpec.sourceOfFunds = flag ? newLender : sourceOfFunds;
+    function test_shouldNotTransferSurplusToBorrower_whenNoSurplus() external {
+        lenderSpec.sourceOfFunds = newLender;
         refinancedLoanTerms.lender = newLender;
         refinancedLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
         _mockLoanTerms(refinancedLoanTerms);
 
         vm.expectCall({
             callee: refinancedLoanTerms.credit.assetAddress,
-            data: flag
-                ? abi.encodeWithSignature("transferFrom(address,address,uint256)", newLender, borrower, 0)
-                : abi.encodeWithSignature("transfer(address,uint256)", borrower, 0),
+            data: abi.encodeWithSignature("transferFrom(address,address,uint256)", newLender, borrower, 0),
             count: 0
         });
 
@@ -1413,13 +1276,18 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function testFuzz_shouldCall_tryClaimRepaidLOANForLoanOwner(address loanOwner) external {
+    // Try claim repaid LOAN
+
+    function testFuzz_shouldTryClaimRepaidLOAN_fullAmount_whenShouldTransferCommon(address loanOwner) external {
         vm.assume(loanOwner != address(0));
         _mockLOANTokenOwner(refinancingLoanId, loanOwner);
 
         vm.expectCall(
             address(loan),
-            abi.encodeWithSignature("tryClaimRepaidLOANForLoanOwner(uint256,address)", refinancingLoanId, loanOwner)
+            abi.encodeWithSignature(
+                "tryClaimRepaidLOAN(uint256,uint256,address)",
+                refinancingLoanId, loan.loanRepaymentAmount(refinancingLoanId), loanOwner
+            )
         );
 
         loan.createLOAN({
@@ -1430,10 +1298,37 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function test_shouldNotFail_whenTryClaimRepaidLOANForLoanOwnerFails() external {
+    function testFuzz_shouldTryClaimRepaidLOAN_shortageAmount_whenShouldNotTransferCommon(uint256 shortage) external {
+        simpleLoan.principalAmount = refinancedLoanTerms.credit.amount + 1;
+        _mockLOAN(refinancingLoanId, simpleLoan);
+
+        uint256 repaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
+        shortage = bound(shortage, 1, repaymentAmount - 1);
+
+        fungibleAsset.mint(borrower, shortage);
+
+        refinancedLoanTerms.credit.amount = repaymentAmount - shortage;
+        _mockLoanTerms(refinancedLoanTerms);
+
+        vm.expectCall(
+            address(loan),
+            abi.encodeWithSignature(
+                "tryClaimRepaidLOAN(uint256,uint256,address)", refinancingLoanId, shortage, lender
+            )
+        );
+
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
+            callerSpec: callerSpec,
+            extra: ""
+        });
+    }
+
+    function test_shouldNotFail_whenTryClaimRepaidLOANFails() external {
         vm.mockCallRevert(
             address(loan),
-            abi.encodeWithSignature("tryClaimRepaidLOANForLoanOwner(uint256,address)", refinancingLoanId, lender),
+            abi.encodeWithSignature("tryClaimRepaidLOAN(uint256,uint256,address)"),
             ""
         );
 
@@ -1774,22 +1669,24 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         loan.repayLOAN(loanId, "");
     }
 
-    function testFuzz_shouldCall_tryClaimRepaidLOANForLoanOwner(address loanOwner) external {
+    function testFuzz_shouldCall_tryClaimRepaidLOAN(address loanOwner) external {
         vm.assume(loanOwner != address(0));
         _mockLOANTokenOwner(loanId, loanOwner);
 
         vm.expectCall(
             address(loan),
-            abi.encodeWithSignature("tryClaimRepaidLOANForLoanOwner(uint256,address)", loanId, loanOwner)
+            abi.encodeWithSignature(
+                "tryClaimRepaidLOAN(uint256,uint256,address)", loanId, loan.loanRepaymentAmount(loanId), loanOwner
+            )
         );
 
         loan.repayLOAN(loanId, "");
     }
 
-    function test_shouldNotFail_whenTryClaimRepaidLOANForLoanOwnerFails() external {
+    function test_shouldNotFail_whenTryClaimRepaidLOANFails() external {
         vm.mockCallRevert(
             address(loan),
-            abi.encodeWithSignature("tryClaimRepaidLOANForLoanOwner(uint256,address)", loanId, lender),
+            abi.encodeWithSignature("tryClaimRepaidLOAN(uint256,uint256,address)"),
             ""
         );
 
@@ -2006,10 +1903,12 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
 
 
 /*----------------------------------------------------------*|
-|*  # TRY CLAIM REPAID LOAN FOR LOAN OWNER                  *|
+|*  # TRY CLAIM REPAID LOAN                                 *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest {
+contract PWNSimpleLoan_TryClaimRepaidLOAN_Test is PWNSimpleLoanTest {
+
+    uint256 public creditAmount;
 
     function setUp() override public {
         super.setUp();
@@ -2020,6 +1919,8 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
         // Move collateral to vault
         vm.prank(borrower);
         nonFungibleAsset.transferFrom(borrower, address(loan), 2);
+
+        creditAmount = 100;
     }
 
 
@@ -2028,7 +1929,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
 
         vm.expectRevert(abi.encodeWithSelector(CallerNotVault.selector));
         vm.prank(caller);
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
 
     function testFuzz_shouldNotProceed_whenLoanNotInRepaidState(uint8 status) external {
@@ -2044,7 +1945,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
         });
 
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
 
         _assertLOANEq(loanId, simpleLoan);
     }
@@ -2059,7 +1960,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
         });
 
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, loanOwner);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, loanOwner);
 
         _assertLOANEq(loanId, simpleLoan);
     }
@@ -2068,12 +1969,12 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
         vm.expectCall(loanToken, abi.encodeWithSignature("burn(uint256)", loanId));
 
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
 
     function test_shouldDeleteLOANData() external {
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
 
         _assertLOANEq(loanId, nonExistingLoan);
     }
@@ -2084,11 +1985,11 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
 
         vm.expectCall(
             simpleLoan.creditAddress,
-            abi.encodeWithSignature("transfer(address,uint256)", lender, loan.loanRepaymentAmount(loanId))
+            abi.encodeWithSignature("transfer(address,uint256)", lender, creditAmount)
         );
 
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
 
     function test_shouldFail_whenPoolAdapterNotRegistered_whenSourceOfFundsNotEqualToOriginalLender() external {
@@ -2101,7 +2002,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
 
         vm.expectRevert(abi.encodeWithSelector(InvalidSourceOfFunds.selector, sourceOfFunds));
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
 
     function test_shouldTransferAmountToPoolAdapter_whenSourceOfFundsNotEqualToOriginalLender() external {
@@ -2110,11 +2011,11 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
 
         vm.expectCall(
             simpleLoan.creditAddress,
-            abi.encodeWithSignature("transfer(address,uint256)", poolAdapter, loan.loanRepaymentAmount(loanId))
+            abi.encodeWithSignature("transfer(address,uint256)", poolAdapter, creditAmount)
         );
 
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
 
     function test_shouldCallSupplyOnPoolAdapter_whenSourceOfFundsNotEqualToOriginalLender() external {
@@ -2124,13 +2025,12 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
         vm.expectCall(
             poolAdapter,
             abi.encodeWithSignature(
-                "supply(address,address,address,uint256)",
-                sourceOfFunds, lender, simpleLoan.creditAddress, loan.loanRepaymentAmount(loanId)
+                "supply(address,address,address,uint256)", sourceOfFunds, lender, simpleLoan.creditAddress, creditAmount
             )
         );
 
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
 
     function test_shouldFail_whenTransferFails_whenSourceOfFundsEqualToOriginalLender() external {
@@ -2141,7 +2041,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
 
         vm.expectRevert();
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
 
     function test_shouldFail_whenTransferFails_whenSourceOfFundsNotEqualToOriginalLender() external {
@@ -2152,7 +2052,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
 
         vm.expectRevert();
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
 
     function test_shouldEmit_LOANClaimed() external {
@@ -2160,7 +2060,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOANForLoanOwner_Test is PWNSimpleLoanTest 
         emit LOANClaimed(loanId, false);
 
         vm.prank(address(loan));
-        loan.tryClaimRepaidLOANForLoanOwner(loanId, lender);
+        loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
 
 }

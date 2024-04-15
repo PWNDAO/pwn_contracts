@@ -9,8 +9,7 @@ interface IPoolAdapter {
 
     /**
      * @notice Withdraw an asset from the pool on behalf of the owner.
-     * @dev Adapter will withdraw and transfer the asset to the caller.
-     *      Caller must have the ACTIVE_LOAN tag in the hub.
+     * @dev Withdrawn asset remains in the owner. Caller must have the ACTIVE_LOAN tag in the hub.
      * @param pool The address of the pool from which the asset is withdrawn.
      * @param owner The address of the owner from whom the asset is withdrawn.
      * @param asset The address of the asset to withdraw.

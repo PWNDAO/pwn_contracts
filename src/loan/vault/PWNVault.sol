@@ -39,6 +39,16 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      */
     event VaultPushFrom(MultiToken.Asset asset, address indexed origin, address indexed beneficiary);
 
+    /**
+     * @dev Emitted when asset is withdrawn from a pool to an `owner` address.
+     */
+    event PoolWithdraw(MultiToken.Asset asset, address indexed poolAdapter, address indexed pool, address indexed owner);
+
+    /**
+     * @dev Emitted when asset is supplied to a pool from a vault.
+     */
+    event PoolSupply(MultiToken.Asset asset, address indexed poolAdapter, address indexed pool, address indexed owner);
+
 
     /*----------------------------------------------------------*|
     |*  # TRANSFER FUNCTIONS                                    *|
@@ -91,23 +101,26 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     }
 
     /**
-     * @notice Function withdrawing an asset from a Compound pool to a vault.
+     * @notice Function withdrawing an asset from a Compound pool to the owner.
      * @dev The function assumes a prior check for a valid pool address.
      * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
      * @param poolAdapter An address of a pool adapter.
      * @param pool An address of a pool.
-     * @param owner An address on which behalf the asset is withdrawn.
+     * @param owner An address on which behalf the assets are withdrawn.
      */
     function _withdrawFromPool(MultiToken.Asset memory asset, IPoolAdapter poolAdapter, address pool, address owner) internal {
-        uint256 originalBalance = asset.balanceOf(address(this));
+        uint256 originalBalance = asset.balanceOf(owner);
 
         poolAdapter.withdraw(pool, owner, asset.assetAddress, asset.amount);
-        _checkTransfer(asset, originalBalance, address(this), true);
+        _checkTransfer(asset, originalBalance, owner, true);
+
+        emit PoolWithdraw(asset, address(poolAdapter), pool, owner);
     }
 
     /**
      * @notice Function supplying an asset to a pool from a vault via a pool adapter.
      * @dev The function assumes a prior check for a valid pool address.
+     *      Assuming pool will revert supply transaction if it fails.
      * @param asset An asset construct - for a definition see { MultiToken dependency lib }.
      * @param poolAdapter An address of a pool adapter.
      * @param pool An address of a pool.
@@ -121,6 +134,8 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         _checkTransfer(asset, originalBalance, address(this), false);
 
         // Note: Assuming pool will revert supply transaction if it fails.
+
+        emit PoolSupply(asset, address(poolAdapter), pool, owner);
     }
 
     function _checkTransfer(
@@ -129,14 +144,12 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         address checkedAddress,
         bool checkIncreasingBalance
     ) private view {
-        if (checkIncreasingBalance) {
-            if (originalBalance + asset.getTransferAmount() != asset.balanceOf(checkedAddress)) {
-                revert IncompleteTransfer();
-            }
-        } else {
-            if (originalBalance - asset.getTransferAmount() != asset.balanceOf(checkedAddress)) {
-                revert IncompleteTransfer();
-            }
+        uint256 expectedBalance = checkIncreasingBalance
+            ? originalBalance + asset.getTransferAmount()
+            : originalBalance - asset.getTransferAmount();
+
+        if (expectedBalance != asset.balanceOf(checkedAddress)) {
+            revert IncompleteTransfer();
         }
     }
 

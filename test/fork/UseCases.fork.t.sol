@@ -374,3 +374,79 @@ contract CategoryRegistryForIncompleteERCTokensTest is UseCasesTest {
     }
 
 }
+
+
+contract RefinacningTest is UseCasesTest {
+
+    function testUseCase_shouldRefinanceRunningLoan() external {
+        proposal.creditAmount = 10 ether;
+        proposal.fixedInterestAmount = 1 ether;
+        proposal.availableCreditLimit = 20 ether;
+        proposal.duration = 5 days;
+
+        // Make proposal
+        vm.prank(lender);
+        deployment.simpleLoanSimpleProposal.makeProposal(proposal);
+
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+
+        // Create a loan
+        vm.prank(borrower);
+        uint256 loanId = deployment.simpleLoan.createLOAN({
+            proposalSpec: PWNSimpleLoan.ProposalSpec({
+                proposalContract: address(deployment.simpleLoanSimpleProposal),
+                proposalData: proposalData,
+                proposalInclusionProof: new bytes32[](0),
+                signature: ""
+            }),
+            lenderSpec: PWNSimpleLoan.LenderSpec({
+                sourceOfFunds: lender
+            }),
+            callerSpec: PWNSimpleLoan.CallerSpec({
+                refinancingLoanId: 0,
+                revokeNonce: false,
+                nonce: 0,
+                permitData: ""
+            }),
+            extra: ""
+        });
+
+        // Check balance
+        assertEq(credit.balanceOf(lender), 90 ether); // -10 credit
+        assertEq(credit.balanceOf(borrower), 100 ether); // -10 coll, +10 credit
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 10 ether); // +10 coll
+
+        vm.warp(block.timestamp + 4 days);
+
+        vm.expectCall(
+            address(credit),
+            abi.encodeWithSelector(credit.transferFrom.selector, borrower, address(deployment.simpleLoan), 1 ether)
+        );
+
+        vm.prank(borrower);
+        deployment.simpleLoan.createLOAN({
+            proposalSpec: PWNSimpleLoan.ProposalSpec({
+                proposalContract: address(deployment.simpleLoanSimpleProposal),
+                proposalData: proposalData,
+                proposalInclusionProof: new bytes32[](0),
+                signature: ""
+            }),
+            lenderSpec: PWNSimpleLoan.LenderSpec({
+                sourceOfFunds: lender
+            }),
+            callerSpec: PWNSimpleLoan.CallerSpec({
+                refinancingLoanId: loanId,
+                revokeNonce: false,
+                nonce: 0,
+                permitData: ""
+            }),
+            extra: ""
+        });
+
+        // Check balance
+        assertEq(credit.balanceOf(lender), 91 ether); // -10 credit, +1 refinance
+        assertEq(credit.balanceOf(borrower), 99 ether); // -10 coll, +10 credit, -1 refinance
+        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 10 ether); // +10 coll
+    }
+
+}

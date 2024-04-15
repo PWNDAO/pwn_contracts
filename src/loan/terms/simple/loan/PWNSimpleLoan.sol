@@ -469,15 +469,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Transfer collateral to Vault
         _pull(loanTerms.collateral, loanTerms.borrower);
 
-        // Decide credit provider
-        address creditProvider = loanTerms.lender;
+        // Lender is not the source of funds
         if (lenderSpec.sourceOfFunds != loanTerms.lender) {
-
-            // Note: Lender is not the source of funds. Withdraw credit asset to the Vault and use it
-            // as a credit provider to minimize the number of withdrawals.
-
-            _pullCreditFromPool(loanTerms.credit, loanTerms, lenderSpec);
-            creditProvider = address(this);
+            // Withdraw credit asset to the lender first
+            _withdrawCreditFromPool(loanTerms.credit, loanTerms, lenderSpec);
         }
 
         // Calculate fee amount and new loan amount
@@ -490,12 +485,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Collect fees
         if (feeAmount > 0) {
             creditHelper.amount = feeAmount;
-            _pushFrom(creditHelper, creditProvider, config.feeCollector());
+            _pushFrom(creditHelper, loanTerms.lender, config.feeCollector());
         }
 
         // Transfer credit to borrower
         creditHelper.amount = newLoanAmount;
-        _pushFrom(creditHelper, creditProvider, loanTerms.borrower);
+        _pushFrom(creditHelper, loanTerms.lender, loanTerms.borrower);
     }
 
     /**
@@ -535,43 +530,42 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Note: `creditHelper` must not be used before updating the amount.
         MultiToken.Asset memory creditHelper = loanTerms.credit;
 
-        // Decide credit provider
-        address creditProvider = loanTerms.lender;
+        // Lender is not the source of funds
         if (lenderSpec.sourceOfFunds != loanTerms.lender) {
-
-            // Note: Lender is not the source of funds. Withdraw credit asset to the Vault and use it
-            // as a credit provider to minimize the number of withdrawals.
-
+            // Withdraw credit asset to the lender first
             creditHelper.amount = feeAmount + (shouldTransferCommon ? common : 0) + surplus;
-            _pullCreditFromPool(creditHelper, loanTerms, lenderSpec);
-            creditProvider = address(this);
+            _withdrawCreditFromPool(creditHelper, loanTerms, lenderSpec);
         }
 
         // Collect fees
         if (feeAmount > 0) {
             creditHelper.amount = feeAmount;
-            _pushFrom(creditHelper, creditProvider, config.feeCollector());
+            _pushFrom(creditHelper, loanTerms.lender, config.feeCollector());
         }
 
         // Transfer common amount to the Vault if necessary
-        // Note: If the `creditProvider` is a vault, the common amount is already in the vault.
-        if (shouldTransferCommon && creditProvider != address(this)) {
+        if (shouldTransferCommon) {
             creditHelper.amount = common;
-            _pull(creditHelper, creditProvider);
+            _pull(creditHelper, loanTerms.lender);
         }
 
         // Handle the surplus or the shortage
         if (surplus > 0) {
             // New loan covers the whole original loan, transfer surplus to the borrower
             creditHelper.amount = surplus;
-            _pushFrom(creditHelper, creditProvider, loanTerms.borrower);
+            _pushFrom(creditHelper, loanTerms.lender, loanTerms.borrower);
         } else if (shortage > 0) {
             // New loan covers only part of the original loan, borrower needs to contribute
             creditHelper.amount = shortage;
             _pull(creditHelper, loanTerms.borrower);
         }
 
-        try this.tryClaimRepaidLOANForLoanOwner(refinancingLoanId, loanOwner) {} catch {
+        // Try to repay directly
+        try this.tryClaimRepaidLOAN({
+            loanId: refinancingLoanId,
+            creditAmount: (shouldTransferCommon ? common : 0) + shortage,
+            loanOwner: loanOwner
+        }) {} catch {
             // Note: Safe transfer or supply to a pool can fail. In that case the LOAN token stays in repaid state and
             // waits for the LOAN token owner to claim the repaid credit. Otherwise lender would be able to prevent
             // anybody from repaying the loan.
@@ -579,13 +573,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     }
 
     /**
-     * @notice Pull a credit asset from a pool to the Vault.
+     * @notice Withdraw a credit asset from a pool to the Vault.
      * @dev The function will revert if pool doesn't have registered pool adapter.
      * @param credit Asset to be pulled from the pool.
      * @param loanTerms Loan terms struct.
      * @param lenderSpec Lender specification struct.
      */
-    function _pullCreditFromPool(
+    function _withdrawCreditFromPool(
         MultiToken.Asset memory credit,
         Terms memory loanTerms,
         LenderSpec calldata lenderSpec
@@ -635,13 +629,14 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         }
 
         // Transfer the repaid credit to the Vault
-        _pull(loan.creditAddress.ERC20(_loanRepaymentAmount(loanId)), msg.sender);
+        uint256 repaymentAmount = _loanRepaymentAmount(loanId);
+        _pull(loan.creditAddress.ERC20(repaymentAmount), msg.sender);
 
         // Transfer collateral back to borrower
         _push(loan.collateral, loan.borrower);
 
         // Try to repay directly
-        try this.tryClaimRepaidLOANForLoanOwner(loanId, loanToken.ownerOf(loanId)) {} catch {
+        try this.tryClaimRepaidLOAN(loanId, repaymentAmount, loanToken.ownerOf(loanId)) {} catch {
             // Note: Safe transfer or supply to a pool can fail. In that case leave the LOAN token in repaid state and
             // wait for the LOAN token owner to claim the repaid credit. Otherwise lender would be able to prevent
             // borrower from repaying the loan.
@@ -769,9 +764,10 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      and the LOAN token owner will be able to claim the repaid credit. Otherwise lender would be able to prevent
      *      borrower from repaying the loan.
      * @param loanId Id of a loan that is being claimed.
+     * @param creditAmount Amount of a credit to be claimed.
      * @param loanOwner Address of the LOAN token holder.
      */
-    function tryClaimRepaidLOANForLoanOwner(uint256 loanId, address loanOwner) external {
+    function tryClaimRepaidLOAN(uint256 loanId, uint256 creditAmount, address loanOwner) external {
         if (msg.sender != address(this))
             revert CallerNotVault();
 
@@ -787,7 +783,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Note: The loan owner is the original lender at this point.
 
         address destinationOfFunds = loan.originalSourceOfFunds;
-        MultiToken.Asset memory repaymentCredit = loan.creditAddress.ERC20(_loanRepaymentAmount(loanId));
+        MultiToken.Asset memory repaymentCredit = loan.creditAddress.ERC20(creditAmount);
 
         // Delete loan data & burn LOAN token before calling safe transfer
         _deleteLoan(loanId);
