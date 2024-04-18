@@ -612,7 +612,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     function repayLOAN(
         uint256 loanId,
         bytes calldata permitData
-        // Permit calldata permit
     ) external {
         LOAN storage loan = LOANs[loanId];
 
