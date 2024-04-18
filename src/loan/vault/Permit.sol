@@ -20,3 +20,13 @@ struct Permit {
     bytes32 r;
     bytes32 s;
 }
+
+/**
+ * @notice Thrown when the permit owner is not matching.
+ */
+error InvalidPermitOwner(address current, address expected);
+
+/**
+ * @notice Thrown when the permit asset is not matching.
+ */
+error InvalidPermitAsset(address current, address expected);

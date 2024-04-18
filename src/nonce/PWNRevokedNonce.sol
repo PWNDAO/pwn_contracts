@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import { PWNHub } from "src/hub/PWNHub.sol";
 import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import "src/PWNErrors.sol";
+import { AddressMissingHubTag } from "src/PWNErrors.sol";
 
 
 /**
@@ -45,14 +45,30 @@ contract PWNRevokedNonce {
     |*----------------------------------------------------------*/
 
     /**
-     * @dev Emitted when a nonce is revoked.
+     * @notice Emitted when a nonce is revoked.
      */
     event NonceRevoked(address indexed owner, uint256 indexed nonceSpace, uint256 indexed nonce);
 
     /**
-     * @dev Emitted when a nonce is revoked.
+     * @notice Emitted when a nonce is revoked.
      */
     event NonceSpaceRevoked(address indexed owner, uint256 indexed nonceSpace);
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERRORS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Thrown when trying to revoke a nonce that is already revoked.
+     */
+    error NonceAlreadyRevoked(address addr, uint256 nonceSpace, uint256 nonce);
+
+    /**
+     * @notice Thrown when nonce is currently not usable.
+     * @dev Maybe nonce is revoked or not in the current nonce space.
+     */
+    error NonceNotUsable(address addr, uint256 nonceSpace, uint256 nonce);
 
 
     /*----------------------------------------------------------*|

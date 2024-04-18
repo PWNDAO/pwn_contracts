@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import { Test } from "forge-std/Test.sol";
 
 import { PWNHub } from "src/hub/PWNHub.sol";
-import "src/PWNErrors.sol";
+import { InvalidInputData } from "src/PWNErrors.sol";
 
 
 abstract contract PWNHubTest is Test {

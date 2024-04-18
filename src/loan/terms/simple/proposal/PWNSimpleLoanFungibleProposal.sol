@@ -7,7 +7,6 @@ import { Math } from "openzeppelin/utils/math/Math.sol";
 
 import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import "src/PWNErrors.sol";
 
 
 /**
@@ -90,9 +89,19 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @dev Emitted when a proposal is made via an on-chain transaction.
+     * @notice Emitted when a proposal is made via an on-chain transaction.
      */
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, Proposal proposal);
+
+    /**
+     * @notice Thrown when proposal has no minimal collateral amount set.
+     */
+    error MinCollateralAmountNotSet();
+
+    /**
+     * @notice Thrown when acceptor provides insufficient collateral amount.
+     */
+    error InsufficientCollateralAmount(uint256 current, uint256 limit);
 
     constructor(
         address _hub,

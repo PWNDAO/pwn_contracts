@@ -5,7 +5,6 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 
 import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import "src/PWNErrors.sol";
 
 
 /**
@@ -73,7 +72,7 @@ contract PWNSimpleLoanSimpleProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @dev Emitted when a proposal is made via an on-chain transaction.
+     * @notice Emitted when a proposal is made via an on-chain transaction.
      */
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, Proposal proposal);
 

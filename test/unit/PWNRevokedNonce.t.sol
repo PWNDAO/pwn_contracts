@@ -3,9 +3,11 @@ pragma solidity 0.8.16;
 
 import { Test } from "forge-std/Test.sol";
 
-import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
-import "src/PWNErrors.sol";
+import {
+    PWNRevokedNonce,
+    PWNHubTags,
+    AddressMissingHubTag
+} from "src/nonce/PWNRevokedNonce.sol";
 
 
 abstract contract PWNRevokedNonceTest is Test {
@@ -54,7 +56,7 @@ contract PWNRevokedNonce_RevokeNonce_Test is PWNRevokedNonceTest {
         vm.store(address(revokedNonce), _nonceSpaceSlot(alice), bytes32(nonceSpace));
         vm.store(address(revokedNonce), _revokedNonceSlot(alice, nonceSpace, nonce), bytes32(uint256(1)));
 
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector, alice, nonceSpace, nonce));
+        vm.expectRevert(abi.encodeWithSelector(PWNRevokedNonce.NonceAlreadyRevoked.selector, alice, nonceSpace, nonce));
         vm.prank(alice);
         revokedNonce.revokeNonce(nonce);
     }
@@ -90,7 +92,7 @@ contract PWNRevokedNonce_RevokeNonceWithNonceSpace_Test is PWNRevokedNonceTest {
     function testFuzz_shouldFail_whenNonceAlreadyRevoked(uint256 nonceSpace, uint256 nonce) external {
         vm.store(address(revokedNonce), _revokedNonceSlot(alice, nonceSpace, nonce), bytes32(uint256(1)));
 
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector, alice, nonceSpace, nonce));
+        vm.expectRevert(abi.encodeWithSelector(PWNRevokedNonce.NonceAlreadyRevoked.selector, alice, nonceSpace, nonce));
         vm.prank(alice);
         revokedNonce.revokeNonce(nonceSpace, nonce);
     }
@@ -149,7 +151,7 @@ contract PWNRevokedNonce_RevokeNonceWithOwner_Test is PWNRevokedNonceTest {
         vm.store(address(revokedNonce), _nonceSpaceSlot(owner), bytes32(nonceSpace));
         vm.store(address(revokedNonce), _revokedNonceSlot(owner, nonceSpace, nonce), bytes32(uint256(1)));
 
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector, owner, nonceSpace, nonce));
+        vm.expectRevert(abi.encodeWithSelector(PWNRevokedNonce.NonceAlreadyRevoked.selector, owner, nonceSpace, nonce));
         vm.prank(accessEnabledAddress);
         revokedNonce.revokeNonce(owner, nonce);
     }
@@ -211,7 +213,7 @@ contract PWNRevokedNonce_RevokeNonceWithNonceSpaceAndOwner_Test is PWNRevokedNon
     function testFuzz_shouldFail_whenNonceAlreadyRevoked(address owner, uint256 nonceSpace, uint256 nonce) external {
         vm.store(address(revokedNonce), _revokedNonceSlot(owner, nonceSpace, nonce), bytes32(uint256(1)));
 
-        vm.expectRevert(abi.encodeWithSelector(NonceAlreadyRevoked.selector, owner, nonceSpace, nonce));
+        vm.expectRevert(abi.encodeWithSelector(PWNRevokedNonce.NonceAlreadyRevoked.selector, owner, nonceSpace, nonce));
         vm.prank(accessEnabledAddress);
         revokedNonce.revokeNonce(owner, nonceSpace, nonce);
     }

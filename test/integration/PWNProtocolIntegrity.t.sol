@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import "src/PWNErrors.sol";
+import { AddressMissingHubTag } from "src/PWNErrors.sol";
 
 import {
     MultiToken,

@@ -37,12 +37,12 @@ contract PWNLOAN is PWNHubAccessControl, IERC5646, ERC721 {
     |*----------------------------------------------------------*/
 
     /**
-     * @dev Emitted when a new LOAN token is minted.
+     * @notice Emitted when a new LOAN token is minted.
      */
     event LOANMinted(uint256 indexed loanId, address indexed loanContract, address indexed owner);
 
     /**
-     * @dev Emitted when a LOAN token is burned.
+     * @notice Emitted when a LOAN token is burned.
      */
     event LOANBurned(uint256 indexed loanId);
 

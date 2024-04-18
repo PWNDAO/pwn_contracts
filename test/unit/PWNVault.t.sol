@@ -12,7 +12,6 @@ import {
     IPoolAdapter,
     Permit
 } from "src/loan/vault/PWNVault.sol";
-import "src/PWNErrors.sol";
 
 import { DummyPoolAdapter } from "test/helper/DummyPoolAdapter.sol";
 import { T20 } from "test/helper/T20.sol";
@@ -103,7 +102,7 @@ contract PWNVault_Pull_Test is PWNVaultTest {
             abi.encode(alice)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 0);
         vault.pull(asset, alice);
     }
@@ -149,7 +148,7 @@ contract PWNVault_Push_Test is PWNVaultTest {
             abi.encode(address(vault))
         );
 
-        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 0);
         vault.push(asset, alice);
     }
@@ -195,7 +194,7 @@ contract PWNVault_PushFrom_Test is PWNVaultTest {
             abi.encode(alice)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 0);
         vault.pushFrom(asset, alice, bob);
     }
@@ -254,7 +253,7 @@ contract PWNVault_WithdrawFromPool_Test is PWNVaultTest {
             abi.encode(asset.amount)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
         vault.withdrawFromPool(asset, poolAdapter, pool, alice);
     }
 
@@ -313,7 +312,7 @@ contract PWNVault_SupplyToPool_Test is PWNVaultTest {
             abi.encode(asset.amount)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(IncompleteTransfer.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
         vault.supplyToPool(asset, poolAdapter, pool, alice);
     }
 
@@ -402,7 +401,7 @@ contract PWNVault_ReceivedHooks_Test is PWNVaultTest {
     }
 
     function test_shouldFail_whenOperatorIsNotVault_onERC721Received() external {
-        vm.expectRevert(abi.encodeWithSelector(UnsupportedTransferFunction.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.UnsupportedTransferFunction.selector));
         vault.onERC721Received(address(0), address(0), 0, "");
     }
 
@@ -413,7 +412,7 @@ contract PWNVault_ReceivedHooks_Test is PWNVaultTest {
     }
 
     function test_shouldFail_whenOperatorIsNotVault_onERC1155Received() external {
-        vm.expectRevert(abi.encodeWithSelector(UnsupportedTransferFunction.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.UnsupportedTransferFunction.selector));
         vault.onERC1155Received(address(0), address(0), 0, 0, "");
     }
 
@@ -421,7 +420,7 @@ contract PWNVault_ReceivedHooks_Test is PWNVaultTest {
         uint256[] memory ids;
         uint256[] memory values;
 
-        vm.expectRevert(abi.encodeWithSelector(UnsupportedTransferFunction.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.UnsupportedTransferFunction.selector));
         vault.onERC1155BatchReceived(address(0), address(0), ids, values, "");
     }
 

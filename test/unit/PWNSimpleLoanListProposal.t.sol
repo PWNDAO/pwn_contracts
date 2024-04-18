@@ -7,7 +7,6 @@ import {
     PWNSimpleLoanProposal,
     PWNSimpleLoan
 } from "src/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
-import "src/PWNErrors.sol";
 
 import {
     MultiToken,
@@ -173,7 +172,7 @@ contract PWNSimpleLoanListProposal_MakeProposal_Test is PWNSimpleLoanListProposa
     function testFuzz_shouldFail_whenCallerIsNotProposer(address caller) external {
         vm.assume(caller != proposal.proposer);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedProposer.selector, proposal.proposer));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanProposal.CallerIsNotStatedProposer.selector, proposal.proposer));
         vm.prank(caller);
         proposalContract.makeProposal(proposal);
     }
@@ -325,7 +324,11 @@ contract PWNSimpleLoanListProposal_AcceptProposal_Test is PWNSimpleLoanListPropo
         proposalValues.merkleInclusionProof = new bytes32[](1);
         proposalValues.merkleInclusionProof[0] = id2Hash;
 
-        vm.expectRevert(abi.encodeWithSelector(CollateralIdNotWhitelisted.selector, proposalValues.collateralId));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanListProposal.CollateralIdNotWhitelisted.selector, proposalValues.collateralId
+            )
+        );
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,

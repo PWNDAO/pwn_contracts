@@ -16,10 +16,10 @@ import { PWNFeeCalculator } from "src/loan/lib/PWNFeeCalculator.sol";
 import { PWNSignatureChecker } from "src/loan/lib/PWNSignatureChecker.sol";
 import { PWNSimpleLoanProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 import { PWNLOAN } from "src/loan/token/PWNLOAN.sol";
-import { Permit } from "src/loan/vault/Permit.sol";
+import { Permit, InvalidPermitOwner, InvalidPermitAsset } from "src/loan/vault/Permit.sol";
 import { PWNVault } from "src/loan/vault/PWNVault.sol";
 import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
-import "src/PWNErrors.sol";
+import { Expired, AddressMissingHubTag } from "src/PWNErrors.sol";
 
 
 /**
@@ -192,38 +192,124 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
 
     /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
     /**
-     * @dev Emitted when a new loan in created.
+     * @notice Emitted when a new loan in created.
      */
     event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, Terms terms, LenderSpec lenderSpec, bytes extra);
 
     /**
-     * @dev Emitted when a loan is refinanced.
+     * @notice Emitted when a loan is refinanced.
      */
     event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
 
     /**
-     * @dev Emitted when a loan is paid back.
+     * @notice Emitted when a loan is paid back.
      */
     event LOANPaidBack(uint256 indexed loanId);
 
     /**
-     * @dev Emitted when a repaid or defaulted loan is claimed.
+     * @notice Emitted when a repaid or defaulted loan is claimed.
      */
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
 
     /**
-     * @dev Emitted when a LOAN token holder extends a loan.
+     * @notice Emitted when a LOAN token holder extends a loan.
      */
     event LOANExtended(uint256 indexed loanId, uint40 originalDefaultTimestamp, uint40 extendedDefaultTimestamp);
 
     /**
-     * @dev Emitted when a loan extension proposal is made.
+     * @notice Emitted when a loan extension proposal is made.
      */
     event ExtensionProposalMade(bytes32 indexed extensionHash, address indexed proposer,  ExtensionProposal proposal);
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERRORS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Thrown when managed loan is defaulted.
+     */
+    error LoanDefaulted(uint40);
+
+    /**
+     * @notice Thrown when manged loan is in incorrect state.
+     */
+    error InvalidLoanStatus(uint256);
+
+    /**
+     * @notice Thrown when loan doesn't exist.
+     */
+    error NonExistingLoan();
+
+    /**
+     * @notice Thrown when caller is not a LOAN token holder.
+     */
+    error CallerNotLOANTokenHolder();
+
+    /**
+     * @notice Thrown when refinancing loan terms have different borrower than the original loan.
+     */
+    error RefinanceBorrowerMismatch(address currentBorrower, address newBorrower);
+
+    /**
+     * @notice Thrown when refinancing loan terms have different credit asset than the original loan.
+     */
+    error RefinanceCreditMismatch();
+
+    /**
+     * @notice Thrown when refinancing loan terms have different collateral asset than the original loan.
+     */
+    error RefinanceCollateralMismatch();
+
+    /**
+     * @notice Thrown when hash of provided lender spec doesn't match the one in loan terms.
+     */
+    error InvalidLenderSpecHash(bytes32 current, bytes32 expected);
+
+    /**
+     * @notice Thrown when loan duration is below the minimum.
+     */
+    error InvalidDuration(uint256 current, uint256 limit);
+
+    /**
+     * @notice Thrown when accruing interest APR is above the maximum.
+     */
+    error AccruingInterestAPROutOfBounds(uint256 current, uint256 limit);
+
+    /**
+     * @notice Thrown when caller is not a vault.
+     */
+    error CallerNotVault();
+
+    /**
+     * @notice Thrown when pool based source of funds doesn't have a registered adapter.
+     */
+    error InvalidSourceOfFunds(address sourceOfFunds);
+
+    /**
+     * @notice Thrown when caller is not a loan borrower or lender.
+     */
+    error InvalidExtensionCaller();
+
+    /**
+     * @notice Thrown when signer is not a loan extension proposer.
+     */
+    error InvalidExtensionSigner(address allowed, address current);
+
+    /**
+     * @notice Thrown when loan extension duration is out of bounds.
+     */
+    error InvalidExtensionDuration(uint256 duration, uint256 limit);
+
+    /**
+     * @notice Thrown when MultiToken.Asset is invalid.
+     * @dev Could be because of invalid category, address, id or amount.
+     */
+    error InvalidMultiTokenAsset(uint8 category, address addr, uint256 id, uint256 amount);
 
 
     /*----------------------------------------------------------*|
@@ -889,7 +975,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bytes32 extensionHash = getExtensionHash(extension);
         if (!extensionProposalsMade[extensionHash])
             if (!PWNSignatureChecker.isValidSignatureNow(extension.proposer, extensionHash, signature))
-                revert InvalidSignature({ signer: extension.proposer, digest: extensionHash });
+                revert PWNSignatureChecker.InvalidSignature({ signer: extension.proposer, digest: extensionHash });
 
         // Check extension expiration
         if (block.timestamp >= extension.expiration)
@@ -897,7 +983,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         // Check extension nonce
         if (!revokedNonce.isNonceUsable(extension.proposer, extension.nonceSpace, extension.nonce))
-            revert NonceNotUsable({ addr: extension.proposer, nonceSpace: extension.nonceSpace, nonce: extension.nonce });
+            revert PWNRevokedNonce.NonceNotUsable({
+                addr: extension.proposer,
+                nonceSpace: extension.nonceSpace,
+                nonce: extension.nonce
+            });
 
         // Check caller and signer
         address loanOwner = loanToken.ownerOf(extension.loanId);

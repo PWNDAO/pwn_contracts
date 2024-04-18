@@ -11,13 +11,17 @@ import { IERC5646 } from "src/interfaces/IERC5646.sol";
 import { PWNSignatureChecker } from "src/loan/lib/PWNSignatureChecker.sol";
 import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
-import "src/PWNErrors.sol";
+import { Expired, AddressMissingHubTag } from "src/PWNErrors.sol";
 
 /**
  * @title PWN Simple Loan Proposal Base Contract
  * @notice Base contract of loan proposals that builds a simple loan terms.
  */
 abstract contract PWNSimpleLoanProposal {
+
+    /*----------------------------------------------------------*|
+    |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
+    |*----------------------------------------------------------*/
 
     bytes32 public immutable DOMAIN_SEPARATOR;
     bytes32 public immutable MULTIPROPOSAL_DOMAIN_SEPARATOR;
@@ -61,6 +65,56 @@ abstract contract PWNSimpleLoanProposal {
      *      (proposal hash => credit used)
      */
     mapping (bytes32 => uint256) public creditUsed;
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERRORS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Thrown when a caller is missing a required hub tag.
+     */
+    error CallerNotLoanContract(address caller, address loanContract);
+
+    /**
+     * @notice Thrown when a state fingerprint computer is not registered.
+     */
+    error MissingStateFingerprintComputer();
+
+    /**
+     * @notice Thrown when a proposed collateral state fingerprint doesn't match the current state.
+     */
+    error InvalidCollateralStateFingerprint(bytes32 current, bytes32 proposed);
+
+    /**
+     * @notice Thrown when a caller is not a stated proposer.
+     */
+    error CallerIsNotStatedProposer(address addr);
+
+    /**
+     * @notice Thrown when proposal acceptor and proposer are the same.
+     */
+    error AcceptorIsProposer(address addr);
+
+    /**
+     * @notice Thrown when provided refinance loan id cannot be used.
+     */
+    error InvalidRefinancingLoanId(uint256 refinancingLoanId);
+
+    /**
+     * @notice Thrown when a proposal would exceed the available credit limit.
+     */
+    error AvailableCreditLimitExceeded(uint256 used, uint256 limit);
+
+    /**
+     * @notice Thrown when caller is not allowed to accept a proposal.
+     */
+    error CallerNotAllowedAcceptor(address current, address allowed);
+
+
+    /*----------------------------------------------------------*|
+    |*  # CONSTRUCTOR                                           *|
+    |*----------------------------------------------------------*/
 
     constructor(
         address _hub,
@@ -161,7 +215,7 @@ abstract contract PWNSimpleLoanProposal {
      */
     function _makeProposal(bytes32 proposalHash, address proposer) internal {
         if (msg.sender != proposer) {
-            revert CallerIsNotStatedProposer(proposer);
+            revert CallerIsNotStatedProposer({ addr: proposer });
         }
 
         proposalsMade[proposalHash] = true;
@@ -197,7 +251,7 @@ abstract contract PWNSimpleLoanProposal {
             // Single proposal signature
             if (!proposalsMade[proposalHash]) {
                 if (!PWNSignatureChecker.isValidSignatureNow(proposal.proposer, proposalHash, signature)) {
-                    revert InvalidSignature({ signer: proposal.proposer, digest: proposalHash });
+                    revert PWNSignatureChecker.InvalidSignature({ signer: proposal.proposer, digest: proposalHash });
                 }
             }
         } else {
@@ -211,7 +265,7 @@ abstract contract PWNSimpleLoanProposal {
                 })
             );
             if (!PWNSignatureChecker.isValidSignatureNow(proposal.proposer, multiproposalHash, signature)) {
-                revert InvalidSignature({ signer: proposal.proposer, digest: multiproposalHash });
+                revert PWNSignatureChecker.InvalidSignature({ signer: proposal.proposer, digest: multiproposalHash });
             }
         }
 
@@ -240,7 +294,11 @@ abstract contract PWNSimpleLoanProposal {
 
         // Check proposal is not revoked
         if (!revokedNonce.isNonceUsable(proposal.proposer, proposal.nonceSpace, proposal.nonce)) {
-            revert NonceNotUsable({ addr: proposal.proposer, nonceSpace: proposal.nonceSpace, nonce: proposal.nonce });
+            revert PWNRevokedNonce.NonceNotUsable({
+                addr: proposal.proposer,
+                nonceSpace: proposal.nonceSpace,
+                nonce: proposal.nonce
+            });
         }
 
         // Check propsal is accepted by an allowed address

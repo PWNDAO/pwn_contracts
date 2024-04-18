@@ -6,7 +6,6 @@ import { Initializable } from "openzeppelin/proxy/utils/Initializable.sol";
 
 import { IPoolAdapter } from "src/interfaces/IPoolAdapter.sol";
 import { IStateFingerpringComputer } from "src/interfaces/IStateFingerpringComputer.sol";
-import "src/PWNErrors.sol";
 
 
 /**
@@ -44,44 +43,64 @@ contract PWNConfig is Ownable2Step, Initializable {
 
     /**
      * @notice Mapping holding registered state fingerprint computer to an asset.
-     * @dev Only owner can update the mapping.
      */
     mapping (address => address) private _sfComputerRegistry;
 
     /**
      * @notice Mapping holding registered pool adapter to a pool address.
-     * @dev Only owner can update the mapping.
      */
     mapping (address => address) private _poolAdapterRegistry;
 
+
     /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
     /**
-     * @dev Emitted when new fee value is set.
+     * @notice Emitted when new fee value is set.
      */
     event FeeUpdated(uint16 oldFee, uint16 newFee);
 
     /**
-     * @dev Emitted when new fee collector address is set.
+     * @notice Emitted when new fee collector address is set.
      */
     event FeeCollectorUpdated(address oldFeeCollector, address newFeeCollector);
 
     /**
-     * @dev Emitted when new LOAN token metadata uri is set.
+     * @notice Emitted when new LOAN token metadata uri is set.
      */
     event LOANMetadataUriUpdated(address indexed loanContract, string newUri);
 
     /**
-     * @dev Emitted when new default LOAN token metadata uri is set.
+     * @notice Emitted when new default LOAN token metadata uri is set.
      */
     event DefaultLOANMetadataUriUpdated(string newUri);
 
+
+    /*----------------------------------------------------------*|
+    |*  # ERRORS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
     /**
-     * @notice Error emitted when registering a computer which does not support the asset it is registered for.
+     * @notice Thrown when registering a computer which does not support the asset it is registered for.
      */
-    error InvalidComputerContract();
+    error InvalidComputerContract(address computer, address asset);
+
+    /**
+     * @notice Thrown when trying to set a fee value higher than `MAX_FEE`.
+     */
+    error InvalidFeeValue(uint256 fee, uint256 limit);
+
+    /**
+     * @notice Thrown when trying to set a fee collector to zero address.
+     */
+    error ZeroFeeCollector();
+
+    /**
+     * @notice Thrown when trying to set a LOAN token metadata uri for zero address loan contract.
+     */
+    error ZeroLoanContract();
+
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
@@ -110,16 +129,19 @@ contract PWNConfig is Ownable2Step, Initializable {
 
     /**
      * @notice Set new protocol fee value.
-     * @dev Only contract owner can call this function.
      * @param _fee New fee value in basis points. Value of 100 is 1% fee.
      */
     function setFee(uint16 _fee) external onlyOwner {
         _setFee(_fee);
     }
 
+    /**
+     * @notice Internal implementation of setting new protocol fee value.
+     * @param _fee New fee value in basis points. Value of 100 is 1% fee.
+     */
     function _setFee(uint16 _fee) private {
         if (_fee > MAX_FEE)
-            revert InvalidFeeValue();
+            revert InvalidFeeValue({ fee: _fee, limit: MAX_FEE });
 
         uint16 oldFee = fee;
         fee = _fee;
@@ -128,16 +150,19 @@ contract PWNConfig is Ownable2Step, Initializable {
 
     /**
      * @notice Set new fee collector address.
-     * @dev Only contract owner can call this function.
      * @param _feeCollector New fee collector address.
      */
     function setFeeCollector(address _feeCollector) external onlyOwner {
         _setFeeCollector(_feeCollector);
     }
 
+    /**
+     * @notice Internal implementation of setting new fee collector address.
+     * @param _feeCollector New fee collector address.
+     */
     function _setFeeCollector(address _feeCollector) private {
         if (_feeCollector == address(0))
-            revert InvalidFeeCollector();
+            revert ZeroFeeCollector();
 
         address oldFeeCollector = feeCollector;
         feeCollector = _feeCollector;
@@ -206,7 +231,7 @@ contract PWNConfig is Ownable2Step, Initializable {
     function registerStateFingerprintComputer(address asset, address computer) external onlyOwner {
         if (computer != address(0))
             if (!IStateFingerpringComputer(computer).supportsToken(asset))
-                revert InvalidComputerContract();
+                revert InvalidComputerContract({ computer: computer, asset: asset });
 
         _sfComputerRegistry[asset] = computer;
     }

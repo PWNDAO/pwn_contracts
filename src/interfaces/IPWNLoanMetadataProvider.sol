@@ -2,7 +2,7 @@
 pragma solidity 0.8.16;
 
 /**
- * @title PWN Loan Metadata Provider
+ * @title IPWNLoanMetadataProvider
  * @notice Interface for a provider of a LOAN token metadata.
  * @dev Loan contracts should implement this interface.
  */

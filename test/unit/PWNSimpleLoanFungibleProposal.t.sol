@@ -7,7 +7,6 @@ import {
     PWNSimpleLoanProposal,
     PWNSimpleLoan
 } from "src/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
-import "src/PWNErrors.sol";
 
 import {
     MultiToken,
@@ -172,7 +171,7 @@ contract PWNSimpleLoanFungibleProposal_MakeProposal_Test is PWNSimpleLoanFungibl
     function testFuzz_shouldFail_whenCallerIsNotProposer(address caller) external {
         vm.assume(caller != proposal.proposer);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedProposer.selector, proposal.proposer));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanProposal.CallerIsNotStatedProposer.selector, proposal.proposer));
         vm.prank(caller);
         proposalContract.makeProposal(proposal);
     }
@@ -290,7 +289,7 @@ contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungi
     function test_shouldFail_whenZeroMinCollateralAmount() external {
         proposal.minCollateralAmount = 0;
 
-        vm.expectRevert(abi.encodeWithSelector(MinCollateralAmountNotSet.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanFungibleProposal.MinCollateralAmountNotSet.selector));
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,
@@ -307,9 +306,13 @@ contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungi
         proposal.minCollateralAmount = bound(minCollateralAmount, 1, type(uint256).max);
         proposalValues.collateralAmount = bound(collateralAmount, 0, proposal.minCollateralAmount - 1);
 
-        vm.expectRevert(abi.encodeWithSelector(
-            InsufficientCollateralAmount.selector, proposalValues.collateralAmount, proposal.minCollateralAmount
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanFungibleProposal.InsufficientCollateralAmount.selector,
+                proposalValues.collateralAmount,
+                proposal.minCollateralAmount
+            )
+        );
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,

@@ -4,7 +4,6 @@ pragma solidity 0.8.16;
 import { Test } from "forge-std/Test.sol";
 
 import { PWNConfig } from "src/config/PWNConfig.sol";
-import "src/PWNErrors.sol";
 
 
 abstract contract PWNConfigTest is Test {
@@ -137,12 +136,13 @@ contract PWNConfig_SetFee_Test is PWNConfigTest {
         config.setFee(9);
     }
 
-    function test_shouldFaile_whenNewValueBiggerThanMaxFee() external {
+    function testFuzz_shouldFail_whenNewValueBiggerThanMaxFee(uint16 fee) external {
         uint16 maxFee = config.MAX_FEE();
+        fee = uint16(bound(fee, maxFee + 1, type(uint16).max));
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidFeeValue.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNConfig.InvalidFeeValue.selector, fee, maxFee));
         vm.prank(owner);
-        config.setFee(maxFee + 1);
+        config.setFee(fee);
     }
 
     function test_shouldSetFeeValue() external {
@@ -187,7 +187,7 @@ contract PWNConfig_SetFeeCollector_Test is PWNConfigTest {
     }
 
     function test_shouldFail_whenSettingZeroAddress() external {
-        vm.expectRevert(abi.encodeWithSelector(InvalidFeeCollector.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNConfig.ZeroFeeCollector.selector));
         vm.prank(owner);
         config.setFeeCollector(address(0));
     }
@@ -233,7 +233,7 @@ contract PWNConfig_SetLOANMetadataUri_Test is PWNConfigTest {
     }
 
     function test_shouldFail_whenZeroLoanContract() external {
-        vm.expectRevert(abi.encodeWithSelector(ZeroLoanContract.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNConfig.ZeroLoanContract.selector));
         vm.prank(owner);
         config.setLOANMetadataUri(address(0), tokenUri);
     }
@@ -413,7 +413,7 @@ contract PWNConfig_RegisterStateFingerprintComputer_Test is PWNConfigTest {
         assumeAddressIsNot(computer, AddressType.ForgeAddress, AddressType.Precompile, AddressType.ZeroAddress);
         _mockSupportsToken(computer, asset, false);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNConfig.InvalidComputerContract.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNConfig.InvalidComputerContract.selector, computer, asset));
         vm.prank(owner);
         config.registerStateFingerprintComputer(asset, computer);
     }

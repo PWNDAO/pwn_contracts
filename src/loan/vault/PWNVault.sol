@@ -9,7 +9,6 @@ import { IERC1155Receiver, IERC165 } from "openzeppelin/token/ERC1155/IERC1155Re
 
 import { IPoolAdapter } from "src/interfaces/IPoolAdapter.sol";
 import { Permit } from "src/loan/vault/Permit.sol";
-import "src/PWNErrors.sol";
 
 
 /**
@@ -25,29 +24,44 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     |*----------------------------------------------------------*/
 
     /**
-     * @dev Emitted when asset transfer happens from an `origin` address to a vault.
+     * @notice Emitted when asset transfer happens from an `origin` address to a vault.
      */
     event VaultPull(MultiToken.Asset asset, address indexed origin);
 
     /**
-     * @dev Emitted when asset transfer happens from a vault to a `beneficiary` address.
+     * @notice Emitted when asset transfer happens from a vault to a `beneficiary` address.
      */
     event VaultPush(MultiToken.Asset asset, address indexed beneficiary);
 
     /**
-     * @dev Emitted when asset transfer happens from an `origin` address to a `beneficiary` address.
+     * @notice Emitted when asset transfer happens from an `origin` address to a `beneficiary` address.
      */
     event VaultPushFrom(MultiToken.Asset asset, address indexed origin, address indexed beneficiary);
 
     /**
-     * @dev Emitted when asset is withdrawn from a pool to an `owner` address.
+     * @notice Emitted when asset is withdrawn from a pool to an `owner` address.
      */
     event PoolWithdraw(MultiToken.Asset asset, address indexed poolAdapter, address indexed pool, address indexed owner);
 
     /**
-     * @dev Emitted when asset is supplied to a pool from a vault.
+     * @notice Emitted when asset is supplied to a pool from a vault.
      */
     event PoolSupply(MultiToken.Asset asset, address indexed poolAdapter, address indexed pool, address indexed owner);
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERRORS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Thrown when the Vault receives an asset that is not transferred by the Vault itself.
+     */
+    error UnsupportedTransferFunction();
+
+    /**
+     * @notice Thrown when an asset transfer is incomplete.
+     */
+    error IncompleteTransfer();
 
 
     /*----------------------------------------------------------*|

@@ -3,8 +3,19 @@ pragma solidity 0.8.16;
 
 import { Test } from "forge-std/Test.sol";
 
-import { PWNSimpleLoan, PWNHubTags, Math, MultiToken, Permit } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import "src/PWNErrors.sol";
+import {
+    PWNSimpleLoan,
+    PWNHubTags,
+    Math,
+    MultiToken,
+    PWNSignatureChecker,
+    PWNRevokedNonce,
+    Permit,
+    InvalidPermitOwner,
+    InvalidPermitAsset,
+    Expired,
+    AddressMissingHubTag
+} from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
 
 import { T20 } from "test/helper/T20.sol";
 import { T721 } from "test/helper/T721.sol";
@@ -404,7 +415,9 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         simpleLoanTerms.lenderSpecHash = lenderSpecHash;
         _mockLoanTerms(simpleLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidLenderSpecHash.selector, lenderSpecHash, correctLenderSpecHash));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoan.InvalidLenderSpecHash.selector, lenderSpecHash, correctLenderSpecHash)
+        );
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -433,7 +446,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         simpleLoanTerms.duration = uint32(duration);
         _mockLoanTerms(simpleLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidDuration.selector, duration, minDuration));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidDuration.selector, duration, minDuration));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -448,7 +461,9 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         simpleLoanTerms.accruingInterestAPR = uint40(interestAPR);
         _mockLoanTerms(simpleLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoan.AccruingInterestAPROutOfBounds.selector, interestAPR, maxInterest)
+        );
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -466,7 +481,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                InvalidMultiTokenAsset.selector,
+                PWNSimpleLoan.InvalidMultiTokenAsset.selector,
                 uint8(simpleLoanTerms.credit.category),
                 simpleLoanTerms.credit.assetAddress,
                 simpleLoanTerms.credit.id,
@@ -490,7 +505,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                InvalidMultiTokenAsset.selector,
+                PWNSimpleLoan.InvalidMultiTokenAsset.selector,
                 uint8(simpleLoanTerms.collateral.category),
                 simpleLoanTerms.collateral.assetAddress,
                 simpleLoanTerms.collateral.id,
@@ -623,7 +638,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 
         vm.mockCall(config, abi.encodeWithSignature("getPoolAdapter(address)", sourceOfFunds), abi.encode(address(0)));
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSourceOfFunds.selector, sourceOfFunds));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidSourceOfFunds.selector, sourceOfFunds));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -784,7 +799,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 0;
         _mockLOAN(refinancingLoanId, simpleLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(NonExistingLoan.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.NonExistingLoan.selector));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -797,7 +812,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 3;
         _mockLOAN(refinancingLoanId, simpleLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidLoanStatus.selector, 3));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidLoanStatus.selector, 3));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -809,7 +824,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     function test_shouldFail_whenLoanIsDefaulted() external {
         vm.warp(simpleLoan.defaultTimestamp);
 
-        vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.defaultTimestamp));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.LoanDefaulted.selector, simpleLoan.defaultTimestamp));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -823,7 +838,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         refinancedLoanTerms.credit.assetAddress = _assetAddress;
         _mockLoanTerms(refinancedLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(RefinanceCreditMismatch.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.RefinanceCreditMismatch.selector));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -836,7 +851,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         refinancedLoanTerms.credit.amount = 0;
         _mockLoanTerms(refinancedLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(RefinanceCreditMismatch.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.RefinanceCreditMismatch.selector));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -851,7 +866,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         refinancedLoanTerms.collateral.category = MultiToken.Category(_category);
         _mockLoanTerms(refinancedLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(RefinanceCollateralMismatch.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.RefinanceCollateralMismatch.selector));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -865,7 +880,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         refinancedLoanTerms.collateral.assetAddress = _assetAddress;
         _mockLoanTerms(refinancedLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(RefinanceCollateralMismatch.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.RefinanceCollateralMismatch.selector));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -879,7 +894,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         refinancedLoanTerms.collateral.id = _id;
         _mockLoanTerms(refinancedLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(RefinanceCollateralMismatch.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.RefinanceCollateralMismatch.selector));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -893,7 +908,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         refinancedLoanTerms.collateral.amount = _amount;
         _mockLoanTerms(refinancedLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(RefinanceCollateralMismatch.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.RefinanceCollateralMismatch.selector));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -907,7 +922,9 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         refinancedLoanTerms.borrower = _borrower;
         _mockLoanTerms(refinancedLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(RefinanceBorrowerMismatch.selector, simpleLoan.borrower, _borrower));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoan.RefinanceBorrowerMismatch.selector, simpleLoan.borrower, _borrower)
+        );
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -1010,7 +1027,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         vm.mockCall(config, abi.encodeWithSignature("getPoolAdapter(address)", sourceOfFunds), abi.encode(address(0)));
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSourceOfFunds.selector, sourceOfFunds));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidSourceOfFunds.selector, sourceOfFunds));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -1517,7 +1534,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 0;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(NonExistingLoan.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.NonExistingLoan.selector));
         loan.repayLOAN(loanId, "");
     }
 
@@ -1527,14 +1544,14 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = status;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidLoanStatus.selector, status));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidLoanStatus.selector, status));
         loan.repayLOAN(loanId, "");
     }
 
     function test_shouldFail_whenLoanIsDefaulted() external {
         vm.warp(simpleLoan.defaultTimestamp);
 
-        vm.expectRevert(abi.encodeWithSelector(LoanDefaulted.selector, simpleLoan.defaultTimestamp));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.LoanDefaulted.selector, simpleLoan.defaultTimestamp));
         loan.repayLOAN(loanId, "");
     }
 
@@ -1781,7 +1798,7 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldFail_whenCallerIsNotLOANTokenHolder(address caller) external {
         vm.assume(caller != lender);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerNotLOANTokenHolder.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.CallerNotLOANTokenHolder.selector));
         vm.prank(caller);
         loan.claimLOAN(loanId);
     }
@@ -1790,7 +1807,7 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 0;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(NonExistingLoan.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.NonExistingLoan.selector));
         vm.prank(lender);
         loan.claimLOAN(loanId);
     }
@@ -1799,7 +1816,7 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 2;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidLoanStatus.selector, 2));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidLoanStatus.selector, 2));
         vm.prank(lender);
         loan.claimLOAN(loanId);
     }
@@ -1927,7 +1944,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldFail_whenCallerIsNotVault(address caller) external {
         vm.assume(caller != address(loan));
 
-        vm.expectRevert(abi.encodeWithSelector(CallerNotVault.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.CallerNotVault.selector));
         vm.prank(caller);
         loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
@@ -2000,7 +2017,7 @@ contract PWNSimpleLoan_TryClaimRepaidLOAN_Test is PWNSimpleLoanTest {
             config, abi.encodeWithSignature("getPoolAdapter(address)", sourceOfFunds), abi.encode(address(0))
         );
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSourceOfFunds.selector, sourceOfFunds));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidSourceOfFunds.selector, sourceOfFunds));
         vm.prank(address(loan));
         loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
     }
@@ -2075,7 +2092,7 @@ contract PWNSimpleLoan_MakeExtensionProposal_Test is PWNSimpleLoanTest {
     function testFuzz_shouldFail_whenCallerNotProposer(address caller) external {
         vm.assume(caller != extension.proposer);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionSigner.selector, extension.proposer, caller));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionSigner.selector, extension.proposer, caller));
         vm.prank(caller);
         loan.makeExtensionProposal(extension);
     }
@@ -2137,7 +2154,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 0;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(NonExistingLoan.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.NonExistingLoan.selector));
         vm.prank(lender);
         loan.extendLOAN(extension, "", "");
     }
@@ -2146,7 +2163,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         simpleLoan.status = 3;
         _mockLOAN(loanId, simpleLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidLoanStatus.selector, 3));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidLoanStatus.selector, 3));
         vm.prank(lender);
         loan.extendLOAN(extension, "", "");
     }
@@ -2155,7 +2172,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         pk = boundPrivateKey(pk);
         vm.assume(pk != borrowerPk);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, extension.proposer, _extensionHash(extension)));
+        vm.expectRevert(abi.encodeWithSelector(PWNSignatureChecker.InvalidSignature.selector, extension.proposer, _extensionHash(extension)));
         vm.prank(lender);
         loan.extendLOAN(extension, _signExtension(pk, extension), "");
     }
@@ -2182,7 +2199,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         );
 
         vm.expectRevert(abi.encodeWithSelector(
-            NonceNotUsable.selector, extension.proposer, extension.nonceSpace, extension.nonce
+            PWNRevokedNonce.NonceNotUsable.selector, extension.proposer, extension.nonceSpace, extension.nonce
         ));
         vm.prank(lender);
         loan.extendLOAN(extension, "", "");
@@ -2192,7 +2209,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         vm.assume(caller != borrower && caller != lender);
         _mockExtensionProposalMade(extension);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionCaller.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionCaller.selector));
         vm.prank(caller);
         loan.extendLOAN(extension, "", "");
     }
@@ -2203,7 +2220,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         extension.proposer = proposer;
         _mockExtensionProposalMade(extension);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionSigner.selector, lender, proposer));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionSigner.selector, lender, proposer));
         vm.prank(borrower);
         loan.extendLOAN(extension, "", "");
     }
@@ -2214,7 +2231,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         extension.proposer = proposer;
         _mockExtensionProposalMade(extension);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionSigner.selector, borrower, proposer));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionSigner.selector, borrower, proposer));
         vm.prank(lender);
         loan.extendLOAN(extension, "", "");
     }
@@ -2226,7 +2243,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         extension.duration = duration;
         _mockExtensionProposalMade(extension);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionDuration.selector, duration, minDuration));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionDuration.selector, duration, minDuration));
         vm.prank(lender);
         loan.extendLOAN(extension, "", "");
     }
@@ -2238,7 +2255,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         extension.duration = duration;
         _mockExtensionProposalMade(extension);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidExtensionDuration.selector, duration, maxDuration));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionDuration.selector, duration, maxDuration));
         vm.prank(lender);
         loan.extendLOAN(extension, "", "");
     }
@@ -2324,7 +2341,15 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
             abi.encode(1) // ERC721
         );
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 0, extension.compensationAddress, 0, extension.compensationAmount));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoan.InvalidMultiTokenAsset.selector,
+                0,
+                extension.compensationAddress,
+                0,
+                extension.compensationAmount
+            )
+        );
         vm.prank(lender);
         loan.extendLOAN(extension, "", "");
     }

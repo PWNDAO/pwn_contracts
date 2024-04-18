@@ -4,7 +4,7 @@ pragma solidity 0.8.16;
 import { MultiToken, ICryptoKitties, IERC20, IERC721 } from "MultiToken/MultiToken.sol";
 
 import { Permit } from "src/loan/vault/Permit.sol";
-import "src/PWNErrors.sol";
+import { PWNVault } from "src/loan/vault/PWNVault.sol";
 
 import { T20 } from "test/helper/T20.sol";
 import {
@@ -125,7 +125,7 @@ contract InvalidCollateralAssetCategoryTest is UseCasesTest {
         proposal.collateralAmount = 0;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 1, ZRX, 10e18, 0));
+        _createLoanRevertWith(abi.encodeWithSelector(PWNSimpleLoan.InvalidMultiTokenAsset.selector, 1, ZRX, 10e18, 0));
     }
 
     // Borrower can steal lender’s assets by using WETH as collateral
@@ -139,7 +139,7 @@ contract InvalidCollateralAssetCategoryTest is UseCasesTest {
         proposal.collateralAmount = 10e18;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 2, WETH, 0, 10e18));
+        _createLoanRevertWith(abi.encodeWithSelector(PWNSimpleLoan.InvalidMultiTokenAsset.selector, 2, WETH, 0, 10e18));
     }
 
     // CryptoKitties token is locked when using it as ERC721 type collateral
@@ -161,7 +161,7 @@ contract InvalidCollateralAssetCategoryTest is UseCasesTest {
         proposal.collateralAmount = 0;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 1, CK, ckId, 0));
+        _createLoanRevertWith(abi.encodeWithSelector(PWNSimpleLoan.InvalidMultiTokenAsset.selector, 1, CK, ckId, 0));
     }
 
 }
@@ -185,7 +185,7 @@ contract InvalidCreditTest is UseCasesTest {
         proposal.creditAmount = doodleId;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 0, DOODLE, 0, doodleId));
+        _createLoanRevertWith(abi.encodeWithSelector(PWNSimpleLoan.InvalidMultiTokenAsset.selector, 0, DOODLE, 0, doodleId));
     }
 
     function testUseCase_shouldFail_whenUsingCryptoKittiesAsCredit() external {
@@ -204,7 +204,7 @@ contract InvalidCreditTest is UseCasesTest {
         proposal.creditAmount = ckId;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(InvalidMultiTokenAsset.selector, 0, CK, 0, ckId));
+        _createLoanRevertWith(abi.encodeWithSelector(PWNSimpleLoan.InvalidMultiTokenAsset.selector, 0, CK, 0, ckId));
     }
 
 }
@@ -228,7 +228,7 @@ contract TaxTokensTest is UseCasesTest {
         proposal.collateralAmount = 10e18;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(IncompleteTransfer.selector));
+        _createLoanRevertWith(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
     }
 
     // Fee-on-transfer tokens can be locked in the vault
@@ -245,7 +245,7 @@ contract TaxTokensTest is UseCasesTest {
         proposal.creditAmount = 10e18;
 
         // Create loan
-        _createLoanRevertWith(abi.encodeWithSelector(IncompleteTransfer.selector));
+        _createLoanRevertWith(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
     }
 
 }

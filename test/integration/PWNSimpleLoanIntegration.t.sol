@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "src/PWNErrors.sol";
-
 import {
     MultiToken,
     MultiTokenCategoryRegistry,
@@ -472,7 +470,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         // Try to repay loan
         _repayLoanFailing(
             loanId,
-            abi.encodeWithSelector(LoanDefaulted.selector, uint40(expiration))
+            abi.encodeWithSelector(PWNSimpleLoan.LoanDefaulted.selector, uint40(expiration))
         );
     }
 

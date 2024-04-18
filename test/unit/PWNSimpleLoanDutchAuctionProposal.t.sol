@@ -7,13 +7,13 @@ import {
     PWNSimpleLoanProposal,
     PWNSimpleLoan
 } from "src/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
-import "src/PWNErrors.sol";
 
 import {
     MultiToken,
     Math,
     PWNSimpleLoanProposalTest,
-    PWNSimpleLoanProposal_AcceptProposal_Test
+    PWNSimpleLoanProposal_AcceptProposal_Test,
+    Expired
 } from "test/unit/PWNSimpleLoanProposal.t.sol";
 
 
@@ -183,7 +183,7 @@ contract PWNSimpleLoanDutchAuctionProposal_MakeProposal_Test is PWNSimpleLoanDut
     function testFuzz_shouldFail_whenCallerIsNotProposer(address caller) external {
         vm.assume(caller != proposal.proposer);
 
-        vm.expectRevert(abi.encodeWithSelector(CallerIsNotStatedProposer.selector, proposal.proposer));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanProposal.CallerIsNotStatedProposer.selector, proposal.proposer));
         vm.prank(caller);
         proposalContract.makeProposal(proposal);
     }
@@ -279,7 +279,11 @@ contract PWNSimpleLoanDutchAuctionProposal_GetCreditAmount_Test is PWNSimpleLoan
         vm.assume(auctionDuration < 1 minutes);
         proposal.auctionDuration = auctionDuration;
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidAuctionDuration.selector, auctionDuration, 1 minutes));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanDutchAuctionProposal.InvalidAuctionDuration.selector, auctionDuration, 1 minutes
+            )
+        );
         proposalContract.getCreditAmount(proposal, 0);
     }
 
@@ -287,7 +291,11 @@ contract PWNSimpleLoanDutchAuctionProposal_GetCreditAmount_Test is PWNSimpleLoan
         vm.assume(auctionDuration > 1 minutes && auctionDuration % 1 minutes > 0);
         proposal.auctionDuration = auctionDuration;
 
-        vm.expectRevert(abi.encodeWithSelector(AuctionDurationNotInFullMinutes.selector, auctionDuration));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanDutchAuctionProposal.AuctionDurationNotInFullMinutes.selector, auctionDuration
+            )
+        );
         proposalContract.getCreditAmount(proposal, 0);
     }
 
@@ -296,7 +304,11 @@ contract PWNSimpleLoanDutchAuctionProposal_GetCreditAmount_Test is PWNSimpleLoan
         proposal.minCreditAmount = minCreditAmount;
         proposal.maxCreditAmount = maxCreditAmount;
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidCreditAmountRange.selector, minCreditAmount, maxCreditAmount));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanDutchAuctionProposal.InvalidCreditAmountRange.selector, minCreditAmount, maxCreditAmount
+            )
+        );
         proposalContract.getCreditAmount(proposal, 0);
     }
 
@@ -306,7 +318,9 @@ contract PWNSimpleLoanDutchAuctionProposal_GetCreditAmount_Test is PWNSimpleLoan
 
         proposal.auctionStart = auctionStart;
 
-        vm.expectRevert(abi.encodeWithSelector(AuctionNotInProgress.selector, time, auctionStart));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoanDutchAuctionProposal.AuctionNotInProgress.selector, time, auctionStart)
+        );
         proposalContract.getCreditAmount(proposal, time);
     }
 
@@ -412,9 +426,14 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
             || intendedCreditAmount > auctionCreditAmount
         );
 
-        vm.expectRevert(abi.encodeWithSelector(
-            InvalidCreditAmount.selector, auctionCreditAmount, proposalValues.intendedCreditAmount, proposalValues.slippage
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanDutchAuctionProposal.InvalidCreditAmount.selector,
+                auctionCreditAmount,
+                proposalValues.intendedCreditAmount,
+                proposalValues.slippage
+            )
+        );
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,
@@ -447,9 +466,14 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
             || intendedCreditAmount - proposalValues.slippage > auctionCreditAmount
         );
 
-        vm.expectRevert(abi.encodeWithSelector(
-            InvalidCreditAmount.selector, auctionCreditAmount, proposalValues.intendedCreditAmount, proposalValues.slippage
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanDutchAuctionProposal.InvalidCreditAmount.selector,
+                auctionCreditAmount,
+                proposalValues.intendedCreditAmount,
+                proposalValues.slippage
+            )
+        );
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,

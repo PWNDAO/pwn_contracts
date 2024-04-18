@@ -2,7 +2,8 @@
 pragma solidity 0.8.16;
 
 /**
- * @dev Interface of the ERC5646 standard, as defined in the https://eips.ethereum.org/EIPS/eip-5646.
+ * @title IERC5646
+ * @notice Interface of the ERC5646 standard, as defined in the https://eips.ethereum.org/EIPS/eip-5646.
  */
 interface IERC5646 {
 

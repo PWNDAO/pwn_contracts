@@ -4,8 +4,6 @@ pragma solidity 0.8.16;
 import { ECDSA } from "openzeppelin/utils/cryptography/ECDSA.sol";
 import { IERC1271 } from "openzeppelin/interfaces/IERC1271.sol";
 
-import "src/PWNErrors.sol";
-
 
 /**
  * @title PWN Signature Checker
@@ -15,6 +13,16 @@ import "src/PWNErrors.sol";
 library PWNSignatureChecker {
 
     string internal constant VERSION = "1.0";
+
+    /**
+     * @dev Thrown when signature length is not 64 nor 65 bytes.
+     */
+    error InvalidSignatureLength(uint256 length);
+
+    /**
+     * @dev Thrown when signature is invalid.
+     */
+    error InvalidSignature(address signer, bytes32 digest);
 
     /**
      * @dev Function will try to recover a signer of a given signature and check if is the same as given signer address.
@@ -66,7 +74,7 @@ library PWNSignatureChecker {
                 s = vs & bytes32(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
                 v = uint8((uint256(vs) >> 255) + 27);
             } else {
-                revert InvalidSignatureLength(signature.length);
+                revert InvalidSignatureLength({ length: signature.length });
             }
 
             return signer == ECDSA.recover(hash, v, r, s);

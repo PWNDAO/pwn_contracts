@@ -27,7 +27,7 @@ contract PWNHub is Ownable2Step {
     |*----------------------------------------------------------*/
 
     /**
-     * @dev Emitted when tag is set for an address.
+     * @notice Emitted when tag is set for an address.
      */
     event TagSet(address indexed _address, bytes32 indexed tag, bool hasTag);
 

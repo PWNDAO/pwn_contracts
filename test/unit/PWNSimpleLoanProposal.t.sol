@@ -9,13 +9,16 @@ import { MerkleProof } from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import { IERC165 } from "openzeppelin/utils/introspection/IERC165.sol";
 import { Math } from "openzeppelin/utils/math/Math.sol";
 
-import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import {
     PWNSimpleLoanProposal,
+    PWNHubTags,
+    PWNSimpleLoan,
+    PWNSignatureChecker,
+    PWNRevokedNonce,
+    AddressMissingHubTag,
+    Expired,
     IERC5646
 } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import "src/PWNErrors.sol";
 
 
 abstract contract PWNSimpleLoanProposalTest is Test {
@@ -137,7 +140,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.base.loanContract = activeLoanContract;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.expectRevert(abi.encodeWithSelector(CallerNotLoanContract.selector, caller, activeLoanContract));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoanProposal.CallerNotLoanContract.selector, caller, activeLoanContract)
+        );
         vm.prank(caller);
         _callAcceptProposalWith();
     }
@@ -157,7 +162,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         vm.assume(randomPK != proposerPK);
         params.signature = _sign(randomPK, _getProposalHashWith());
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, _getProposalHashWith()));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSignatureChecker.InvalidSignature.selector, proposer, _getProposalHashWith())
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -166,7 +173,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         vm.etch(proposer, bytes("data"));
         params.signature = "";
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, _getProposalHashWith()));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSignatureChecker.InvalidSignature.selector, proposer, _getProposalHashWith())
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -187,7 +196,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.signature = _sign(randomPK, multiproposalHash);
         params.proposalInclusionProof = proposalInclusionProof;
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, multiproposalHash));
+        vm.expectRevert(abi.encodeWithSelector(PWNSignatureChecker.InvalidSignature.selector, proposer, multiproposalHash));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -206,7 +215,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.signature = "";
         params.proposalInclusionProof = proposalInclusionProof;
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, multiproposalHash));
+        vm.expectRevert(abi.encodeWithSelector(PWNSignatureChecker.InvalidSignature.selector, proposer, multiproposalHash));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -231,7 +240,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
                 : abi.encode(proposalInclusionProof[0], proposalHash)
         );
         bytes32 actualMultiproposalHash = proposalContractAddr.getMultiproposalHash(PWNSimpleLoanProposal.Multiproposal(actualRoot));
-        vm.expectRevert(abi.encodeWithSelector(InvalidSignature.selector, proposer, actualMultiproposalHash));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSignatureChecker.InvalidSignature.selector, proposer, actualMultiproposalHash)
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -340,7 +351,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.acceptor = proposer;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.expectRevert(abi.encodeWithSelector(AcceptorIsProposer.selector, proposer));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanProposal.AcceptorIsProposer.selector, proposer));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -351,7 +362,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.refinancingLoanId = 0;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoanProposal.InvalidRefinancingLoanId.selector, proposedRefinancingLoanId)
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -366,7 +379,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.refinancingLoanId = refinancingLoanId;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoanProposal.InvalidRefinancingLoanId.selector, proposedRefinancingLoanId)
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -393,7 +408,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.refinancingLoanId = refinancingLoanId;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidRefinancingLoanId.selector, proposedRefinancingLoanId));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoanProposal.InvalidRefinancingLoanId.selector, proposedRefinancingLoanId)
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -424,7 +441,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encodeWithSignature("isNonceUsable(address,uint256,uint256)", proposer, nonceSpace, nonce)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(NonceNotUsable.selector, proposer, nonceSpace, nonce));
+        vm.expectRevert(abi.encodeWithSelector(PWNRevokedNonce.NonceNotUsable.selector, proposer, nonceSpace, nonce));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -436,7 +453,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.acceptor = caller;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.expectRevert(abi.encodeWithSelector(CallerNotAllowedAcceptor.selector, caller, allowedAcceptor));
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoanProposal.CallerNotAllowedAcceptor.selector, caller, allowedAcceptor)
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -469,9 +488,11 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             bytes32(used)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(
-            AvailableCreditLimitExceeded.selector, used + params.base.creditAmount, limit
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanProposal.AvailableCreditLimitExceeded.selector, used + params.base.creditAmount, limit
+            )
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -555,9 +576,13 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encode(stateFingerprint)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(
-            InvalidCollateralStateFingerprint.selector, stateFingerprint, params.base.collateralStateFingerprint
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanProposal.InvalidCollateralStateFingerprint.selector,
+                stateFingerprint,
+                params.base.collateralStateFingerprint
+            )
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -577,7 +602,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encode("not implementing ERC165")
         );
 
-        vm.expectRevert(abi.encodeWithSelector(MissingStateFingerprintComputer.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanProposal.MissingStateFingerprintComputer.selector));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -592,7 +617,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         );
         _mockERC5646Support(params.base.collateralAddress, false);
 
-        vm.expectRevert(abi.encodeWithSelector(MissingStateFingerprintComputer.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanProposal.MissingStateFingerprintComputer.selector));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
@@ -615,9 +640,13 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encode(stateFingerprint)
         );
 
-        vm.expectRevert(abi.encodeWithSelector(
-            InvalidCollateralStateFingerprint.selector, stateFingerprint, params.base.collateralStateFingerprint
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanProposal.InvalidCollateralStateFingerprint.selector,
+                stateFingerprint,
+                params.base.collateralStateFingerprint
+            )
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }

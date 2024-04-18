@@ -2,7 +2,8 @@
 pragma solidity 0.8.16;
 
 /**
- * @notice Interface of the state fingerprint computer.
+ * @title IStateFingerpringComputer
+ * @notice State Fingerprint Computer Interface.
  * @dev Contract can compute state fingerprint of several tokens as long as they share the same state structure.
  */
 interface IStateFingerpringComputer {

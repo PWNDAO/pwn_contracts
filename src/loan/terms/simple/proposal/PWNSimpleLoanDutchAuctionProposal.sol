@@ -6,8 +6,7 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 import { Math } from "openzeppelin/utils/math/Math.sol";
 
 import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import "src/PWNErrors.sol";
+import { PWNSimpleLoanProposal, Expired } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 
 
 /**
@@ -91,9 +90,34 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @dev Emitted when a proposal is made via an on-chain transaction.
+     * @notice Emitted when a proposal is made via an on-chain transaction.
      */
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, Proposal proposal);
+
+    /**
+     * @notice Thrown when auction duration is less than min auction duration.
+     */
+    error InvalidAuctionDuration(uint256 current, uint256 limit);
+
+    /**
+     * @notice Thrown when auction duration is not in full minutes.
+     */
+    error AuctionDurationNotInFullMinutes(uint256 current);
+
+    /**
+     * @notice Thrown when min credit amount is greater than max credit amount.
+     */
+    error InvalidCreditAmountRange(uint256 minCreditAmount, uint256 maxCreditAmount);
+
+    /**
+     * @notice Thrown when current auction credit amount is not in the range of intended credit amount and slippage.
+     */
+    error InvalidCreditAmount(uint256 auctionCreditAmount, uint256 intendedCreditAmount, uint256 slippage);
+
+    /**
+     * @notice Thrown when auction has not started yet or has already ended.
+     */
+    error AuctionNotInProgress(uint256 currentTimestamp, uint256 auctionStart);
 
     constructor(
         address _hub,
