@@ -25,6 +25,8 @@ abstract contract Deployments is CommonBase {
     using stdJson for string;
     using Strings for uint256;
 
+    string public deploymentsSubpath;
+
     uint256[] deployedChains;
     Deployment deployment;
 
@@ -53,7 +55,7 @@ abstract contract Deployments is CommonBase {
 
     function _loadDeployedAddresses() internal {
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/deployments/latest.json");
+        string memory path = string.concat(root, deploymentsSubpath, "/deployments/latest.json");
         string memory json = vm.readFile(path);
         bytes memory rawDeployedChains = json.parseRaw(".deployedChains");
         deployedChains = abi.decode(rawDeployedChains, (uint256[]));
