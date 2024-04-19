@@ -3,8 +3,8 @@ pragma solidity 0.8.16;
 
 import { MultiToken, ICryptoKitties, IERC20, IERC721 } from "MultiToken/MultiToken.sol";
 
-import { Permit } from "src/loan/vault/Permit.sol";
-import { PWNVault } from "src/loan/vault/PWNVault.sol";
+import { Permit } from "pwn/loan/vault/Permit.sol";
+import { PWNVault } from "pwn/loan/vault/PWNVault.sol";
 
 import { T20 } from "test/helper/T20.sol";
 import {

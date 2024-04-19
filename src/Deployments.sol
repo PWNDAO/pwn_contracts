@@ -8,17 +8,17 @@ import { MultiTokenCategoryRegistry } from "MultiToken/MultiTokenCategoryRegistr
 
 import { Strings } from "openzeppelin/utils/Strings.sol";
 
-import { PWNConfig } from "src/config/PWNConfig.sol";
-import { PWNHub } from "src/hub/PWNHub.sol";
-import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import { IPWNDeployer } from "src/interfaces/IPWNDeployer.sol";
-import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanDutchAuctionProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
-import { PWNSimpleLoanFungibleProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
-import { PWNSimpleLoanListProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
-import { PWNSimpleLoanSimpleProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
-import { PWNLOAN } from "src/loan/token/PWNLOAN.sol";
-import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
+import { PWNConfig } from "pwn/config/PWNConfig.sol";
+import { PWNHub } from "pwn/hub/PWNHub.sol";
+import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
+import { IPWNDeployer } from "pwn/interfaces/IPWNDeployer.sol";
+import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { PWNSimpleLoanDutchAuctionProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
+import { PWNSimpleLoanFungibleProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
+import { PWNSimpleLoanListProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
+import { PWNSimpleLoanSimpleProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
+import { PWNLOAN } from "pwn/loan/token/PWNLOAN.sol";
+import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
 
 
 abstract contract Deployments is CommonBase {

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { PWNHubTags } from "src/hub/PWNHubTags.sol";
+import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import {
     PWNSimpleLoanSimpleProposal,
     PWNSimpleLoanProposal,
     PWNSimpleLoan
-} from "src/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
+} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
 
 import {
     MultiToken,

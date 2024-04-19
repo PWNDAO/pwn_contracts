@@ -19,7 +19,7 @@ import {
     PWNLOAN,
     PWNRevokedNonce,
     MultiTokenCategoryRegistry
-} from "src/Deployments.sol";
+} from "pwn/Deployments.sol";
 
 
 abstract contract DeploymentTest is Deployments, Test {

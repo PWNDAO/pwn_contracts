@@ -11,7 +11,7 @@ import {
     PWNVault,
     IPoolAdapter,
     Permit
-} from "src/loan/vault/PWNVault.sol";
+} from "pwn/loan/vault/PWNVault.sol";
 
 import { DummyPoolAdapter } from "test/helper/DummyPoolAdapter.sol";
 import { T20 } from "test/helper/T20.sol";

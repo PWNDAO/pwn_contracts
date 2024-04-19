@@ -18,7 +18,7 @@ import {
     AddressMissingHubTag,
     Expired,
     IERC5646
-} from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 
 
 abstract contract PWNSimpleLoanProposalTest is Test {

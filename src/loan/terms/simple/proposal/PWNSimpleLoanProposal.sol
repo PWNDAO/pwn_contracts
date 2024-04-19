@@ -4,14 +4,14 @@ pragma solidity 0.8.16;
 import { MerkleProof } from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import { ERC165Checker } from "openzeppelin/utils/introspection/ERC165Checker.sol";
 
-import { PWNConfig, IStateFingerpringComputer } from "src/config/PWNConfig.sol";
-import { PWNHub } from "src/hub/PWNHub.sol";
-import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import { IERC5646 } from "src/interfaces/IERC5646.sol";
-import { PWNSignatureChecker } from "src/loan/lib/PWNSignatureChecker.sol";
-import { PWNSimpleLoan } from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
-import { Expired, AddressMissingHubTag } from "src/PWNErrors.sol";
+import { PWNConfig, IStateFingerpringComputer } from "pwn/config/PWNConfig.sol";
+import { PWNHub } from "pwn/hub/PWNHub.sol";
+import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
+import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
+import { PWNSignatureChecker } from "pwn/loan/lib/PWNSignatureChecker.sol";
+import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
+import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
 
 /**
  * @title PWN Simple Loan Proposal Base Contract

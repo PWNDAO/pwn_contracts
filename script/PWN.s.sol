@@ -22,7 +22,7 @@ import {
     PWNLOAN,
     PWNRevokedNonce,
     MultiTokenCategoryRegistry
-} from "src/Deployments.sol";
+} from "pwn/Deployments.sol";
 
 import { T20 } from "test/helper/T20.sol";
 import { T721 } from "test/helper/T721.sol";

@@ -15,7 +15,7 @@ import {
     InvalidPermitAsset,
     Expired,
     AddressMissingHubTag
-} from "src/loan/terms/simple/loan/PWNSimpleLoan.sol";
+} from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 
 import { T20 } from "test/helper/T20.sol";
 import { T721 } from "test/helper/T721.sol";

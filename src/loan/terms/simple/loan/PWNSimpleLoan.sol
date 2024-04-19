@@ -6,20 +6,20 @@ import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.s
 import { Math } from "openzeppelin/utils/math/Math.sol";
 import { SafeCast } from "openzeppelin/utils/math/SafeCast.sol";
 
-import { PWNConfig } from "src/config/PWNConfig.sol";
-import { PWNHub } from "src/hub/PWNHub.sol";
-import { PWNHubTags } from "src/hub/PWNHubTags.sol";
-import { IERC5646 } from "src/interfaces/IERC5646.sol";
-import { IPoolAdapter } from "src/interfaces/IPoolAdapter.sol";
-import { IPWNLoanMetadataProvider } from "src/interfaces/IPWNLoanMetadataProvider.sol";
-import { PWNFeeCalculator } from "src/loan/lib/PWNFeeCalculator.sol";
-import { PWNSignatureChecker } from "src/loan/lib/PWNSignatureChecker.sol";
-import { PWNSimpleLoanProposal } from "src/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import { PWNLOAN } from "src/loan/token/PWNLOAN.sol";
-import { Permit, InvalidPermitOwner, InvalidPermitAsset } from "src/loan/vault/Permit.sol";
-import { PWNVault } from "src/loan/vault/PWNVault.sol";
-import { PWNRevokedNonce } from "src/nonce/PWNRevokedNonce.sol";
-import { Expired, AddressMissingHubTag } from "src/PWNErrors.sol";
+import { PWNConfig } from "pwn/config/PWNConfig.sol";
+import { PWNHub } from "pwn/hub/PWNHub.sol";
+import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
+import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
+import { IPoolAdapter } from "pwn/interfaces/IPoolAdapter.sol";
+import { IPWNLoanMetadataProvider } from "pwn/interfaces/IPWNLoanMetadataProvider.sol";
+import { PWNFeeCalculator } from "pwn/loan/lib/PWNFeeCalculator.sol";
+import { PWNSignatureChecker } from "pwn/loan/lib/PWNSignatureChecker.sol";
+import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import { PWNLOAN } from "pwn/loan/token/PWNLOAN.sol";
+import { Permit, InvalidPermitOwner, InvalidPermitAsset } from "pwn/loan/vault/Permit.sol";
+import { PWNVault } from "pwn/loan/vault/PWNVault.sol";
+import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
+import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
 
 
 /**

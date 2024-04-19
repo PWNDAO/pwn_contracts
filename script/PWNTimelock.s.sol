@@ -12,8 +12,7 @@ import {
     PWNConfig,
     IPWNDeployer,
     PWNHub
-} from "src/Deployments.sol";
-
+} from "pwn/Deployments.sol";
 
 
 library PWNDeployerSalt {

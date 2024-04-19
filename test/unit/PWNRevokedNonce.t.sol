@@ -7,7 +7,7 @@ import {
     PWNRevokedNonce,
     PWNHubTags,
     AddressMissingHubTag
-} from "src/nonce/PWNRevokedNonce.sol";
+} from "pwn/nonce/PWNRevokedNonce.sol";
 
 
 abstract contract PWNRevokedNonceTest is Test {

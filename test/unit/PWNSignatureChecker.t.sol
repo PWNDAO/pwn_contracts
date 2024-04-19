@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import { Test } from "forge-std/Test.sol";
 
-import { PWNSignatureChecker } from "src/loan/lib/PWNSignatureChecker.sol";
+import { PWNSignatureChecker } from "pwn/loan/lib/PWNSignatureChecker.sol";
 
 
 abstract contract PWNSignatureCheckerTest is Test {
