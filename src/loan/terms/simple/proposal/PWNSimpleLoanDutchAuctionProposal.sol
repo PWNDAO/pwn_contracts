@@ -30,25 +30,24 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
      * @param collateralAddress Address of an asset used as a collateral.
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0.
-     * @param checkCollateralStateFingerprint If true, the collateral state fingerprint has to be checked.
+     * @param checkCollateralStateFingerprint If true, the collateral state fingerprint will be checked during proposal acceptance.
      * @param collateralStateFingerprint Fingerprint of a collateral state defined by ERC5646.
      * @param creditAddress Address of an asset which is lended to a borrower.
      * @param minCreditAmount Minimum amount of tokens which is proposed as a loan to a borrower. If `isOffer` is true, auction will start with this amount, otherwise it will end with this amount.
      * @param maxCreditAmount Maximum amount of tokens which is proposed as a loan to a borrower. If `isOffer` is true, auction will end with this amount, otherwise it will start with this amount.
-     * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal.
+     * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal. If non-zero, proposal can be accepted more than once, until the credit limit is reached.
      * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
-     * @param accruingInterestAPR Accruing interest APR.
+     * @param accruingInterestAPR Accruing interest APR with 5 decimals.
      * @param duration Loan duration in seconds.
      * @param auctionStart Auction start timestamp in seconds.
      * @param auctionDuration Auction duration in seconds.
      * @param allowedAcceptor Address that is allowed to accept proposal. If the address is zero address, anybody can accept the proposal.
      * @param proposer Address of a proposal signer. If `isOffer` is true, the proposer is the lender. If `isOffer` is false, the proposer is the borrower.
-     * @param proposerSpecHash Hash of a proposer specification. It is a hash of a proposer specific data, which must be provided during a loan creation.
+     * @param proposerSpecHash Hash of a proposer specific data, which must be provided during a loan creation.
      * @param isOffer If true, the proposal is an offer. If false, the proposal is a request.
      * @param refinancingLoanId Id of a loan which is refinanced by this proposal. If the id is 0 and `isOffer` is true, the proposal can refinance any loan.
      * @param nonceSpace Nonce space of a proposal nonce. All nonces in the same space can be revoked at once.
-     * @param nonce Additional value to enable identical proposals in time. Without it, it would be impossible to make again proposal, which was once revoked.
-     *              Can be used to create a group of proposals, where accepting one proposal will make other proposals in the group revoked.
+     * @param nonce Additional value to enable identical proposals in time. Without it, it would be impossible to make again proposal, which was once revoked. Can be used to create a group of proposals, where accepting one proposal will make other proposals in the group revoked.
      * @param loanContract Address of a loan contract that will create a loan from the proposal.
      */
     struct Proposal {
