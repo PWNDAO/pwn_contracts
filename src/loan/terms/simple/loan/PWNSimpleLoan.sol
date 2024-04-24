@@ -231,14 +231,24 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*----------------------------------------------------------*/
 
     /**
+     * @notice Thrown when managed loan is running.
+     */
+    error LoanNotRunning();
+
+    /**
+     * @notice Thrown when manged loan is still running.
+     */
+    error LoanRunning();
+
+    /**
+     * @notice Thrown when managed loan is repaid.
+     */
+    error LoanRepaid();
+
+    /**
      * @notice Thrown when managed loan is defaulted.
      */
     error LoanDefaulted(uint40);
-
-    /**
-     * @notice Thrown when manged loan is in incorrect state.
-     */
-    error InvalidLoanStatus(uint256);
 
     /**
      * @notice Thrown when loan doesn't exist.
@@ -278,7 +288,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Thrown when accruing interest APR is above the maximum.
      */
-    error AccruingInterestAPROutOfBounds(uint256 current, uint256 limit);
+    error InterestAPROutOfBounds(uint256 current, uint256 limit);
 
     /**
      * @notice Thrown when caller is not a vault.
@@ -402,7 +412,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         // Check maximum accruing interest APR
         if (loanTerms.accruingInterestAPR > MAX_ACCRUING_INTEREST_APR) {
-            revert AccruingInterestAPROutOfBounds({ current: loanTerms.accruingInterestAPR, limit: MAX_ACCRUING_INTEREST_APR });
+            revert InterestAPROutOfBounds({ current: loanTerms.accruingInterestAPR, limit: MAX_ACCRUING_INTEREST_APR });
         }
 
         if (callerSpec.refinancingLoanId == 0) {
@@ -736,11 +746,14 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     function _checkLoanCanBeRepaid(uint8 status, uint40 defaultTimestamp) private view {
         // Check that loan exists and is not from a different loan contract
-        if (status == 0) revert NonExistingLoan();
+        if (status == 0)
+            revert NonExistingLoan();
         // Check that loan is running
-        if (status != 2) revert InvalidLoanStatus(status);
+        if (status != 2)
+            revert LoanNotRunning();
         // Check that loan is not defaulted
-        if (defaultTimestamp <= block.timestamp) revert LoanDefaulted(defaultTimestamp);
+        if (defaultTimestamp <= block.timestamp)
+            revert LoanDefaulted(defaultTimestamp);
     }
 
     /**
@@ -828,18 +841,18 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         if (loanToken.ownerOf(loanId) != msg.sender)
             revert CallerNotLOANTokenHolder();
 
-        // Loan is not existing or from a different loan contract
         if (loan.status == 0)
+            // Loan is not existing or from a different loan contract
             revert NonExistingLoan();
-        // Loan has been paid back
         else if (loan.status == 3)
+            // Loan has been paid back
             _settleLoanClaim({ loanId: loanId, loanOwner: msg.sender, defaulted: false });
-        // Loan is running but expired
         else if (loan.status == 2 && loan.defaultTimestamp <= block.timestamp)
+            // Loan is running but expired
             _settleLoanClaim({ loanId: loanId, loanOwner: msg.sender, defaulted: true });
-        // Loan is in wrong state
         else
-            revert InvalidLoanStatus(loan.status);
+            // Loan is in wrong state
+            revert LoanRunning();
     }
 
     /**
@@ -969,7 +982,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         if (loan.status == 0)
             revert NonExistingLoan();
         if (loan.status == 3) // cannot extend repaid loan
-            revert InvalidLoanStatus(loan.status);
+            revert LoanRepaid();
 
         // Check extension validity
         bytes32 extensionHash = getExtensionHash(extension);
