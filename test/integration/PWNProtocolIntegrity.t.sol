@@ -26,7 +26,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
     function test_shouldFailToCreateLOAN_whenLoanContractNotActive() external {
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Try to create LOAN
@@ -40,7 +40,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         uint256 loanId = _createERC1155Loan();
 
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Repay loan directly to original lender
@@ -70,7 +70,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         deployment.loanToken.transferFrom(lender, lender2, loanId);
 
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Repay loan directly to original lender
@@ -104,7 +104,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         _repayLoan(loanId);
 
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Claim loan
@@ -128,7 +128,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
     function test_shouldFailToCreateLOANTerms_whenCallerIsNotActiveLoan() external {
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(simpleProposal);
@@ -150,7 +150,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
     function test_shouldFailToCreateLOAN_whenPassingInvalidTermsFactoryContract() external {
         // Remove LOAN_PROPOSAL tag
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.hub.setTag(address(deployment.simpleLoanSimpleProposal), PWNHubTags.LOAN_PROPOSAL, false);
 
         // Try to create LOAN

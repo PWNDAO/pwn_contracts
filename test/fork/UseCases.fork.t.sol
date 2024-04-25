@@ -348,7 +348,7 @@ contract CategoryRegistryForIncompleteERCTokensTest is UseCasesTest {
         address catCoinBank = 0xdeDf88899D7c9025F19C6c9F188DEb98D49CD760;
 
         // Register category
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.categoryRegistry.registerCategoryValue(catCoinBank, uint8(MultiToken.Category.ERC721));
 
         // Prepare collateral

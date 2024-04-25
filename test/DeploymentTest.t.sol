@@ -29,23 +29,24 @@ abstract contract DeploymentTest is Deployments, Test {
     }
 
     function _protocolNotDeployedOnSelectedChain() internal override {
-        deployment.protocolSafe = makeAddr("protocolSafe");
+        deployment.protocolTimelock = makeAddr("protocolTimelock");
+        deployment.adminTimelock = makeAddr("adminTimelock");
         deployment.daoSafe = makeAddr("daoSafe");
 
         // Deploy category registry
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.categoryRegistry = new MultiTokenCategoryRegistry();
 
         // Deploy protocol
         deployment.configSingleton = new PWNConfig();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(deployment.configSingleton),
-            deployment.protocolSafe,
-            abi.encodeWithSignature("initialize(address,uint16,address)", address(this), 0, deployment.daoSafe)
+            deployment.adminTimelock,
+            abi.encodeWithSignature("initialize(address,uint16,address)", deployment.protocolTimelock, 0, deployment.daoSafe)
         );
         deployment.config = PWNConfig(address(proxy));
 
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.hub = new PWNHub();
 
         deployment.revokedNonce = new PWNRevokedNonce(address(deployment.hub), PWNHubTags.NONCE_MANAGER);
@@ -113,7 +114,7 @@ abstract contract DeploymentTest is Deployments, Test {
         tags[8] = PWNHubTags.LOAN_PROPOSAL;
         tags[9] = PWNHubTags.NONCE_MANAGER;
 
-        vm.prank(deployment.protocolSafe);
+        vm.prank(deployment.protocolTimelock);
         deployment.hub.setTags(addrs, tags, true);
     }
 

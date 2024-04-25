@@ -42,7 +42,6 @@ abstract contract Deployments is CommonBase {
         address deployerSafe;
         PWNHub hub;
         PWNLOAN loanToken;
-        address protocolSafe;
         address protocolTimelock;
         PWNRevokedNonce revokedNonce;
         PWNSimpleLoan simpleLoan;
