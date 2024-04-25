@@ -7,6 +7,7 @@ import { TransparentUpgradeableProxy, ITransparentUpgradeableProxy }
     from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { GnosisSafeLike, GnosisSafeUtils } from "./lib/GnosisSafeUtils.sol";
+import { TimelockController, TimelockUtils } from "./lib/TimelockUtils.sol";
 
 import {
     Deployments,
@@ -97,7 +98,7 @@ forge script script/PWN.s.sol:Deploy \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
-    /// @dev Expecting to have deployer, deployerSafe, protocolSafe, daoSafe, hub & LOAN token
+    /// @dev Expecting to have deployer, deployerSafe, adminTimelock, protocolTimelock, daoSafe, hub & LOAN token
     /// addresses set in the `deployments/latest.json`.
     function deployNewProtocolVersion() external {
         _loadDeployedAddresses();
@@ -252,7 +253,7 @@ forge script script/PWN.s.sol:Deploy \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
-    /// @dev Expecting to have deployer, deployerSafe, protocolSafe, daoSafe & categoryRegistry
+    /// @dev Expecting to have deployer, deployerSafe, adminTimelock, protocolTimelock & daoSafe
     /// addresses set in the `deployments/latest.json`.
     function deployProtocol() external {
         _loadDeployedAddresses();
@@ -417,6 +418,7 @@ forge script script/PWN.s.sol:Deploy \
 
 contract Setup is Deployments, Script {
     using GnosisSafeUtils for GnosisSafeLike;
+    using TimelockUtils for TimelockController;
 
     function _protocolNotDeployedOnSelectedChain() internal pure override {
         revert("PWN: selected chain is not set in deployments/latest.json");
@@ -425,24 +427,21 @@ contract Setup is Deployments, Script {
 /*
 forge script script/PWN.s.sol:Setup \
 --sig "setupNewProtocolVersion()" \
---rpc-url $RPC_URL \
---private-key $PRIVATE_KEY \
---with-gas-price $(cast --to-wei 15 gwei) \
+--rpc-url $TENDERLY_URL \
+--private-key $PRIVATE_KEY_PWN_SHARED_DEV \
 --broadcast
 */
     /// @dev Expecting to have protocol addresses set in the `deployments/latest.json`
-    /// Can be used only in fork tests, because protocol safe has threshold >1 and hub is owner by a timelock.
-    /// To set safes threshold to 1 use: cast rpc -r $TENDERLY_URL tenderly_setStorageAt {safe_address} 0x0000000000000000000000000000000000000000000000000000000000000004 0x0000000000000000000000000000000000000000000000000000000000000001
-    /// To set hubs owner to protocol safe use: cast rpc -r $TENDERLY_URL tenderly_setStorageAt {hub_address} 0x0000000000000000000000000000000000000000000000000000000000000000 {protocol_safe_addr_to_32}
+    /// Can be used only in fork tests, because safe has threshold >1 and hub is owner by a timelock.
     function setupNewProtocolVersion() external {
         _loadDeployedAddresses();
 
-        require(address(deployment.protocolSafe) != address(0), "Protocol safe not set");
+        require(address(deployment.daoSafe) != address(0), "Protocol safe not set");
         require(address(deployment.categoryRegistry) != address(0), "Category registry not set");
 
         vm.startBroadcast();
 
-        _acceptOwnership(deployment.protocolSafe, address(deployment.categoryRegistry));
+        _acceptOwnership(deployment.daoSafe, deployment.protocolTimelock, address(deployment.categoryRegistry));
         _setTags();
 
         vm.stopBroadcast();
@@ -460,25 +459,25 @@ forge script script/PWN.s.sol:Setup \
     function setupProtocol() external {
         _loadDeployedAddresses();
 
-        require(address(deployment.protocolSafe) != address(0), "Protocol safe not set");
+        require(address(deployment.daoSafe) != address(0), "Protocol safe not set");
+        require(address(deployment.categoryRegistry) != address(0), "Category registry not set");
         require(address(deployment.hub) != address(0), "Hub not set");
 
         vm.startBroadcast();
 
-        _acceptOwnership(deployment.protocolSafe, address(deployment.categoryRegistry));
-        _acceptOwnership(deployment.protocolSafe, address(deployment.hub));
+        _acceptOwnership(deployment.daoSafe, deployment.protocolTimelock, address(deployment.categoryRegistry));
+        _acceptOwnership(deployment.daoSafe, deployment.protocolTimelock, address(deployment.hub));
         _setTags();
 
         vm.stopBroadcast();
     }
 
-    function _acceptOwnership(address safe, address contract_) internal {
-        bool success = GnosisSafeLike(safe).execTransaction({
-            to: contract_,
-            data: abi.encodeWithSignature("acceptOwnership()")
-        });
-
-        require(success, "Accept ownership tx failed");
+    function _acceptOwnership(address safe, address timelock, address contract_) internal {
+        TimelockController(payable(timelock)).scheduleAndExecute(
+            GnosisSafeLike(safe),
+            contract_,
+            abi.encodeWithSignature("acceptOwnership()")
+        );
         console2.log("Accept ownership tx succeeded");
     }
 
@@ -488,7 +487,8 @@ forge script script/PWN.s.sol:Setup \
         require(address(deployment.simpleLoanListProposal) != address(0), "Simple loan list proposal not set");
         require(address(deployment.simpleLoanFungibleProposal) != address(0), "Simple loan fungible proposal not set");
         require(address(deployment.simpleLoanDutchAuctionProposal) != address(0), "Simple loan dutch auctin proposal not set");
-        require(address(deployment.protocolSafe) != address(0), "Protocol safe not set");
+        require(address(deployment.protocolTimelock) != address(0), "Protocol timelock not set");
+        require(address(deployment.daoSafe) != address(0), "DAO safe not set");
         require(address(deployment.hub) != address(0), "Hub not set");
 
         address[] memory addrs = new address[](10);
@@ -523,14 +523,11 @@ forge script script/PWN.s.sol:Setup \
         tags[8] = PWNHubTags.LOAN_PROPOSAL;
         tags[9] = PWNHubTags.NONCE_MANAGER;
 
-        bool success = GnosisSafeLike(deployment.protocolSafe).execTransaction({
-            to: address(deployment.hub),
-            data: abi.encodeWithSignature(
-                "setTags(address[],bytes32[],bool)", addrs, tags, true
-            )
-        });
-
-        require(success, "Tags set failed");
+        TimelockController(payable(deployment.protocolTimelock)).scheduleAndExecute(
+            GnosisSafeLike(deployment.daoSafe),
+            address(deployment.hub),
+            abi.encodeWithSignature("setTags(address[],bytes32[],bool)", addrs, tags, true)
+        );
         console2.log("Tags set succeeded");
     }
 
@@ -547,18 +544,16 @@ forge script script/PWN.s.sol:Setup \
         _loadDeployedAddresses();
 
         require(address(deployment.daoSafe) != address(0), "DAO safe not set");
+        require(address(deployment.protocolTimelock) != address(0), "Protocol timelock not set");
         require(address(deployment.config) != address(0), "Config not set");
 
         vm.startBroadcast();
 
-        bool success = GnosisSafeLike(deployment.daoSafe).execTransaction({
-            to: address(deployment.config),
-            data: abi.encodeWithSignature(
-                "setLoanMetadataUri(address,string)", address_, metadata
-            )
-        });
-
-        require(success, "Set metadata failed");
+        TimelockController(payable(deployment.protocolTimelock)).scheduleAndExecute(
+            GnosisSafeLike(deployment.daoSafe),
+            address(deployment.config),
+            abi.encodeWithSignature("setLoanMetadataUri(address,string)", address_, metadata)
+        );
         console2.log("Metadata set:", metadata);
 
         vm.stopBroadcast();
