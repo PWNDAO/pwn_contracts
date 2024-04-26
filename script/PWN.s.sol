@@ -428,7 +428,7 @@ contract Setup is Deployments, Script {
 forge script script/PWN.s.sol:Setup \
 --sig "setupNewProtocolVersion()" \
 --rpc-url $TENDERLY_URL \
---private-key $PRIVATE_KEY_PWN_SHARED_DEV \
+--private-key $PRIVATE_KEY \
 --broadcast
 */
     /// @dev Expecting to have protocol addresses set in the `deployments/latest.json`
@@ -533,14 +533,14 @@ forge script script/PWN.s.sol:Setup \
 
 /*
 forge script script/PWN.s.sol:Setup \
---sig "setMetadata(address,string)" $LOAN_CONTRACT $METADATA \
+--sig "setDefaultMetadata(string)" $METADATA \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
     /// @dev Expecting to have daoSafe & config addresses set in the `deployments/latest.json`
-    function setMetadata(address address_, string memory metadata) external {
+    function setDefaultMetadata(string memory metadata) external {
         _loadDeployedAddresses();
 
         require(address(deployment.daoSafe) != address(0), "DAO safe not set");
@@ -552,7 +552,7 @@ forge script script/PWN.s.sol:Setup \
         TimelockController(payable(deployment.protocolTimelock)).scheduleAndExecute(
             GnosisSafeLike(deployment.daoSafe),
             address(deployment.config),
-            abi.encodeWithSignature("setLoanMetadataUri(address,string)", address_, metadata)
+            abi.encodeWithSignature("setDefaultLOANMetadataUri(string)", metadata)
         );
         console2.log("Metadata set:", metadata);
 
