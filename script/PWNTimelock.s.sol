@@ -169,28 +169,28 @@ forge script script/PWNTimelock.s.sol:Setup \
 
 /*
 forge script script/PWNTimelock.s.sol:Setup \
---sig "setupProtocolTimelock()" \
+--sig "updateProtocolTimelockMinDelay()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
     /// @dev Expecting to have protocol, daoSafe & protocolTimelock addresses set in the `deployments.json`
-    function setupProtocolTimelock() external {
+    function updateProtocolTimelockMinDelay() external {
         _loadDeployedAddresses();
         _updateMinDelay(TimelockController(payable(deployment.protocolTimelock)), 4 days);
     }
 
 /*
 forge script script/PWNTimelock.s.sol:Setup \
---sig "setAdminTimelock()" \
+--sig "updateAdminTimelockMinDelay()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
     /// @dev Expecting to have protocol, daoSafe & adminTimelock addresses set in the `deployments.json
-    function setAdminTimelock() external {
+    function updateAdminTimelockMinDelay() external {
         _loadDeployedAddresses();
         _updateMinDelay(TimelockController(payable(deployment.adminTimelock)), 4 days);
     }
