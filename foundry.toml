@@ -2,6 +2,7 @@
 solc_version = '0.8.16'
 fs_permissions = [{ access = "read", path = "./deployments/latest.json"}]
 gas_reports = ["PWNSimpleLoan"]
+cbor_metadata = true
 
 
 [rpc_endpoints]
@@ -22,5 +23,8 @@ base_goerli = "${BASE_GOERLI_URL}"
 cronos_testnet = "${CRONOS_TESTNET_URL}"
 mantle_testnet = "${MANTLE_TESTNET_URL}"
 
-tenderly = "${TENDERLY_URL}" # chain_id = 162314
+tenderly = "${TENDERLY_URL}"
 local = "${LOCAL_URL}"
+
+[etherscan]
+unknown_chain = { key = "${TENDERLY_ACCESS_TOKEN}", chain = 11155111, url = "${TENDERLY_URL}" }
