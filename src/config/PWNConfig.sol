@@ -11,7 +11,7 @@ import { IStateFingerpringComputer } from "pwn/interfaces/IStateFingerpringCompu
 /**
  * @title PWN Config
  * @notice Contract holding configurable values of PWN protocol.
- * @dev Is intendet to be used as a proxy via `TransparentUpgradeableProxy`.
+ * @dev Is intended to be used as a proxy via `TransparentUpgradeableProxy`.
  */
 contract PWNConfig is Ownable2Step, Initializable {
 
