@@ -111,7 +111,7 @@ contract PWNConfig_Initialize_Test is PWNConfigTest {
     }
 
     function test_shouldFail_whenFeeCollectorIsZeroAddress() external {
-        vm.expectRevert("Fee collector is zero address");
+        vm.expectRevert(abi.encodeWithSelector(PWNConfig.ZeroFeeCollector.selector));
         config.initialize(owner, fee, address(0));
     }
 
