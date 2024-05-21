@@ -107,7 +107,7 @@ abstract contract PWNSimpleLoanTest is Test {
             defaultTimestamp: uint40(block.timestamp + loanDurationInDays * 1 days),
             borrower: borrower,
             originalLender: lender,
-            accruingInterestDailyRate: 0,
+            accruingInterestAPR: 0,
             fixedInterestAmount: 6631,
             principalAmount: 100,
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2)
@@ -140,7 +140,7 @@ abstract contract PWNSimpleLoanTest is Test {
             defaultTimestamp: 0,
             borrower: address(0),
             originalLender: address(0),
-            accruingInterestDailyRate: 0,
+            accruingInterestAPR: 0,
             fixedInterestAmount: 0,
             principalAmount: 0,
             collateral: MultiToken.Asset(MultiToken.Category(0), address(0), 0, 0)
@@ -198,7 +198,7 @@ abstract contract PWNSimpleLoanTest is Test {
         assertEq(_simpleLoan1.defaultTimestamp, _simpleLoan2.defaultTimestamp);
         assertEq(_simpleLoan1.borrower, _simpleLoan2.borrower);
         assertEq(_simpleLoan1.originalLender, _simpleLoan2.originalLender);
-        assertEq(_simpleLoan1.accruingInterestDailyRate, _simpleLoan2.accruingInterestDailyRate);
+        assertEq(_simpleLoan1.accruingInterestAPR, _simpleLoan2.accruingInterestAPR);
         assertEq(_simpleLoan1.fixedInterestAmount, _simpleLoan2.fixedInterestAmount);
         assertEq(_simpleLoan1.principalAmount, _simpleLoan2.principalAmount);
         assertEq(uint8(_simpleLoan1.collateral.category), uint8(_simpleLoan2.collateral.category));
@@ -217,7 +217,7 @@ abstract contract PWNSimpleLoanTest is Test {
         // Borrower address
         _assertLOANWord(loanSlot + 2, abi.encodePacked(uint96(0), _simpleLoan.borrower));
         // Original lender, accruing interest daily rate
-        _assertLOANWord(loanSlot + 3, abi.encodePacked(uint56(0), _simpleLoan.accruingInterestDailyRate, _simpleLoan.originalLender));
+        _assertLOANWord(loanSlot + 3, abi.encodePacked(uint56(0), _simpleLoan.accruingInterestAPR, _simpleLoan.originalLender));
         // Fixed interest amount
         _assertLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.fixedInterestAmount));
         // Principal amount
@@ -241,7 +241,7 @@ abstract contract PWNSimpleLoanTest is Test {
         // Borrower address
         _storeLOANWord(loanSlot + 2, abi.encodePacked(uint96(0), _simpleLoan.borrower));
         // Original lender, accruing interest daily rate
-        _storeLOANWord(loanSlot + 3, abi.encodePacked(uint56(0), _simpleLoan.accruingInterestDailyRate, _simpleLoan.originalLender));
+        _storeLOANWord(loanSlot + 3, abi.encodePacked(uint56(0), _simpleLoan.accruingInterestAPR, _simpleLoan.originalLender));
         // Fixed interest amount
         _storeLOANWord(loanSlot + 4, abi.encodePacked(_simpleLoan.fixedInterestAmount));
         // Principal amount
@@ -530,11 +530,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function testFuzz_shouldStoreLoanData(uint40 accruingInterestAPR) external {
-        accruingInterestAPR = uint40(bound(accruingInterestAPR, 0, 1e11));
-        simpleLoanTerms.accruingInterestAPR = accruingInterestAPR;
-        _mockLoanTerms(simpleLoanTerms);
-
+    function test_shouldStoreLoanData() external {
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
@@ -542,7 +538,6 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
             extra: ""
         });
 
-        simpleLoan.accruingInterestDailyRate = uint40(uint256(accruingInterestAPR) * 274 / 1e5);
         _assertLOANEq(loanId, simpleLoan);
     }
 
@@ -762,7 +757,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             defaultTimestamp: uint40(block.timestamp + 40039),
             borrower: borrower,
             originalLender: lender,
-            accruingInterestDailyRate: 0,
+            accruingInterestAPR: 0,
             fixedInterestAmount: 6631,
             principalAmount: 100e18,
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2)
@@ -994,7 +989,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         // Update loan and compare
         simpleLoan.status = 3; // move loan to repaid state
         simpleLoan.fixedInterestAmount = loan.loanRepaymentAmount(refinancingLoanId) - simpleLoan.principalAmount; // stored accrued interest at the time of repayment
-        simpleLoan.accruingInterestDailyRate = 0; // stop accruing interest
+        simpleLoan.accruingInterestAPR = 0; // stop accruing interest
         _assertLOANEq(refinancingLoanId, simpleLoan);
     }
 
@@ -1015,7 +1010,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         // Update loan and compare
         simpleLoan.status = 3; // move loan to repaid state
         simpleLoan.fixedInterestAmount = loan.loanRepaymentAmount(refinancingLoanId) - simpleLoan.principalAmount; // stored accrued interest at the time of repayment
-        simpleLoan.accruingInterestDailyRate = 0; // stop accruing interest
+        simpleLoan.accruingInterestAPR = 0; // stop accruing interest
         _assertLOANEq(refinancingLoanId, simpleLoan);
     }
 
@@ -1360,7 +1355,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
         simpleLoan.status = 3;
         simpleLoan.fixedInterestAmount = loan.loanRepaymentAmount(refinancingLoanId) - simpleLoan.principalAmount;
-        simpleLoan.accruingInterestDailyRate = 0;
+        simpleLoan.accruingInterestAPR = 0;
         _assertLOANEq(refinancingLoanId, simpleLoan);
 
     }
@@ -1368,16 +1363,16 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     // More overall tests
 
     function testFuzz_shouldRepayOriginalLoan(
-        uint256 _days, uint256 principal, uint256 fixedInterest, uint256 dailyInterest, uint256 refinanceAmount
+        uint256 _days, uint256 principal, uint256 fixedInterest, uint256 interestAPR, uint256 refinanceAmount
     ) external {
         _days = bound(_days, 0, loanDurationInDays - 1);
         principal = bound(principal, 1, 1e40);
         fixedInterest = bound(fixedInterest, 0, 1e40);
-        dailyInterest = bound(dailyInterest, 1, 274e8);
+        interestAPR = bound(interestAPR, 1, 1e12);
 
         simpleLoan.principalAmount = principal;
         simpleLoan.fixedInterestAmount = fixedInterest;
-        simpleLoan.accruingInterestDailyRate = uint40(dailyInterest);
+        simpleLoan.accruingInterestAPR = uint40(interestAPR);
         _mockLOAN(refinancingLoanId, simpleLoan);
 
         vm.warp(simpleLoan.startTimestamp + _days * 1 days);
@@ -1412,16 +1407,16 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     }
 
     function testFuzz_shouldCollectProtocolFee(
-        uint256 _days, uint256 principal, uint256 fixedInterest, uint256 dailyInterest, uint256 refinanceAmount, uint256 fee
+        uint256 _days, uint256 principal, uint256 fixedInterest, uint256 interestAPR, uint256 refinanceAmount, uint256 fee
     ) external {
         _days = bound(_days, 0, loanDurationInDays - 1);
         principal = bound(principal, 1, 1e40);
         fixedInterest = bound(fixedInterest, 0, 1e40);
-        dailyInterest = bound(dailyInterest, 1, 274e8);
+        interestAPR = bound(interestAPR, 1, 1e12);
 
         simpleLoan.principalAmount = principal;
         simpleLoan.fixedInterestAmount = fixedInterest;
-        simpleLoan.accruingInterestDailyRate = uint40(dailyInterest);
+        simpleLoan.accruingInterestAPR = uint40(interestAPR);
         _mockLOAN(refinancingLoanId, simpleLoan);
 
         vm.warp(simpleLoan.startTimestamp + _days * 1 days);
@@ -1599,18 +1594,18 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
     }
 
     function testFuzz_shouldUpdateLoanData_whenLOANOwnerIsNotOriginalLender(
-        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _dailyInterest
+        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _interestAPR
     ) external {
         _mockLOANTokenOwner(loanId, notOriginalLender);
 
         _days = bound(_days, 0, loanDurationInDays - 1);
         _principal = bound(_principal, 1, 1e40);
         _fixedInterest = bound(_fixedInterest, 0, 1e40);
-        _dailyInterest = bound(_dailyInterest, 1, 274e8);
+        _interestAPR = bound(_interestAPR, 1, 1e12);
 
         simpleLoan.principalAmount = _principal;
         simpleLoan.fixedInterestAmount = _fixedInterest;
-        simpleLoan.accruingInterestDailyRate = uint40(_dailyInterest);
+        simpleLoan.accruingInterestAPR = uint40(_interestAPR);
         _mockLOAN(loanId, simpleLoan);
 
         vm.warp(simpleLoan.startTimestamp + _days * 1 days);
@@ -1624,7 +1619,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         // Update loan and compare
         simpleLoan.status = 3; // move loan to repaid state
         simpleLoan.fixedInterestAmount = loanRepaymentAmount - _principal; // stored accrued interest at the time of repayment
-        simpleLoan.accruingInterestDailyRate = 0; // stop accruing interest
+        simpleLoan.accruingInterestAPR = 0; // stop accruing interest
         _assertLOANEq(loanId, simpleLoan);
     }
 
@@ -1641,16 +1636,16 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
     }
 
     function testFuzz_shouldTransferRepaidAmountToVault(
-        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _dailyInterest
+        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _interestAPR
     ) external {
         _days = bound(_days, 0, loanDurationInDays - 1);
         _principal = bound(_principal, 1, 1e40);
         _fixedInterest = bound(_fixedInterest, 0, 1e40);
-        _dailyInterest = bound(_dailyInterest, 1, 274e8);
+        _interestAPR = bound(_interestAPR, 1, 1e12);
 
         simpleLoan.principalAmount = _principal;
         simpleLoan.fixedInterestAmount = _fixedInterest;
-        simpleLoan.accruingInterestDailyRate = uint40(_dailyInterest);
+        simpleLoan.accruingInterestAPR = uint40(_interestAPR);
         _mockLOAN(loanId, simpleLoan);
 
         vm.warp(simpleLoan.startTimestamp + _days * 1 days);
@@ -1713,7 +1708,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
 
         simpleLoan.status = 3;
         simpleLoan.fixedInterestAmount = loan.loanRepaymentAmount(loanId) - simpleLoan.principalAmount;
-        simpleLoan.accruingInterestDailyRate = 0;
+        simpleLoan.accruingInterestAPR = 0;
         _assertLOANEq(loanId, simpleLoan);
     }
 
@@ -1747,7 +1742,7 @@ contract PWNSimpleLoan_LoanRepaymentAmount_Test is PWNSimpleLoanTest {
         simpleLoan.defaultTimestamp = simpleLoan.startTimestamp + 101 * 1 days;
         simpleLoan.principalAmount = _principal;
         simpleLoan.fixedInterestAmount = _fixedInterest;
-        simpleLoan.accruingInterestDailyRate = 0;
+        simpleLoan.accruingInterestAPR = 0;
         _mockLOAN(loanId, simpleLoan);
 
         vm.warp(simpleLoan.startTimestamp + _days + 1 days); // should not have an effect
@@ -1755,25 +1750,45 @@ contract PWNSimpleLoan_LoanRepaymentAmount_Test is PWNSimpleLoanTest {
         assertEq(loan.loanRepaymentAmount(loanId), _principal + _fixedInterest);
     }
 
-    function test_shouldReturnAccruedInterest_whenNonZeroAccruedInterest(
-        uint256 _days, uint256 _principal, uint256 _fixedInterest, uint256 _dailyInterest
+    function testFuzz_shouldReturnAccruedInterest_whenNonZeroAccruedInterest(
+        uint256 _minutes, uint256 _principal, uint256 _fixedInterest, uint256 _interestAPR
     ) external {
-        _days = bound(_days, 0, 2 * loanDurationInDays); // should return non zero value even after loan expiration
+        _minutes = bound(_minutes, 0, 2 * loanDurationInDays * 24 * 60); // should return non zero value even after loan expiration
         _principal = bound(_principal, 1, 1e40);
         _fixedInterest = bound(_fixedInterest, 0, 1e40);
-        _dailyInterest = bound(_dailyInterest, 1, 274e8);
+        _interestAPR = bound(_interestAPR, 1, 1e12);
 
         simpleLoan.defaultTimestamp = simpleLoan.startTimestamp + 101 * 1 days;
         simpleLoan.principalAmount = _principal;
         simpleLoan.fixedInterestAmount = _fixedInterest;
-        simpleLoan.accruingInterestDailyRate = uint40(_dailyInterest);
+        simpleLoan.accruingInterestAPR = uint40(_interestAPR);
         _mockLOAN(loanId, simpleLoan);
 
-        vm.warp(simpleLoan.startTimestamp + _days * 1 days + 1);
+        vm.warp(simpleLoan.startTimestamp + _minutes * 1 minutes + 1);
 
-        uint256 expectedInterest = _fixedInterest + _principal * _dailyInterest * _days / 1e10;
+        uint256 expectedInterest = _fixedInterest + _principal * _interestAPR * _minutes / (1e5 * 60 * 24 * 365) / 100;
         uint256 expectedLoanRepaymentAmount = _principal + expectedInterest;
         assertEq(loan.loanRepaymentAmount(loanId), expectedLoanRepaymentAmount);
+    }
+
+    function test_shouldReturnAccuredInterest() external {
+        simpleLoan.defaultTimestamp = simpleLoan.startTimestamp + 101 * 1 days;
+        simpleLoan.principalAmount = 100e18;
+        simpleLoan.fixedInterestAmount = 10e18;
+        simpleLoan.accruingInterestAPR = uint40(365e5);
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp);
+        assertEq(loan.loanRepaymentAmount(loanId), simpleLoan.principalAmount + simpleLoan.fixedInterestAmount);
+
+        vm.warp(simpleLoan.startTimestamp + 1 days);
+        assertEq(loan.loanRepaymentAmount(loanId), simpleLoan.principalAmount + simpleLoan.fixedInterestAmount + 1e18);
+
+        simpleLoan.accruingInterestAPR = uint40(100e5);
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.warp(simpleLoan.startTimestamp + 365 days);
+        assertEq(loan.loanRepaymentAmount(loanId), 2 * simpleLoan.principalAmount + simpleLoan.fixedInterestAmount);
     }
 
 }
@@ -1862,10 +1877,10 @@ contract PWNSimpleLoan_ClaimLOAN_Test is PWNSimpleLoanTest {
         _fixedInterest = bound(_fixedInterest, 0, 1e40);
 
         // Note: loan repayment into Vault will reuse `fixedInterestAmount` and store total interest
-        // at the time of repayment and set `accruingInterestDailyRate` to zero.
+        // at the time of repayment and set `accruingInterestAPR` to zero.
         simpleLoan.principalAmount = _principal;
         simpleLoan.fixedInterestAmount = _fixedInterest;
-        simpleLoan.accruingInterestDailyRate = 0;
+        simpleLoan.accruingInterestAPR = 0;
         uint256 loanRepaymentAmount = loan.loanRepaymentAmount(loanId);
 
         fungibleAsset.mint(address(loan), loanRepaymentAmount);
@@ -2480,7 +2495,7 @@ contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
         uint40 _defaultTimestamp,
         address _borrower,
         address _originalLender,
-        uint40 _accruingInterestDailyRate,
+        uint40 _accruingInterestAPR,
         uint256 _fixedInterestAmount,
         address _creditAddress,
         uint256 _principalAmount,
@@ -2491,14 +2506,14 @@ contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
     ) external {
         _startTimestamp = uint40(bound(_startTimestamp, 0, type(uint40).max - 1));
         _defaultTimestamp = uint40(bound(_defaultTimestamp, _startTimestamp + 1, type(uint40).max));
-        _accruingInterestDailyRate = uint40(bound(_accruingInterestDailyRate, 0, 274e8));
+        _accruingInterestAPR = uint40(bound(_accruingInterestAPR, 0, 1e12));
         _fixedInterestAmount = bound(_fixedInterestAmount, 0, type(uint256).max - _principalAmount);
 
         simpleLoan.startTimestamp = _startTimestamp;
         simpleLoan.defaultTimestamp = _defaultTimestamp;
         simpleLoan.borrower = _borrower;
         simpleLoan.originalLender = _originalLender;
-        simpleLoan.accruingInterestDailyRate = _accruingInterestDailyRate;
+        simpleLoan.accruingInterestAPR = _accruingInterestAPR;
         simpleLoan.fixedInterestAmount = _fixedInterestAmount;
         simpleLoan.creditAddress = _creditAddress;
         simpleLoan.principalAmount = _principalAmount;
@@ -2528,8 +2543,8 @@ contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
             assertEq(originalLender, _originalLender);
         }
         {
-            (,,,,,, uint40 accruingInterestDailyRate,,,,,) = loan.getLOAN(loanId);
-            assertEq(accruingInterestDailyRate, _accruingInterestDailyRate);
+            (,,,,,, uint40 accruingInterestAPR,,,,,) = loan.getLOAN(loanId);
+            assertEq(accruingInterestAPR, _accruingInterestAPR);
         }
         {
             (,,,,,,, uint256 fixedInterestAmount,,,,) = loan.getLOAN(loanId);
@@ -2592,15 +2607,15 @@ contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
     function testFuzz_shouldReturnRepaymentAmount(
         uint256 _days,
         uint256 _principalAmount,
-        uint40 _accruingInterestDailyRate,
+        uint40 _accruingInterestAPR,
         uint256 _fixedInterestAmount
     ) external {
         _days = bound(_days, 0, 2 * loanDurationInDays);
         _principalAmount = bound(_principalAmount, 1, 1e40);
-        _accruingInterestDailyRate = uint40(bound(_accruingInterestDailyRate, 0, 274e8));
+        _accruingInterestAPR = uint40(bound(_accruingInterestAPR, 0, 1e12));
         _fixedInterestAmount = bound(_fixedInterestAmount, 0, _principalAmount);
 
-        simpleLoan.accruingInterestDailyRate = _accruingInterestDailyRate;
+        simpleLoan.accruingInterestAPR = _accruingInterestAPR;
         simpleLoan.fixedInterestAmount = _fixedInterestAmount;
         simpleLoan.principalAmount = _principalAmount;
         _mockLOAN(loanId, simpleLoan);
@@ -2621,7 +2636,7 @@ contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
             address borrower,
             address originalLender,
             address loanOwner,
-            uint40 accruingInterestDailyRate,
+            uint40 accruingInterestAPR,
             uint256 fixedInterestAmount,
             MultiToken.Asset memory credit,
             MultiToken.Asset memory collateral,
@@ -2635,7 +2650,7 @@ contract PWNSimpleLoan_GetLOAN_Test is PWNSimpleLoanTest {
         assertEq(borrower, address(0));
         assertEq(originalLender, address(0));
         assertEq(loanOwner, address(0));
-        assertEq(accruingInterestDailyRate, 0);
+        assertEq(accruingInterestAPR, 0);
         assertEq(fixedInterestAmount, 0);
         assertEq(credit.assetAddress, address(0));
         assertEq(credit.amount, 0);
@@ -2707,26 +2722,26 @@ contract PWNSimpleLoan_GetStateFingerprint_Test is PWNSimpleLoanTest {
         vm.warp(simpleLoan.defaultTimestamp - 1);
         assertEq(
             loan.getStateFingerprint(loanId),
-            keccak256(abi.encode(2, simpleLoan.defaultTimestamp, simpleLoan.fixedInterestAmount, simpleLoan.accruingInterestDailyRate))
+            keccak256(abi.encode(2, simpleLoan.defaultTimestamp, simpleLoan.fixedInterestAmount, simpleLoan.accruingInterestAPR))
         );
 
         vm.warp(simpleLoan.defaultTimestamp);
         assertEq(
             loan.getStateFingerprint(loanId),
-            keccak256(abi.encode(4, simpleLoan.defaultTimestamp, simpleLoan.fixedInterestAmount, simpleLoan.accruingInterestDailyRate))
+            keccak256(abi.encode(4, simpleLoan.defaultTimestamp, simpleLoan.fixedInterestAmount, simpleLoan.accruingInterestAPR))
         );
     }
 
     function testFuzz_shouldReturnCorrectStateFingerprint(
-        uint256 fixedInterestAmount, uint40 accruingInterestDailyRate
+        uint256 fixedInterestAmount, uint40 accruingInterestAPR
     ) external {
         simpleLoan.fixedInterestAmount = fixedInterestAmount;
-        simpleLoan.accruingInterestDailyRate = accruingInterestDailyRate;
+        simpleLoan.accruingInterestAPR = accruingInterestAPR;
         _mockLOAN(loanId, simpleLoan);
 
         assertEq(
             loan.getStateFingerprint(loanId),
-            keccak256(abi.encode(2, simpleLoan.defaultTimestamp, simpleLoan.fixedInterestAmount, simpleLoan.accruingInterestDailyRate))
+            keccak256(abi.encode(2, simpleLoan.defaultTimestamp, simpleLoan.fixedInterestAmount, simpleLoan.accruingInterestAPR))
         );
     }
 
