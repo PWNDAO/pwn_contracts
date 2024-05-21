@@ -4,7 +4,6 @@ pragma solidity 0.8.16;
 import { Test } from "forge-std/Test.sol";
 
 import { PWNHub } from "pwn/hub/PWNHub.sol";
-import { InvalidInputData } from "pwn/PWNErrors.sol";
 
 
 abstract contract PWNHubTest is Test {
@@ -138,7 +137,7 @@ contract PWNHub_SetTags_Test is PWNHubTest {
     function test_shouldFail_whenDiffInputLengths() external {
         address[] memory addrs_ = new address[](3);
 
-        vm.expectRevert(abi.encodeWithSelector(InvalidInputData.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNHub.InvalidInputData.selector));
         vm.prank(owner);
         hub.setTags(addrs_, tags, true);
     }
