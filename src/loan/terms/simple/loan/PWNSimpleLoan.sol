@@ -886,6 +886,14 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Delete loan data & burn LOAN token before calling safe transfer
         _deleteLoan(loanId);
 
+        emit LOANClaimed({ loanId: loanId, defaulted: false });
+
+        // End here if the credit amount is zero
+        if (creditAmount == 0)
+            return;
+
+        // Note: Zero credit amount can happen when the loan is refinanced by the original lender.
+
         // Repay the original lender
         if (destinationOfFunds == loanOwner) {
             _push(repaymentCredit, loanOwner);
@@ -907,8 +915,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Note: If the transfer fails, the LOAN token will remain in repaid state and the LOAN token owner
         // will be able to claim the repaid credit. Otherwise lender would be able to prevent borrower from
         // repaying the loan.
-
-        emit LOANClaimed({ loanId: loanId, defaulted: false });
     }
 
     /**

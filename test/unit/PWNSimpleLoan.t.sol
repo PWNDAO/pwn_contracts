@@ -1000,6 +1000,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldUpdateLoanData_whenLOANOwnerIsOriginalLender_whenDirectRepaymentFails() external {
+        refinancedLoanTerms.credit.amount = simpleLoan.principalAmount - 1;
+        _mockLoanTerms(refinancedLoanTerms);
         _mockLOANTokenOwner(refinancingLoanId, lender);
 
         vm.mockCallRevert(simpleLoan.creditAddress, abi.encodeWithSignature("transfer(address,uint256)"), "");
@@ -1296,7 +1298,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
     // Try claim repaid LOAN
 
     function testFuzz_shouldTryClaimRepaidLOAN_fullAmount_whenShouldTransferCommon(address loanOwner) external {
-        vm.assume(loanOwner != address(0));
+        vm.assume(loanOwner != address(0) && loanOwner != lender);
         _mockLOANTokenOwner(refinancingLoanId, loanOwner);
 
         vm.expectCall(
@@ -1320,7 +1322,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         _mockLOAN(refinancingLoanId, simpleLoan);
 
         uint256 repaymentAmount = loan.loanRepaymentAmount(refinancingLoanId);
-        shortage = bound(shortage, 1, repaymentAmount - 1);
+        shortage = bound(shortage, 0, repaymentAmount - 1);
 
         fungibleAsset.mint(borrower, shortage);
 
@@ -1330,7 +1332,8 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         vm.expectCall(
             address(loan),
             abi.encodeWithSignature(
-                "tryClaimRepaidLOAN(uint256,uint256,address)", refinancingLoanId, shortage, lender
+                "tryClaimRepaidLOAN(uint256,uint256,address)",
+                refinancingLoanId, shortage, lender
             )
         );
 
@@ -1994,6 +1997,20 @@ contract PWNSimpleLoan_TryClaimRepaidLOAN_Test is PWNSimpleLoanTest {
         loan.tryClaimRepaidLOAN(loanId, creditAmount, lender);
 
         _assertLOANEq(loanId, nonExistingLoan);
+    }
+
+    function test_shouldNotCallTransfer_whenCreditAmountIsZero() external {
+        simpleLoan.originalSourceOfFunds = lender;
+        _mockLOAN(loanId, simpleLoan);
+
+        vm.expectCall({
+            callee: simpleLoan.creditAddress,
+            data: abi.encodeWithSignature("transfer(address,uint256)", lender, 0),
+            count: 0
+        });
+
+        vm.prank(address(loan));
+        loan.tryClaimRepaidLOAN(loanId, 0, lender);
     }
 
     function test_shouldTransferToOriginalLender_whenSourceOfFundsEqualToOriginalLender() external {
