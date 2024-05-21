@@ -57,10 +57,9 @@ abstract contract PWNSimpleLoanTest is Test {
 
     bytes32 proposalHash = keccak256("proposalHash");
 
-    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, PWNSimpleLoan.Terms terms, PWNSimpleLoan.LenderSpec lenderSpec, bytes extra);
+    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, uint256 refinancingLoanId, PWNSimpleLoan.Terms terms, PWNSimpleLoan.LenderSpec lenderSpec, bytes extra);
     event LOANPaidBack(uint256 indexed loanId);
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
-    event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
     event LOANExtended(uint256 indexed loanId, uint40 originalDefaultTimestamp, uint40 extendedDefaultTimestamp);
     event ExtensionProposalMade(bytes32 indexed extensionHash, address indexed proposer,  PWNSimpleLoan.ExtensionProposal proposal);
 
@@ -710,7 +709,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 
     function test_shouldEmit_LOANCreated() external {
         vm.expectEmit();
-        emit LOANCreated(loanId, proposalHash, proposalContract, simpleLoanTerms, lenderSpec, "lil extra");
+        emit LOANCreated(loanId, proposalHash, proposalContract, 0, simpleLoanTerms, lenderSpec, "lil extra");
 
         loan.createLOAN({
             proposalSpec: proposalSpec,
@@ -945,15 +944,15 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
         });
     }
 
-    function test_shouldEmit_LOANRefinanced() external {
+    function test_shouldEmit_LOANCreated() external {
         vm.expectEmit();
-        emit LOANRefinanced(refinancingLoanId, loanId);
+        emit LOANCreated(loanId, proposalHash, proposalContract, refinancingLoanId, refinancedLoanTerms, lenderSpec, "lil extra");
 
         loan.createLOAN({
             proposalSpec: proposalSpec,
             lenderSpec: lenderSpec,
             callerSpec: callerSpec,
-            extra: ""
+            extra: "lil extra"
         });
     }
 

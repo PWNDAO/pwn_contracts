@@ -198,12 +198,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Emitted when a new loan in created.
      */
-    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, Terms terms, LenderSpec lenderSpec, bytes extra);
-
-    /**
-     * @notice Emitted when a loan is refinanced.
-     */
-    event LOANRefinanced(uint256 indexed loanId, uint256 indexed refinancedLoanId);
+    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, uint256 refinancingLoanId, Terms terms, LenderSpec lenderSpec, bytes extra);
 
     /**
      * @notice Emitted when a loan is paid back.
@@ -426,9 +421,16 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         // Create a new loan
         loanId = _createLoan({
+            loanTerms: loanTerms,
+            lenderSpec: lenderSpec
+        });
+
+        emit LOANCreated({
+            loanId: loanId,
             proposalHash: proposalHash,
             proposalContract: proposalSpec.proposalContract,
-            loanTerms: loanTerms,
+            refinancingLoanId: callerSpec.refinancingLoanId,
+            terms: loanTerms,
             lenderSpec: lenderSpec,
             extra: extra
         });
@@ -454,8 +456,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
                 loanTerms: loanTerms,
                 lenderSpec: lenderSpec
             });
-
-            emit LOANRefinanced({ loanId: callerSpec.refinancingLoanId, refinancedLoanId: loanId });
         }
     }
 
@@ -512,17 +512,12 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     /**
      * @notice Mint LOAN token and store loan data under loan id.
-     * @param proposalHash Hash of a loan offer / request that is signed by a lender / borrower.
-     * @param proposalContract Address of a loan proposal contract.
      * @param loanTerms Loan terms struct.
-     * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
+     * @param lenderSpec Lender specification struct.
      */
     function _createLoan(
-        bytes32 proposalHash,
-        address proposalContract,
         Terms memory loanTerms,
-        LenderSpec calldata lenderSpec,
-        bytes calldata extra
+        LenderSpec calldata lenderSpec
     ) private returns (uint256 loanId) {
         // Mint LOAN token for lender
         loanId = loanToken.mint(loanTerms.lender);
@@ -542,15 +537,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         loan.fixedInterestAmount = loanTerms.fixedInterestAmount;
         loan.principalAmount = loanTerms.credit.amount;
         loan.collateral = loanTerms.collateral;
-
-        emit LOANCreated({
-            loanId: loanId,
-            proposalHash: proposalHash,
-            proposalContract: proposalContract,
-            terms: loanTerms,
-            lenderSpec: lenderSpec,
-            extra: extra
-        });
     }
 
     /**
