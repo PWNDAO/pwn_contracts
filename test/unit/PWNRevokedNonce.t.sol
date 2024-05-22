@@ -84,6 +84,70 @@ contract PWNRevokedNonce_RevokeNonce_Test is PWNRevokedNonceTest {
 
 
 /*----------------------------------------------------------*|
+|*  # REVOKE NONCES                                         *|
+|*----------------------------------------------------------*/
+
+contract PWNRevokedNonce_RevokeNonces_Test is PWNRevokedNonceTest {
+
+    uint256[] nonces;
+
+    function testFuzz_shouldFail_whenAnyNonceAlreadyRevoked(uint256 nonceSpace, uint256 nonce) external {
+        nonce = bound(nonce, 0, type(uint256).max - 1);
+        vm.store(address(revokedNonce), _nonceSpaceSlot(alice), bytes32(nonceSpace));
+        vm.store(address(revokedNonce), _revokedNonceSlot(alice, nonceSpace, nonce), bytes32(uint256(1)));
+
+        nonces = new uint256[](2);
+        nonces[0] = nonce;
+        nonces[1] = nonce + 1;
+
+        vm.expectRevert(abi.encodeWithSelector(PWNRevokedNonce.NonceAlreadyRevoked.selector, alice, nonceSpace, nonce));
+        vm.prank(alice);
+        revokedNonce.revokeNonces(nonces);
+    }
+
+    function testFuzz_shouldStoreNoncesAsRevoked(
+        uint256 nonceSpace, uint256 nonce1, uint256 nonce2, uint256 nonce3
+    ) external {
+        vm.assume(nonce1 != nonce2 && nonce2 != nonce3 && nonce1 != nonce3);
+        vm.store(address(revokedNonce), _nonceSpaceSlot(alice), bytes32(nonceSpace));
+
+        nonces = new uint256[](3);
+        nonces[0] = nonce1;
+        nonces[1] = nonce2;
+        nonces[2] = nonce3;
+
+        vm.prank(alice);
+        revokedNonce.revokeNonces(nonces);
+
+        assertTrue(revokedNonce.isNonceRevoked(alice, nonceSpace, nonce1));
+        assertTrue(revokedNonce.isNonceRevoked(alice, nonceSpace, nonce2));
+        assertTrue(revokedNonce.isNonceRevoked(alice, nonceSpace, nonce3));
+    }
+
+    function testFuzz_shouldEmit_NonceRevoked(
+        uint256 nonceSpace, uint256 nonce1, uint256 nonce2, uint256 nonce3
+    ) external {
+        vm.assume(nonce1 != nonce2 && nonce2 != nonce3 && nonce1 != nonce3);
+        vm.store(address(revokedNonce), _nonceSpaceSlot(alice), bytes32(nonceSpace));
+
+        nonces = new uint256[](3);
+        nonces[0] = nonce1;
+        nonces[1] = nonce2;
+        nonces[2] = nonce3;
+
+        for (uint256 i; i < nonces.length; ++i) {
+            vm.expectEmit();
+            emit NonceRevoked(alice, nonceSpace, nonces[i]);
+        }
+
+        vm.prank(alice);
+        revokedNonce.revokeNonces(nonces);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
 |*  # REVOKE NONCE WITH NONCE SPACE                         *|
 |*----------------------------------------------------------*/
 
