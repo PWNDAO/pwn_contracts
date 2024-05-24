@@ -43,7 +43,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @param creditPerCollateralUnit Amount of tokens which are offered per collateral unit with 38 decimals.
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal. If non-zero, proposal can be accepted more than once, until the credit limit is reached.
      * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
-     * @param accruingInterestAPR Accruing interest APR with 5 decimals.
+     * @param accruingInterestAPR Accruing interest APR with 2 decimals.
      * @param duration Loan duration in seconds.
      * @param expiration Proposal expiration timestamp in seconds.
      * @param allowedAcceptor Address that is allowed to accept proposal. If the address is zero address, anybody can accept the proposal.
@@ -66,7 +66,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         uint256 creditPerCollateralUnit;
         uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
-        uint40 accruingInterestAPR;
+        uint24 accruingInterestAPR;
         uint32 duration;
         uint40 expiration;
         address allowedAcceptor;

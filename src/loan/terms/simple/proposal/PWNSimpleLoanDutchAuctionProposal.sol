@@ -37,7 +37,7 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
      * @param maxCreditAmount Maximum amount of tokens which is proposed as a loan to a borrower. If `isOffer` is true, auction will end with this amount, otherwise it will start with this amount.
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal. If non-zero, proposal can be accepted more than once, until the credit limit is reached.
      * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
-     * @param accruingInterestAPR Accruing interest APR with 5 decimals.
+     * @param accruingInterestAPR Accruing interest APR with 2 decimals.
      * @param duration Loan duration in seconds.
      * @param auctionStart Auction start timestamp in seconds.
      * @param auctionDuration Auction duration in seconds.
@@ -62,7 +62,7 @@ contract PWNSimpleLoanDutchAuctionProposal is PWNSimpleLoanProposal {
         uint256 maxCreditAmount;
         uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
-        uint40 accruingInterestAPR;
+        uint24 accruingInterestAPR;
         uint32 duration;
         uint40 auctionStart;
         uint40 auctionDuration;

@@ -37,9 +37,9 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*----------------------------------------------------------*/
 
     uint32 public constant MIN_LOAN_DURATION = 10 minutes;
-    uint40 public constant MAX_ACCRUING_INTEREST_APR = 1e12; // 10,000,000 APR (with 5 decimals)
+    uint40 public constant MAX_ACCRUING_INTEREST_APR = 16e6; // 160,000 APR (with 2 decimals)
 
-    uint256 public constant ACCRUING_INTEREST_APR_DECIMALS = 1e5;
+    uint256 public constant ACCRUING_INTEREST_APR_DECIMALS = 1e2;
     uint256 public constant MINUTES_IN_YEAR = 525_600; // Note: Assuming 365 days in a year
     uint256 public constant ACCRUING_INTEREST_APR_DENOMINATOR = ACCRUING_INTEREST_APR_DECIMALS * MINUTES_IN_YEAR * 100;
 
@@ -73,7 +73,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
      * @param credit Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
      * @param fixedInterestAmount Fixed interest amount in credit asset tokens. It is the minimum amount of interest which has to be paid by a borrower.
-     * @param accruingInterestAPR Accruing interest APR.
+     * @param accruingInterestAPR Accruing interest APR with 2 decimals.
      * @param lenderSpecHash Hash of a lender specification.
      * @param borrowerSpecHash Hash of a borrower specification.
      */
@@ -84,7 +84,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         MultiToken.Asset collateral;
         MultiToken.Asset credit;
         uint256 fixedInterestAmount;
-        uint40 accruingInterestAPR;
+        uint24 accruingInterestAPR;
         bytes32 lenderSpecHash;
         bytes32 borrowerSpecHash;
     }
@@ -135,7 +135,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param defaultTimestamp Unix timestamp (in seconds) of a default date.
      * @param borrower Address of a borrower.
      * @param originalLender Address of a lender that funded the loan.
-     * @param accruingInterestAPR Accruing interest APR.
+     * @param accruingInterestAPR Accruing interest APR with 2 decimals.
      * @param fixedInterestAmount Fixed interest amount in credit asset tokens.
      *                            It is the minimum amount of interest which has to be paid by a borrower.
      *                            This property is reused to store the final interest amount if the loan is repaid and waiting to be claimed.
@@ -150,7 +150,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         uint40 defaultTimestamp;
         address borrower;
         address originalLender;
-        uint40 accruingInterestAPR;
+        uint24 accruingInterestAPR;
         uint256 fixedInterestAmount;
         uint256 principalAmount;
         MultiToken.Asset collateral;
@@ -1075,7 +1075,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @return borrower Address of a loan borrower.
      * @return originalLender Address of a loan original lender.
      * @return loanOwner Address of a LOAN token holder.
-     * @return accruingInterestAPR Accruing interest APR with 5 decimal places.
+     * @return accruingInterestAPR Accruing interest APR with 2 decimal places.
      * @return fixedInterestAmount Fixed interest amount in credit asset tokens.
      * @return credit Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
      * @return collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
@@ -1089,7 +1089,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         address borrower,
         address originalLender,
         address loanOwner,
-        uint40 accruingInterestAPR,
+        uint24 accruingInterestAPR,
         uint256 fixedInterestAmount,
         MultiToken.Asset memory credit,
         MultiToken.Asset memory collateral,

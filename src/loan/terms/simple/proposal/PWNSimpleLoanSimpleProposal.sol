@@ -34,7 +34,7 @@ contract PWNSimpleLoanSimpleProposal is PWNSimpleLoanProposal {
      * @param creditAmount Amount of tokens which is proposed as a loan to a borrower.
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal. If non-zero, proposal can be accepted more than once, until the credit limit is reached.
      * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
-     * @param accruingInterestAPR Accruing interest APR with 5 decimals.
+     * @param accruingInterestAPR Accruing interest APR with 2 decimals.
      * @param duration Loan duration in seconds.
      * @param expiration Proposal expiration timestamp in seconds.
      * @param allowedAcceptor Address that is allowed to accept proposal. If the address is zero address, anybody can accept the proposal.
@@ -57,7 +57,7 @@ contract PWNSimpleLoanSimpleProposal is PWNSimpleLoanProposal {
         uint256 creditAmount;
         uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
-        uint40 accruingInterestAPR;
+        uint24 accruingInterestAPR;
         uint32 duration;
         uint40 expiration;
         address allowedAcceptor;
