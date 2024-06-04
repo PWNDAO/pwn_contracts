@@ -3,8 +3,6 @@ pragma solidity 0.8.16;
 
 import { Ownable2Step } from "openzeppelin/access/Ownable2Step.sol";
 
-import { InvalidInputData } from "pwn/PWNErrors.sol";
-
 
 /**
  * @title PWN Hub
@@ -23,13 +21,23 @@ contract PWNHub is Ownable2Step {
 
 
     /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
     /**
      * @notice Emitted when tag is set for an address.
      */
     event TagSet(address indexed _address, bytes32 indexed tag, bool hasTag);
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERRORS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Thrown when `PWNHub.setTags` inputs lengths are not equal.
+     */
+    error InvalidInputData();
 
 
     /*----------------------------------------------------------*|

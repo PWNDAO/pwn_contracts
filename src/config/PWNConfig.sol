@@ -11,7 +11,7 @@ import { IStateFingerpringComputer } from "pwn/interfaces/IStateFingerpringCompu
 /**
  * @title PWN Config
  * @notice Contract holding configurable values of PWN protocol.
- * @dev Is intendet to be used as a proxy via `TransparentUpgradeableProxy`.
+ * @dev Is intended to be used as a proxy via `TransparentUpgradeableProxy`.
  */
 contract PWNConfig is Ownable2Step, Initializable {
 
@@ -115,10 +115,7 @@ contract PWNConfig is Ownable2Step, Initializable {
     function initialize(address _owner, uint16 _fee, address _feeCollector) external initializer {
         require(_owner != address(0), "Owner is zero address");
         _transferOwnership(_owner);
-
-        require(_feeCollector != address(0), "Fee collector is zero address");
         _setFeeCollector(_feeCollector);
-
         _setFee(_fee);
     }
 

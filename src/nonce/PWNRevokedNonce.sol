@@ -97,8 +97,7 @@ contract PWNRevokedNonce {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Revoke a nonce in the current nonce space.
-     * @dev Caller is used as a nonce owner.
+     * @notice Revoke callers nonce in the current nonce space.
      * @param nonce Nonce to be revoked.
      */
     function revokeNonce(uint256 nonce) external {
@@ -106,8 +105,17 @@ contract PWNRevokedNonce {
     }
 
     /**
-     * @notice Revoke a nonce in a nonce space.
-     * @dev Caller is used as a nonce owner.
+     * @notice Revoke multiple caller nonces in the current nonce space.
+     * @param nonces List of nonces to be revoked.
+     */
+    function revokeNonces(uint256[] calldata nonces) external {
+        for (uint256 i; i < nonces.length; ++i) {
+            _revokeNonce(msg.sender, _nonceSpace[msg.sender], nonces[i]);
+        }
+    }
+
+    /**
+     * @notice Revoke caller nonce in a nonce space.
      * @param nonceSpace Nonce space where a nonce will be revoked.
      * @param nonce Nonce to be revoked.
      */
