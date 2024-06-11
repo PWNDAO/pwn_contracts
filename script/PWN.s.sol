@@ -130,17 +130,17 @@ forge script script/PWN.s.sol:Deploy \
                 abi.encode(deployment.deployer, vm.addr(initialConfigHelper), "")
             )
         }));
-        address configSingleton = _deploy({
+        deployment.configSingleton = PWNConfig(_deploy({
             salt: PWNContractDeployerSalt.CONFIG,
             bytecode: type(PWNConfig).creationCode
-        });
+        }));
 
         vm.stopBroadcast();
 
 
         vm.startBroadcast(initialConfigHelper);
         ITransparentUpgradeableProxy(address(deployment.config)).upgradeToAndCall(
-            configSingleton,
+            address(deployment.configSingleton),
             abi.encodeWithSelector(PWNConfig.initialize.selector, deployment.protocolTimelock, 0, deployment.daoSafe)
         );
         ITransparentUpgradeableProxy(address(deployment.config)).changeAdmin(deployment.adminTimelock);
@@ -230,7 +230,7 @@ forge script script/PWN.s.sol:Deploy \
         }));
 
         console2.log("MultiToken Category Registry:", address(deployment.categoryRegistry));
-        console2.log("PWNConfig - singleton:", configSingleton);
+        console2.log("PWNConfig - singleton:", address(deployment.configSingleton));
         console2.log("PWNConfig - proxy:", address(deployment.config));
         console2.log("PWNHub:", address(deployment.hub));
         console2.log("PWNLOAN:", address(deployment.loanToken));
@@ -427,7 +427,7 @@ contract Setup is Deployments, Script {
 /*
 forge script script/PWN.s.sol:Setup \
 --sig "setupNewProtocolVersion()" \
---rpc-url $TENDERLY_URL \
+--rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
 --broadcast
 */
@@ -442,7 +442,7 @@ forge script script/PWN.s.sol:Setup \
         vm.startBroadcast();
 
         _acceptOwnership(deployment.daoSafe, deployment.protocolTimelock, address(deployment.categoryRegistry));
-        _setTags();
+        _setTags(true);
 
         vm.stopBroadcast();
     }
@@ -467,8 +467,23 @@ forge script script/PWN.s.sol:Setup \
 
         _acceptOwnership(deployment.daoSafe, deployment.protocolTimelock, address(deployment.categoryRegistry));
         _acceptOwnership(deployment.daoSafe, deployment.protocolTimelock, address(deployment.hub));
-        _setTags();
+        _setTags(true);
 
+        vm.stopBroadcast();
+    }
+
+/*
+forge script script/PWN.s.sol:Setup \
+--sig "removeCurrentLoanProposalTags()" \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--broadcast
+*/
+    function removeCurrentLoanProposalTags() external {
+        _loadDeployedAddresses();
+
+        vm.startBroadcast();
+        _setTags(false);
         vm.stopBroadcast();
     }
 
@@ -481,7 +496,7 @@ forge script script/PWN.s.sol:Setup \
         console2.log("Accept ownership tx succeeded");
     }
 
-    function _setTags() internal {
+    function _setTags(bool set) internal {
         require(address(deployment.simpleLoan) != address(0), "Simple loan not set");
         require(address(deployment.simpleLoanSimpleProposal) != address(0), "Simple loan simple proposal not set");
         require(address(deployment.simpleLoanListProposal) != address(0), "Simple loan list proposal not set");
@@ -526,7 +541,7 @@ forge script script/PWN.s.sol:Setup \
         TimelockController(payable(deployment.protocolTimelock)).scheduleAndExecute(
             GnosisSafeLike(deployment.daoSafe),
             address(deployment.hub),
-            abi.encodeWithSignature("setTags(address[],bytes32[],bool)", addrs, tags, true)
+            abi.encodeWithSignature("setTags(address[],bytes32[],bool)", addrs, tags, set)
         );
         console2.log("Tags set succeeded");
     }
