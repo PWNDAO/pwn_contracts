@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
+import { ERC721 } from "openzeppelin/token/ERC721/ERC721.sol";
 
-import "@pwn/hub/PWNHubAccessControl.sol";
-import "@pwn/loan/token/IERC5646.sol";
-import "@pwn/loan/token/IPWNLoanMetadataProvider.sol";
-import "@pwn/PWNErrors.sol";
+import { PWNHub } from "pwn/hub/PWNHub.sol";
+import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
+import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
+import { IPWNLoanMetadataProvider } from "pwn/interfaces/IPWNLoanMetadataProvider.sol";
 
 
 /**
@@ -15,11 +15,13 @@ import "@pwn/PWNErrors.sol";
  * @dev Token doesn't hold any loan logic, just an address of a loan contract that minted the LOAN token.
  *      PWN LOAN token is shared between all loan contracts.
  */
-contract PWNLOAN is PWNHubAccessControl, IERC5646, ERC721 {
+contract PWNLOAN is ERC721, IERC5646 {
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
+
+    PWNHub public immutable hub;
 
     /**
      * @dev Last used LOAN id. First LOAN id is 1. This value is incremental.
@@ -37,22 +39,48 @@ contract PWNLOAN is PWNHubAccessControl, IERC5646, ERC721 {
     |*----------------------------------------------------------*/
 
     /**
-     * @dev Emitted when a new LOAN token is minted.
+     * @notice Emitted when a new LOAN token is minted.
      */
     event LOANMinted(uint256 indexed loanId, address indexed loanContract, address indexed owner);
 
     /**
-     * @dev Emitted when a LOAN token is burned.
+     * @notice Emitted when a LOAN token is burned.
      */
     event LOANBurned(uint256 indexed loanId);
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERRORS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Thrown when `PWNLOAN.burn` caller is not a loan contract that minted the LOAN token.
+     */
+    error InvalidLoanContractCaller();
+
+    /**
+     * @notice Thrown when caller is missing a PWN Hub tag.
+     */
+    error CallerMissingHubTag(bytes32 tag);
+
+
+    /*----------------------------------------------------------*|
+    |*  # MODIFIERS                                             *|
+    |*----------------------------------------------------------*/
+
+    modifier onlyActiveLoan() {
+        if (!hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN))
+            revert CallerMissingHubTag({ tag: PWNHubTags.ACTIVE_LOAN });
+        _;
+    }
 
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor(address hub) PWNHubAccessControl(hub) ERC721("PWN LOAN", "LOAN") {
-
+    constructor(address _hub) ERC721("PWN LOAN", "LOAN") {
+        hub = PWNHub(_hub);
     }
 
 

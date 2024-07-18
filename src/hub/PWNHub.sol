@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
-
-import "@pwn/PWNErrors.sol";
+import { Ownable2Step } from "openzeppelin/access/Ownable2Step.sol";
 
 
 /**
@@ -23,13 +21,23 @@ contract PWNHub is Ownable2Step {
 
 
     /*----------------------------------------------------------*|
-    |*  # EVENTS & ERRORS DEFINITIONS                           *|
+    |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
     /**
-     * @dev Emitted when tag is set for an address.
+     * @notice Emitted when tag is set for an address.
      */
     event TagSet(address indexed _address, bytes32 indexed tag, bool hasTag);
+
+
+    /*----------------------------------------------------------*|
+    |*  # ERRORS DEFINITIONS                                    *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Thrown when `PWNHub.setTags` inputs lengths are not equal.
+     */
+    error InvalidInputData();
 
 
     /*----------------------------------------------------------*|
