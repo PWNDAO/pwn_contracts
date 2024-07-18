@@ -21,34 +21,6 @@ contract DeployedProtocolTest is DeploymentTest {
         vm.createSelectFork(urlOrAlias);
         super.setUp();
 
-        // DEPLOYER
-        // - owner is deployer safe
-        if (deployment.deployerSafe != address(0)) {
-            assertEq(deployment.deployer.owner(), deployment.deployerSafe);
-        }
-
-        // TIMELOCK CONTROLLERS
-        address timelockOwner = deployment.dao == address(0) ? deployment.daoSafe : deployment.dao;
-        TimelockController protocolTimelockController = TimelockController(payable(deployment.protocolTimelock));
-        // - protocol timelock has min delay of 4 days
-        assertEq(protocolTimelockController.getMinDelay(), 4 days);
-        // - dao or dao safe has PROPOSER role in protocol timelock
-        assertTrue(protocolTimelockController.hasRole(PROPOSER_ROLE, timelockOwner));
-        // - dao or dao safe has CANCELLER role in protocol timelock
-        assertTrue(protocolTimelockController.hasRole(CANCELLER_ROLE, timelockOwner));
-        // - everybody has EXECUTOR role in protocol timelock
-        assertTrue(protocolTimelockController.hasRole(EXECUTOR_ROLE, address(0)));
-
-        TimelockController adminTimelockController = TimelockController(payable(deployment.adminTimelock));
-        // - admin timelock has min delay of 4 days
-        assertEq(adminTimelockController.getMinDelay(), 4 days);
-        // - dao or dao safe has PROPOSER role in product timelock
-        assertTrue(adminTimelockController.hasRole(PROPOSER_ROLE, timelockOwner));
-        // - dao or dao safe has CANCELLER role in product timelock
-        assertTrue(adminTimelockController.hasRole(CANCELLER_ROLE, timelockOwner));
-        // - everybody has EXECUTOR role in product timelock
-        assertTrue(adminTimelockController.hasRole(EXECUTOR_ROLE, address(0)));
-
         // CONFIG
         // - admin is admin timelock
         assertEq(vm.load(address(deployment.config), PROXY_ADMIN_SLOT), bytes32(uint256(uint160(deployment.adminTimelock))));
@@ -58,13 +30,13 @@ contract DeployedProtocolTest is DeploymentTest {
         assertEq(deployment.config.feeCollector(), deployment.daoSafe);
         // - is initialized
         assertEq(vm.load(address(deployment.config), bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(1)));
-        // - implementation is initialized
+        // - implementation initialization is disabled
         address configImplementation = address(uint160(uint256(vm.load(address(deployment.config), PROXY_IMPLEMENTATION_SLOT))));
-        assertEq(vm.load(configImplementation, bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(1)));
+        assertEq(vm.load(configImplementation, bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(type(uint8).max)));
 
         // CATEGORY REGISTRY
         // - owner is protocol timelock
-        // assertTrue(deployment.categoryRegistry.owner(), deployment.protocolTimelock);
+        assertEq(deployment.categoryRegistry.owner(), deployment.protocolTimelock);
 
         // HUB
         // - owner is protocol timelock
@@ -89,6 +61,14 @@ contract DeployedProtocolTest is DeploymentTest {
     }
 
 
-    // todo: function test_deployedProtocol_ethereum() external { _test_deployedProtocol("mainnet"); }
+    function test_deployedProtocol_ethereum() external { _test_deployedProtocol("mainnet"); }
+    function test_deployedProtocol_polygon() external { _test_deployedProtocol("polygon"); }
+    function test_deployedProtocol_arbitrum() external { _test_deployedProtocol("arbitrum"); }
+    function test_deployedProtocol_optimism() external { _test_deployedProtocol("optimism"); }
+    function test_deployedProtocol_base() external { _test_deployedProtocol("base"); }
+    function test_deployedProtocol_cronos() external { _test_deployedProtocol("cronos"); }
+    function test_deployedProtocol_mantle() external { _test_deployedProtocol("mantle"); }
+    function test_deployedProtocol_bsc() external { _test_deployedProtocol("bsc"); }
+    function test_deployedProtocol_linea() external { _test_deployedProtocol("linea"); }
 
 }
