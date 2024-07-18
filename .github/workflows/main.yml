@@ -15,6 +15,7 @@ jobs:
       CRONOS_URL: ${{ secrets.CRONOS_URL }}
       MANTLE_URL: ${{ secrets.MANTLE_URL }}
       BSC_URL: ${{ secrets.BSC_URL }}
+      LINEA_URL: ${{ secrets.LINEA_URL }}
       SEPOLIA_URL: ${{ secrets.SEPOLIA_URL }}
       GOERLI_URL: ${{ secrets.GOERLI_URL }}
       BASE_GOERLI_URL: ${{ secrets.BASE_GOERLI_URL }}
