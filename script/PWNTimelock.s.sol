@@ -167,10 +167,7 @@ forge script script/PWNTimelock.s.sol:Setup \
         timelock.scheduleAndExecute(
             GnosisSafeLike(deployment.daoSafe),
             address(timelock),
-            abi.encodeWithSelector(
-                TimelockController.schedule.selector,
-                address(timelock), 0, abi.encodeWithSignature("updateDelay(uint256)", minDelay), 0, 0, 0
-            )
+            abi.encodeWithSignature("updateDelay(uint256)", minDelay)
         );
 
         console2.log("Timelock min delay updated:", minDelay);
