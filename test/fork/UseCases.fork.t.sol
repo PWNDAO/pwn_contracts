@@ -32,7 +32,7 @@ abstract contract UseCasesTest is DeploymentTest {
     PWNSimpleLoanSimpleProposal.Proposal proposal;
 
 
-    function setUp() public override {
+    function setUp() public override virtual {
         vm.createSelectFork("mainnet");
 
         super.setUp();
