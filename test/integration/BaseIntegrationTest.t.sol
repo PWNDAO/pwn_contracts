@@ -60,7 +60,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             availableCreditLimit: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 3600,
+            durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
             allowedAcceptor: borrower,
             proposer: lender,

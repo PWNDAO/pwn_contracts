@@ -13,13 +13,13 @@ import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleL
  */
 contract PWNSimpleLoanSimpleProposal is PWNSimpleLoanProposal {
 
-    string public constant VERSION = "1.2";
+    string public constant VERSION = "1.3";
 
     /**
      * @dev EIP-712 simple proposal struct type hash.
      */
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
@@ -35,7 +35,7 @@ contract PWNSimpleLoanSimpleProposal is PWNSimpleLoanProposal {
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal. If non-zero, proposal can be accepted more than once, until the credit limit is reached.
      * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
      * @param accruingInterestAPR Accruing interest APR with 2 decimals.
-     * @param duration Loan duration in seconds.
+     * @param durationOrDate Duration of a loan in seconds. If the value is greater than 10^9, it is treated as a timestamp of a loan end.
      * @param expiration Proposal expiration timestamp in seconds.
      * @param allowedAcceptor Address that is allowed to accept proposal. If the address is zero address, anybody can accept the proposal.
      * @param proposer Address of a proposal signer. If `isOffer` is true, the proposer is the lender. If `isOffer` is false, the proposer is the borrower.
@@ -58,7 +58,7 @@ contract PWNSimpleLoanSimpleProposal is PWNSimpleLoanProposal {
         uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
         uint24 accruingInterestAPR;
-        uint32 duration;
+        uint32 durationOrDate;
         uint40 expiration;
         address allowedAcceptor;
         address proposer;
@@ -165,7 +165,7 @@ contract PWNSimpleLoanSimpleProposal is PWNSimpleLoanProposal {
         loanTerms = PWNSimpleLoan.Terms({
             lender: proposal.isOffer ? proposal.proposer : acceptor,
             borrower: proposal.isOffer ? acceptor : proposal.proposer,
-            duration: proposal.duration,
+            duration: _getLoanDuration(proposal.durationOrDate),
             collateral: MultiToken.Asset({
                 category: proposal.collateralCategory,
                 assetAddress: proposal.collateralAddress,

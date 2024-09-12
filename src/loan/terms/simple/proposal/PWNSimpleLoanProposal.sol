@@ -111,6 +111,11 @@ abstract contract PWNSimpleLoanProposal {
      */
     error CallerNotAllowedAcceptor(address current, address allowed);
 
+    /**
+     * @notice Thrown when a default date is in the past.
+     */
+    error DefaultDateInPast(uint32 defaultDate, uint32 current);
+
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
@@ -219,6 +224,23 @@ abstract contract PWNSimpleLoanProposal {
         }
 
         proposalsMade[proposalHash] = true;
+    }
+
+    /**
+     * @notice Get loan duration from a duration or date value.
+     * @param durationOrDate Duration or date value.
+     * @return Loan duration.
+     */
+    function _getLoanDuration(uint32 durationOrDate) internal view returns (uint32) {
+        if (durationOrDate <= 1e9) {
+            // Value is duration
+            return durationOrDate;
+        } else if (durationOrDate >= block.timestamp) {
+            // Value is date
+            return uint32(uint256(durationOrDate) - block.timestamp);
+        } else {
+            revert DefaultDateInPast({ defaultDate: durationOrDate, current: uint32(block.timestamp) });
+        }
     }
 
     /**

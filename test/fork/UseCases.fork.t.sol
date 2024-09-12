@@ -59,7 +59,7 @@ abstract contract UseCasesTest is DeploymentTest {
             availableCreditLimit: 0,
             fixedInterestAmount: 0,
             accruingInterestAPR: 0,
-            duration: 1 days,
+            durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
             allowedAcceptor: address(0),
             proposer: lender,
@@ -382,7 +382,7 @@ contract RefinacningTest is UseCasesTest {
         proposal.creditAmount = 10 ether;
         proposal.fixedInterestAmount = 1 ether;
         proposal.availableCreditLimit = 20 ether;
-        proposal.duration = 5 days;
+        proposal.durationOrDate = 5 days;
 
         // Make proposal
         vm.prank(lender);

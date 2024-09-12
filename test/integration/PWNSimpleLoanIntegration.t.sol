@@ -36,7 +36,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             availableCreditLimit: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 7 days,
+            durationOrDate: 7 days,
             expiration: uint40(block.timestamp + 1 days),
             allowedAcceptor: borrower,
             proposer: lender,
@@ -121,7 +121,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             availableCreditLimit: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 7 days,
+            durationOrDate: 7 days,
             expiration: uint40(block.timestamp + 1 days),
             allowedAcceptor: borrower,
             proposer: lender,
@@ -208,7 +208,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             availableCreditLimit: 100e18,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 7 days,
+            durationOrDate: 7 days,
             expiration: uint40(block.timestamp + 1 days),
             allowedAcceptor: borrower,
             proposer: lender,
@@ -296,7 +296,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             availableCreditLimit: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 7 days,
+            durationOrDate: 7 days,
             auctionStart: uint40(block.timestamp),
             auctionDuration: 30 hours,
             allowedAcceptor: lender,
@@ -464,7 +464,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         uint256 loanId = _createERC1155Loan();
 
         // Default on a loan
-        uint256 expiration = block.timestamp + uint256(simpleProposal.duration);
+        uint256 expiration = block.timestamp + uint256(simpleProposal.durationOrDate);
         vm.warp(expiration);
 
         // Try to repay loan
@@ -514,7 +514,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         uint256 loanId = _createERC1155Loan();
 
         // Loan defaulted
-        vm.warp(block.timestamp + uint256(simpleProposal.duration));
+        vm.warp(block.timestamp + uint256(simpleProposal.durationOrDate));
 
         // Claim defaulted loan
         vm.prank(lender);
