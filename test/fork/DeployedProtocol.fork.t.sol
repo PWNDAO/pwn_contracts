@@ -52,9 +52,9 @@ contract DeployedProtocolTest is DeploymentTest {
         // - simple loan list proposal
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanListProposal), PWNHubTags.NONCE_MANAGER));
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanListProposal), PWNHubTags.LOAN_PROPOSAL));
-        // - simple loan fungible proposal
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanFungibleProposal), PWNHubTags.NONCE_MANAGER));
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanFungibleProposal), PWNHubTags.LOAN_PROPOSAL));
+        // - simple loan elastic proposal
+        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticProposal), PWNHubTags.NONCE_MANAGER));
+        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticProposal), PWNHubTags.LOAN_PROPOSAL));
         // - simple loan dutch auction proposal
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanDutchAuctionProposal), PWNHubTags.NONCE_MANAGER));
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanDutchAuctionProposal), PWNHubTags.LOAN_PROPOSAL));

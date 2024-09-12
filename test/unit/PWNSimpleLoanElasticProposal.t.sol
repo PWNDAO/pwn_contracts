@@ -3,10 +3,10 @@ pragma solidity 0.8.16;
 
 import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import {
-    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanElasticProposal,
     PWNSimpleLoanProposal,
     PWNSimpleLoan
-} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
+} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticProposal.sol";
 
 import {
     MultiToken,
@@ -16,21 +16,21 @@ import {
 } from "test/unit/PWNSimpleLoanProposal.t.sol";
 
 
-abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest {
+abstract contract PWNSimpleLoanElasticProposalTest is PWNSimpleLoanProposalTest {
 
-    PWNSimpleLoanFungibleProposal proposalContract;
-    PWNSimpleLoanFungibleProposal.Proposal proposal;
-    PWNSimpleLoanFungibleProposal.ProposalValues proposalValues;
+    PWNSimpleLoanElasticProposal proposalContract;
+    PWNSimpleLoanElasticProposal.Proposal proposal;
+    PWNSimpleLoanElasticProposal.ProposalValues proposalValues;
 
-    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanFungibleProposal.Proposal proposal);
+    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanElasticProposal.Proposal proposal);
 
     function setUp() virtual public override {
         super.setUp();
 
-        proposalContract = new PWNSimpleLoanFungibleProposal(hub, revokedNonce, config);
+        proposalContract = new PWNSimpleLoanElasticProposal(hub, revokedNonce, config);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
-        proposal = PWNSimpleLoanFungibleProposal.Proposal({
+        proposal = PWNSimpleLoanElasticProposal.Proposal({
             collateralCategory: MultiToken.Category.ERC1155,
             collateralAddress: token,
             collateralId: 0,
@@ -54,18 +54,18 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
             loanContract: activeLoanContract
         });
 
-        proposalValues = PWNSimpleLoanFungibleProposal.ProposalValues({
+        proposalValues = PWNSimpleLoanElasticProposal.ProposalValues({
             collateralAmount: 1000
         });
     }
 
 
-    function _proposalHash(PWNSimpleLoanFungibleProposal.Proposal memory _proposal) internal view returns (bytes32) {
+    function _proposalHash(PWNSimpleLoanElasticProposal.Proposal memory _proposal) internal view returns (bytes32) {
         return keccak256(abi.encodePacked(
             "\x19\x01",
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("PWNSimpleLoanFungibleProposal"),
+                keccak256("PWNSimpleLoanElasticProposal"),
                 keccak256("1.1"),
                 block.chainid,
                 proposalContractAddr
@@ -119,7 +119,7 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
 |*  # CREDIT USED                                           *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_CreditUsed_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_CreditUsed_Test is PWNSimpleLoanElasticProposalTest {
 
     function testFuzz_shouldReturnUsedCredit(uint256 used) external {
         vm.store(address(proposalContract), keccak256(abi.encode(_proposalHash(proposal), CREDIT_USED_SLOT)), bytes32(used));
@@ -134,7 +134,7 @@ contract PWNSimpleLoanFungibleProposal_CreditUsed_Test is PWNSimpleLoanFungibleP
 |*  # REVOKE NONCE                                          *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_RevokeNonce_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_RevokeNonce_Test is PWNSimpleLoanElasticProposalTest {
 
     function testFuzz_shouldCallRevokeNonce(address caller, uint256 nonceSpace, uint256 nonce) external {
         vm.expectCall(
@@ -153,7 +153,7 @@ contract PWNSimpleLoanFungibleProposal_RevokeNonce_Test is PWNSimpleLoanFungible
 |*  # GET PROPOSAL HASH                                     *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_GetProposalHash_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_GetProposalHash_Test is PWNSimpleLoanElasticProposalTest {
 
     function test_shouldReturnProposalHash() external {
         assertEq(_proposalHash(proposal), proposalContract.getProposalHash(proposal));
@@ -166,7 +166,7 @@ contract PWNSimpleLoanFungibleProposal_GetProposalHash_Test is PWNSimpleLoanFung
 |*  # MAKE PROPOSAL                                         *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_MakeProposal_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_MakeProposal_Test is PWNSimpleLoanElasticProposalTest {
 
     function testFuzz_shouldFail_whenCallerIsNotProposer(address caller) external {
         vm.assume(caller != proposal.proposer);
@@ -203,7 +203,7 @@ contract PWNSimpleLoanFungibleProposal_MakeProposal_Test is PWNSimpleLoanFungibl
 |*  # ENCODE PROPOSAL DATA                                  *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_EncodeProposalData_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_EncodeProposalData_Test is PWNSimpleLoanElasticProposalTest {
 
     function test_shouldReturnEncodedProposalData() external {
         assertEq(
@@ -219,12 +219,12 @@ contract PWNSimpleLoanFungibleProposal_EncodeProposalData_Test is PWNSimpleLoanF
 |*  # DECODE PROPOSAL DATA                                  *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_DecodeProposalData_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_DecodeProposalData_Test is PWNSimpleLoanElasticProposalTest {
 
     function test_shouldReturnDecodedProposalData() external {
         (
-            PWNSimpleLoanFungibleProposal.Proposal memory _proposal,
-            PWNSimpleLoanFungibleProposal.ProposalValues memory _proposalValues
+            PWNSimpleLoanElasticProposal.Proposal memory _proposal,
+            PWNSimpleLoanElasticProposal.ProposalValues memory _proposalValues
         ) = proposalContract.decodeProposalData(abi.encode(proposal, proposalValues));
 
         assertEq(uint8(_proposal.collateralCategory), uint8(proposal.collateralCategory));
@@ -258,7 +258,7 @@ contract PWNSimpleLoanFungibleProposal_DecodeProposalData_Test is PWNSimpleLoanF
 |*  # GET CREDIT AMOUNT                                     *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_GetCreditAmount_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_GetCreditAmount_Test is PWNSimpleLoanElasticProposalTest {
 
     function testFuzz_shouldReturnCreditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) external {
         collateralAmount = bound(collateralAmount, 0, 1e70);
@@ -279,9 +279,9 @@ contract PWNSimpleLoanFungibleProposal_GetCreditAmount_Test is PWNSimpleLoanFung
 |*  # ACCEPT PROPOSAL                                       *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungibleProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test {
+contract PWNSimpleLoanElasticProposal_AcceptProposal_Test is PWNSimpleLoanElasticProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test {
 
-    function setUp() virtual public override(PWNSimpleLoanFungibleProposalTest, PWNSimpleLoanProposalTest) {
+    function setUp() virtual public override(PWNSimpleLoanElasticProposalTest, PWNSimpleLoanProposalTest) {
         super.setUp();
     }
 
@@ -289,7 +289,7 @@ contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungi
     function test_shouldFail_whenZeroMinCreditAmount() external {
         proposal.minCreditAmount = 0;
 
-        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanFungibleProposal.MinCreditAmountNotSet.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanElasticProposal.MinCreditAmountNotSet.selector));
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,
@@ -313,7 +313,7 @@ contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungi
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNSimpleLoanFungibleProposal.InsufficientCreditAmount.selector,
+                PWNSimpleLoanElasticProposal.InsufficientCreditAmount.selector,
                 creditAmount,
                 proposal.minCreditAmount
             )

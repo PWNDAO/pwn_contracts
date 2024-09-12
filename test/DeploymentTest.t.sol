@@ -13,7 +13,7 @@ import {
     PWNHubTags,
     PWNSimpleLoan,
     PWNSimpleLoanDutchAuctionProposal,
-    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,
@@ -70,7 +70,7 @@ abstract contract DeploymentTest is Deployments, Test {
             address(deployment.revokedNonce),
             address(deployment.config)
         );
-        deployment.simpleLoanFungibleProposal = new PWNSimpleLoanFungibleProposal(
+        deployment.simpleLoanElasticProposal = new PWNSimpleLoanElasticProposal(
             address(deployment.hub),
             address(deployment.revokedNonce),
             address(deployment.config)
@@ -92,8 +92,8 @@ abstract contract DeploymentTest is Deployments, Test {
         addrs[4] = address(deployment.simpleLoanListProposal);
         addrs[5] = address(deployment.simpleLoanListProposal);
 
-        addrs[6] = address(deployment.simpleLoanFungibleProposal);
-        addrs[7] = address(deployment.simpleLoanFungibleProposal);
+        addrs[6] = address(deployment.simpleLoanElasticProposal);
+        addrs[7] = address(deployment.simpleLoanElasticProposal);
 
         addrs[8] = address(deployment.simpleLoanDutchAuctionProposal);
         addrs[9] = address(deployment.simpleLoanDutchAuctionProposal);

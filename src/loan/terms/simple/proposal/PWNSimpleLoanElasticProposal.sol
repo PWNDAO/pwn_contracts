@@ -10,12 +10,12 @@ import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleL
 
 
 /**
- * @title PWN Simple Loan Fungible Proposal
- * @notice Contract for creating and accepting fungible loan proposals.
- *         Proposals are fungible, which means that they are not tied to a specific collateral or credit amount.
+ * @title PWN Simple Loan Elastic Proposal
+ * @notice Contract for creating and accepting elastic loan proposals.
+ *         Proposals are elastic, which means that they are not tied to a specific collateral or credit amount.
  *         The amount of collateral and credit is specified during the proposal acceptance.
  */
-contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
+contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
 
     string public constant VERSION = "1.1";
 
@@ -32,7 +32,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     );
 
     /**
-     * @notice Construct defining a fungible proposal.
+     * @notice Construct defining an elastic proposal.
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
@@ -106,7 +106,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         address _hub,
         address _revokedNonce,
         address _config
-    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, "PWNSimpleLoanFungibleProposal", VERSION) {}
+    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, "PWNSimpleLoanElasticProposal", VERSION) {}
 
     /**
      * @notice Get an proposal hash according to EIP-712

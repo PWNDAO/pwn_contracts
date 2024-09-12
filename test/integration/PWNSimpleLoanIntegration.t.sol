@@ -11,7 +11,7 @@ import {
     PWNHubTags,
     PWNSimpleLoan,
     PWNSimpleLoanDutchAuctionProposal,
-    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,
@@ -195,15 +195,15 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         assertEq(deployment.loanToken.loanContract(loanId), address(deployment.simpleLoan));
     }
 
-    function test_shouldCreateLOAN_fromFungibleProposal() external {
-        PWNSimpleLoanFungibleProposal.Proposal memory proposal = PWNSimpleLoanFungibleProposal.Proposal({
+    function test_shouldCreateLOAN_fromElasticProposal() external {
+        PWNSimpleLoanElasticProposal.Proposal memory proposal = PWNSimpleLoanElasticProposal.Proposal({
             collateralCategory: MultiToken.Category.ERC1155,
             collateralAddress: address(t1155),
             collateralId: 42,
             checkCollateralStateFingerprint: false,
             collateralStateFingerprint: bytes32(0),
             creditAddress: address(credit),
-            creditPerCollateralUnit: 10e18 * deployment.simpleLoanFungibleProposal.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR(),
+            creditPerCollateralUnit: 10e18 * deployment.simpleLoanElasticProposal.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR(),
             minCreditAmount: 10e18,
             availableCreditLimit: 100e18,
             fixedInterestAmount: 10e18,
@@ -220,7 +220,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             loanContract: address(deployment.simpleLoan)
         });
 
-        PWNSimpleLoanFungibleProposal.ProposalValues memory proposalValues = PWNSimpleLoanFungibleProposal.ProposalValues({
+        PWNSimpleLoanElasticProposal.ProposalValues memory proposalValues = PWNSimpleLoanElasticProposal.ProposalValues({
             collateralAmount: 7
         });
 
@@ -232,7 +232,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         t1155.setApprovalForAll(address(deployment.simpleLoan), true);
 
         // Sign proposal
-        bytes32 proposalHash = deployment.simpleLoanFungibleProposal.getProposalHash(proposal);
+        bytes32 proposalHash = deployment.simpleLoanElasticProposal.getProposalHash(proposal);
         bytes memory signature = _sign(lenderPK, proposalHash);
 
         // Mint initial state
@@ -243,13 +243,13 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         credit.approve(address(deployment.simpleLoan), 100e18);
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
-        bytes memory proposalData = deployment.simpleLoanFungibleProposal.encodeProposalData(proposal, proposalValues);
+        bytes memory proposalData = deployment.simpleLoanElasticProposal.encodeProposalData(proposal, proposalValues);
 
         // Create LOAN
         vm.prank(borrower);
         uint256 loanId = deployment.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanFungibleProposal),
+                proposalContract: address(deployment.simpleLoanElasticProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: signature
@@ -278,7 +278,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         assertEq(t1155.balanceOf(address(deployment.simpleLoan), 42), 7);
 
         assertEq(deployment.revokedNonce.isNonceRevoked(lender, proposal.nonceSpace, proposal.nonce), false);
-        assertEq(deployment.simpleLoanFungibleProposal.creditUsed(proposalHash), 70e18);
+        assertEq(deployment.simpleLoanElasticProposal.creditUsed(proposalHash), 70e18);
         assertEq(deployment.loanToken.loanContract(loanId), address(deployment.simpleLoan));
     }
 

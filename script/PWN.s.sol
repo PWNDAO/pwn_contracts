@@ -17,7 +17,7 @@ import {
     PWNHubTags,
     PWNSimpleLoan,
     PWNSimpleLoanDutchAuctionProposal,
-    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,
@@ -47,7 +47,7 @@ library PWNContractDeployerSalt {
     // Proposal types
     bytes32 internal constant SIMPLE_LOAN_SIMPLE_PROPOSAL = keccak256("PWNSimpleLoanSimpleProposal");
     bytes32 internal constant SIMPLE_LOAN_LIST_PROPOSAL = keccak256("PWNSimpleLoanListProposal");
-    bytes32 internal constant SIMPLE_LOAN_FUNGIBLE_PROPOSAL = keccak256("PWNSimpleLoanFungibleProposal");
+    bytes32 internal constant SIMPLE_LOAN_ELASTIC_PROPOSAL = keccak256("PWNSimpleLoanElasticProposal");
     bytes32 internal constant SIMPLE_LOAN_DUTCH_AUCTION_PROPOSAL = keccak256("PWNSimpleLoanDutchAuctionProposal");
 
 }
@@ -205,10 +205,10 @@ forge script script/PWN.s.sol:Deploy \
             )
         }));
 
-        deployment.simpleLoanFungibleProposal = PWNSimpleLoanFungibleProposal(_deploy({
-            salt: PWNContractDeployerSalt.SIMPLE_LOAN_FUNGIBLE_PROPOSAL,
+        deployment.simpleLoanElasticProposal = PWNSimpleLoanElasticProposal(_deploy({
+            salt: PWNContractDeployerSalt.SIMPLE_LOAN_ELASTIC_PROPOSAL,
             bytecode: abi.encodePacked(
-                type(PWNSimpleLoanFungibleProposal).creationCode,
+                type(PWNSimpleLoanElasticProposal).creationCode,
                 abi.encode(
                     address(deployment.hub),
                     address(deployment.revokedNonce),
@@ -238,7 +238,7 @@ forge script script/PWN.s.sol:Deploy \
         console2.log("PWNSimpleLoan:", address(deployment.simpleLoan));
         console2.log("PWNSimpleLoanSimpleProposal:", address(deployment.simpleLoanSimpleProposal));
         console2.log("PWNSimpleLoanListProposal:", address(deployment.simpleLoanListProposal));
-        console2.log("PWNSimpleLoanFungibleProposal:", address(deployment.simpleLoanFungibleProposal));
+        console2.log("PWNSimpleLoanElasticProposal:", address(deployment.simpleLoanElasticProposal));
         console2.log("PWNSimpleLoanDutchAuctionProposal:", address(deployment.simpleLoanDutchAuctionProposal));
 
         vm.stopBroadcast();
@@ -371,10 +371,10 @@ forge script script/PWN.s.sol:Deploy \
             )
         }));
 
-        deployment.simpleLoanFungibleProposal = PWNSimpleLoanFungibleProposal(_deploy({
-            salt: PWNContractDeployerSalt.SIMPLE_LOAN_FUNGIBLE_PROPOSAL,
+        deployment.simpleLoanElasticProposal = PWNSimpleLoanElasticProposal(_deploy({
+            salt: PWNContractDeployerSalt.SIMPLE_LOAN_ELASTIC_PROPOSAL,
             bytecode: abi.encodePacked(
-                type(PWNSimpleLoanFungibleProposal).creationCode,
+                type(PWNSimpleLoanElasticProposal).creationCode,
                 abi.encode(
                     address(deployment.hub),
                     address(deployment.revokedNonce),
@@ -404,7 +404,7 @@ forge script script/PWN.s.sol:Deploy \
         console2.log("PWNSimpleLoan:", address(deployment.simpleLoan));
         console2.log("PWNSimpleLoanSimpleProposal:", address(deployment.simpleLoanSimpleProposal));
         console2.log("PWNSimpleLoanListProposal:", address(deployment.simpleLoanListProposal));
-        console2.log("PWNSimpleLoanFungibleProposal:", address(deployment.simpleLoanFungibleProposal));
+        console2.log("PWNSimpleLoanElasticProposal:", address(deployment.simpleLoanElasticProposal));
         console2.log("PWNSimpleLoanDutchAuctionProposal:", address(deployment.simpleLoanDutchAuctionProposal));
 
         vm.stopBroadcast();
@@ -497,7 +497,7 @@ forge script script/PWN.s.sol:Setup \
         require(address(deployment.simpleLoan) != address(0), "Simple loan not set");
         require(address(deployment.simpleLoanSimpleProposal) != address(0), "Simple loan simple proposal not set");
         require(address(deployment.simpleLoanListProposal) != address(0), "Simple loan list proposal not set");
-        require(address(deployment.simpleLoanFungibleProposal) != address(0), "Simple loan fungible proposal not set");
+        require(address(deployment.simpleLoanElasticProposal) != address(0), "Simple loan elastic proposal not set");
         require(address(deployment.simpleLoanDutchAuctionProposal) != address(0), "Simple loan dutch auctin proposal not set");
         require(address(deployment.protocolTimelock) != address(0), "Protocol timelock not set");
         require(address(deployment.daoSafe) != address(0), "DAO safe not set");
@@ -513,8 +513,8 @@ forge script script/PWN.s.sol:Setup \
         addrs[4] = address(deployment.simpleLoanListProposal);
         addrs[5] = address(deployment.simpleLoanListProposal);
 
-        addrs[6] = address(deployment.simpleLoanFungibleProposal);
-        addrs[7] = address(deployment.simpleLoanFungibleProposal);
+        addrs[6] = address(deployment.simpleLoanElasticProposal);
+        addrs[7] = address(deployment.simpleLoanElasticProposal);
 
         addrs[8] = address(deployment.simpleLoanDutchAuctionProposal);
         addrs[9] = address(deployment.simpleLoanDutchAuctionProposal);
