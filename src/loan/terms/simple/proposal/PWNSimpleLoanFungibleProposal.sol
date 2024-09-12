@@ -17,7 +17,7 @@ import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleL
  */
 contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
 
-    string public constant VERSION = "1.0";
+    string public constant VERSION = "1.1";
 
     /**
      * @notice Credit per collateral unit denominator. It is used to calculate credit amount from collateral amount.
@@ -28,7 +28,7 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @dev EIP-712 simple proposal struct type hash.
      */
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 minCollateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 minCreditAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
@@ -36,11 +36,11 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
-     * @param minCollateralAmount Minimal amount of tokens used as a collateral.
      * @param checkCollateralStateFingerprint If true, the collateral state fingerprint will be checked during proposal acceptance.
      * @param collateralStateFingerprint Fingerprint of a collateral state. It is used to check if a collateral is in a valid state.
      * @param creditAddress Address of an asset which is lended to a borrower.
      * @param creditPerCollateralUnit Amount of tokens which are offered per collateral unit with 38 decimals.
+     * @param minCreditAmount Minimum amount of tokens which can be borrowed using the proposal.
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal. If non-zero, proposal can be accepted more than once, until the credit limit is reached.
      * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
      * @param accruingInterestAPR Accruing interest APR with 2 decimals.
@@ -59,11 +59,11 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         MultiToken.Category collateralCategory;
         address collateralAddress;
         uint256 collateralId;
-        uint256 minCollateralAmount;
         bool checkCollateralStateFingerprint;
         bytes32 collateralStateFingerprint;
         address creditAddress;
         uint256 creditPerCollateralUnit;
+        uint256 minCreditAmount;
         uint256 availableCreditLimit;
         uint256 fixedInterestAmount;
         uint24 accruingInterestAPR;
@@ -93,14 +93,14 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, Proposal proposal);
 
     /**
-     * @notice Thrown when proposal has no minimal collateral amount set.
+     * @notice Thrown when proposal has no minimum credit amount set.
      */
-    error MinCollateralAmountNotSet();
+    error MinCreditAmountNotSet();
 
     /**
-     * @notice Thrown when acceptor provides insufficient collateral amount.
+     * @notice Throw when proposal credit amount is insufficient.
      */
-    error InsufficientCollateralAmount(uint256 current, uint256 limit);
+    error InsufficientCreditAmount(uint256 current, uint256 limit);
 
     constructor(
         address _hub,
@@ -178,19 +178,18 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         // Make proposal hash
         proposalHash = _getProposalHash(PROPOSAL_TYPEHASH, abi.encode(proposal));
 
-        // Check min collateral amount
-        if (proposal.minCollateralAmount == 0) {
-            revert MinCollateralAmountNotSet();
-        }
-        if (proposalValues.collateralAmount < proposal.minCollateralAmount) {
-            revert InsufficientCollateralAmount({
-                current: proposalValues.collateralAmount,
-                limit: proposal.minCollateralAmount
-            });
+        // Check min credit amount
+        if (proposal.minCreditAmount == 0) {
+            revert MinCreditAmountNotSet();
         }
 
         // Calculate credit amount
         uint256 creditAmount = getCreditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit);
+
+        // Check sufficient credit amount
+        if (creditAmount < proposal.minCreditAmount) {
+            revert InsufficientCreditAmount({ current: creditAmount, limit: proposal.minCreditAmount });
+        }
 
         // Try to accept proposal
         _acceptProposal(
