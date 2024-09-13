@@ -57,6 +57,7 @@ abstract contract UseCasesTest is DeploymentTest {
             creditAddress: address(credit),
             creditAmount: 1e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 0,
             accruingInterestAPR: 0,
             durationOrDate: 1 days,

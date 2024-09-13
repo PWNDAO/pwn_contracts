@@ -19,6 +19,7 @@ import { PWNSimpleLoanListProposal } from "pwn/loan/terms/simple/proposal/PWNSim
 import { PWNSimpleLoanSimpleProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
 import { PWNLOAN } from "pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
+import { PWNUtilizedCredit } from "pwn/utilized-credit/PWNUtilizedCredit.sol";
 
 
 abstract contract Deployments is CommonBase {
@@ -49,6 +50,7 @@ abstract contract Deployments is CommonBase {
         PWNSimpleLoanElasticProposal simpleLoanElasticProposal;
         PWNSimpleLoanListProposal simpleLoanListProposal;
         PWNSimpleLoanSimpleProposal simpleLoanSimpleProposal;
+        PWNUtilizedCredit utilizedCredit;
     }
 
 

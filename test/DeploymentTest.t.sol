@@ -18,6 +18,7 @@ import {
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,
     PWNRevokedNonce,
+    PWNUtilizedCredit,
     MultiTokenCategoryRegistry
 } from "pwn/Deployments.sol";
 
@@ -50,6 +51,7 @@ abstract contract DeploymentTest is Deployments, Test {
         deployment.hub = new PWNHub();
 
         deployment.revokedNonce = new PWNRevokedNonce(address(deployment.hub), PWNHubTags.NONCE_MANAGER);
+        deployment.utilizedCredit = new PWNUtilizedCredit(address(deployment.hub), PWNHubTags.LOAN_PROPOSAL);
 
         deployment.loanToken = new PWNLOAN(address(deployment.hub));
         deployment.simpleLoan = new PWNSimpleLoan(
@@ -63,22 +65,26 @@ abstract contract DeploymentTest is Deployments, Test {
         deployment.simpleLoanSimpleProposal = new PWNSimpleLoanSimpleProposal(
             address(deployment.hub),
             address(deployment.revokedNonce),
-            address(deployment.config)
+            address(deployment.config),
+            address(deployment.utilizedCredit)
         );
         deployment.simpleLoanListProposal = new PWNSimpleLoanListProposal(
             address(deployment.hub),
             address(deployment.revokedNonce),
-            address(deployment.config)
+            address(deployment.config),
+            address(deployment.utilizedCredit)
         );
         deployment.simpleLoanElasticProposal = new PWNSimpleLoanElasticProposal(
             address(deployment.hub),
             address(deployment.revokedNonce),
-            address(deployment.config)
+            address(deployment.config),
+            address(deployment.utilizedCredit)
         );
         deployment.simpleLoanDutchAuctionProposal = new PWNSimpleLoanDutchAuctionProposal(
             address(deployment.hub),
             address(deployment.revokedNonce),
-            address(deployment.config)
+            address(deployment.config),
+            address(deployment.utilizedCredit)
         );
 
         // Set hub tags

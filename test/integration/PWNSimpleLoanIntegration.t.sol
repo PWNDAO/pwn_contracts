@@ -15,7 +15,8 @@ import {
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,
-    PWNRevokedNonce
+    PWNRevokedNonce,
+    PWNUtilizedCredit
 } from "test/integration/BaseIntegrationTest.t.sol";
 
 
@@ -34,6 +35,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             creditAddress: address(credit),
             creditAmount: 100e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
             durationOrDate: 7 days,
@@ -119,6 +121,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             creditAddress: address(credit),
             creditAmount: 100e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
             durationOrDate: 7 days,
@@ -206,6 +209,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             creditPerCollateralUnit: 10e18 * deployment.simpleLoanElasticProposal.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR(),
             minCreditAmount: 10e18,
             availableCreditLimit: 100e18,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
             durationOrDate: 7 days,
@@ -278,7 +282,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         assertEq(t1155.balanceOf(address(deployment.simpleLoan), 42), 7);
 
         assertEq(deployment.revokedNonce.isNonceRevoked(lender, proposal.nonceSpace, proposal.nonce), false);
-        assertEq(deployment.simpleLoanElasticProposal.creditUsed(proposalHash), 70e18);
+        assertEq(deployment.utilizedCredit.utilizedCredit(lender, proposal.utilizedCreditId), 70e18);
         assertEq(deployment.loanToken.loanContract(loanId), address(deployment.simpleLoan));
     }
 
@@ -294,6 +298,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             minCreditAmount: 10e18,
             maxCreditAmount: 100e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
             durationOrDate: 7 days,

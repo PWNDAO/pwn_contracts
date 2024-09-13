@@ -27,7 +27,7 @@ abstract contract PWNSimpleLoanElasticProposalTest is PWNSimpleLoanProposalTest 
     function setUp() virtual public override {
         super.setUp();
 
-        proposalContract = new PWNSimpleLoanElasticProposal(hub, revokedNonce, config);
+        proposalContract = new PWNSimpleLoanElasticProposal(hub, revokedNonce, config, utilizedCredit);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
         proposal = PWNSimpleLoanElasticProposal.Proposal({
@@ -40,6 +40,7 @@ abstract contract PWNSimpleLoanElasticProposalTest is PWNSimpleLoanProposalTest 
             creditPerCollateralUnit: 1 * proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR(),
             minCreditAmount: 1,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 1,
             accruingInterestAPR: 0,
             durationOrDate: 1 days,
@@ -71,7 +72,7 @@ abstract contract PWNSimpleLoanElasticProposalTest is PWNSimpleLoanProposalTest 
                 proposalContractAddr
             )),
             keccak256(abi.encodePacked(
-                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 minCreditAmount,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
+                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
                 abi.encode(_proposal)
             ))
         ));
@@ -83,6 +84,7 @@ abstract contract PWNSimpleLoanElasticProposalTest is PWNSimpleLoanProposalTest 
         proposal.checkCollateralStateFingerprint = _params.checkCollateralStateFingerprint;
         proposal.collateralStateFingerprint = _params.collateralStateFingerprint;
         proposal.availableCreditLimit = _params.availableCreditLimit;
+        proposal.utilizedCreditId = _params.utilizedCreditId;
         proposal.durationOrDate = _params.durationOrDate;
         proposal.expiration = _params.expiration;
         proposal.allowedAcceptor = _params.allowedAcceptor;
@@ -111,21 +113,6 @@ abstract contract PWNSimpleLoanElasticProposalTest is PWNSimpleLoanProposalTest 
     function _getProposalHashWith(Params memory _params) internal override returns (bytes32) {
         _updateProposal(_params.common);
         return _proposalHash(proposal);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # CREDIT USED                                           *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanElasticProposal_CreditUsed_Test is PWNSimpleLoanElasticProposalTest {
-
-    function testFuzz_shouldReturnUsedCredit(uint256 used) external {
-        vm.store(address(proposalContract), keccak256(abi.encode(_proposalHash(proposal), CREDIT_USED_SLOT)), bytes32(used));
-
-        assertEq(proposalContract.creditUsed(_proposalHash(proposal)), used);
     }
 
 }
@@ -237,6 +224,7 @@ contract PWNSimpleLoanElasticProposal_DecodeProposalData_Test is PWNSimpleLoanEl
         assertEq(_proposal.creditPerCollateralUnit, proposal.creditPerCollateralUnit);
         assertEq(_proposal.minCreditAmount, proposal.minCreditAmount);
         assertEq(_proposal.availableCreditLimit, proposal.availableCreditLimit);
+        assertEq(_proposal.utilizedCreditId, proposal.utilizedCreditId);
         assertEq(_proposal.fixedInterestAmount, proposal.fixedInterestAmount);
         assertEq(_proposal.accruingInterestAPR, proposal.accruingInterestAPR);
         assertEq(_proposal.durationOrDate, proposal.durationOrDate);

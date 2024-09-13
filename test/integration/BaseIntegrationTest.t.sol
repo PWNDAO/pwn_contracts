@@ -21,6 +21,7 @@ import {
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,
     PWNRevokedNonce,
+    PWNUtilizedCredit,
     MultiTokenCategoryRegistry
 } from "test/DeploymentTest.t.sol";
 
@@ -58,6 +59,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             creditAddress: address(credit),
             creditAmount: 100e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
             durationOrDate: 1 days,

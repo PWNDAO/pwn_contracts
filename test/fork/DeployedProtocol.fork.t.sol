@@ -42,6 +42,18 @@ contract DeployedProtocolTest is DeploymentTest {
         // - owner is protocol timelock
         assertEq(deployment.hub.owner(), deployment.protocolTimelock);
 
+        // REVOKED NONCE
+        // - has correct access tag
+        assertEq(deployment.revokedNonce.accessTag(), PWNHubTags.NONCE_MANAGER);
+        // - has correct hub address
+        assertEq(address(deployment.revokedNonce.hub()), address(deployment.hub));
+
+        // UTILIZED CREDIT
+        // - has correct access tag
+        assertEq(deployment.utilizedCredit.accessTag(), PWNHubTags.LOAN_PROPOSAL);
+        // - has correct hub address
+        assertEq(address(deployment.utilizedCredit.hub()), address(deployment.hub));
+
         // HUB TAGS
         // - simple loan
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoan), PWNHubTags.NONCE_MANAGER));

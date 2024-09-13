@@ -15,6 +15,7 @@ import {
     PWNSimpleLoan,
     PWNSignatureChecker,
     PWNRevokedNonce,
+    PWNUtilizedCredit,
     AddressMissingHubTag,
     Expired,
     IERC5646
@@ -24,11 +25,11 @@ import {
 abstract contract PWNSimpleLoanProposalTest is Test {
 
     bytes32 public constant PROPOSALS_MADE_SLOT = bytes32(uint256(0)); // `proposalsMade` mapping position
-    bytes32 public constant CREDIT_USED_SLOT = bytes32(uint256(1)); // `creditUsed` mapping position
 
     address public hub = makeAddr("hub");
     address public revokedNonce = makeAddr("revokedNonce");
     address public config = makeAddr("config");
+    address public utilizedCredit = makeAddr("utilizedCredit");
     address public stateFingerprintComputer = makeAddr("stateFingerprintComputer");
     address public activeLoanContract = makeAddr("activeLoanContract");
     address public token = makeAddr("token");
@@ -45,6 +46,7 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         bytes32 collateralStateFingerprint;
         uint256 creditAmount;
         uint256 availableCreditLimit;
+        bytes32 utilizedCreditId;
         uint32 durationOrDate;
         uint40 expiration;
         address allowedAcceptor;
@@ -494,47 +496,28 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         _callAcceptProposalWith();
     }
 
-    function testFuzz_shouldFail_whenUsedCreditExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - params.common.creditAmount);
-        limit = bound(limit, used, used + params.common.creditAmount - 1);
-
-        params.common.availableCreditLimit = limit;
+    function testFuzz_shouldUtilizeCredit(bytes32 id, uint256 creditAmount, uint256 limit) external {
+        params.common.creditAmount = bound(creditAmount, 1, type(uint256).max);
+        params.common.availableCreditLimit = bound(limit, 1, type(uint256).max);
+        params.common.utilizedCreditId = id;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.store(
-            address(proposalContractAddr),
-            keccak256(abi.encode(_getProposalHashWith(), CREDIT_USED_SLOT)),
-            bytes32(used)
+        vm.mockCall(
+            utilizedCredit,
+            abi.encodeWithSelector(PWNUtilizedCredit.utilizeCredit.selector),
+            abi.encode("")
         );
 
-        vm.expectRevert(
+        vm.expectCall(
+            utilizedCredit,
             abi.encodeWithSelector(
-                PWNSimpleLoanProposal.AvailableCreditLimitExceeded.selector, used + params.common.creditAmount, limit
+                PWNUtilizedCredit.utilizeCredit.selector,
+                proposer, params.common.utilizedCreditId, params.common.creditAmount, params.common.availableCreditLimit
             )
         );
-        vm.prank(activeLoanContract);
-        _callAcceptProposalWith();
-    }
-
-    function testFuzz_shouldIncreaseUsedCredit_whenUsedCreditNotExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - params.common.creditAmount);
-        limit = bound(limit, used + params.common.creditAmount, type(uint256).max);
-
-        params.common.availableCreditLimit = limit;
-        params.signature = _sign(proposerPK, _getProposalHashWith());
-
-        bytes32 proposalHash = _getProposalHashWith();
-
-        vm.store(
-            address(proposalContractAddr),
-            keccak256(abi.encode(proposalHash, CREDIT_USED_SLOT)),
-            bytes32(used)
-        );
 
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
-
-        assertEq(proposalContractAddr.creditUsed(proposalHash), used + params.common.creditAmount);
     }
 
     function test_shouldNotCallComputerRegistry_whenShouldNotCheckStateFingerprint() external {
