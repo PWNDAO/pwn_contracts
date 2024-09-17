@@ -551,7 +551,7 @@ forge script script/PWN.s.sol:Setup \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
-    /// @dev Expecting to have daoSafe & config addresses set in the `deployments/latest.json`
+    /// @dev Expecting to have daoSafe, protocol timelock & config addresses set in the `deployments/latest.json`
     function setDefaultMetadata(string memory metadata) external {
         _loadDeployedAddresses();
 
@@ -567,6 +567,34 @@ forge script script/PWN.s.sol:Setup \
             abi.encodeWithSignature("setDefaultLOANMetadataUri(string)", metadata)
         );
         console2.log("Metadata set:", metadata);
+
+        vm.stopBroadcast();
+    }
+
+/*
+forge script script/PWN.s.sol:Setup \
+--sig "registerCategory()" {addr} {category} \
+--rpc-url $RPC_URL \
+--private-key $PRIVATE_KEY \
+--with-gas-price $(cast --to-wei 15 gwei) \
+--broadcast
+*/
+    /// @dev Expecting to have daoSafe, protocol timelock & category registry addresses set in the `deployments/latest.json`
+    function registerCategory(address assetAddress, uint8 category) external {
+        _loadDeployedAddresses();
+
+        require(address(deployment.daoSafe) != address(0), "DAO safe not set");
+        require(address(deployment.protocolTimelock) != address(0), "Protocol timelock not set");
+        require(address(deployment.categoryRegistry) != address(0), "Category Registry not set");
+
+        vm.startBroadcast();
+
+        TimelockController(payable(deployment.protocolTimelock)).scheduleAndExecute(
+            GnosisSafeLike(deployment.daoSafe),
+            address(deployment.categoryRegistry),
+            abi.encodeWithSignature("registerCategoryValue(address,uint8)", assetAddress, category)
+        );
+        console2.log("Category registered:", assetAddress, category);
 
         vm.stopBroadcast();
     }
