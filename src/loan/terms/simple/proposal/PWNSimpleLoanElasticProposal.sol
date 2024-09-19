@@ -83,10 +83,10 @@ contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
 
     /**
      * @notice Construct defining proposal concrete values.
-     * @param collateralAmount Amount of collateral to be used in the loan.
+     * @param creditAmount Amount of credit to be borrowed.
      */
     struct ProposalValues {
-        uint256 collateralAmount;
+        uint256 creditAmount;
     }
 
     /**
@@ -156,13 +156,13 @@ contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @notice Compute credit amount from collateral amount and credit per collateral unit.
-     * @param collateralAmount Amount of collateral.
+     * @notice Compute collateral amount from credit amount and credit per collateral unit.
+     * @param creditAmount Amount of credit.
      * @param creditPerCollateralUnit Amount of credit per collateral unit with 38 decimals.
-     * @return Amount of credit.
+     * @return Amount of collateral.
      */
-    function getCreditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) public pure returns (uint256) {
-        return Math.mulDiv(collateralAmount, creditPerCollateralUnit, CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR);
+    function getCollateralAmount(uint256 creditAmount, uint256 creditPerCollateralUnit) public pure returns (uint256) {
+        return Math.mulDiv(creditAmount, CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR, creditPerCollateralUnit);
     }
 
     /**
@@ -186,13 +186,13 @@ contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
             revert MinCreditAmountNotSet();
         }
 
-        // Calculate credit amount
-        uint256 creditAmount = getCreditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit);
-
         // Check sufficient credit amount
-        if (creditAmount < proposal.minCreditAmount) {
-            revert InsufficientCreditAmount({ current: creditAmount, limit: proposal.minCreditAmount });
+        if (proposalValues.creditAmount < proposal.minCreditAmount) {
+            revert InsufficientCreditAmount({ current: proposalValues.creditAmount, limit: proposal.minCreditAmount });
         }
+
+        // Calculate credit amount
+        uint256 collateralAmount = getCollateralAmount(proposalValues.creditAmount, proposal.creditPerCollateralUnit);
 
         // Try to accept proposal
         _acceptProposal(
@@ -206,7 +206,7 @@ contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
                 collateralId: proposal.collateralId,
                 checkCollateralStateFingerprint: proposal.checkCollateralStateFingerprint,
                 collateralStateFingerprint: proposal.collateralStateFingerprint,
-                creditAmount: creditAmount,
+                creditAmount: proposalValues.creditAmount,
                 availableCreditLimit: proposal.availableCreditLimit,
                 utilizedCreditId: proposal.utilizedCreditId,
                 expiration: proposal.expiration,
@@ -229,11 +229,11 @@ contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
                 category: proposal.collateralCategory,
                 assetAddress: proposal.collateralAddress,
                 id: proposal.collateralId,
-                amount: proposalValues.collateralAmount
+                amount: collateralAmount
             }),
             credit: MultiToken.ERC20({
                 assetAddress: proposal.creditAddress,
-                amount: creditAmount
+                amount: proposalValues.creditAmount
             }),
             fixedInterestAmount: proposal.fixedInterestAmount,
             accruingInterestAPR: proposal.accruingInterestAPR,

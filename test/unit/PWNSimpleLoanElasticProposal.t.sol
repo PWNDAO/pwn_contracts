@@ -56,7 +56,7 @@ abstract contract PWNSimpleLoanElasticProposalTest is PWNSimpleLoanProposalTest 
         });
 
         proposalValues = PWNSimpleLoanElasticProposal.ProposalValues({
-            collateralAmount: 1000
+            creditAmount: 1000
         });
     }
 
@@ -95,7 +95,7 @@ abstract contract PWNSimpleLoanElasticProposalTest is PWNSimpleLoanProposalTest 
         proposal.nonce = _params.nonce;
         proposal.loanContract = _params.loanContract;
 
-        proposalValues.collateralAmount = _params.creditAmount;
+        proposalValues.creditAmount = _params.creditAmount;
     }
 
 
@@ -237,27 +237,40 @@ contract PWNSimpleLoanElasticProposal_DecodeProposalData_Test is PWNSimpleLoanEl
         assertEq(_proposal.nonce, proposal.nonce);
         assertEq(_proposal.loanContract, proposal.loanContract);
 
-        assertEq(_proposalValues.collateralAmount, proposalValues.collateralAmount);
+        assertEq(_proposalValues.creditAmount, proposalValues.creditAmount);
     }
 
 }
 
 
 /*----------------------------------------------------------*|
-|*  # GET CREDIT AMOUNT                                     *|
+|*  # GET COLLATERAL AMOUNT                                 *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanElasticProposal_GetCreditAmount_Test is PWNSimpleLoanElasticProposalTest {
+contract PWNSimpleLoanElasticProposal_GetCollateralAmount_Test is PWNSimpleLoanElasticProposalTest {
 
-    function testFuzz_shouldReturnCreditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) external {
-        collateralAmount = bound(collateralAmount, 0, 1e70);
-        creditPerCollateralUnit = bound(
-            creditPerCollateralUnit, 1, collateralAmount == 0 ? type(uint256).max : type(uint256).max / collateralAmount
-        );
+    function test_shouldReturnCollateralAmount() external {
+        uint256 CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR = proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR();
 
         assertEq(
-            proposalContract.getCreditAmount(collateralAmount, creditPerCollateralUnit),
-            Math.mulDiv(collateralAmount, creditPerCollateralUnit, proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR())
+            proposalContract.getCollateralAmount(100e18, 100 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            1e18
+        );
+        assertEq(
+            proposalContract.getCollateralAmount(50, 25 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            2
+        );
+        assertEq(
+            proposalContract.getCollateralAmount(1033220e18, 10e18 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            103322
+        );
+        assertEq(
+            proposalContract.getCollateralAmount(5e50, 1e30 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            5e20
+        );
+        assertEq(
+            proposalContract.getCollateralAmount(0, 1e30 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            0
         );
     }
 
@@ -290,20 +303,16 @@ contract PWNSimpleLoanElasticProposal_AcceptProposal_Test is PWNSimpleLoanElasti
     }
 
     function testFuzz_shouldFail_whenCreditAmountLessThanMinCreditAmount(
-        uint256 minCreditAmount, uint256 collateralAmount
+        uint256 minCreditAmount, uint256 creditAmount
     ) external {
         proposal.creditPerCollateralUnit = 1 * proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR();
         proposal.minCreditAmount = bound(minCreditAmount, 1, type(uint256).max);
-        proposalValues.collateralAmount = bound(collateralAmount, 0, proposal.minCreditAmount - 1);
-
-        uint256 creditAmount = proposalContract.getCreditAmount(
-            proposalValues.collateralAmount, proposal.creditPerCollateralUnit
-        );
+        proposalValues.creditAmount = bound(creditAmount, 0, proposal.minCreditAmount - 1);
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 PWNSimpleLoanElasticProposal.InsufficientCreditAmount.selector,
-                creditAmount,
+                proposalValues.creditAmount,
                 proposal.minCreditAmount
             )
         );
@@ -317,12 +326,8 @@ contract PWNSimpleLoanElasticProposal_AcceptProposal_Test is PWNSimpleLoanElasti
         });
     }
 
-    function testFuzz_shouldCallLoanContractWithLoanTerms(uint256 collateralAmount, bool isOffer) external {
-        uint256 minCollateralAmount = Math.mulDiv(
-            proposal.minCreditAmount, proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR(),
-            proposal.creditPerCollateralUnit
-        );
-        proposalValues.collateralAmount = bound(collateralAmount, minCollateralAmount, 1e40);
+    function testFuzz_shouldCallLoanContractWithLoanTerms(uint256 creditAmount, bool isOffer) external {
+        proposalValues.creditAmount = bound(creditAmount, proposal.minCreditAmount, 1e40);
         proposal.isOffer = isOffer;
 
         vm.prank(activeLoanContract);
@@ -341,11 +346,11 @@ contract PWNSimpleLoanElasticProposal_AcceptProposal_Test is PWNSimpleLoanElasti
         assertEq(uint8(terms.collateral.category), uint8(proposal.collateralCategory));
         assertEq(terms.collateral.assetAddress, proposal.collateralAddress);
         assertEq(terms.collateral.id, proposal.collateralId);
-        assertEq(terms.collateral.amount, proposalValues.collateralAmount);
+        assertEq(terms.collateral.amount, proposalContract.getCollateralAmount(proposalValues.creditAmount, proposal.creditPerCollateralUnit));
         assertEq(uint8(terms.credit.category), uint8(MultiToken.Category.ERC20));
         assertEq(terms.credit.assetAddress, proposal.creditAddress);
         assertEq(terms.credit.id, 0);
-        assertEq(terms.credit.amount, proposalContract.getCreditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit));
+        assertEq(terms.credit.amount, proposalValues.creditAmount);
         assertEq(terms.fixedInterestAmount, proposal.fixedInterestAmount);
         assertEq(terms.accruingInterestAPR, proposal.accruingInterestAPR);
         assertEq(terms.lenderSpecHash, isOffer ? proposal.proposerSpecHash : bytes32(0));

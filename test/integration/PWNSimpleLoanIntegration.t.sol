@@ -225,7 +225,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         });
 
         PWNSimpleLoanElasticProposal.ProposalValues memory proposalValues = PWNSimpleLoanElasticProposal.ProposalValues({
-            collateralAmount: 7
+            creditAmount: 70e18
         });
 
         // Mint initial state
