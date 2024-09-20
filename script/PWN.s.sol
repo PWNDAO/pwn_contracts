@@ -22,6 +22,7 @@ import {
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,
     PWNRevokedNonce,
+    PWNUtilizedCredit,
     MultiTokenCategoryRegistry
 } from "pwn/Deployments.sol";
 
@@ -32,14 +33,13 @@ import { T1155 } from "test/helper/T1155.sol";
 
 library PWNContractDeployerSalt {
 
-    string internal constant VERSION = "1.2";
-
     // Singletons
     bytes32 internal constant CONFIG = keccak256("PWNConfig");
     bytes32 internal constant CONFIG_PROXY = keccak256("PWNConfigProxy");
     bytes32 internal constant HUB = keccak256("PWNHub");
     bytes32 internal constant LOAN = keccak256("PWNLOAN");
     bytes32 internal constant REVOKED_NONCE = keccak256("PWNRevokedNonce");
+    bytes32 internal constant UTILIZED_CREDIT = keccak256("PWNUtilizedCredit");
 
     // Loan types
     bytes32 internal constant SIMPLE_LOAN = keccak256("PWNSimpleLoan");
@@ -98,85 +98,27 @@ forge script script/PWN.s.sol:Deploy \
 --verify --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast
 */
-    /// @dev Expecting to have deployer, deployerSafe, adminTimelock, protocolTimelock, daoSafe, hub & LOAN token
+    /// @dev Expecting to have deployer, deployerSafe, config, hub & revoked nonce
     /// addresses set in the `deployments/latest.json`.
     function deployNewProtocolVersion() external {
         _loadDeployedAddresses();
 
         require(address(deployment.deployer) != address(0), "Deployer not set");
         require(deployment.deployerSafe != address(0), "Deployer safe not set");
-        require(deployment.adminTimelock != address(0), "Admin timelock not set");
-        require(deployment.protocolTimelock != address(0), "Protocol timelock not set");
-        require(deployment.daoSafe != address(0), "DAO safe not set");
+        require(address(deployment.config) != address(0), "Config not set");
         require(address(deployment.hub) != address(0), "Hub not set");
-        require(address(deployment.loanToken) != address(0), "LOAN token not set");
-
-        uint256 initialConfigHelper = vmSafe.envUint("INITIAL_CONFIG_HELPER");
+        require(address(deployment.revokedNonce) != address(0), "Revoked nonce not set");
 
         vm.startBroadcast();
 
         // Deploy new protocol version
 
-        // - Config
-
-        // Note: To have the same config proxy address on new chains independently of the config implementation,
-        // the config proxy is deployed first with Deployer implementation that has the same address on all chains.
-        // Proxy implementation is then upgraded to the correct one in the next transaction.
-
-        deployment.config = PWNConfig(_deploy({
-            salt: PWNContractDeployerSalt.CONFIG_PROXY,
+        // - Utilized credit
+        deployment.utilizedCredit = PWNUtilizedCredit(_deploy({
+            salt: PWNContractDeployerSalt.UTILIZED_CREDIT,
             bytecode: abi.encodePacked(
-                type(TransparentUpgradeableProxy).creationCode,
-                abi.encode(deployment.deployer, vm.addr(initialConfigHelper), "")
-            )
-        }));
-        deployment.configSingleton = PWNConfig(_deploy({
-            salt: PWNContractDeployerSalt.CONFIG,
-            bytecode: type(PWNConfig).creationCode
-        }));
-
-        vm.stopBroadcast();
-
-
-        vm.startBroadcast(initialConfigHelper);
-        ITransparentUpgradeableProxy(address(deployment.config)).upgradeToAndCall(
-            address(deployment.configSingleton),
-            abi.encodeWithSelector(PWNConfig.initialize.selector, deployment.protocolTimelock, 0, deployment.daoSafe)
-        );
-        ITransparentUpgradeableProxy(address(deployment.config)).changeAdmin(deployment.adminTimelock);
-        vm.stopBroadcast();
-
-
-        vm.startBroadcast();
-
-        // - MultiToken category registry
-        deployment.categoryRegistry = MultiTokenCategoryRegistry(_deployAndTransferOwnership({ // Need ownership acceptance from the new owner
-            salt: PWNContractDeployerSalt.CONFIG,
-            owner: deployment.protocolTimelock,
-            bytecode: type(MultiTokenCategoryRegistry).creationCode
-        }));
-
-        // - Revoked nonces
-        deployment.revokedNonce = PWNRevokedNonce(_deploy({
-            salt: PWNContractDeployerSalt.REVOKED_NONCE,
-            bytecode: abi.encodePacked(
-                type(PWNRevokedNonce).creationCode,
-                abi.encode(address(deployment.hub), PWNHubTags.NONCE_MANAGER)
-            )
-        }));
-
-        // - Loan types
-        deployment.simpleLoan = PWNSimpleLoan(_deploy({
-            salt: PWNContractDeployerSalt.SIMPLE_LOAN,
-            bytecode: abi.encodePacked(
-                type(PWNSimpleLoan).creationCode,
-                abi.encode(
-                    address(deployment.hub),
-                    address(deployment.loanToken),
-                    address(deployment.config),
-                    address(deployment.revokedNonce),
-                    address(deployment.categoryRegistry)
-                )
+                type(PWNUtilizedCredit).creationCode,
+                abi.encode(address(deployment.hub), PWNHubTags.LOAN_PROPOSAL)
             )
         }));
 
@@ -188,7 +130,8 @@ forge script script/PWN.s.sol:Deploy \
                 abi.encode(
                     address(deployment.hub),
                     address(deployment.revokedNonce),
-                    address(deployment.config)
+                    address(deployment.config),
+                    address(deployment.utilizedCredit)
                 )
             )
         }));
@@ -200,7 +143,8 @@ forge script script/PWN.s.sol:Deploy \
                 abi.encode(
                     address(deployment.hub),
                     address(deployment.revokedNonce),
-                    address(deployment.config)
+                    address(deployment.config),
+                    address(deployment.utilizedCredit)
                 )
             )
         }));
@@ -212,7 +156,8 @@ forge script script/PWN.s.sol:Deploy \
                 abi.encode(
                     address(deployment.hub),
                     address(deployment.revokedNonce),
-                    address(deployment.config)
+                    address(deployment.config),
+                    address(deployment.utilizedCredit)
                 )
             )
         }));
@@ -224,18 +169,13 @@ forge script script/PWN.s.sol:Deploy \
                 abi.encode(
                     address(deployment.hub),
                     address(deployment.revokedNonce),
-                    address(deployment.config)
+                    address(deployment.config),
+                    address(deployment.utilizedCredit)
                 )
             )
         }));
 
-        console2.log("MultiToken Category Registry:", address(deployment.categoryRegistry));
-        console2.log("PWNConfig - singleton:", address(deployment.configSingleton));
-        console2.log("PWNConfig - proxy:", address(deployment.config));
-        console2.log("PWNHub:", address(deployment.hub));
-        console2.log("PWNLOAN:", address(deployment.loanToken));
-        console2.log("PWNRevokedNonce:", address(deployment.revokedNonce));
-        console2.log("PWNSimpleLoan:", address(deployment.simpleLoan));
+        console2.log("PWNUtilizedCredit:", address(deployment.utilizedCredit));
         console2.log("PWNSimpleLoanSimpleProposal:", address(deployment.simpleLoanSimpleProposal));
         console2.log("PWNSimpleLoanListProposal:", address(deployment.simpleLoanListProposal));
         console2.log("PWNSimpleLoanElasticProposal:", address(deployment.simpleLoanElasticProposal));
@@ -331,6 +271,15 @@ forge script script/PWN.s.sol:Deploy \
             )
         }));
 
+        // - Utilized credit
+        deployment.utilizedCredit = PWNUtilizedCredit(_deploy({
+            salt: PWNContractDeployerSalt.UTILIZED_CREDIT,
+            bytecode: abi.encodePacked(
+                type(PWNUtilizedCredit).creationCode,
+                abi.encode(address(deployment.hub), PWNHubTags.LOAN_PROPOSAL)
+            )
+        }));
+
         // - Loan types
         deployment.simpleLoan = PWNSimpleLoan(_deploy({
             salt: PWNContractDeployerSalt.SIMPLE_LOAN,
@@ -401,6 +350,7 @@ forge script script/PWN.s.sol:Deploy \
         console2.log("PWNHub:", address(deployment.hub));
         console2.log("PWNLOAN:", address(deployment.loanToken));
         console2.log("PWNRevokedNonce:", address(deployment.revokedNonce));
+        console2.log("PWNUtilizedCredit:", address(deployment.utilizedCredit));
         console2.log("PWNSimpleLoan:", address(deployment.simpleLoan));
         console2.log("PWNSimpleLoanSimpleProposal:", address(deployment.simpleLoanSimpleProposal));
         console2.log("PWNSimpleLoanListProposal:", address(deployment.simpleLoanListProposal));
@@ -433,12 +383,8 @@ forge script script/PWN.s.sol:Setup \
     function setupNewProtocolVersion() external {
         _loadDeployedAddresses();
 
-        require(address(deployment.daoSafe) != address(0), "Protocol safe not set");
-        require(address(deployment.categoryRegistry) != address(0), "Category registry not set");
-
         vm.startBroadcast();
 
-        _acceptOwnership(deployment.daoSafe, deployment.protocolTimelock, address(deployment.categoryRegistry));
         _setTags(true);
 
         vm.stopBroadcast();
@@ -494,7 +440,6 @@ forge script script/PWN.s.sol:Setup \
     }
 
     function _setTags(bool set) internal {
-        require(address(deployment.simpleLoan) != address(0), "Simple loan not set");
         require(address(deployment.simpleLoanSimpleProposal) != address(0), "Simple loan simple proposal not set");
         require(address(deployment.simpleLoanListProposal) != address(0), "Simple loan list proposal not set");
         require(address(deployment.simpleLoanElasticProposal) != address(0), "Simple loan elastic proposal not set");
@@ -503,24 +448,21 @@ forge script script/PWN.s.sol:Setup \
         require(address(deployment.daoSafe) != address(0), "DAO safe not set");
         require(address(deployment.hub) != address(0), "Hub not set");
 
-        address[] memory addrs = new address[](10);
-        addrs[0] = address(deployment.simpleLoan);
-        addrs[1] = address(deployment.simpleLoan);
+        address[] memory addrs = new address[](8);
+        addrs[0] = address(deployment.simpleLoanSimpleProposal);
+        addrs[1] = address(deployment.simpleLoanSimpleProposal);
 
-        addrs[2] = address(deployment.simpleLoanSimpleProposal);
-        addrs[3] = address(deployment.simpleLoanSimpleProposal);
+        addrs[2] = address(deployment.simpleLoanListProposal);
+        addrs[3] = address(deployment.simpleLoanListProposal);
 
-        addrs[4] = address(deployment.simpleLoanListProposal);
-        addrs[5] = address(deployment.simpleLoanListProposal);
+        addrs[4] = address(deployment.simpleLoanElasticProposal);
+        addrs[5] = address(deployment.simpleLoanElasticProposal);
 
-        addrs[6] = address(deployment.simpleLoanElasticProposal);
-        addrs[7] = address(deployment.simpleLoanElasticProposal);
+        addrs[6] = address(deployment.simpleLoanDutchAuctionProposal);
+        addrs[7] = address(deployment.simpleLoanDutchAuctionProposal);
 
-        addrs[8] = address(deployment.simpleLoanDutchAuctionProposal);
-        addrs[9] = address(deployment.simpleLoanDutchAuctionProposal);
-
-        bytes32[] memory tags = new bytes32[](10);
-        tags[0] = PWNHubTags.ACTIVE_LOAN;
+        bytes32[] memory tags = new bytes32[](8);
+        tags[0] = PWNHubTags.LOAN_PROPOSAL;
         tags[1] = PWNHubTags.NONCE_MANAGER;
 
         tags[2] = PWNHubTags.LOAN_PROPOSAL;
@@ -531,9 +473,6 @@ forge script script/PWN.s.sol:Setup \
 
         tags[6] = PWNHubTags.LOAN_PROPOSAL;
         tags[7] = PWNHubTags.NONCE_MANAGER;
-
-        tags[8] = PWNHubTags.LOAN_PROPOSAL;
-        tags[9] = PWNHubTags.NONCE_MANAGER;
 
         TimelockController(payable(deployment.protocolTimelock)).scheduleAndExecute(
             GnosisSafeLike(deployment.daoSafe),
