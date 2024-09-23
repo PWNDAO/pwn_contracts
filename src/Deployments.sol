@@ -14,6 +14,7 @@ import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import { IPWNDeployer } from "pwn/interfaces/IPWNDeployer.sol";
 import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanDutchAuctionProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
+import { PWNSimpleLoanElasticChainlinkProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticChainlinkProposal.sol";
 import { PWNSimpleLoanElasticProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticProposal.sol";
 import { PWNSimpleLoanListProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
 import { PWNSimpleLoanSimpleProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
@@ -47,6 +48,7 @@ abstract contract Deployments is CommonBase {
         PWNRevokedNonce revokedNonce;
         PWNSimpleLoan simpleLoan;
         PWNSimpleLoanDutchAuctionProposal simpleLoanDutchAuctionProposal;
+        PWNSimpleLoanElasticChainlinkProposal simpleLoanElasticChainlinkProposal;
         PWNSimpleLoanElasticProposal simpleLoanElasticProposal;
         PWNSimpleLoanListProposal simpleLoanListProposal;
         PWNSimpleLoanSimpleProposal simpleLoanSimpleProposal;

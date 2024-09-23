@@ -13,6 +13,7 @@ import {
     PWNHubTags,
     PWNSimpleLoan,
     PWNSimpleLoanDutchAuctionProposal,
+    PWNSimpleLoanElasticChainlinkProposal,
     PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
@@ -74,6 +75,14 @@ abstract contract DeploymentTest is Deployments, Test {
             address(deployment.config),
             address(deployment.utilizedCredit)
         );
+        deployment.simpleLoanElasticChainlinkProposal = new PWNSimpleLoanElasticChainlinkProposal(
+            address(deployment.hub),
+            address(deployment.revokedNonce),
+            address(deployment.config),
+            address(deployment.utilizedCredit),
+            address(0), // todo: feed registry
+            address(0) // todo: weth
+        );
         deployment.simpleLoanElasticProposal = new PWNSimpleLoanElasticProposal(
             address(deployment.hub),
             address(deployment.revokedNonce),
@@ -88,7 +97,7 @@ abstract contract DeploymentTest is Deployments, Test {
         );
 
         // Set hub tags
-        address[] memory addrs = new address[](10);
+        address[] memory addrs = new address[](12);
         addrs[0] = address(deployment.simpleLoan);
         addrs[1] = address(deployment.simpleLoan);
 
@@ -98,13 +107,16 @@ abstract contract DeploymentTest is Deployments, Test {
         addrs[4] = address(deployment.simpleLoanListProposal);
         addrs[5] = address(deployment.simpleLoanListProposal);
 
-        addrs[6] = address(deployment.simpleLoanElasticProposal);
-        addrs[7] = address(deployment.simpleLoanElasticProposal);
+        addrs[6] = address(deployment.simpleLoanElasticChainlinkProposal);
+        addrs[7] = address(deployment.simpleLoanElasticChainlinkProposal);
 
-        addrs[8] = address(deployment.simpleLoanDutchAuctionProposal);
-        addrs[9] = address(deployment.simpleLoanDutchAuctionProposal);
+        addrs[8] = address(deployment.simpleLoanElasticProposal);
+        addrs[9] = address(deployment.simpleLoanElasticProposal);
 
-        bytes32[] memory tags = new bytes32[](10);
+        addrs[10] = address(deployment.simpleLoanDutchAuctionProposal);
+        addrs[11] = address(deployment.simpleLoanDutchAuctionProposal);
+
+        bytes32[] memory tags = new bytes32[](12);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
         tags[1] = PWNHubTags.NONCE_MANAGER;
 
@@ -119,6 +131,9 @@ abstract contract DeploymentTest is Deployments, Test {
 
         tags[8] = PWNHubTags.LOAN_PROPOSAL;
         tags[9] = PWNHubTags.NONCE_MANAGER;
+
+        tags[10] = PWNHubTags.LOAN_PROPOSAL;
+        tags[11] = PWNHubTags.NONCE_MANAGER;
 
         vm.prank(deployment.protocolTimelock);
         deployment.hub.setTags(addrs, tags, true);

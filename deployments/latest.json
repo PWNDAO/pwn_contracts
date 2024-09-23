@@ -18,6 +18,7 @@
             "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
             "simpleLoanSimpleProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanListProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanElasticProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         },
@@ -38,6 +39,7 @@
             "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
             "simpleLoanSimpleProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanListProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanElasticProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         },
@@ -58,6 +60,7 @@
             "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
             "simpleLoanSimpleProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanListProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanElasticProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         },
@@ -78,6 +81,7 @@
             "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
             "simpleLoanSimpleProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanListProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanElasticProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         },
@@ -98,6 +102,7 @@
             "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
             "simpleLoanSimpleProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanListProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanElasticProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         },
@@ -118,6 +123,7 @@
             "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
             "simpleLoanSimpleProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanListProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanElasticProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         },
@@ -138,6 +144,7 @@
             "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
             "simpleLoanSimpleProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanListProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanElasticProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         },
@@ -158,6 +165,7 @@
             "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
             "simpleLoanSimpleProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanListProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanElasticProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         },
@@ -178,6 +186,7 @@
             "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
             "simpleLoanSimpleProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanListProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanElasticProposal": "0x0000000000000000000000000000000000000000",
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         }
