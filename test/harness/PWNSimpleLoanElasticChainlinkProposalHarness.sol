@@ -12,9 +12,10 @@ contract PWNSimpleLoanElasticChainlinkProposalHarness is PWNSimpleLoanElasticCha
         address _config,
         address _utilizedCredit,
         address _chainlinkFeedRegistry,
+        address _l2sequencerUptimeFeed,
         address _weth
     ) PWNSimpleLoanElasticChainlinkProposal(
-        _hub, _revokedNonce, _config, _utilizedCredit, _chainlinkFeedRegistry, _weth
+        _hub, _revokedNonce, _config, _utilizedCredit, _chainlinkFeedRegistry, _l2sequencerUptimeFeed, _weth
     ) {}
 
 

@@ -31,13 +31,14 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
     address credAggregator = makeAddr("credAggregator");
     address collAggregator = makeAddr("collAggregator");
     address weth = makeAddr("weth");
+    address l2sequencerUptimeFeed = makeAddr("l2sequencerUptimeFeed");
 
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanElasticChainlinkProposal.Proposal proposal);
 
     function setUp() virtual public override {
         super.setUp();
 
-        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, weth);
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, address(0), weth);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
         proposal = PWNSimpleLoanElasticChainlinkProposal.Proposal({
@@ -72,6 +73,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
         _mockFeed(generalAggregator);
         _mockLastRoundData(generalAggregator, 1e18, 1);
         _mockDecimals(generalAggregator, 18);
+        _mockSequencerUptimeFeed(true, block.timestamp - 1);
     }
 
 
@@ -160,6 +162,14 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
             aggregator,
             abi.encodeWithSelector(IChainlinkAggregatorLike.decimals.selector),
             abi.encode(decimals)
+        );
+    }
+
+    function _mockSequencerUptimeFeed(bool isUp, uint256 startedAt) internal {
+        vm.mockCall(
+            l2sequencerUptimeFeed,
+            abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector),
+            abi.encode(0, isUp ? 0 : 1, startedAt, 0, 0)
         );
     }
 
@@ -301,9 +311,12 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
     address credAddr = makeAddr("credAddr");
     uint256 credAmount = 100e8;
     uint256 loanToValue = 5000; // 50%
+    uint256 L2_GRACE_PERIOD;
 
     function setUp() virtual override public {
         super.setUp();
+
+        L2_GRACE_PERIOD = proposalContract.L2_GRACE_PERIOD();
 
         _mockFeed(collAggregator, collAddr, ChainlinkDenominations.USD);
         _mockFeed(collAggregator, collAddr, ChainlinkDenominations.ETH);
@@ -318,6 +331,59 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         _mockFeed(generalAggregator, ChainlinkDenominations.ETH, ChainlinkDenominations.USD);
         _mockLastRoundData(generalAggregator, 1e18, 1);
         _mockDecimals(generalAggregator, 18);
+    }
+
+
+    function test_shouldFetchSequencerUptimeFeed_whenFeedSet() external {
+        vm.warp(1e9);
+
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2sequencerUptimeFeed, weth);
+        _mockSequencerUptimeFeed(true, block.timestamp - L2_GRACE_PERIOD - 1);
+        _mockLastRoundData(collAggregator, 1e18, block.timestamp);
+        _mockLastRoundData(credAggregator, 1e18, block.timestamp);
+
+        vm.expectCall(
+            l2sequencerUptimeFeed,
+            abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector)
+        );
+
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
+    }
+
+    function test_shouldFail_whenL2SequencerDown_whenFeedSet() external {
+        vm.warp(1e9);
+
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2sequencerUptimeFeed, weth);
+        _mockSequencerUptimeFeed(false, block.timestamp - L2_GRACE_PERIOD - 1);
+
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanElasticChainlinkProposal.L2SequencerDown.selector));
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
+    }
+
+    function testFuzz_shouldFail_whenL2SequencerUp_whenInGracePeriod_whenFeedSet(uint256 startedAt) external {
+        vm.warp(1e9);
+        startedAt = bound(startedAt, block.timestamp - L2_GRACE_PERIOD, block.timestamp);
+
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2sequencerUptimeFeed, weth);
+        _mockSequencerUptimeFeed(true, startedAt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanElasticChainlinkProposal.GracePeriodNotOver.selector,
+                block.timestamp - startedAt, L2_GRACE_PERIOD
+            )
+        );
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
+    }
+
+    function test_shouldNotFetchSequencerUptimeFeed_whenFeedNotSet() external {
+        vm.expectCall(
+            l2sequencerUptimeFeed,
+            abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector),
+            0
+        );
+
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
     }
 
     function test_shouldFetchCreditAndCollateralPrices() external {

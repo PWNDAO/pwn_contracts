@@ -81,6 +81,7 @@ abstract contract DeploymentTest is Deployments, Test {
             address(deployment.config),
             address(deployment.utilizedCredit),
             address(0), // todo: feed registry
+            address(0), // todo: l2 sequencer uptime feed
             address(0) // todo: weth
         );
         deployment.simpleLoanElasticProposal = new PWNSimpleLoanElasticProposal(

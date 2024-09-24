@@ -30,7 +30,12 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     /**
      * @notice Maximum Chainlink feed price age.
      */
-    uint256 public constant MAX_CHAINLINK_FEED_PRICE_AGE = 3 days;
+    uint256 public constant MAX_CHAINLINK_FEED_PRICE_AGE = 1 days;
+
+    /**
+     * @notice Grace period time for L2 Sequencer uptime feed.
+     */
+    uint256 public constant L2_GRACE_PERIOD = 10 minutes;
 
     /**
      * @dev EIP-712 simple proposal struct type hash.
@@ -103,6 +108,12 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     IChainlinkFeedRegistryLike public immutable chainlinkFeedRegistry;
 
     /**
+     * @notice Chainlink feed for L2 Sequencer uptime.
+     * @dev Must be address(0) for L1s.
+     */
+    IChainlinkAggregatorLike public immutable l2sequencerUptimeFeed;
+
+    /**
      * @notice WETH address.
      * @dev WETH price is fetched from the ETH price feed.
      */
@@ -143,15 +154,27 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      */
     error ChainlinkFeedPriceTooOld(address asset, uint256 updatedAt);
 
+    /**
+     * @notice Throw when L2 Sequencer uptime feed returns that the sequencer is down.
+     */
+    error L2SequencerDown();
+
+    /**
+     * @notice Throw when L2 Sequencer uptime feed grace period is not over.
+     */
+    error GracePeriodNotOver(uint256 timeSinceUp, uint256 gracePeriod);
+
     constructor(
         address _hub,
         address _revokedNonce,
         address _config,
         address _utilizedCredit,
         address _chainlinkFeedRegistry,
+        address _l2sequencerUptimeFeed,
         address _weth
     ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanElasticChainlinkProposal", VERSION) {
         chainlinkFeedRegistry = IChainlinkFeedRegistryLike(_chainlinkFeedRegistry);
+        l2sequencerUptimeFeed = IChainlinkAggregatorLike(_l2sequencerUptimeFeed);
         WETH = _weth;
     }
 
@@ -211,6 +234,21 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     function getCollateralAmount(
         address creditAddress, uint256 creditAmount, address collateralAddress, uint256 loanToValue
     ) public view returns (uint256) {
+        // check L2 sequencer uptime if necessary
+        if (address(l2sequencerUptimeFeed) != address(0)) {
+            (, int256 answer, uint256 startedAt,,) = l2sequencerUptimeFeed.latestRoundData();
+            if (answer == 1) {
+                // sequencer is down
+                revert L2SequencerDown();
+            }
+
+            uint256 timeSinceUp = block.timestamp - startedAt;
+            if (timeSinceUp <= L2_GRACE_PERIOD) {
+                // grace period is not over
+                revert GracePeriodNotOver({ timeSinceUp: timeSinceUp, gracePeriod: L2_GRACE_PERIOD });
+            }
+        }
+
         // fetch data from price feeds
         (uint256 creditPrice, uint8 creditPriceDecimals, address creditDenominator) = _findPrice(creditAddress);
         (uint256 collateralPrice, uint8 collateralPriceDecimals, address collateralDenominator) = _findPrice(collateralAddress);
