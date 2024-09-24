@@ -31,7 +31,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
     address credAggregator = makeAddr("credAggregator");
     address collAggregator = makeAddr("collAggregator");
     address weth = makeAddr("weth");
-    address l2sequencerUptimeFeed = makeAddr("l2sequencerUptimeFeed");
+    address l2SequencerUptimeFeed = makeAddr("l2SequencerUptimeFeed");
 
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanElasticChainlinkProposal.Proposal proposal);
 
@@ -167,7 +167,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
 
     function _mockSequencerUptimeFeed(bool isUp, uint256 startedAt) internal {
         vm.mockCall(
-            l2sequencerUptimeFeed,
+            l2SequencerUptimeFeed,
             abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector),
             abi.encode(0, isUp ? 0 : 1, startedAt, 0, 0)
         );
@@ -337,13 +337,13 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
     function test_shouldFetchSequencerUptimeFeed_whenFeedSet() external {
         vm.warp(1e9);
 
-        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2sequencerUptimeFeed, weth);
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
         _mockSequencerUptimeFeed(true, block.timestamp - L2_GRACE_PERIOD - 1);
         _mockLastRoundData(collAggregator, 1e18, block.timestamp);
         _mockLastRoundData(credAggregator, 1e18, block.timestamp);
 
         vm.expectCall(
-            l2sequencerUptimeFeed,
+            l2SequencerUptimeFeed,
             abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector)
         );
 
@@ -353,7 +353,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
     function test_shouldFail_whenL2SequencerDown_whenFeedSet() external {
         vm.warp(1e9);
 
-        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2sequencerUptimeFeed, weth);
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
         _mockSequencerUptimeFeed(false, block.timestamp - L2_GRACE_PERIOD - 1);
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanElasticChainlinkProposal.L2SequencerDown.selector));
@@ -364,7 +364,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         vm.warp(1e9);
         startedAt = bound(startedAt, block.timestamp - L2_GRACE_PERIOD, block.timestamp);
 
-        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2sequencerUptimeFeed, weth);
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
         _mockSequencerUptimeFeed(true, startedAt);
 
         vm.expectRevert(
@@ -378,7 +378,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
 
     function test_shouldNotFetchSequencerUptimeFeed_whenFeedNotSet() external {
         vm.expectCall(
-            l2sequencerUptimeFeed,
+            l2SequencerUptimeFeed,
             abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector),
             0
         );

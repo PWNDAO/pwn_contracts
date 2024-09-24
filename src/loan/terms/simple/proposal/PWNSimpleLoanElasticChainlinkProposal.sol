@@ -111,7 +111,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      * @notice Chainlink feed for L2 Sequencer uptime.
      * @dev Must be address(0) for L1s.
      */
-    IChainlinkAggregatorLike public immutable l2sequencerUptimeFeed;
+    IChainlinkAggregatorLike public immutable l2SequencerUptimeFeed;
 
     /**
      * @notice WETH address.
@@ -170,11 +170,11 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         address _config,
         address _utilizedCredit,
         address _chainlinkFeedRegistry,
-        address _l2sequencerUptimeFeed,
+        address _l2SequencerUptimeFeed,
         address _weth
     ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanElasticChainlinkProposal", VERSION) {
         chainlinkFeedRegistry = IChainlinkFeedRegistryLike(_chainlinkFeedRegistry);
-        l2sequencerUptimeFeed = IChainlinkAggregatorLike(_l2sequencerUptimeFeed);
+        l2SequencerUptimeFeed = IChainlinkAggregatorLike(_l2SequencerUptimeFeed);
         WETH = _weth;
     }
 
@@ -235,8 +235,8 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         address creditAddress, uint256 creditAmount, address collateralAddress, uint256 loanToValue
     ) public view returns (uint256) {
         // check L2 sequencer uptime if necessary
-        if (address(l2sequencerUptimeFeed) != address(0)) {
-            (, int256 answer, uint256 startedAt,,) = l2sequencerUptimeFeed.latestRoundData();
+        if (address(l2SequencerUptimeFeed) != address(0)) {
+            (, int256 answer, uint256 startedAt,,) = l2SequencerUptimeFeed.latestRoundData();
             if (answer == 1) {
                 // sequencer is down
                 revert L2SequencerDown();
