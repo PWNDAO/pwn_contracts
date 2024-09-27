@@ -11,6 +11,7 @@ import { Strings } from "openzeppelin/utils/Strings.sol";
 import { PWNConfig } from "pwn/config/PWNConfig.sol";
 import { PWNHub } from "pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
+import { IChainlinkFeedRegistryLike } from "pwn/interfaces/IChainlinkFeedRegistryLike.sol";
 import { IPWNDeployer } from "pwn/interfaces/IPWNDeployer.sol";
 import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanDutchAuctionProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
@@ -31,14 +32,15 @@ abstract contract Deployments is CommonBase {
 
     uint256[] deployedChains;
     Deployment deployment;
+    External externalAddrs;
 
     // Properties need to be in alphabetical order
     struct Deployment {
         address adminTimelock;
         MultiTokenCategoryRegistry categoryRegistry;
+        IChainlinkFeedRegistryLike chainlinkFeedRegistry;
         PWNConfig config;
         PWNConfig configSingleton;
-        address dao;
         address daoSafe;
         IPWNDeployer deployer;
         address deployerSafe;
@@ -55,16 +57,26 @@ abstract contract Deployments is CommonBase {
         PWNUtilizedCredit utilizedCredit;
     }
 
+    struct External {
+        address chainlinkL2SequencerUptimeFeed;
+        address dao;
+        address weth;
+    }
+
 
     function _loadDeployedAddresses() internal {
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, deploymentsSubpath, "/deployments/latest.json");
-        string memory json = vm.readFile(path);
-        bytes memory rawDeployedChains = json.parseRaw(".deployedChains");
+
+        string memory externalJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/external/external.json"));
+        bytes memory rawExternal = externalJson.parseRaw(string.concat(".chains.", block.chainid.toString()));
+        externalAddrs = abi.decode(rawExternal, (External));
+
+        string memory deploymentsJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/latest.json"));
+        bytes memory rawDeployedChains = deploymentsJson.parseRaw(".deployedChains");
         deployedChains = abi.decode(rawDeployedChains, (uint256[]));
 
         if (_contains(deployedChains, block.chainid)) {
-            bytes memory rawDeployment = json.parseRaw(string.concat(".chains.", block.chainid.toString()));
+            bytes memory rawDeployment = deploymentsJson.parseRaw(string.concat(".chains.", block.chainid.toString()));
             deployment = abi.decode(rawDeployment, (Deployment));
         } else {
             _protocolNotDeployedOnSelectedChain();

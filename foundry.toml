@@ -1,6 +1,9 @@
 [profile.default]
 solc_version = '0.8.16'
-fs_permissions = [{ access = "read", path = "./deployments/latest.json"}]
+fs_permissions = [
+    { access = "read", path = "./deployments/latest.json"},
+    { access = "read", path = "./deployments/external/external.json"}
+]
 gas_reports = ["PWNSimpleLoan"]
 
 

@@ -33,10 +33,6 @@ abstract contract BaseIntegrationTest is DeploymentTest {
     T1155 t1155;
     T20 credit;
 
-    uint256 lenderPK = uint256(777);
-    address lender = vm.addr(lenderPK);
-    uint256 borrowerPK = uint256(888);
-    address borrower = vm.addr(borrowerPK);
     PWNSimpleLoanSimpleProposal.Proposal simpleProposal;
 
     function setUp() public override {
@@ -75,11 +71,6 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         });
     }
 
-
-    function _sign(uint256 pk, bytes32 digest) internal pure returns (bytes memory) {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
-        return abi.encodePacked(r, s, v);
-    }
 
     // Create from proposal
 

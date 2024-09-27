@@ -26,8 +26,6 @@ abstract contract UseCasesTest is DeploymentTest {
     address DOODLE = 0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e;
 
     T20 credit;
-    address lender = makeAddr("lender");
-    address borrower = makeAddr("borrower");
 
     PWNSimpleLoanSimpleProposal.Proposal proposal;
 
