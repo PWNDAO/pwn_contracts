@@ -18,4 +18,31 @@ interface IChainlinkFeedRegistryLike {
      */
     function getFeed(address base, address quote) external view returns (IChainlinkAggregatorLike aggregator);
 
+    /**
+     * @notice Allows an owner to begin transferring ownership to a new address,
+     * pending.
+     */
+    function transferOwnership(address to) external;
+
+    /**
+     * @notice Allows an ownership transfer to be completed by the recipient.
+     */
+    function acceptOwnership() external;
+
+    /**
+     * @notice Propose a new Chainlink aggregator for a given base and quote asset.
+     * @param base Base asset address.
+     * @param quote Quote asset address.
+     * @param aggregator Chainlink aggregator address.
+     */
+    function proposeFeed(address base, address quote, address aggregator) external;
+
+    /**
+     * @notice Confirm a new Chainlink aggregator for a given base and quote asset.
+     * @param base Base asset address.
+     * @param quote Quote asset address.
+     * @param aggregator Chainlink aggregator address.
+     */
+    function confirmFeed(address base, address quote, address aggregator) external;
+
 }
