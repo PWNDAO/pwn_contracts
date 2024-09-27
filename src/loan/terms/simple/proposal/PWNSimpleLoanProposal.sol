@@ -229,7 +229,7 @@ abstract contract PWNSimpleLoanProposal {
         if (durationOrDate <= 1e9) {
             // Value is duration
             return durationOrDate;
-        } else if (durationOrDate >= block.timestamp) {
+        } else if (durationOrDate > block.timestamp) {
             // Value is date
             return uint32(uint256(durationOrDate) - block.timestamp);
         } else {
