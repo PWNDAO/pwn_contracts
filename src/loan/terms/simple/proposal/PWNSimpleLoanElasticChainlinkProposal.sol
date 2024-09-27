@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { MultiToken, IERC20 } from "MultiToken/MultiToken.sol";
+import { MultiToken } from "MultiToken/MultiToken.sol";
 
+import { IERC20Metadata } from "openzeppelin/interfaces/IERC20Metadata.sol";
 import { Math } from "openzeppelin/utils/math/Math.sol";
+import { Address } from "openzeppelin/utils/Address.sol";
 
 import { IChainlinkAggregatorLike } from "pwn/interfaces/IChainlinkAggregatorLike.sol";
 import { IChainlinkFeedRegistryLike } from "pwn/interfaces/IChainlinkFeedRegistryLike.sol";
@@ -282,12 +284,17 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
             creditPrice = _scalePrice(creditPrice, creditPriceDecimals, collateralPriceDecimals);
         }
 
+        // Note: assume that if credit or collateral is not ERC20, function would fail before this point
+
+        uint256 collateralDecimals = _safeFetchDecimals(collateralAddress);
+        uint256 creditDecimals = _safeFetchDecimals(creditAddress);
+
         // calculate collateral amount
         return Math.mulDiv(
-            creditAmount,
+            creditAmount * 10 ** (collateralDecimals > creditDecimals ? collateralDecimals - creditDecimals : 0),
             creditPrice * LOAN_TO_VALUE_DENOMINATOR,
             collateralPrice * loanToValue
-        );
+        ) / 10 ** (collateralDecimals < creditDecimals ? creditDecimals - collateralDecimals : 0);
     }
 
     /**
@@ -475,6 +482,20 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
             return price / 10 ** (priceDecimals - newDecimals);
         }
         return price;
+    }
+
+    /**
+     * @notice Fetch asset decimals.
+     * @dev If asset does not implement `decimals()`, function will return 0.
+     * @param asset Address of an asset.
+     * @return Decimals of an asset or 0 if asset does not implement `decimals()`.
+     */
+    function _safeFetchDecimals(address asset) internal view returns (uint256) {
+        bytes memory rawDecimals = Address.functionStaticCall(asset, abi.encodeWithSignature("decimals()"));
+        if (rawDecimals.length == 0) {
+            return 0;
+        }
+        return abi.decode(rawDecimals, (uint256));
     }
 
 }

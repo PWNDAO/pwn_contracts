@@ -38,6 +38,8 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
     function setUp() virtual public override {
         super.setUp();
 
+        vm.etch(token, "bytes");
+
         proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, address(0), weth);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
@@ -72,7 +74,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
 
         _mockFeed(generalAggregator);
         _mockLastRoundData(generalAggregator, 1e18, 1);
-        _mockDecimals(generalAggregator, 18);
+        _mockFeedDecimals(generalAggregator, 18);
         _mockSequencerUptimeFeed(true, block.timestamp - 1);
     }
 
@@ -112,6 +114,8 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
         proposal.loanContract = _params.loanContract;
 
         proposalValues.creditAmount = _params.creditAmount;
+
+        vm.etch(proposal.collateralAddress, "bytes");
     }
 
 
@@ -157,7 +161,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
         );
     }
 
-    function _mockDecimals(address aggregator, uint8 decimals) internal {
+    function _mockFeedDecimals(address aggregator, uint8 decimals) internal {
         vm.mockCall(
             aggregator,
             abi.encodeWithSelector(IChainlinkAggregatorLike.decimals.selector),
@@ -171,6 +175,10 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
             abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector),
             abi.encode(0, isUp ? 0 : 1, startedAt, 0, 0)
         );
+    }
+
+    function _mockAssetDecimals(address asset, uint8 decimals) internal {
+        vm.mockCall(asset, abi.encodeWithSignature("decimals()"), abi.encode(decimals));
     }
 
 }
@@ -318,19 +326,22 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
 
         L2_GRACE_PERIOD = proposalContract.L2_GRACE_PERIOD();
 
+        _mockAssetDecimals(collAddr, 18);
+        _mockAssetDecimals(credAddr, 18);
+
         _mockFeed(collAggregator, collAddr, ChainlinkDenominations.USD);
         _mockFeed(collAggregator, collAddr, ChainlinkDenominations.ETH);
         _mockLastRoundData(collAggregator, 1e18, 1);
-        _mockDecimals(collAggregator, 18);
+        _mockFeedDecimals(collAggregator, 18);
 
         _mockFeed(credAggregator, credAddr, ChainlinkDenominations.USD);
         _mockFeed(credAggregator, credAddr, ChainlinkDenominations.ETH);
         _mockLastRoundData(credAggregator, 1e18, 1);
-        _mockDecimals(credAggregator, 18);
+        _mockFeedDecimals(credAggregator, 18);
 
         _mockFeed(generalAggregator, ChainlinkDenominations.ETH, ChainlinkDenominations.USD);
         _mockLastRoundData(generalAggregator, 1e18, 1);
-        _mockDecimals(generalAggregator, 18);
+        _mockFeedDecimals(generalAggregator, 18);
     }
 
 
@@ -508,9 +519,9 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
 
     function test_shouldReturnCollateralAmount_whenBothPricesInUSD() external {
         _mockLastRoundData(credAggregator, 1e8, 1);
-        _mockDecimals(credAggregator, 8);
+        _mockFeedDecimals(credAggregator, 8);
         _mockLastRoundData(collAggregator, 1e18, 1);
-        _mockDecimals(collAggregator, 18);
+        _mockFeedDecimals(collAggregator, 18);
         assertEq(
             proposalContract.getCollateralAmount(credAddr, 9876, collAddr, 10000),
             9876
@@ -525,9 +536,9 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         );
 
         _mockLastRoundData(credAggregator, 1e25, 1);
-        _mockDecimals(credAggregator, 25);
+        _mockFeedDecimals(credAggregator, 25);
         _mockLastRoundData(collAggregator, 200e18, 1);
-        _mockDecimals(collAggregator, 18);
+        _mockFeedDecimals(collAggregator, 18);
         assertEq(
             proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 10000),
             0.5e18
@@ -555,9 +566,9 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         );
 
         _mockLastRoundData(credAggregator, 1e8, 1);
-        _mockDecimals(credAggregator, 8);
+        _mockFeedDecimals(credAggregator, 8);
         _mockLastRoundData(collAggregator, 1e18, 1);
-        _mockDecimals(collAggregator, 18);
+        _mockFeedDecimals(collAggregator, 18);
         assertEq(
             proposalContract.getCollateralAmount(credAddr, 9876, collAddr, 10000),
             9876
@@ -572,9 +583,9 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         );
 
         _mockLastRoundData(credAggregator, 1e25, 1);
-        _mockDecimals(credAggregator, 25);
+        _mockFeedDecimals(credAggregator, 25);
         _mockLastRoundData(collAggregator, 200e18, 1);
-        _mockDecimals(collAggregator, 18);
+        _mockFeedDecimals(collAggregator, 18);
         assertEq(
             proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 10000),
             0.5e18
@@ -602,11 +613,11 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         );
 
         _mockLastRoundData(credAggregator, 2500e2, 1);
-        _mockDecimals(credAggregator, 2);
+        _mockFeedDecimals(credAggregator, 2);
         _mockLastRoundData(collAggregator, 1e18, 1);
-        _mockDecimals(collAggregator, 18);
+        _mockFeedDecimals(collAggregator, 18);
         _mockLastRoundData(generalAggregator, 2500e8, 1);
-        _mockDecimals(generalAggregator, 8);
+        _mockFeedDecimals(generalAggregator, 8);
         assertEq(
             proposalContract.getCollateralAmount(credAddr, 9876, collAddr, 10000),
             9876
@@ -621,11 +632,11 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         );
 
         _mockLastRoundData(credAggregator, 2500e25, 1);
-        _mockDecimals(credAggregator, 25);
+        _mockFeedDecimals(credAggregator, 25);
         _mockLastRoundData(collAggregator, 200e18, 1);
-        _mockDecimals(collAggregator, 18);
+        _mockFeedDecimals(collAggregator, 18);
         _mockLastRoundData(generalAggregator, 2500e8, 1);
-        _mockDecimals(generalAggregator, 8);
+        _mockFeedDecimals(generalAggregator, 8);
         assertEq(
             proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 10000),
             0.5e18
@@ -637,6 +648,44 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         assertEq(
             proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 100),
             50e18
+        );
+    }
+
+    function test_shouldReturnCollateralAmountWithCorrectDecimals() external {
+        _mockLastRoundData(credAggregator, 1e8, 1);
+        _mockFeedDecimals(credAggregator, 8);
+        _mockLastRoundData(collAggregator, 2500e8, 1);
+        _mockFeedDecimals(collAggregator, 8);
+
+        _mockAssetDecimals(collAddr, 18);
+        _mockAssetDecimals(credAddr, 6);
+        assertEq(
+            proposalContract.getCollateralAmount(credAddr, 500e6, collAddr, 8000),
+            0.25e18
+        );
+
+        _mockAssetDecimals(collAddr, 6);
+        _mockAssetDecimals(credAddr, 18);
+        assertEq(
+            proposalContract.getCollateralAmount(credAddr, 500e18, collAddr, 8000),
+            0.25e6
+        );
+    }
+
+    function test_shouldUseZeroDecimals_whenDecimalsNotImplemented() external {
+        address credAddrWithoutDecimals = makeAddr("credAddrWithoutDecimals");
+        vm.etch(credAddrWithoutDecimals, "bytes");
+
+        _mockFeed(credAggregator, credAddrWithoutDecimals, ChainlinkDenominations.USD);
+        _mockLastRoundData(credAggregator, 1e8, 1);
+        _mockFeedDecimals(credAggregator, 8);
+        _mockLastRoundData(collAggregator, 2500e8, 1);
+        _mockFeedDecimals(collAggregator, 8);
+
+        _mockAssetDecimals(collAddr, 18);
+        assertEq(
+            proposalContract.getCollateralAmount(credAddrWithoutDecimals, 500, collAddr, 8000),
+            0.25e18
         );
     }
 
@@ -739,7 +788,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_findPrice_Test is PWNSimp
         _price = bound(_price, 0, uint256(type(int256).max));
 
         _mockLastRoundData(generalAggregator, int256(_price), 1);
-        _mockDecimals(generalAggregator, _decimals);
+        _mockFeedDecimals(generalAggregator, _decimals);
 
         vm.expectCall(
             feedRegistry,
@@ -762,7 +811,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_findPrice_Test is PWNSimp
         _price = bound(_price, 0, uint256(type(int256).max));
 
         _mockLastRoundData(generalAggregator, int256(_price), 1);
-        _mockDecimals(generalAggregator, _decimals);
+        _mockFeedDecimals(generalAggregator, _decimals);
         vm.mockCallRevert(
             feedRegistry,
             abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
@@ -874,7 +923,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_fetchPrice_Test is PWNSim
     function testFuzz_shouldReturnPriceAndDecimals(uint256 _price, uint8 _decimals) external {
         _price = bound(_price, 0, uint256(type(int256).max));
 
-        _mockDecimals(generalAggregator, _decimals);
+        _mockFeedDecimals(generalAggregator, _decimals);
         _mockLastRoundData(generalAggregator, int256(_price), 1);
 
         (bool success, uint256 price, uint8 decimals) = proposalContract.exposed_fetchPrice(asset, denominator);
@@ -926,7 +975,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_convertUSDDenominatorToET
         uint8 resultDecimals = uint8(Math.max(nDecimals, feedDecimals));
 
         _mockLastRoundData(generalAggregator, int256(10 ** feedDecimals), 1);
-        _mockDecimals(generalAggregator, feedDecimals);
+        _mockFeedDecimals(generalAggregator, feedDecimals);
 
         (, uint256 price, uint8 decimals) = proposalContract.exposed_convertUSDDenominatorToETH(10 ** nDecimals, nDecimals);
 
@@ -935,7 +984,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_convertUSDDenominatorToET
     }
 
     function test_shouldConvertPrice() external {
-        _mockDecimals(generalAggregator, 8);
+        _mockFeedDecimals(generalAggregator, 8);
 
         _mockLastRoundData(generalAggregator, 3000e8, 1);
         (, uint256 price, uint8 decimals) = proposalContract.exposed_convertUSDDenominatorToETH(6000e8, 8);
