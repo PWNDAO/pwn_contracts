@@ -784,7 +784,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_findPrice_Test is PWNSimp
 
     address asset = makeAddr("asset");
 
-    function testFuzz_shouldReturnUSDUSDPrice_whenAvailable(uint256 _price, uint8 _decimals) external {
+    function testFuzz_shouldFetchUSDPrice_whenAvailable(uint256 _price, uint8 _decimals) external {
         _price = bound(_price, 0, uint256(type(int256).max));
 
         _mockLastRoundData(generalAggregator, int256(_price), 1);
@@ -798,6 +798,11 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_findPrice_Test is PWNSimp
         vm.expectCall(
             feedRegistry,
             abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
+            0
+        );
+        vm.expectCall(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
             0
         );
 
@@ -828,6 +833,11 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_findPrice_Test is PWNSimp
             abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
             1
         );
+        vm.expectCall(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
+            0
+        );
 
         (uint256 price, uint8 decimals, address denominator) = proposalContract.exposed_findPrice(asset);
         assertEq(price, _price);
@@ -835,7 +845,11 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_findPrice_Test is PWNSimp
         assertEq(denominator, ChainlinkDenominations.ETH);
     }
 
-    function test_shouldFail_whenPriceNotFoundInUSDOrETH() external {
+    function testFuzz_shouldFetchBTCPrice_whenUSDNotAvailable_whenETHNotAvailable(uint256 _price, uint8 _decimals) external {
+        _price = bound(_price, 0, uint256(type(int256).max));
+
+        _mockLastRoundData(generalAggregator, int256(_price), 1);
+        _mockFeedDecimals(generalAggregator, _decimals);
         vm.mockCallRevert(
             feedRegistry,
             abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
@@ -844,6 +858,45 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_findPrice_Test is PWNSimp
         vm.mockCallRevert(
             feedRegistry,
             abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
+            "whatnot"
+        );
+
+        vm.expectCall(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
+            1
+        );
+        vm.expectCall(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
+            1
+        );
+        vm.expectCall(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
+            1
+        );
+
+        (uint256 price, uint8 decimals, address denominator) = proposalContract.exposed_findPrice(asset);
+        assertEq(price, _price);
+        assertEq(decimals, _decimals);
+        assertEq(denominator, ChainlinkDenominations.BTC);
+    }
+
+    function test_shouldFail_whenUSDNotAvailable_whenETHNotAvailable_whenBTCNotAvailable() external {
+        vm.mockCallRevert(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
+            "whatnot"
+        );
+        vm.mockCallRevert(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
+            "whatnot"
+        );
+        vm.mockCallRevert(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
             "whatnot"
         );
 
@@ -937,33 +990,37 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_fetchPrice_Test is PWNSim
 
 
 /*----------------------------------------------------------*|
-|*  # EXPOSED - CONVERT USD DENOMINATOR TO ETH              *|
+|*  # EXPOSED - CONVERT PRICE DENOMINATOR                   *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanElasticChainlinkProposal_Exposed_convertUSDDenominatorToETH_Test is PWNSimpleLoanElasticChainlinkProposalTest {
+contract PWNSimpleLoanElasticChainlinkProposal_Exposed_convertPriceDenominator_Test is PWNSimpleLoanElasticChainlinkProposalTest {
 
-    function test_shouldFetchETHPriceInUSD() external {
+    address oDenominator = makeAddr("originalDenominator");
+    address nDenominator = makeAddr("newDenominator");
+
+    function test_shouldFetchConverterPriceFeed() external {
         vm.expectCall(
             feedRegistry,
             abi.encodeWithSelector(
-                IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD
+                IChainlinkFeedRegistryLike.getFeed.selector, nDenominator, oDenominator
             )
         );
 
-        proposalContract.exposed_convertUSDDenominatorToETH(1e18, 18);
+        proposalContract.exposed_convertPriceDenominator(1e18, 18, oDenominator, nDenominator);
     }
 
     function testFuzz_shouldReturnSameValues_whenFailedToFetchPrice(uint256 nPrice, uint8 nDecimals) external {
         vm.mockCallRevert(
             feedRegistry,
             abi.encodeWithSelector(
-                IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD
+                IChainlinkFeedRegistryLike.getFeed.selector, nDenominator, oDenominator
             ),
             "whatnot"
         );
 
         (bool success, uint256 price, uint8 decimals)
-            = proposalContract.exposed_convertUSDDenominatorToETH(nPrice, nDecimals);
+            = proposalContract.exposed_convertPriceDenominator(nPrice, nDecimals, oDenominator, nDenominator);
+
         assertFalse(success);
         assertEq(price, nPrice);
         assertEq(decimals, nDecimals);
@@ -977,7 +1034,8 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_convertUSDDenominatorToET
         _mockLastRoundData(generalAggregator, int256(10 ** feedDecimals), 1);
         _mockFeedDecimals(generalAggregator, feedDecimals);
 
-        (, uint256 price, uint8 decimals) = proposalContract.exposed_convertUSDDenominatorToETH(10 ** nDecimals, nDecimals);
+        (, uint256 price, uint8 decimals)
+            = proposalContract.exposed_convertPriceDenominator(10 ** nDecimals, nDecimals, oDenominator, nDenominator);
 
         assertEq(price, 10 ** resultDecimals);
         assertEq(decimals, resultDecimals);
@@ -987,20 +1045,20 @@ contract PWNSimpleLoanElasticChainlinkProposal_Exposed_convertUSDDenominatorToET
         _mockFeedDecimals(generalAggregator, 8);
 
         _mockLastRoundData(generalAggregator, 3000e8, 1);
-        (, uint256 price, uint8 decimals) = proposalContract.exposed_convertUSDDenominatorToETH(6000e8, 8);
+        (, uint256 price, uint8 decimals) = proposalContract.exposed_convertPriceDenominator(6000e8, 8, oDenominator, nDenominator);
         assertEq(price, 2e8);
 
         _mockLastRoundData(generalAggregator, 500e8, 1);
-        (, price, decimals) = proposalContract.exposed_convertUSDDenominatorToETH(100e8, 8);
+        (, price, decimals) = proposalContract.exposed_convertPriceDenominator(100e8, 8, oDenominator, nDenominator);
         assertEq(price, 0.2e8);
 
         _mockLastRoundData(generalAggregator, 5000e8, 1);
-        (, price, decimals) = proposalContract.exposed_convertUSDDenominatorToETH(1e8, 8);
+        (, price, decimals) = proposalContract.exposed_convertPriceDenominator(1e8, 8, oDenominator, nDenominator);
         assertEq(price, 0.0002e8);
     }
 
     function test_shouldReturnSuccess() external {
-        (bool success,,) = proposalContract.exposed_convertUSDDenominatorToETH(1e18, 18);
+        (bool success,,) = proposalContract.exposed_convertPriceDenominator(1e18, 18, oDenominator, nDenominator);
         assertTrue(success);
     }
 

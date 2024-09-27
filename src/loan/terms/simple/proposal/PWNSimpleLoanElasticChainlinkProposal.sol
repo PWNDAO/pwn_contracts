@@ -255,26 +255,48 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         (uint256 creditPrice, uint8 creditPriceDecimals, address creditDenominator) = _findPrice(creditAddress);
         (uint256 collateralPrice, uint8 collateralPriceDecimals, address collateralDenominator) = _findPrice(collateralAddress);
 
-        // convert prices to ETH denominator if necessary
-        // Note: assume that only USD or ETH can be denominators
-        bool success = true;
-        if (creditDenominator == ChainlinkDenominations.USD && collateralDenominator == ChainlinkDenominations.ETH) {
-            // convert credit price to ETH
-            (success, creditPrice, creditPriceDecimals) = _convertUSDDenominatorToETH({
-                nominatorPrice: creditPrice,
-                nominatorDecimals: creditPriceDecimals
-            });
-        } else if (creditDenominator == ChainlinkDenominations.ETH && collateralDenominator == ChainlinkDenominations.USD) {
-            // convert collateral price to ETH
-            (success, collateralPrice, collateralPriceDecimals) = _convertUSDDenominatorToETH({
-                nominatorPrice: collateralPrice,
-                nominatorDecimals: collateralPriceDecimals
-            });
-        }
-        if (!success) {
-            revert ChainlinkFeedCommonDenominatorNotFound({
-                creditAsset: creditAddress, collateralAsset: collateralAddress
-            });
+        // convert prices to the same denominator
+        // Note: assume only USD, ETH, or BTC can be denominator
+        if (creditDenominator != collateralDenominator) {
+
+            // We can assume that most assets have price feed in USD. If not, we need to find common denominator.
+            // Table below shows conversions between assets.
+            //  -------------------------
+            //  |     | USD | ETH | BTC |  <-- credit
+            //  | USD |  X  | ETH | BTC |
+            //  | ETH | ETH |  X  | ETH |
+            //  | BTC | BTC | ETH |  X  |
+            //  -------------------------
+            //     ^ collateral
+            //
+            // For this to work, we need to have this price feeds: ETH/USD, ETH/BTC, BTC/USD.
+            // This will cover most of the cases, where assets don't have price feed in USD.
+
+            bool success = true;
+            if (creditDenominator == ChainlinkDenominations.USD) {
+                (success, creditPrice, creditPriceDecimals) = _convertPriceDenominator({
+                    nominatorPrice: creditPrice,
+                    nominatorDecimals: creditPriceDecimals,
+                    originalDenominator: creditDenominator,
+                    newDenominator: collateralDenominator
+                });
+            } else {
+                (success, collateralPrice, collateralPriceDecimals) = _convertPriceDenominator({
+                    nominatorPrice: collateralPrice,
+                    nominatorDecimals: collateralPriceDecimals,
+                    originalDenominator: collateralDenominator,
+                    newDenominator: collateralDenominator == ChainlinkDenominations.USD
+                        ? creditDenominator
+                        : ChainlinkDenominations.ETH
+                });
+            }
+
+            if (!success) {
+                revert ChainlinkFeedCommonDenominatorNotFound({
+                    creditAsset: creditAddress,
+                    collateralAsset: collateralAddress
+                });
+            }
         }
 
         // scale prices to the same decimals
@@ -385,10 +407,10 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Find price for an asset with USD or ETH denominator.
+     * @notice Find price for an asset in USD, ETH, or BTC denominator.
      * @param asset Address of an asset.
      * @return price Price of an asset.
-     * @return priceDecimals Decimals of a price.
+     * @return priceDecimals Decimals of the price.
      * @return denominator Address of a denominator asset.
      */
     function _findPrice(address asset) internal view returns (uint256, uint8, address) {
@@ -400,6 +422,11 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         (success, price, priceDecimals) = _fetchPrice(asset, ChainlinkDenominations.ETH);
         if (success) {
             return (price, priceDecimals, ChainlinkDenominations.ETH);
+        }
+
+        (success, price, priceDecimals) = _fetchPrice(asset, ChainlinkDenominations.BTC);
+        if (success) {
+            return (price, priceDecimals, ChainlinkDenominations.BTC);
         }
 
         revert ChainlinkFeedNotFound({ asset: asset });
@@ -436,19 +463,20 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @notice Convert USD denominated price to ETH denominated price.
-     * @param nominatorPrice Price of an asset denomination in USD.
-     * @param nominatorDecimals Decimals of a price in USD.
+     * @notice Convert price denominator.
+     * @param nominatorPrice Price of an asset denomination in `originalDenominator`.
+     * @param nominatorDecimals Decimals of a price in `originalDenominator`.
+     * @param originalDenominator Address of an original denominator asset.
+     * @param newDenominator Address of a new denominator asset.
      * @return success True if conversion was successful.
-     * @return nominatorPrice Price of an asset denomination in ETH.
-     * @return nominatorDecimals Decimals of a price in ETH.
+     * @return nominatorPrice Price of an asset denomination in `newDenominator`.
+     * @return nominatorDecimals Decimals of a price in `newDenominator`.
      */
-    function _convertUSDDenominatorToETH(
-        uint256 nominatorPrice, uint8 nominatorDecimals
+    function _convertPriceDenominator(
+        uint256 nominatorPrice, uint8 nominatorDecimals, address originalDenominator, address newDenominator
     ) internal view returns (bool, uint256, uint8) {
         (bool success, uint256 price, uint8 priceDecimals) = _fetchPrice({
-            asset: ChainlinkDenominations.ETH,
-            denominator: ChainlinkDenominations.USD
+            asset: newDenominator, denominator: originalDenominator
         });
 
         if (!success) {

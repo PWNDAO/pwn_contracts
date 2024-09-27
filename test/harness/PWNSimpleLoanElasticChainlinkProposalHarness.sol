@@ -27,8 +27,8 @@ contract PWNSimpleLoanElasticChainlinkProposalHarness is PWNSimpleLoanElasticCha
         return _fetchPrice(asset, denominator);
     }
 
-    function exposed_convertUSDDenominatorToETH(uint256 nominatorPrice, uint8 nominatorDecimals) external view returns (bool, uint256, uint8) {
-        return _convertUSDDenominatorToETH(nominatorPrice, nominatorDecimals);
+    function exposed_convertPriceDenominator(uint256 nominatorPrice, uint8 nominatorDecimals, address originalDenominator, address newDenominator) external view returns (bool, uint256, uint8) {
+        return _convertPriceDenominator(nominatorPrice, nominatorDecimals, originalDenominator, newDenominator);
     }
 
     function exposed_scalePrice(uint256 price, uint8 priceDecimals, uint8 newDecimals) external pure returns (uint256) {
