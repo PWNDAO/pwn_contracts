@@ -70,5 +70,6 @@ contract DeployedProtocolTest is DeploymentTest {
     function test_deployedProtocol_mantle() external { _test_deployedProtocol("mantle"); }
     function test_deployedProtocol_bsc() external { _test_deployedProtocol("bsc"); }
     function test_deployedProtocol_linea() external { _test_deployedProtocol("linea"); }
+    function test_deployedProtocol_gnosis() external { _test_deployedProtocol("gnosis"); }
 
 }
