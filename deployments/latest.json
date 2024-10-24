@@ -1,5 +1,5 @@
 {
-    "deployedChains": [1, 10, 25, 56, 100, 137, 8453, 42161, 59144, 11155111],
+    "deployedChains": [1, 10, 25, 56, 100, 137, 1301, 8453, 42161, 59144, 11155111],
     "chains": {
         "1": {
             "dao": "0x1B8383D2726E7e18189205337424a2631A2102F4",
@@ -102,6 +102,25 @@
             "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
             "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
             "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
+            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
+            "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
+            "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
+            "config": "0xd52a2898d61636bB3eEF0d145f05352FF543bdCC",
+            "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+            "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+            "revokedNonce": "0x972204fF33348ee6889B2d0A3967dB67d7b08e4c",
+            "simpleLoan": "0x9A93AE395F09C6F350E3306aec592763c517072e",
+            "simpleLoanSimpleProposal": "0xEb3e6B9B51911175F3a121b5Efb46Fa354520f41",
+            "simpleLoanListProposal": "0x0E6cE603d328de0D357D624F10f3f448855fFBDC",
+            "simpleLoanFungibleProposal": "0x0618504Fa17888ec36AC5D46A4A0Ed59436Fb77E",
+            "simpleLoanDutchAuctionProposal": "0x807eb2A61B2d0193b0696436BeFFcFE4d6D520CB"
+        },
+        "1301": {
+            "dao": "0x0000000000000000000000000000000000000000",
+            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
+            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
+            "daoSafe": "0x0000000000000000000000000000000000000000",
+            "deployerSafe": "0x0000000000000000000000000000000000000000",
             "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
