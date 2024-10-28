@@ -8,10 +8,10 @@ import {
     PWNSimpleLoan,
     IChainlinkAggregatorLike,
     IChainlinkFeedRegistryLike,
-    ChainlinkDenominations
+    ChainlinkDenominations,
+    Chainlink
 } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticChainlinkProposal.sol";
 
-import { PWNSimpleLoanElasticChainlinkProposalHarness } from "test/harness/PWNSimpleLoanElasticChainlinkProposalHarness.sol";
 import {
     MultiToken,
     Math,
@@ -22,7 +22,7 @@ import {
 
 abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProposalTest {
 
-    PWNSimpleLoanElasticChainlinkProposalHarness proposalContract;
+    PWNSimpleLoanElasticChainlinkProposal proposalContract;
     PWNSimpleLoanElasticChainlinkProposal.Proposal proposal;
     PWNSimpleLoanElasticChainlinkProposal.ProposalValues proposalValues;
 
@@ -40,7 +40,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
 
         vm.etch(token, "bytes");
 
-        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, address(0), weth);
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposal(hub, revokedNonce, config, utilizedCredit, feedRegistry, address(0), weth);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
         proposal = PWNSimpleLoanElasticChainlinkProposal.Proposal({
@@ -324,7 +324,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
     function setUp() virtual override public {
         super.setUp();
 
-        L2_GRACE_PERIOD = proposalContract.L2_GRACE_PERIOD();
+        L2_GRACE_PERIOD = Chainlink.L2_GRACE_PERIOD;
 
         _mockAssetDecimals(collAddr, 18);
         _mockAssetDecimals(credAddr, 18);
@@ -348,7 +348,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
     function test_shouldFetchSequencerUptimeFeed_whenFeedSet() external {
         vm.warp(1e9);
 
-        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposal(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
         _mockSequencerUptimeFeed(true, block.timestamp - L2_GRACE_PERIOD - 1);
         _mockLastRoundData(collAggregator, 1e18, block.timestamp);
         _mockLastRoundData(credAggregator, 1e18, block.timestamp);
@@ -364,10 +364,10 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
     function test_shouldFail_whenL2SequencerDown_whenFeedSet() external {
         vm.warp(1e9);
 
-        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposal(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
         _mockSequencerUptimeFeed(false, block.timestamp - L2_GRACE_PERIOD - 1);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanElasticChainlinkProposal.L2SequencerDown.selector));
+        vm.expectRevert(abi.encodeWithSelector(Chainlink.L2SequencerDown.selector));
         proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
     }
 
@@ -375,12 +375,12 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         vm.warp(1e9);
         startedAt = bound(startedAt, block.timestamp - L2_GRACE_PERIOD, block.timestamp);
 
-        proposalContract = new PWNSimpleLoanElasticChainlinkProposalHarness(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
+        proposalContract = new PWNSimpleLoanElasticChainlinkProposal(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
         _mockSequencerUptimeFeed(true, startedAt);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNSimpleLoanElasticChainlinkProposal.GracePeriodNotOver.selector,
+                Chainlink.GracePeriodNotOver.selector,
                 block.timestamp - startedAt, L2_GRACE_PERIOD
             )
         );
@@ -408,6 +408,22 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         );
 
         proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
+    }
+
+    function test_shouldFetchETHPrice_whenWETH() external {
+        _mockAssetDecimals(weth, 18);
+
+        vm.expectCall(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD)
+        );
+        proposalContract.getCollateralAmount(weth, credAmount, collAddr, loanToValue);
+
+        vm.expectCall(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD)
+        );
+        proposalContract.getCollateralAmount(credAddr, credAmount, weth, loanToValue);
     }
 
     function test_shouldFetchETHPriceInUSD_whenCreditPriceInUSD_whenCollateralPriceNotInUSD() external {
@@ -511,7 +527,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNSimpleLoanElasticChainlinkProposal.ChainlinkFeedCommonDenominatorNotFound.selector, credAddr, collAddr
+                Chainlink.ChainlinkFeedCommonDenominatorNotFound.selector, credAddr, collAddr
             )
         );
         proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
@@ -769,313 +785,6 @@ contract PWNSimpleLoanElasticChainlinkProposal_AcceptProposal_Test is PWNSimpleL
         assertEq(terms.accruingInterestAPR, proposal.accruingInterestAPR);
         assertEq(terms.lenderSpecHash, isOffer ? proposal.proposerSpecHash : bytes32(0));
         assertEq(terms.borrowerSpecHash, isOffer ? bytes32(0) : proposal.proposerSpecHash);
-    }
-
-}
-
-
-// Testing exposed internals
-
-/*----------------------------------------------------------*|
-|*  # EXPOSED - FIND PRICE                                  *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanElasticChainlinkProposal_Exposed_findPrice_Test is PWNSimpleLoanElasticChainlinkProposalTest {
-
-    address asset = makeAddr("asset");
-
-    function testFuzz_shouldFetchUSDPrice_whenAvailable(uint256 _price, uint8 _decimals) external {
-        _price = bound(_price, 0, uint256(type(int256).max));
-
-        _mockLastRoundData(generalAggregator, int256(_price), 1);
-        _mockFeedDecimals(generalAggregator, _decimals);
-
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            1
-        );
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            0
-        );
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
-            0
-        );
-
-        (uint256 price, uint8 decimals, address denominator) = proposalContract.exposed_findPrice(asset);
-        assertEq(price, _price);
-        assertEq(decimals, _decimals);
-        assertEq(denominator, ChainlinkDenominations.USD);
-    }
-
-    function testFuzz_shouldFetchETHPrice_whenUSDNotAvailable(uint256 _price, uint8 _decimals) external {
-        _price = bound(_price, 0, uint256(type(int256).max));
-
-        _mockLastRoundData(generalAggregator, int256(_price), 1);
-        _mockFeedDecimals(generalAggregator, _decimals);
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            1
-        );
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            1
-        );
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
-            0
-        );
-
-        (uint256 price, uint8 decimals, address denominator) = proposalContract.exposed_findPrice(asset);
-        assertEq(price, _price);
-        assertEq(decimals, _decimals);
-        assertEq(denominator, ChainlinkDenominations.ETH);
-    }
-
-    function testFuzz_shouldFetchBTCPrice_whenUSDNotAvailable_whenETHNotAvailable(uint256 _price, uint8 _decimals) external {
-        _price = bound(_price, 0, uint256(type(int256).max));
-
-        _mockLastRoundData(generalAggregator, int256(_price), 1);
-        _mockFeedDecimals(generalAggregator, _decimals);
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            1
-        );
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            1
-        );
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
-            1
-        );
-
-        (uint256 price, uint8 decimals, address denominator) = proposalContract.exposed_findPrice(asset);
-        assertEq(price, _price);
-        assertEq(decimals, _decimals);
-        assertEq(denominator, ChainlinkDenominations.BTC);
-    }
-
-    function test_shouldFail_whenUSDNotAvailable_whenETHNotAvailable_whenBTCNotAvailable() external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
-            "whatnot"
-        );
-
-        vm.expectRevert(
-            abi.encodeWithSelector(PWNSimpleLoanElasticChainlinkProposal.ChainlinkFeedNotFound.selector, asset)
-        );
-        proposalContract.exposed_findPrice(asset);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # EXPOSED - FETCH PRICE                                 *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanElasticChainlinkProposal_Exposed_fetchPrice_Test is PWNSimpleLoanElasticChainlinkProposalTest {
-
-    address asset = makeAddr("asset");
-    address denominator = makeAddr("denominator");
-
-    function testFuzz_shouldGetFeedFromRegistry(address _asset, address _denominator) external {
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, _asset, _denominator)
-        );
-
-        proposalContract.exposed_fetchPrice(_asset, _denominator);
-    }
-
-    function test_shouldFetchETHPrice_whenWETH() external {
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, denominator)
-        );
-
-        proposalContract.exposed_fetchPrice(weth, denominator);
-    }
-
-    function test_shouldReturnFalse_whenAggregatorNotRegistered() external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, denominator),
-            "whatnot"
-        );
-
-        (bool success, uint256 price, uint8 decimals) = proposalContract.exposed_fetchPrice(asset, denominator);
-        assertFalse(success);
-        assertEq(price, 0);
-        assertEq(decimals, 0);
-    }
-
-    function test_shouldFail_whenNegativePrice() external {
-        _mockLastRoundData(generalAggregator, -1, 1);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                PWNSimpleLoanElasticChainlinkProposal.ChainlinkFeedReturnedNegativePrice.selector, asset, denominator, -1
-            )
-        );
-        proposalContract.exposed_fetchPrice(asset, denominator);
-    }
-
-    function test_shouldFail_whenPriceTooOld() external {
-        _mockLastRoundData(generalAggregator, 1, 1);
-
-        vm.warp(proposalContract.MAX_CHAINLINK_FEED_PRICE_AGE() + 2);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                PWNSimpleLoanElasticChainlinkProposal.ChainlinkFeedPriceTooOld.selector, asset, 1
-            )
-        );
-        proposalContract.exposed_fetchPrice(asset, denominator);
-    }
-
-    function testFuzz_shouldReturnPriceAndDecimals(uint256 _price, uint8 _decimals) external {
-        _price = bound(_price, 0, uint256(type(int256).max));
-
-        _mockFeedDecimals(generalAggregator, _decimals);
-        _mockLastRoundData(generalAggregator, int256(_price), 1);
-
-        (bool success, uint256 price, uint8 decimals) = proposalContract.exposed_fetchPrice(asset, denominator);
-
-        assertTrue(success);
-        assertEq(price, _price);
-        assertEq(decimals, _decimals);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # EXPOSED - CONVERT PRICE DENOMINATOR                   *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanElasticChainlinkProposal_Exposed_convertPriceDenominator_Test is PWNSimpleLoanElasticChainlinkProposalTest {
-
-    address oDenominator = makeAddr("originalDenominator");
-    address nDenominator = makeAddr("newDenominator");
-
-    function test_shouldFetchConverterPriceFeed() external {
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(
-                IChainlinkFeedRegistryLike.getFeed.selector, nDenominator, oDenominator
-            )
-        );
-
-        proposalContract.exposed_convertPriceDenominator(1e18, 18, oDenominator, nDenominator);
-    }
-
-    function testFuzz_shouldReturnSameValues_whenFailedToFetchPrice(uint256 nPrice, uint8 nDecimals) external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(
-                IChainlinkFeedRegistryLike.getFeed.selector, nDenominator, oDenominator
-            ),
-            "whatnot"
-        );
-
-        (bool success, uint256 price, uint8 decimals)
-            = proposalContract.exposed_convertPriceDenominator(nPrice, nDecimals, oDenominator, nDenominator);
-
-        assertFalse(success);
-        assertEq(price, nPrice);
-        assertEq(decimals, nDecimals);
-    }
-
-    function testFuzz_shouldScaleToBiggerDecimals(uint8 nDecimals, uint8 feedDecimals) external {
-        feedDecimals = uint8(bound(feedDecimals, 0, 70));
-        nDecimals = uint8(bound(nDecimals, 0, 70));
-        uint8 resultDecimals = uint8(Math.max(nDecimals, feedDecimals));
-
-        _mockLastRoundData(generalAggregator, int256(10 ** feedDecimals), 1);
-        _mockFeedDecimals(generalAggregator, feedDecimals);
-
-        (, uint256 price, uint8 decimals)
-            = proposalContract.exposed_convertPriceDenominator(10 ** nDecimals, nDecimals, oDenominator, nDenominator);
-
-        assertEq(price, 10 ** resultDecimals);
-        assertEq(decimals, resultDecimals);
-    }
-
-    function test_shouldConvertPrice() external {
-        _mockFeedDecimals(generalAggregator, 8);
-
-        _mockLastRoundData(generalAggregator, 3000e8, 1);
-        (, uint256 price, uint8 decimals) = proposalContract.exposed_convertPriceDenominator(6000e8, 8, oDenominator, nDenominator);
-        assertEq(price, 2e8);
-
-        _mockLastRoundData(generalAggregator, 500e8, 1);
-        (, price, decimals) = proposalContract.exposed_convertPriceDenominator(100e8, 8, oDenominator, nDenominator);
-        assertEq(price, 0.2e8);
-
-        _mockLastRoundData(generalAggregator, 5000e8, 1);
-        (, price, decimals) = proposalContract.exposed_convertPriceDenominator(1e8, 8, oDenominator, nDenominator);
-        assertEq(price, 0.0002e8);
-    }
-
-    function test_shouldReturnSuccess() external {
-        (bool success,,) = proposalContract.exposed_convertPriceDenominator(1e18, 18, oDenominator, nDenominator);
-        assertTrue(success);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # EXPOSED - SCALE PRICE                                 *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanElasticChainlinkProposal_Exposed_scalePrice_Test is PWNSimpleLoanElasticChainlinkProposalTest {
-
-    function test_shouldUpdateValueDecimals() external {
-        assertEq(proposalContract.exposed_scalePrice(1e18, 18, 19), 1e19);
-        assertEq(proposalContract.exposed_scalePrice(5e18, 18, 17), 5e17);
-        assertEq(proposalContract.exposed_scalePrice(3319200, 3, 1), 33192);
-        assertEq(proposalContract.exposed_scalePrice(0, 1, 10), 0);
     }
 
 }

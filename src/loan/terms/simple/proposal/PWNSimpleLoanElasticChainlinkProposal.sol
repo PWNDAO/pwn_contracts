@@ -3,15 +3,17 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { IERC20Metadata } from "openzeppelin/interfaces/IERC20Metadata.sol";
 import { Math } from "openzeppelin/utils/math/Math.sol";
-import { Address } from "openzeppelin/utils/Address.sol";
 
-import { IChainlinkAggregatorLike } from "pwn/interfaces/IChainlinkAggregatorLike.sol";
-import { IChainlinkFeedRegistryLike } from "pwn/interfaces/IChainlinkFeedRegistryLike.sol";
-import { ChainlinkDenominations } from "pwn/loan/lib/ChainlinkDenominations.sol";
+import {
+    Chainlink,
+    ChainlinkDenominations,
+    IChainlinkFeedRegistryLike,
+    IChainlinkAggregatorLike
+} from "pwn/loan/lib/Chainlink.sol";
 import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import { safeFetchDecimals } from "pwn/loan/utils/safeFetchDecimals.sol";
 
 
 /**
@@ -21,6 +23,8 @@ import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleL
  *         The amount of collateral and credit is specified during the proposal acceptance.
  */
 contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
+    using Chainlink for IChainlinkFeedRegistryLike;
+    using Chainlink for IChainlinkAggregatorLike;
 
     string public constant VERSION = "1.0";
 
@@ -28,16 +32,6 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      * @notice Loan to value denominator. It is used to calculate collateral amount from credit amount.
      */
     uint256 public constant LOAN_TO_VALUE_DENOMINATOR = 1e4;
-
-    /**
-     * @notice Maximum Chainlink feed price age.
-     */
-    uint256 public constant MAX_CHAINLINK_FEED_PRICE_AGE = 1 days;
-
-    /**
-     * @notice Grace period time for L2 Sequencer uptime feed.
-     */
-    uint256 public constant L2_GRACE_PERIOD = 10 minutes;
 
     /**
      * @dev EIP-712 simple proposal struct type hash.
@@ -136,35 +130,6 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      */
     error InsufficientCreditAmount(uint256 current, uint256 limit);
 
-    /**
-     * @notice Throw when Chainlink feed returns negative price.
-     */
-    error ChainlinkFeedReturnedNegativePrice(address asset, address denominator, int256 price);
-
-    /**
-     * @notice Throw when Chainlink feed for asset is not found.
-     */
-    error ChainlinkFeedNotFound(address asset);
-
-    /**
-     * @notice Throw when common denominator for credit and collateral assets is not found.
-     */
-    error ChainlinkFeedCommonDenominatorNotFound(address creditAsset, address collateralAsset);
-
-    /**
-     * @notice Throw when Chainlink feed price is too old.
-     */
-    error ChainlinkFeedPriceTooOld(address asset, uint256 updatedAt);
-
-    /**
-     * @notice Throw when L2 Sequencer uptime feed returns that the sequencer is down.
-     */
-    error L2SequencerDown();
-
-    /**
-     * @notice Throw when L2 Sequencer uptime feed grace period is not over.
-     */
-    error GracePeriodNotOver(uint256 timeSinceUp, uint256 gracePeriod);
 
     constructor(
         address _hub,
@@ -237,79 +202,18 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         address creditAddress, uint256 creditAmount, address collateralAddress, uint256 loanToValue
     ) public view returns (uint256) {
         // check L2 sequencer uptime if necessary
-        if (address(l2SequencerUptimeFeed) != address(0)) {
-            (, int256 answer, uint256 startedAt,,) = l2SequencerUptimeFeed.latestRoundData();
-            if (answer == 1) {
-                // sequencer is down
-                revert L2SequencerDown();
-            }
+        l2SequencerUptimeFeed.checkSequencerUptime();
 
-            uint256 timeSinceUp = block.timestamp - startedAt;
-            if (timeSinceUp <= L2_GRACE_PERIOD) {
-                // grace period is not over
-                revert GracePeriodNotOver({ timeSinceUp: timeSinceUp, gracePeriod: L2_GRACE_PERIOD });
-            }
-        }
+        // fetch asset prices
+        // Note: use ETH price feed for WETH asset due to absence of WETH price feed
+        (uint256 creditPrice, uint256 collateralPrice) = chainlinkFeedRegistry.fetchPricesWithCommonDenominator({
+            creditAsset: creditAddress == WETH ? ChainlinkDenominations.ETH : creditAddress,
+            collateralAsset: collateralAddress == WETH ? ChainlinkDenominations.ETH : collateralAddress
+        });
 
-        // fetch data from price feeds
-        (uint256 creditPrice, uint8 creditPriceDecimals, address creditDenominator) = _findPrice(creditAddress);
-        (uint256 collateralPrice, uint8 collateralPriceDecimals, address collateralDenominator) = _findPrice(collateralAddress);
-
-        // convert prices to the same denominator
-        // Note: assume only USD, ETH, or BTC can be denominator
-        if (creditDenominator != collateralDenominator) {
-
-            // We can assume that most assets have price feed in USD. If not, we need to find common denominator.
-            // Table below shows conversions between assets.
-            //  -------------------------
-            //  |     | USD | ETH | BTC |  <-- credit
-            //  | USD |  X  | ETH | BTC |
-            //  | ETH | ETH |  X  | ETH |
-            //  | BTC | BTC | ETH |  X  |
-            //  -------------------------
-            //     ^ collateral
-            //
-            // For this to work, we need to have this price feeds: ETH/USD, ETH/BTC, BTC/USD.
-            // This will cover most of the cases, where assets don't have price feed in USD.
-
-            bool success = true;
-            if (creditDenominator == ChainlinkDenominations.USD) {
-                (success, creditPrice, creditPriceDecimals) = _convertPriceDenominator({
-                    nominatorPrice: creditPrice,
-                    nominatorDecimals: creditPriceDecimals,
-                    originalDenominator: creditDenominator,
-                    newDenominator: collateralDenominator
-                });
-            } else {
-                (success, collateralPrice, collateralPriceDecimals) = _convertPriceDenominator({
-                    nominatorPrice: collateralPrice,
-                    nominatorDecimals: collateralPriceDecimals,
-                    originalDenominator: collateralDenominator,
-                    newDenominator: collateralDenominator == ChainlinkDenominations.USD
-                        ? creditDenominator
-                        : ChainlinkDenominations.ETH
-                });
-            }
-
-            if (!success) {
-                revert ChainlinkFeedCommonDenominatorNotFound({
-                    creditAsset: creditAddress,
-                    collateralAsset: collateralAddress
-                });
-            }
-        }
-
-        // scale prices to the same decimals
-        if (creditPriceDecimals > collateralPriceDecimals) {
-            collateralPrice = _scalePrice(collateralPrice, collateralPriceDecimals, creditPriceDecimals);
-        } else if (creditPriceDecimals < collateralPriceDecimals) {
-            creditPrice = _scalePrice(creditPrice, creditPriceDecimals, collateralPriceDecimals);
-        }
-
-        // Note: assume that if credit or collateral is not ERC20, function would fail before this point
-
-        uint256 collateralDecimals = _safeFetchDecimals(collateralAddress);
-        uint256 creditDecimals = _safeFetchDecimals(creditAddress);
+        // fetch asset decimals
+        uint256 creditDecimals = safeFetchDecimals(creditAddress);
+        uint256 collateralDecimals = safeFetchDecimals(collateralAddress);
 
         // calculate collateral amount
         return Math.mulDiv(
@@ -399,131 +303,6 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
             lenderSpecHash: proposal.isOffer ? proposal.proposerSpecHash : bytes32(0),
             borrowerSpecHash: proposal.isOffer ? bytes32(0) : proposal.proposerSpecHash
         });
-    }
-
-
-    /*----------------------------------------------------------*|
-    |*  # INTERNALS                                             *|
-    |*----------------------------------------------------------*/
-
-    /**
-     * @notice Find price for an asset in USD, ETH, or BTC denominator.
-     * @param asset Address of an asset.
-     * @return price Price of an asset.
-     * @return priceDecimals Decimals of the price.
-     * @return denominator Address of a denominator asset.
-     */
-    function _findPrice(address asset) internal view returns (uint256, uint8, address) {
-        (bool success, uint256 price, uint8 priceDecimals) = _fetchPrice(asset, ChainlinkDenominations.USD);
-        if (success) {
-            return (price, priceDecimals, ChainlinkDenominations.USD);
-        }
-
-        (success, price, priceDecimals) = _fetchPrice(asset, ChainlinkDenominations.ETH);
-        if (success) {
-            return (price, priceDecimals, ChainlinkDenominations.ETH);
-        }
-
-        (success, price, priceDecimals) = _fetchPrice(asset, ChainlinkDenominations.BTC);
-        if (success) {
-            return (price, priceDecimals, ChainlinkDenominations.BTC);
-        }
-
-        revert ChainlinkFeedNotFound({ asset: asset });
-    }
-
-    /**
-     * @notice Fetch price from Chainlink feed.
-     * @dev WETH price is fetched from the ETH price feed.
-     * @param asset Address of an asset.
-     * @param denominator Address of a denominator asset.
-     * @return success True if price was fetched successfully.
-     * @return price Price of an asset.
-     * @return decimals Decimals of a price.
-     */
-    function _fetchPrice(address asset, address denominator) internal view returns (bool, uint256, uint8) {
-        if (asset == WETH) {
-            asset = ChainlinkDenominations.ETH;
-        }
-
-        try chainlinkFeedRegistry.getFeed(asset, denominator) returns (IChainlinkAggregatorLike aggregator) {
-            (, int256 price,, uint256 updatedAt,) = aggregator.latestRoundData();
-            if (price < 0) {
-                revert ChainlinkFeedReturnedNegativePrice({ asset: asset, denominator: denominator, price: price });
-            }
-            if (block.timestamp - updatedAt > MAX_CHAINLINK_FEED_PRICE_AGE) {
-                revert ChainlinkFeedPriceTooOld({ asset: asset, updatedAt: updatedAt });
-            }
-
-            uint8 decimals = aggregator.decimals();
-            return (true, uint256(price), decimals);
-        } catch {
-            return (false, 0, 0);
-        }
-    }
-
-    /**
-     * @notice Convert price denominator.
-     * @param nominatorPrice Price of an asset denomination in `originalDenominator`.
-     * @param nominatorDecimals Decimals of a price in `originalDenominator`.
-     * @param originalDenominator Address of an original denominator asset.
-     * @param newDenominator Address of a new denominator asset.
-     * @return success True if conversion was successful.
-     * @return nominatorPrice Price of an asset denomination in `newDenominator`.
-     * @return nominatorDecimals Decimals of a price in `newDenominator`.
-     */
-    function _convertPriceDenominator(
-        uint256 nominatorPrice, uint8 nominatorDecimals, address originalDenominator, address newDenominator
-    ) internal view returns (bool, uint256, uint8) {
-        (bool success, uint256 price, uint8 priceDecimals) = _fetchPrice({
-            asset: newDenominator, denominator: originalDenominator
-        });
-
-        if (!success) {
-            return (false, nominatorPrice, nominatorDecimals);
-        }
-
-        if (priceDecimals < nominatorDecimals) {
-            price = _scalePrice(price, priceDecimals, nominatorDecimals);
-        } else if (priceDecimals > nominatorDecimals) {
-            nominatorPrice = _scalePrice(nominatorPrice, nominatorDecimals, priceDecimals);
-            nominatorDecimals = priceDecimals;
-        }
-        nominatorPrice = Math.mulDiv(nominatorPrice, 10 ** nominatorDecimals, price);
-
-        return (true, nominatorPrice, nominatorDecimals);
-    }
-
-    /**
-     * @notice Scale price to new decimals.
-     * @param price Price to be scaled.
-     * @param priceDecimals Decimals of a price.
-     * @param newDecimals New decimals.
-     * @return Scaled price.
-     */
-    function _scalePrice(
-        uint256 price, uint8 priceDecimals, uint8 newDecimals
-    ) internal pure returns (uint256) {
-        if (priceDecimals < newDecimals) {
-            return price * 10 ** (newDecimals - priceDecimals);
-        } else if (priceDecimals > newDecimals) {
-            return price / 10 ** (priceDecimals - newDecimals);
-        }
-        return price;
-    }
-
-    /**
-     * @notice Fetch asset decimals.
-     * @dev If asset does not implement `decimals()`, function will return 0.
-     * @param asset Address of an asset.
-     * @return Decimals of an asset or 0 if asset does not implement `decimals()`.
-     */
-    function _safeFetchDecimals(address asset) internal view returns (uint256) {
-        bytes memory rawDecimals = Address.functionStaticCall(asset, abi.encodeWithSignature("decimals()"));
-        if (rawDecimals.length == 0) {
-            return 0;
-        }
-        return abi.decode(rawDecimals, (uint256));
     }
 
 }
