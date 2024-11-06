@@ -16,6 +16,7 @@ mantle = "${MANTLE_URL}"
 bsc = "${BSC_URL}"
 linea = "${LINEA_URL}"
 gnosis = "${GNOSIS_URL}"
+world = "${WORLDCHAIN_URL}"
 
 # Testnets
 sepolia = "${SEPOLIA_URL}"
