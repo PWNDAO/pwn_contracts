@@ -30,7 +30,7 @@ import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
 contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     using MultiToken for address;
 
-    string public constant VERSION = "1.2";
+    string public constant VERSION = "1.2.1";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -354,7 +354,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     /**
      * @notice Create a new loan.
-     * @dev The function assumes a prior token approval to a contract address or signed permits.
+     * @dev The function assumes a prior token approval to a contract address.
      * @param proposalSpec Proposal specification struct.
      * @param lenderSpec Lender specification struct.
      * @param callerSpec Caller specification struct.
@@ -377,10 +377,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             revokedNonce.revokeNonce(msg.sender, callerSpec.nonce);
         }
 
-        // If refinancing a loan, check that the loan can be repaid
+        // When refinancing a loan, move the original loan to repaid state
         if (callerSpec.refinancingLoanId != 0) {
             LOAN storage loan = LOANs[callerSpec.refinancingLoanId];
             _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
+
+            // Update loan to repaid state
+            _updateRepaidLoan(callerSpec.refinancingLoanId);
         }
 
         // Accept proposal and get loan terms
@@ -433,21 +436,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             extra: extra
         });
 
-        // Execute permit for the caller
-        if (callerSpec.permitData.length > 0) {
-            Permit memory permit = abi.decode(callerSpec.permitData, (Permit));
-            _checkPermit(msg.sender, loanTerms.credit.assetAddress, permit);
-            _tryPermit(permit);
-        }
-
         // Settle the loan
         if (callerSpec.refinancingLoanId == 0) {
             // Transfer collateral to Vault and credit to borrower
             _settleNewLoan(loanTerms, lenderSpec);
         } else {
-            // Update loan to repaid state
-            _updateRepaidLoan(callerSpec.refinancingLoanId);
-
             // Repay the original loan and transfer the surplus to the borrower if any
             _settleLoanRefinance({
                 refinancingLoanId: callerSpec.refinancingLoanId,
