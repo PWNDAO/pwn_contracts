@@ -17,13 +17,22 @@ bsc = "${BSC_URL}"
 linea = "${LINEA_URL}"
 gnosis = "${GNOSIS_URL}"
 world = "${WORLDCHAIN_URL}"
-
 # Testnets
 sepolia = "${SEPOLIA_URL}"
-goerli = "${GOERLI_URL}"
-base_goerli = "${BASE_GOERLI_URL}"
-cronos_testnet = "${CRONOS_TESTNET_URL}"
-mantle_testnet = "${MANTLE_TESTNET_URL}"
-
+unichain-sepolia = "${UNICHAIN_SEPOLIA_URL}"
+# Devnets
 tenderly = "${TENDERLY_URL}"
 local = "${LOCAL_URL}"
+
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}" }
+polygon = { key = "${POLYGONSCAN_API_KEY}" }
+arbitrum = { key = "${ARBISCAN_API_KEY}" }
+optimism = { key = "${OPTIMISTIC_ETHERSCAN_API_KEY}" }
+base = { key = "${BASESCAN_API_KEY}" }
+cronos = { key = "${CRONOSCAN_API_KEY}" }
+bsc = { key = "${BSCSCAN_API_KEY}" }
+linea = { key = "${LINEASCAN_API_KEY}" }
+gnosis = { key = "${GNOSISSCAN_API_KEY}" }
+world = { key = "${WORLDSCAN_API_KEY}" }
