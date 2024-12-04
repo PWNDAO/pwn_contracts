@@ -246,7 +246,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Thrown when managed loan is defaulted.
      */
-    error LoanDefaulted(uint40);
+    error LoanDefaulted(uint40 timestap);
 
     /**
      * @notice Thrown when loan doesn't exist.
@@ -750,7 +750,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             revert LoanNotRunning();
         // Check that loan is not defaulted
         if (defaultTimestamp <= block.timestamp)
-            revert LoanDefaulted(defaultTimestamp);
+            revert LoanDefaulted({ timestap: defaultTimestamp });
     }
 
     /**
