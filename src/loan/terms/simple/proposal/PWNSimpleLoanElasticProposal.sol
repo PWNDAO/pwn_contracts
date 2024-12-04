@@ -104,6 +104,11 @@ contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
      */
     error InsufficientCreditAmount(uint256 current, uint256 limit);
 
+    /**
+     * @notice Throw when value of provided credit per collateral unit is zero.
+     */
+    error ZeroCreditPerCollateralUnit();
+
     constructor(
         address _hub,
         address _revokedNonce,
@@ -162,6 +167,10 @@ contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
      * @return Amount of collateral.
      */
     function getCollateralAmount(uint256 creditAmount, uint256 creditPerCollateralUnit) public pure returns (uint256) {
+        if (creditPerCollateralUnit == 0) {
+            revert ZeroCreditPerCollateralUnit();
+        }
+
         return Math.mulDiv(creditAmount, CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR, creditPerCollateralUnit);
     }
 

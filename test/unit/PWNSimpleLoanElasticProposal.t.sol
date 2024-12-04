@@ -249,6 +249,11 @@ contract PWNSimpleLoanElasticProposal_DecodeProposalData_Test is PWNSimpleLoanEl
 
 contract PWNSimpleLoanElasticProposal_GetCollateralAmount_Test is PWNSimpleLoanElasticProposalTest {
 
+    function test_shouldFail_whenZeroCreditPerCollateralUnit() external {
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanElasticProposal.ZeroCreditPerCollateralUnit.selector));
+        proposalContract.getCollateralAmount(100e18, 0);
+    }
+
     function test_shouldReturnCollateralAmount() external {
         uint256 CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR = proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR();
 
@@ -316,6 +321,20 @@ contract PWNSimpleLoanElasticProposal_AcceptProposal_Test is PWNSimpleLoanElasti
                 proposal.minCreditAmount
             )
         );
+        vm.prank(activeLoanContract);
+        proposalContract.acceptProposal({
+            acceptor: acceptor,
+            refinancingLoanId: 0,
+            proposalData: abi.encode(proposal, proposalValues),
+            proposalInclusionProof: new bytes32[](0),
+            signature: _sign(proposerPK, _proposalHash(proposal))
+        });
+    }
+
+    function test_shouldFail_whenZeroCreditPerCollateralUnit() external {
+        proposal.creditPerCollateralUnit = 0;
+
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanElasticProposal.ZeroCreditPerCollateralUnit.selector));
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,
