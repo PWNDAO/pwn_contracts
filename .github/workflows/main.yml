@@ -19,6 +19,7 @@ jobs:
       GNOSIS_URL: ${{ secrets.GNOSIS_URL }}
       SEPOLIA_URL: ${{ secrets.SEPOLIA_URL }}
       GOERLI_URL: ${{ secrets.GOERLI_URL }}
+      WORLDCHAIN_URL: ${{ secrets.WORLDCHAIN_URL }}
       BASE_GOERLI_URL: ${{ secrets.BASE_GOERLI_URL }}
       CRONOS_TESTNET_URL: ${{ secrets.CRONOS_TESTNET_URL }}
       MANTLE_TESTNET_URL: ${{ secrets.MANTLE_TESTNET_URL }}

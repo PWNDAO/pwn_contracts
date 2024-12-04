@@ -30,7 +30,7 @@ import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
 contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     using MultiToken for address;
 
-    string public constant VERSION = "1.2";
+    string public constant VERSION = "1.2.2";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -239,6 +239,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     error LoanRepaid();
 
     /**
+     * @notice Thrown when managed loan is not repaid.
+     */
+    error LoanNotRepaid();
+
+    /**
      * @notice Thrown when managed loan is defaulted.
      */
     error LoanDefaulted(uint40);
@@ -314,6 +319,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     error InvalidMultiTokenAsset(uint8 category, address addr, uint256 id, uint256 amount);
 
+    /**
+     * @notice Thrown when loan cannot be claimed on repayment.
+     */
+    error LoanNotAutoclaimable();
+
 
     /*----------------------------------------------------------*|
     |*  # CONSTRUCTOR                                           *|
@@ -354,7 +364,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     /**
      * @notice Create a new loan.
-     * @dev The function assumes a prior token approval to a contract address or signed permits.
+     * @dev The function assumes a prior token approval to a contract address.
      * @param proposalSpec Proposal specification struct.
      * @param lenderSpec Lender specification struct.
      * @param callerSpec Caller specification struct.
@@ -377,10 +387,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             revokedNonce.revokeNonce(msg.sender, callerSpec.nonce);
         }
 
-        // If refinancing a loan, check that the loan can be repaid
+        // When refinancing a loan, move the original loan to repaid state
         if (callerSpec.refinancingLoanId != 0) {
             LOAN storage loan = LOANs[callerSpec.refinancingLoanId];
             _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
+
+            // Update loan to repaid state
+            _updateRepaidLoan(callerSpec.refinancingLoanId);
         }
 
         // Accept proposal and get loan terms
@@ -433,21 +446,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             extra: extra
         });
 
-        // Execute permit for the caller
-        if (callerSpec.permitData.length > 0) {
-            Permit memory permit = abi.decode(callerSpec.permitData, (Permit));
-            _checkPermit(msg.sender, loanTerms.credit.assetAddress, permit);
-            _tryPermit(permit);
-        }
-
         // Settle the loan
         if (callerSpec.refinancingLoanId == 0) {
             // Transfer collateral to Vault and credit to borrower
             _settleNewLoan(loanTerms, lenderSpec);
         } else {
-            // Update loan to repaid state
-            _updateRepaidLoan(callerSpec.refinancingLoanId);
-
             // Repay the original loan and transfer the surplus to the borrower if any
             _settleLoanRefinance({
                 refinancingLoanId: callerSpec.refinancingLoanId,
@@ -647,6 +650,18 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             // Note: Safe transfer or supply to a pool can fail. In that case the LOAN token stays in repaid state and
             // waits for the LOAN token owner to claim the repaid credit. Otherwise lender would be able to prevent
             // anybody from repaying the loan.
+
+            // Transfer loan common to the Vault if necessary
+            // Shortage part is already in the Vault
+            if (!shouldTransferCommon) {
+                creditHelper.amount = common;
+                if (lenderSpec.sourceOfFunds != loanTerms.lender) {
+                    // Lender is not the source of funds
+                    // Withdraw credit asset to the lender first
+                    _withdrawCreditFromPool(creditHelper, loanTerms, lenderSpec);
+                }
+                _pull(creditHelper, loanTerms.lender);
+            }
         }
     }
 
@@ -842,12 +857,13 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         LOAN storage loan = LOANs[loanId];
 
+        // Loan must be in the repaid state
         if (loan.status != 3)
-            return;
+            revert LoanNotRepaid();
 
         // If current loan owner is not original lender, the loan cannot be repaid directly, return without revert.
         if (loan.originalLender != loanOwner)
-            return;
+            revert LoanNotAutoclaimable();
 
         // Note: The loan owner is the original lender at this point.
 
