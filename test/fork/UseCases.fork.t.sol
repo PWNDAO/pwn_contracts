@@ -3,7 +3,6 @@ pragma solidity 0.8.16;
 
 import { MultiToken, ICryptoKitties, IERC20, IERC721 } from "MultiToken/MultiToken.sol";
 
-import { Permit } from "pwn/loan/vault/Permit.sol";
 import { PWNVault } from "pwn/loan/vault/PWNVault.sol";
 
 import { DummyPoolAdapter } from "test/helper/DummyPoolAdapter.sol";
@@ -103,8 +102,7 @@ abstract contract UseCasesTest is DeploymentTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -286,10 +284,7 @@ contract IncompleteERC20TokensTest is UseCasesTest {
 
         // Repay loan
         vm.prank(borrower);
-        deployment.simpleLoan.repayLOAN({
-            loanId: loanId,
-            permitData: ""
-        });
+        deployment.simpleLoan.repayLOAN(loanId);
 
         // Check balance
         assertEq(T20(USDT).balanceOf(borrower), 10e6);
@@ -330,10 +325,7 @@ contract IncompleteERC20TokensTest is UseCasesTest {
 
         // Repay loan
         vm.prank(borrower);
-        deployment.simpleLoan.repayLOAN({
-            loanId: loanId,
-            permitData: ""
-        });
+        deployment.simpleLoan.repayLOAN(loanId);
 
         // Check balance - repaid directly to lender
         assertEq(T20(USDT).balanceOf(lender), 10e6);
@@ -410,8 +402,7 @@ contract RefinacningTest is UseCasesTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -442,8 +433,7 @@ contract RefinacningTest is UseCasesTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: loanId,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -505,8 +495,7 @@ contract RefinacningTest is UseCasesTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -540,8 +529,7 @@ contract RefinacningTest is UseCasesTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: loanId,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -554,7 +542,7 @@ contract RefinacningTest is UseCasesTest {
         assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
 
         vm.prank(borrower);
-        deployment.simpleLoan.repayLOAN(rLoanId, "");
+        deployment.simpleLoan.repayLOAN(rLoanId);
 
         assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
     }
@@ -621,8 +609,7 @@ contract RefinacningTest is UseCasesTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -653,8 +640,7 @@ contract RefinacningTest is UseCasesTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: loanId,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -667,7 +653,7 @@ contract RefinacningTest is UseCasesTest {
         assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
 
         vm.prank(borrower);
-        deployment.simpleLoan.repayLOAN(rLoanId, "");
+        deployment.simpleLoan.repayLOAN(rLoanId);
 
         assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
 

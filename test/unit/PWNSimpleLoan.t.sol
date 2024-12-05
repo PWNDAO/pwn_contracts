@@ -10,9 +10,6 @@ import {
     MultiToken,
     PWNSignatureChecker,
     PWNRevokedNonce,
-    Permit,
-    InvalidPermitOwner,
-    InvalidPermitAsset,
     Expired,
     AddressMissingHubTag
 } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
@@ -53,7 +50,6 @@ abstract contract PWNSimpleLoanTest is Test {
     PWNSimpleLoan.ExtensionProposal extension;
     T20 fungibleAsset;
     T721 nonFungibleAsset;
-    Permit permit;
 
     bytes32 proposalHash = keccak256("proposalHash");
 
@@ -156,12 +152,6 @@ abstract contract PWNSimpleLoanTest is Test {
             nonceSpace: 1,
             nonce: 1
         });
-
-        vm.mockCall(
-            address(fungibleAsset),
-            abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)"),
-            abi.encode()
-        );
 
         vm.mockCall(
             categoryRegistry,
@@ -540,68 +530,6 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 
         _assertLOANEq(loanId, simpleLoan);
     }
-
-    // function testFuzz_shouldFail_whenInvalidPermitData_permitOwner(address permitOwner) external {
-    //     vm.assume(permitOwner != borrower && permitOwner != address(0));
-    //     permit.asset = simpleLoan.creditAddress;
-    //     permit.owner = permitOwner;
-
-    //     callerSpec.permitData = abi.encode(permit);
-
-    //     vm.expectRevert(abi.encodeWithSelector(InvalidPermitOwner.selector, permitOwner, borrower));
-    //     vm.prank(borrower);
-    //     loan.createLOAN({
-    //         proposalSpec: proposalSpec,
-    //         lenderSpec: lenderSpec,
-    //         callerSpec: callerSpec,
-    //         extra: ""
-    //     });
-    // }
-
-    // function testFuzz_shouldFail_whenInvalidPermitData_permitAsset(address permitAsset) external {
-    //     vm.assume(permitAsset != simpleLoan.creditAddress && permitAsset != address(0));
-    //     permit.asset = permitAsset;
-    //     permit.owner = borrower;
-
-    //     callerSpec.permitData = abi.encode(permit);
-
-    //     vm.expectRevert(abi.encodeWithSelector(InvalidPermitAsset.selector, permitAsset, simpleLoan.creditAddress));
-    //     vm.prank(borrower);
-    //     loan.createLOAN({
-    //         proposalSpec: proposalSpec,
-    //         lenderSpec: lenderSpec,
-    //         callerSpec: callerSpec,
-    //         extra: ""
-    //     });
-    // }
-
-    // function test_shouldCallPermit_whenProvided() external {
-    //     permit.asset = simpleLoan.creditAddress;
-    //     permit.owner = borrower;
-    //     permit.amount = 101;
-    //     permit.deadline = 1;
-    //     permit.v = 4;
-    //     permit.r = bytes32(uint256(2));
-    //     permit.s = bytes32(uint256(3));
-
-    //     callerSpec.permitData = abi.encode(permit);
-
-    //     vm.expectCall(
-    //         permit.asset,
-    //         abi.encodeWithSignature(
-    //             "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-    //             permit.owner, address(loan), permit.amount, permit.deadline, permit.v, permit.r, permit.s
-    //         )
-    //     );
-
-    //     vm.prank(borrower);
-    //     loan.createLOAN({
-    //         proposalSpec: proposalSpec,
-    //         lenderSpec: lenderSpec,
-    //         callerSpec: callerSpec,
-    //         extra: ""
-    //     });
-    // }
 
     function test_shouldTransferCollateral_fromBorrower_toVault() external {
         simpleLoanTerms.collateral.category = MultiToken.Category.ERC20;
@@ -1588,7 +1516,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.NonExistingLoan.selector));
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
     }
 
     function testFuzz_shouldFail_whenLoanIsNotRunning(uint8 status) external {
@@ -1598,55 +1526,14 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         _mockLOAN(loanId, simpleLoan);
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.LoanNotRunning.selector));
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
     }
 
     function test_shouldFail_whenLoanIsDefaulted() external {
         vm.warp(simpleLoan.defaultTimestamp);
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.LoanDefaulted.selector, simpleLoan.defaultTimestamp));
-        loan.repayLOAN(loanId, "");
-    }
-
-    function testFuzz_shouldFail_whenInvalidPermitOwner_whenPermitProvided(address permitOwner) external {
-        vm.assume(permitOwner != borrower && permitOwner != address(0));
-        permit.asset = simpleLoan.creditAddress;
-        permit.owner = permitOwner;
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidPermitOwner.selector, permitOwner, borrower));
-        vm.prank(borrower);
-        loan.repayLOAN(loanId, abi.encode(permit));
-    }
-
-    function testFuzz_shouldFail_whenInvalidPermitAsset_whenPermitProvided(address permitAsset) external {
-        vm.assume(permitAsset != simpleLoan.creditAddress && permitAsset != address(0));
-        permit.asset = permitAsset;
-        permit.owner = borrower;
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidPermitAsset.selector, permitAsset, simpleLoan.creditAddress));
-        vm.prank(borrower);
-        loan.repayLOAN(loanId, abi.encode(permit));
-    }
-
-    function test_shouldCallPermit_whenPermitProvided() external {
-        permit.asset = simpleLoan.creditAddress;
-        permit.owner = borrower;
-        permit.amount = 321;
-        permit.deadline = 2;
-        permit.v = 3;
-        permit.r = bytes32(uint256(4));
-        permit.s = bytes32(uint256(5));
-
-        vm.expectCall(
-            simpleLoan.creditAddress,
-            abi.encodeWithSignature(
-                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                permit.owner, address(loan), permit.amount, permit.deadline, permit.v, permit.r, permit.s
-            )
-        );
-
-        vm.prank(borrower);
-        loan.repayLOAN(loanId, abi.encode(permit));
+        loan.repayLOAN(loanId);
     }
 
     function testFuzz_shouldUpdateLoanData_whenLOANOwnerIsNotOriginalLender(
@@ -1670,7 +1557,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         fungibleAsset.mint(borrower, loanRepaymentAmount);
 
         vm.prank(borrower);
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
 
         // Update loan and compare
         simpleLoan.status = 3; // move loan to repaid state
@@ -1680,7 +1567,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
     }
 
     function test_shouldDeleteLoanData_whenLOANOwnerIsOriginalLender() external {
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
 
         _assertLOANEq(loanId, nonExistingLoan);
     }
@@ -1688,7 +1575,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
     function test_shouldBurnLOANToken_whenLOANOwnerIsOriginalLender() external {
         vm.expectCall(loanToken, abi.encodeWithSignature("burn(uint256)", loanId));
 
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
     }
 
     function testFuzz_shouldTransferRepaidAmountToVault(
@@ -1717,7 +1604,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         );
 
         vm.prank(borrower);
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
     }
 
     function test_shouldTransferCollateralToBorrower() external {
@@ -1729,14 +1616,14 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
             )
         );
 
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
     }
 
     function test_shouldEmit_LOANPaidBack() external {
         vm.expectEmit();
         emit LOANPaidBack(loanId);
 
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
     }
 
     function testFuzz_shouldCall_tryClaimRepaidLOAN(address loanOwner) external {
@@ -1750,7 +1637,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
             )
         );
 
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
     }
 
     function test_shouldNotFail_whenTryClaimRepaidLOANFails() external {
@@ -1760,7 +1647,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
             ""
         );
 
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
 
         simpleLoan.status = 3;
         simpleLoan.fixedInterestAmount = loan.loanRepaymentAmount(loanId) - simpleLoan.principalAmount;
@@ -1772,7 +1659,7 @@ contract PWNSimpleLoan_RepayLOAN_Test is PWNSimpleLoanTest {
         vm.expectEmit();
         emit LOANClaimed(loanId, false);
 
-        loan.repayLOAN(loanId, "");
+        loan.repayLOAN(loanId);
     }
 
 }
@@ -2229,7 +2116,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.NonExistingLoan.selector));
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function test_shouldFail_whenLoanIsRepaid() external {
@@ -2238,7 +2125,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.LoanRepaid.selector));
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function testFuzz_shouldFail_whenInvalidSignature_whenEOA(uint256 pk) external {
@@ -2247,7 +2134,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNSignatureChecker.InvalidSignature.selector, extension.proposer, _extensionHash(extension)));
         vm.prank(lender);
-        loan.extendLOAN(extension, _signExtension(pk, extension), "");
+        loan.extendLOAN(extension, _signExtension(pk, extension));
     }
 
     function testFuzz_shouldFail_whenOfferExpirated(uint40 expiration) external {
@@ -2259,7 +2146,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(Expired.selector, block.timestamp, extension.expiration));
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function test_shouldFail_whenOfferNonceNotUsable() external {
@@ -2275,7 +2162,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
             PWNRevokedNonce.NonceNotUsable.selector, extension.proposer, extension.nonceSpace, extension.nonce
         ));
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function testFuzz_shouldFail_whenCallerIsNotBorrowerNorLoanOwner(address caller) external {
@@ -2284,7 +2171,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionCaller.selector));
         vm.prank(caller);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function testFuzz_shouldFail_whenCallerIsBorrower_andProposerIsNotLoanOwner(address proposer) external {
@@ -2295,7 +2182,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionSigner.selector, lender, proposer));
         vm.prank(borrower);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function testFuzz_shouldFail_whenCallerIsLoanOwner_andProposerIsNotBorrower(address proposer) external {
@@ -2306,7 +2193,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionSigner.selector, borrower, proposer));
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function testFuzz_shouldFail_whenExtensionDurationLessThanMin(uint40 duration) external {
@@ -2318,7 +2205,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionDuration.selector, duration, minDuration));
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function testFuzz_shouldFail_whenExtensionDurationMoreThanMax(uint40 duration) external {
@@ -2330,7 +2217,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoan.InvalidExtensionDuration.selector, duration, maxDuration));
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function testFuzz_shouldRevokeExtensionNonce(uint256 nonceSpace, uint256 nonce) external {
@@ -2344,7 +2231,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         );
 
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function testFuzz_shouldUpdateLoanData(uint40 duration) external {
@@ -2354,7 +2241,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         _mockExtensionProposalMade(extension);
 
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
 
         simpleLoan.defaultTimestamp = simpleLoan.defaultTimestamp + duration;
         _assertLOANEq(loanId, simpleLoan);
@@ -2370,7 +2257,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         emit LOANExtended(loanId, simpleLoan.defaultTimestamp, simpleLoan.defaultTimestamp + duration);
 
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function test_shouldNotTransferCredit_whenAmountZero() external {
@@ -2385,7 +2272,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         });
 
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function test_shouldNotTransferCredit_whenAddressZero() external {
@@ -2400,7 +2287,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         });
 
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function test_shouldFail_whenInvalidCompensationAsset() external {
@@ -2424,54 +2311,7 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
             )
         );
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
-    }
-
-    function testFuzz_shouldFail_whenInvalidPermitData_permitOwner(address permitOwner) external {
-        _mockExtensionProposalMade(extension);
-
-        vm.assume(permitOwner != lender && permitOwner != address(0));
-        permit.asset = extension.compensationAddress;
-        permit.owner = permitOwner;
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidPermitOwner.selector, permitOwner, lender));
-        vm.prank(lender);
-        loan.extendLOAN(extension, "", abi.encode(permit));
-    }
-
-    function testFuzz_shouldFail_whenInvalidPermitData_permitAsset(address permitAsset) external {
-        _mockExtensionProposalMade(extension);
-
-        vm.assume(permitAsset != extension.compensationAddress && permitAsset != address(0));
-        permit.asset = permitAsset;
-        permit.owner = lender;
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidPermitAsset.selector, permitAsset, extension.compensationAddress));
-        vm.prank(lender);
-        loan.extendLOAN(extension, "", abi.encode(permit));
-    }
-
-    function test_shouldCallPermit_whenProvided() external {
-        _mockExtensionProposalMade(extension);
-
-        permit.asset = extension.compensationAddress;
-        permit.owner = lender;
-        permit.amount = 321;
-        permit.deadline = 2;
-        permit.v = 3;
-        permit.r = bytes32(uint256(4));
-        permit.s = bytes32(uint256(5));
-
-        vm.expectCall(
-            permit.asset,
-            abi.encodeWithSignature(
-                "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
-                permit.owner, address(loan), permit.amount, permit.deadline, permit.v, permit.r, permit.s
-            )
-        );
-
-        vm.prank(lender);
-        loan.extendLOAN(extension, "", abi.encode(permit));
+        loan.extendLOAN(extension, "");
     }
 
     function testFuzz_shouldTransferCompensation_whenDefined(uint256 amount) external {
@@ -2493,21 +2333,21 @@ contract PWNSimpleLoan_ExtendLOAN_Test is PWNSimpleLoanTest {
         );
 
         vm.prank(lender);
-        loan.extendLOAN(extension, "", "");
+        loan.extendLOAN(extension, "");
     }
 
     function test_shouldPass_whenBorrowerSignature_whenLenderAccepts() external {
         extension.proposer = borrower;
 
         vm.prank(lender);
-        loan.extendLOAN(extension, _signExtension(borrowerPk, extension), "");
+        loan.extendLOAN(extension, _signExtension(borrowerPk, extension));
     }
 
     function test_shouldPass_whenLenderSignature_whenBorrowerAccepts() external {
         extension.proposer = lender;
 
         vm.prank(borrower);
-        loan.extendLOAN(extension, _signExtension(lenderPk, extension), "");
+        loan.extendLOAN(extension, _signExtension(lenderPk, extension));
     }
 
 }

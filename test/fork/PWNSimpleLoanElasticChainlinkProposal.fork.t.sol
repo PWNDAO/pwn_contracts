@@ -101,8 +101,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -189,8 +188,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -280,8 +278,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -371,8 +368,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });

@@ -3,8 +3,6 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { Permit } from "pwn/loan/vault/Permit.sol";
-
 import { T20 } from "test/helper/T20.sol";
 import { T721 } from "test/helper/T721.sol";
 import { T1155 } from "test/helper/T1155.sol";
@@ -164,8 +162,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -190,10 +187,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             vm.expectRevert(revertData);
         }
         vm.prank(borrower);
-        deployment.simpleLoan.repayLOAN({
-            loanId: loanId,
-            permitData: ""
-        });
+        deployment.simpleLoan.repayLOAN(loanId);
     }
 
 }

@@ -3,12 +3,10 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 import { IERC721Receiver } from "openzeppelin/token/ERC721/IERC721Receiver.sol";
 import { IERC1155Receiver, IERC165 } from "openzeppelin/token/ERC1155/IERC1155Receiver.sol";
 
 import { IPoolAdapter } from "pwn/interfaces/IPoolAdapter.sol";
-import { Permit } from "pwn/loan/vault/Permit.sol";
 
 
 /**
@@ -164,32 +162,6 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
 
         if (expectedBalance != asset.balanceOf(checkedAddress)) {
             revert IncompleteTransfer();
-        }
-    }
-
-
-    /*----------------------------------------------------------*|
-    |*  # PERMIT                                                *|
-    |*----------------------------------------------------------*/
-
-    /**
-     * @notice Try to execute a permit for an ERC20 token.
-     * @dev If the permit execution fails, the function will not revert.
-     * @param permit The permit data.
-     */
-    function _tryPermit(Permit memory permit) internal {
-        if (permit.asset != address(0)) {
-            try IERC20Permit(permit.asset).permit({
-                owner: permit.owner,
-                spender: address(this),
-                value: permit.amount,
-                deadline: permit.deadline,
-                v: permit.v,
-                r: permit.r,
-                s: permit.s
-            }) {} catch {
-                // Note: Permit execution can be frontrun, so we don't revert on failure.
-            }
         }
     }
 

@@ -9,8 +9,7 @@ import {
     IERC721Receiver,
     IERC1155Receiver,
     PWNVault,
-    IPoolAdapter,
-    Permit
+    IPoolAdapter
 } from "pwn/loan/vault/PWNVault.sol";
 
 import { DummyPoolAdapter } from "test/helper/DummyPoolAdapter.sol";
@@ -38,10 +37,6 @@ contract PWNVaultHarness is PWNVault {
 
     function supplyToPool(MultiToken.Asset memory asset, IPoolAdapter poolAdapter, address pool, address owner) external {
         _supplyToPool(asset, poolAdapter, pool, owner);
-    }
-
-    function exposed_tryPermit(Permit calldata permit) external {
-        _tryPermit(permit);
     }
 
 }
@@ -321,68 +316,6 @@ contract PWNVault_SupplyToPool_Test is PWNVaultTest {
         emit PoolSupply(asset, address(poolAdapter), pool, alice);
 
         vault.supplyToPool(asset, poolAdapter, pool, alice);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # TRY PERMIT                                            *|
-|*----------------------------------------------------------*/
-
-contract PWNVault_TryPermit_Test is PWNVaultTest {
-
-    Permit permit;
-    string permitSignature = "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)";
-
-    function setUp() public override {
-        super.setUp();
-
-        vm.mockCall(
-            token,
-            abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)"),
-            abi.encode("")
-        );
-
-        permit = Permit({
-            asset: token,
-            owner: alice,
-            amount: 100,
-            deadline: 1,
-            v: 4,
-            r: bytes32(uint256(2)),
-            s: bytes32(uint256(3))
-        });
-    }
-
-
-    function test_shouldCallPermit_whenPermitAssetNonZero() external {
-        vm.expectCall(
-            token,
-            abi.encodeWithSignature(
-                permitSignature,
-                permit.owner, address(vault), permit.amount, permit.deadline, permit.v, permit.r, permit.s
-            )
-        );
-
-        vault.exposed_tryPermit(permit);
-    }
-
-    function test_shouldNotCallPermit_whenPermitIsZero() external {
-        vm.expectCall({
-            callee: token,
-            data: abi.encodeWithSignature(permitSignature),
-            count: 0
-        });
-
-        permit.asset = address(0);
-        vault.exposed_tryPermit(permit);
-    }
-
-    function test_shouldNotFail_whenPermitReverts() external {
-        vm.mockCallRevert(token, abi.encodeWithSignature(permitSignature), abi.encode(""));
-
-        vault.exposed_tryPermit(permit);
     }
 
 }
