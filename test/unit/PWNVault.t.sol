@@ -102,6 +102,14 @@ contract PWNVault_Pull_Test is PWNVaultTest {
         vault.pull(asset, alice);
     }
 
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        t721.mint(address(vault), 42);
+
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, address(vault)));
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 0);
+        vault.pull(asset, address(vault));
+    }
+
     function test_shouldEmitEvent_VaultPull() external {
         t721.mint(alice, 42);
         vm.prank(alice);
@@ -148,6 +156,14 @@ contract PWNVault_Push_Test is PWNVaultTest {
         vault.push(asset, alice);
     }
 
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        t721.mint(address(vault), 42);
+
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, address(vault)));
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 0);
+        vault.push(asset, address(vault));
+    }
+
     function test_shouldEmitEvent_VaultPush() external {
         t721.mint(address(vault), 42);
 
@@ -192,6 +208,16 @@ contract PWNVault_PushFrom_Test is PWNVaultTest {
         vm.expectRevert(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 0);
         vault.pushFrom(asset, alice, bob);
+    }
+
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        t721.mint(alice, 42);
+        vm.prank(alice);
+        t721.approve(address(vault), 42);
+
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, alice));
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 0);
+        vault.pushFrom(asset, alice, alice);
     }
 
     function test_shouldEmitEvent_VaultPushFrom() external {
@@ -252,6 +278,11 @@ contract PWNVault_WithdrawFromPool_Test is PWNVaultTest {
         vault.withdrawFromPool(asset, poolAdapter, pool, alice);
     }
 
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, pool));
+        vault.withdrawFromPool(asset, poolAdapter, pool, pool);
+    }
+
     function test_shouldEmitEvent_PoolWithdraw() external {
         vm.expectEmit();
         emit PoolWithdraw(asset, address(poolAdapter), pool, alice);
@@ -309,6 +340,11 @@ contract PWNVault_SupplyToPool_Test is PWNVaultTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
         vault.supplyToPool(asset, poolAdapter, pool, alice);
+    }
+
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, address(vault)));
+        vault.supplyToPool(asset, poolAdapter, address(vault), alice);
     }
 
     function test_shouldEmitEvent_PoolSupply() external {

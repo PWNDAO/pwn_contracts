@@ -61,6 +61,11 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      */
     error IncompleteTransfer();
 
+    /**
+     * @notice Thrown when an asset transfer source and destination address are the same.
+     */
+    error VaultTransferSameSourceAndDestination(address addr);
+
 
     /*----------------------------------------------------------*|
     |*  # TRANSFER FUNCTIONS                                    *|
@@ -76,7 +81,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256 originalBalance = asset.balanceOf(address(this));
 
         asset.transferAssetFrom(origin, address(this));
-        _checkTransfer(asset, originalBalance, address(this), true);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: address(this),
+            counterPartyAddress: origin,
+            checkIncreasingBalance: true
+        });
 
         emit VaultPull(asset, origin);
     }
@@ -91,7 +102,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256 originalBalance = asset.balanceOf(beneficiary);
 
         asset.safeTransferAssetFrom(address(this), beneficiary);
-        _checkTransfer(asset, originalBalance, beneficiary, true);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: beneficiary,
+            counterPartyAddress: address(this),
+            checkIncreasingBalance: true
+        });
 
         emit VaultPush(asset, beneficiary);
     }
@@ -107,7 +124,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256 originalBalance = asset.balanceOf(beneficiary);
 
         asset.safeTransferAssetFrom(origin, beneficiary);
-        _checkTransfer(asset, originalBalance, beneficiary, true);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: beneficiary,
+            counterPartyAddress: origin,
+            checkIncreasingBalance: true
+        });
 
         emit VaultPushFrom(asset, origin, beneficiary);
     }
@@ -124,7 +147,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256 originalBalance = asset.balanceOf(owner);
 
         poolAdapter.withdraw(pool, owner, asset.assetAddress, asset.amount);
-        _checkTransfer(asset, originalBalance, owner, true);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: owner,
+            counterPartyAddress: pool,
+            checkIncreasingBalance: true
+        });
 
         emit PoolWithdraw(asset, address(poolAdapter), pool, owner);
     }
@@ -143,7 +172,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
 
         asset.transferAssetFrom(address(this), address(poolAdapter));
         poolAdapter.supply(pool, owner, asset.assetAddress, asset.amount);
-        _checkTransfer(asset, originalBalance, address(this), false);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: address(this),
+            counterPartyAddress: pool,
+            checkIncreasingBalance: false
+        });
 
         // Note: Assuming pool will revert supply transaction if it fails.
 
@@ -154,8 +189,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         MultiToken.Asset memory asset,
         uint256 originalBalance,
         address checkedAddress,
+        address counterPartyAddress,
         bool checkIncreasingBalance
     ) private view {
+        if (checkedAddress == counterPartyAddress) {
+            revert VaultTransferSameSourceAndDestination({ addr: checkedAddress });
+        }
+
         uint256 expectedBalance = checkIncreasingBalance
             ? originalBalance + asset.getTransferAmount()
             : originalBalance - asset.getTransferAmount();
