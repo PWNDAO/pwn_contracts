@@ -7,11 +7,11 @@ import {
     Chainlink,
     IChainlinkFeedRegistryLike,
     IChainlinkAggregatorLike,
-    ChainlinkDenominations,
     Math
 } from "pwn/loan/lib/Chainlink.sol";
 
 import { ChainlinkHarness } from "test/harness/ChainlinkHarness.sol";
+import { ChainlinkDenominations } from "test/helper/ChainlinkDenominations.sol";
 
 
 abstract contract ChainlinkTest is Test {
@@ -135,298 +135,152 @@ contract Chainlink_CheckSequencerUptime_Test is ChainlinkTest {
 
 
 /*----------------------------------------------------------*|
-|*  # FETCH PRICE WITH COMMON DENOMINATOR                   *|
+|*  # FETCH CREDIT PRICE WITH COLLATERAL DENOMINATION       *|
 |*----------------------------------------------------------*/
 
-contract Chainlink_FetchPricesWithCommonDenominator_Test is ChainlinkTest {
+contract Chainlink_FetchCreditPriceWithCollateralDenomination_Test is ChainlinkTest {
 
     address credAddr = makeAddr("credAddr");
     address collAddr = makeAddr("collAddr");
 
 
-    function test_shouldFetchCreditAndCollateralPrices() external {
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.USD)
-        );
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD)
-        );
+    function test_shouldFail_whenInvalidInputLength() external {
+        address[] memory feedIntermediaryDenominations;
+        bool[] memory feedInvertFlags;
 
-        chainlink.fetchPricesWithCommonDenominator(feedRegistry, credAddr, collAddr);
+        feedIntermediaryDenominations = new address[](0);
+        feedInvertFlags = new bool[](0);
+        vm.expectRevert(abi.encodeWithSelector(Chainlink.ChainlinkInvalidInputLenghts.selector));
+        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
+
+        feedIntermediaryDenominations = new address[](5);
+        feedInvertFlags = new bool[](5);
+        vm.expectRevert(abi.encodeWithSelector(Chainlink.ChainlinkInvalidInputLenghts.selector));
+        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
+
+        feedIntermediaryDenominations = new address[](4);
+        feedInvertFlags = new bool[](6);
+        vm.expectRevert(abi.encodeWithSelector(Chainlink.ChainlinkInvalidInputLenghts.selector));
+        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
+
+        feedIntermediaryDenominations = new address[](10);
+        feedInvertFlags = new bool[](6);
+        vm.expectRevert(abi.encodeWithSelector(Chainlink.ChainlinkInvalidInputLenghts.selector));
+        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
     }
 
-    function test_shouldFetchETHPriceInUSD_whenCreditPriceInUSD_whenCollateralPriceNotInUSD() external {
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
+    function test_shouldFetchIntermediaryPrices() external {
+        address[] memory feedIntermediaryDenominations = new address[](2);
+        feedIntermediaryDenominations[0] = makeAddr("denom1");
+        feedIntermediaryDenominations[1] = makeAddr("denom2");
 
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD)
-        );
-
-        chainlink.fetchPricesWithCommonDenominator(feedRegistry, credAddr, collAddr);
-    }
-
-    function test_shouldFetchETHPriceInUSD_whenCreditPriceNotInUSD_whenCollateralPriceInUSD() external {
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
+        bool[] memory feedInvertFlags = new bool[](3);
+        feedInvertFlags[0] = true;
+        feedInvertFlags[1] = false;
+        feedInvertFlags[2] = true;
 
         vm.expectCall(
             address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD)
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, feedIntermediaryDenominations[0], credAddr)
         );
-
-        chainlink.fetchPricesWithCommonDenominator(feedRegistry, credAddr, collAddr);
-    }
-
-    function test_shouldNotFetchETHPriceInUSD_whenCreditPriceInUSD_whenCollateralPriceInUSD() external {
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-
         vm.expectCall(
             address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD),
-            0
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, feedIntermediaryDenominations[0], feedIntermediaryDenominations[1])
         );
-
-        chainlink.fetchPricesWithCommonDenominator(feedRegistry, credAddr, collAddr);
-    }
-
-    function test_shouldNotFetchETHPriceInUSD_whenCreditPriceInETH_whenCollateralPriceInETH() external {
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-
         vm.expectCall(
             address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD),
-            0
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, feedIntermediaryDenominations[1])
         );
 
-        chainlink.fetchPricesWithCommonDenominator(feedRegistry, credAddr, collAddr);
-    }
-
-    function test_shouldFail_whenNoCommonDenominator() external {
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Chainlink.ChainlinkFeedCommonDenominatorNotFound.selector, credAddr, collAddr
-            )
-        );
-        chainlink.fetchPricesWithCommonDenominator(feedRegistry, credAddr, collAddr);
-    }
-
-    function test_shouldScaleCreditDecimalsUp_whenCollateralHasBiggerDecimals() external {
-        address credAggregator = makeAddr("credAggregator");
-        _mockFeed(credAggregator, credAddr, ChainlinkDenominations.USD);
-        _mockLastRoundData(credAggregator, 1e6, block.timestamp);
-        _mockFeedDecimals(credAggregator, 6);
-
-        address collAggregator = makeAddr("collAggregator");
-        _mockFeed(collAggregator, collAddr, ChainlinkDenominations.USD);
-        _mockLastRoundData(collAggregator, 1e18, block.timestamp);
-        _mockFeedDecimals(collAggregator, 18);
-
-        (uint256 credPrice, uint256 collPrice)
-            = chainlink.fetchPricesWithCommonDenominator(feedRegistry, credAddr, collAddr);
-
-        assertEq(credPrice, 1e18);
-        assertEq(collPrice, 1e18);
-    }
-
-    function test_shouldScaleCollateralDecimalsUp_whenCreditHasBiggerDecimals() external {
-        address credAggregator = makeAddr("credAggregator");
-        _mockFeed(credAggregator, credAddr, ChainlinkDenominations.USD);
-        _mockLastRoundData(credAggregator, 1e18, block.timestamp);
-        _mockFeedDecimals(credAggregator, 18);
-
-        address collAggregator = makeAddr("collAggregator");
-        _mockFeed(collAggregator, collAddr, ChainlinkDenominations.USD);
-        _mockLastRoundData(collAggregator, 1e6, block.timestamp);
-        _mockFeedDecimals(collAggregator, 6);
-
-        (uint256 credPrice, uint256 collPrice)
-            = chainlink.fetchPricesWithCommonDenominator(feedRegistry, credAddr, collAddr);
-
-        assertEq(credPrice, 1e18);
-        assertEq(collPrice, 1e18);
+        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
     }
 
 }
 
 
 /*----------------------------------------------------------*|
-|*  # FIND PRICE                                            *|
+|*  # CONVERT PRICE DENOMINATION                            *|
 |*----------------------------------------------------------*/
 
-contract Chainlink_FindPrice_Test is ChainlinkTest {
+contract Chainlink_ConvertPriceDenomination_Test is ChainlinkTest {
 
-    function testFuzz_shouldFetchUSDPrice_whenAvailable(uint256 _price, uint8 _decimals) external {
-        _price = bound(_price, 0, uint256(type(int256).max));
+    address oDenominator = makeAddr("originalDenomination");
+    address nDenominator = makeAddr("newDenomination");
 
-        _mockLastRoundData(aggregator, int256(_price), 1);
-        _mockFeedDecimals(aggregator, _decimals);
 
+    function test_shouldFetchIntermediaryPriceFeed_whenNotInverted() external {
         vm.expectCall(
             address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            1
-        );
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            0
-        );
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
-            0
+            abi.encodeWithSelector(
+                IChainlinkFeedRegistryLike.getFeed.selector, oDenominator, nDenominator
+            )
         );
 
-        (uint256 price, uint8 decimals, address denominator) = Chainlink.findPrice(feedRegistry, asset);
-        assertEq(price, _price);
-        assertEq(decimals, _decimals);
-        assertEq(denominator, ChainlinkDenominations.USD);
+        chainlink.convertPriceDenomination(feedRegistry, 1e18, 18, oDenominator, nDenominator, false);
     }
 
-    function testFuzz_shouldFetchETHPrice_whenUSDNotAvailable(uint256 _price, uint8 _decimals) external {
-        _price = bound(_price, 0, uint256(type(int256).max));
-
-        _mockLastRoundData(aggregator, int256(_price), 1);
-        _mockFeedDecimals(aggregator, _decimals);
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-
+    function test_shouldFetchIntermediaryPriceFeed_whenInverted() external {
         vm.expectCall(
             address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            1
-        );
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            1
-        );
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
-            0
+            abi.encodeWithSelector(
+                IChainlinkFeedRegistryLike.getFeed.selector, nDenominator, oDenominator
+            )
         );
 
-        (uint256 price, uint8 decimals, address denominator) = chainlink.findPrice(feedRegistry, asset);
-        assertEq(price, _price);
-        assertEq(decimals, _decimals);
-        assertEq(denominator, ChainlinkDenominations.ETH);
+        chainlink.convertPriceDenomination(feedRegistry, 1e18, 18, oDenominator, nDenominator, true);
     }
 
-    function testFuzz_shouldFetchBTCPrice_whenUSDNotAvailable_whenETHNotAvailable(uint256 _price, uint8 _decimals) external {
-        _price = bound(_price, 0, uint256(type(int256).max));
+    function test_shouldScaleToBiggerDecimals() external {
+        _mockFeedDecimals(aggregator, 10);
+        (, uint8 decimals)
+            = chainlink.convertPriceDenomination(feedRegistry, 1, 6, oDenominator, nDenominator, false);
+        assertEq(decimals, 10);
 
-        _mockLastRoundData(aggregator, int256(_price), 1);
-        _mockFeedDecimals(aggregator, _decimals);
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
+        _mockFeedDecimals(aggregator, 6);
+        (, decimals)
+            = chainlink.convertPriceDenomination(feedRegistry, 1, 18, oDenominator, nDenominator, false);
+        assertEq(decimals, 18);
 
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            1
-        );
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            1
-        );
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
-            1
-        );
-
-        (uint256 price, uint8 decimals, address denominator) = Chainlink.findPrice(feedRegistry, asset);
-        assertEq(price, _price);
-        assertEq(decimals, _decimals);
-        assertEq(denominator, ChainlinkDenominations.BTC);
+        _mockFeedDecimals(aggregator, 8);
+        (, decimals)
+            = chainlink.convertPriceDenomination(feedRegistry, 1, 8, oDenominator, nDenominator, false);
+        assertEq(decimals, 8);
     }
 
-    function test_shouldFail_whenUSDNotAvailable_whenETHNotAvailable_whenBTCNotAvailable() external {
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, ChainlinkDenominations.BTC),
-            "whatnot"
-        );
+    function test_shouldConvertPrice_whenNotInverted() external {
+        _mockFeedDecimals(aggregator, 8);
 
-        vm.expectRevert(abi.encodeWithSelector(Chainlink.ChainlinkFeedNotFound.selector, asset));
-        chainlink.findPrice(feedRegistry, asset);
+        _mockLastRoundData(aggregator, 3000e8, 1);
+        (uint256 price,) = chainlink.convertPriceDenomination(feedRegistry, 6000e8, 8, oDenominator, nDenominator, false);
+        assertEq(price, 18000000e8);
+
+        _mockLastRoundData(aggregator, 500e8, 1);
+        (price,) = chainlink.convertPriceDenomination(feedRegistry, 100e8, 8, oDenominator, nDenominator, false);
+        assertEq(price, 50000e8);
+
+        _mockLastRoundData(aggregator, 5000e8, 1);
+        (price,) = chainlink.convertPriceDenomination(feedRegistry, 1e8, 8, oDenominator, nDenominator, false);
+        assertEq(price, 5000e8);
+
+        _mockLastRoundData(aggregator, 0.05e8, 1);
+        (price,) = chainlink.convertPriceDenomination(feedRegistry, 10e8, 8, oDenominator, nDenominator, false);
+        assertEq(price, 0.5e8);
+    }
+
+    function test_shouldConvertPrice_whenInverted() external {
+        _mockFeedDecimals(aggregator, 8);
+
+        _mockLastRoundData(aggregator, 3000e8, 1);
+        (uint256 price,) = chainlink.convertPriceDenomination(feedRegistry, 6000e8, 8, oDenominator, nDenominator, true);
+        assertEq(price, 2e8);
+
+        _mockLastRoundData(aggregator, 500e8, 1);
+        (price,) = chainlink.convertPriceDenomination(feedRegistry, 100e8, 8, oDenominator, nDenominator, true);
+        assertEq(price, 0.2e8);
+
+        _mockLastRoundData(aggregator, 5000e8, 1);
+        (price,) = chainlink.convertPriceDenomination(feedRegistry, 1e8, 8, oDenominator, nDenominator, true);
+        assertEq(price, 0.0002e8);
     }
 
 }
@@ -440,6 +294,7 @@ contract Chainlink_FetchPrice_Test is ChainlinkTest {
 
     address denominator = makeAddr("denominator");
 
+
     function testFuzz_shouldGetFeedFromRegistry(address _asset, address _denominator) external {
         vm.expectCall(
             address(feedRegistry),
@@ -449,17 +304,15 @@ contract Chainlink_FetchPrice_Test is ChainlinkTest {
         chainlink.fetchPrice(feedRegistry, _asset, _denominator);
     }
 
-    function test_shouldReturnFalse_whenAggregatorNotRegistered() external {
+    function test_shouldFail_whenAggregatorNotRegistered() external {
         vm.mockCallRevert(
             address(feedRegistry),
             abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, asset, denominator),
             "whatnot"
         );
 
-        (bool success, uint256 price, uint8 decimals) = chainlink.fetchPrice(feedRegistry, asset, denominator);
-        assertFalse(success);
-        assertEq(price, 0);
-        assertEq(decimals, 0);
+        vm.expectRevert("whatnot");
+        chainlink.fetchPrice(feedRegistry, asset, denominator);
     }
 
     function test_shouldFail_whenNegativePrice() external {
@@ -467,7 +320,7 @@ contract Chainlink_FetchPrice_Test is ChainlinkTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Chainlink.ChainlinkFeedReturnedNegativePrice.selector, asset, denominator, -1
+                Chainlink.ChainlinkFeedReturnedNegativePrice.selector, aggregator, -1, 1
             )
         );
         chainlink.fetchPrice(feedRegistry, asset, denominator);
@@ -480,7 +333,7 @@ contract Chainlink_FetchPrice_Test is ChainlinkTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Chainlink.ChainlinkFeedPriceTooOld.selector, asset, 1
+                Chainlink.ChainlinkFeedPriceTooOld.selector, aggregator, 1
             )
         );
         chainlink.fetchPrice(feedRegistry, asset, denominator);
@@ -492,9 +345,8 @@ contract Chainlink_FetchPrice_Test is ChainlinkTest {
         _mockFeedDecimals(aggregator, _decimals);
         _mockLastRoundData(aggregator, int256(_price), 1);
 
-        (bool success, uint256 price, uint8 decimals) = chainlink.fetchPrice(feedRegistry, asset, denominator);
+        (uint256 price, uint8 decimals) = chainlink.fetchPrice(feedRegistry, asset, denominator);
 
-        assertTrue(success);
         assertEq(price, _price);
         assertEq(decimals, _decimals);
     }
@@ -503,92 +355,35 @@ contract Chainlink_FetchPrice_Test is ChainlinkTest {
 
 
 /*----------------------------------------------------------*|
-|*  # CONVERT PRICE DENOMINATOR                             *|
+|*  # SYNC DECIMALS UP                                      *|
 |*----------------------------------------------------------*/
 
-contract Chainlink_ConvertPriceDenominator_Test is ChainlinkTest {
+contract Chainlink_SyncDecimalsUp_Test is ChainlinkTest {
 
-    address oDenominator = makeAddr("originalDenominator");
-    address nDenominator = makeAddr("newDenominator");
+    function test_shouldUpdateDecimals() external {
+        uint256 price1;
+        uint256 price2;
+        uint8 decimals;
 
-    function test_shouldFetchConverterPriceFeed() external {
-        vm.expectCall(
-            address(feedRegistry),
-            abi.encodeWithSelector(
-                IChainlinkFeedRegistryLike.getFeed.selector, nDenominator, oDenominator
-            )
-        );
+        (price1, price2, decimals) = chainlink.syncDecimalsUp(1, 0, 100, 3);
+        assertEq(price1, 1000);
+        assertEq(price2, 100);
+        assertEq(decimals, 3);
 
-        chainlink.convertPriceDenominator(feedRegistry, 1e18, 18, oDenominator, nDenominator);
-    }
+        (price1, price2, decimals) = chainlink.syncDecimalsUp(5e18, 18, 0, 21);
+        assertEq(price1, 5e21);
+        assertEq(price2, 0);
+        assertEq(decimals, 21);
 
-    function testFuzz_shouldReturnSameValues_whenFailedToFetchPrice(uint256 nPrice, uint8 nDecimals) external {
-        vm.mockCallRevert(
-            address(feedRegistry),
-            abi.encodeWithSelector(
-                IChainlinkFeedRegistryLike.getFeed.selector, nDenominator, oDenominator
-            ),
-            "whatnot"
-        );
+        (price1, price2, decimals) = chainlink.syncDecimalsUp(3319200, 3, 3, 1);
+        assertEq(price1, 3319200);
+        assertEq(price2, 300);
+        assertEq(decimals, 3);
 
-        (bool success, uint256 price, uint8 decimals)
-            = chainlink.convertPriceDenominator(feedRegistry, nPrice, nDecimals, oDenominator, nDenominator);
-
-        assertFalse(success);
-        assertEq(price, nPrice);
-        assertEq(decimals, nDecimals);
-    }
-
-    function testFuzz_shouldScaleToBiggerDecimals(uint8 nDecimals, uint8 feedDecimals) external {
-        feedDecimals = uint8(bound(feedDecimals, 0, 70));
-        nDecimals = uint8(bound(nDecimals, 0, 70));
-        uint8 resultDecimals = uint8(Math.max(nDecimals, feedDecimals));
-
-        _mockLastRoundData(aggregator, int256(10 ** feedDecimals), 1);
-        _mockFeedDecimals(aggregator, feedDecimals);
-
-        (, uint256 price, uint8 decimals)
-            = chainlink.convertPriceDenominator(feedRegistry, 10 ** nDecimals, nDecimals, oDenominator, nDenominator);
-
-        assertEq(price, 10 ** resultDecimals);
-        assertEq(decimals, resultDecimals);
-    }
-
-    function test_shouldConvertPrice() external {
-        _mockFeedDecimals(aggregator, 8);
-
-        _mockLastRoundData(aggregator, 3000e8, 1);
-        (, uint256 price, uint8 decimals) = chainlink.convertPriceDenominator(feedRegistry, 6000e8, 8, oDenominator, nDenominator);
-        assertEq(price, 2e8);
-
-        _mockLastRoundData(aggregator, 500e8, 1);
-        (, price, decimals) = chainlink.convertPriceDenominator(feedRegistry, 100e8, 8, oDenominator, nDenominator);
-        assertEq(price, 0.2e8);
-
-        _mockLastRoundData(aggregator, 5000e8, 1);
-        (, price, decimals) = chainlink.convertPriceDenominator(feedRegistry, 1e8, 8, oDenominator, nDenominator);
-        assertEq(price, 0.0002e8);
-    }
-
-    function test_shouldReturnSuccess() external {
-        (bool success,,) = chainlink.convertPriceDenominator(feedRegistry, 1e18, 18, oDenominator, nDenominator);
-        assertTrue(success);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # SCALE PRICE                                           *|
-|*----------------------------------------------------------*/
-
-contract Chainlink_ScalePrice_Test is ChainlinkTest {
-
-    function test_shouldUpdateValueDecimals() external {
-        assertEq(chainlink.scalePrice(1e18, 18, 19), 1e19);
-        assertEq(chainlink.scalePrice(5e18, 18, 17), 5e17);
-        assertEq(chainlink.scalePrice(3319200, 3, 1), 33192);
-        assertEq(chainlink.scalePrice(0, 1, 10), 0);
+        (price1, price2, decimals) = chainlink.syncDecimalsUp(1e18, 18, 21e17, 18);
+        assertEq(price1, 1e18);
+        assertEq(price2, 21e17);
+        assertEq(decimals, 18);
     }
 
 }

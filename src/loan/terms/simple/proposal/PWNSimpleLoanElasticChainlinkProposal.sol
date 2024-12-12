@@ -7,7 +7,6 @@ import { Math } from "openzeppelin/utils/math/Math.sol";
 
 import {
     Chainlink,
-    ChainlinkDenominations,
     IChainlinkFeedRegistryLike,
     IChainlinkAggregatorLike
 } from "pwn/loan/lib/Chainlink.sol";
@@ -28,6 +27,8 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
 
     string public constant VERSION = "1.0";
 
+    uint256 public constant MAX_INTERMEDIARY_DENOMINATIONS = 2;
+
     /**
      * @notice Loan to value denominator. It is used to calculate collateral amount from credit amount.
      */
@@ -37,7 +38,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      * @dev EIP-712 simple proposal struct type hash.
      */
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
@@ -48,6 +49,8 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      * @param checkCollateralStateFingerprint If true, the collateral state fingerprint will be checked during proposal acceptance.
      * @param collateralStateFingerprint Fingerprint of a collateral state. It is used to check if a collateral is in a valid state.
      * @param creditAddress Address of an asset which is lended to a borrower.
+     * @param feedIntermediaryDenominations List of intermediary price feeds that will be fetched to get to the collateral asset denominator.
+     * @param feedInvertFlags List of flags indicating if price feeds exist only for inverted base and quote assets.
      * @param loanToValue Loan to value ratio with 4 decimals. E.g., 6231 == 0.6231 == 62.31%.
      * @param minCreditAmount Minimum amount of tokens which can be borrowed using the proposal.
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal. If non-zero, proposal can be accepted more than once, until the credit limit is reached.
@@ -72,6 +75,8 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         bool checkCollateralStateFingerprint;
         bytes32 collateralStateFingerprint;
         address creditAddress;
+        address[] feedIntermediaryDenominations;
+        bool[] feedInvertFlags;
         uint256 loanToValue;
         uint256 minCreditAmount;
         uint256 availableCreditLimit;
@@ -126,9 +131,14 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     error MinCreditAmountNotSet();
 
     /**
-     * @notice Throw when proposal credit amount is insufficient.
+     * @notice Thrown when proposal credit amount is insufficient.
      */
     error InsufficientCreditAmount(uint256 current, uint256 limit);
+
+    /**
+     * @notice Thrown when intermediary denominations are out of bounds.
+     */
+    error IntermediaryDenominationsOutOfBounds(uint256 current, uint256 limit);
 
 
     constructor(
@@ -195,32 +205,55 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      * @param creditAddress Address of credit token.
      * @param creditAmount Amount of credit.
      * @param collateralAddress Address of collateral token.
+     * @param feedIntermediaryDenominations List of intermediary price feeds that will be fetched to get to the collateral asset denominator.
+     * @param feedInvertFlags List of flags indicating if price feeds exist only for inverted base and quote assets.
      * @param loanToValue Loan to value ratio with 4 decimals. E.g., 6231 == 0.6231 == 62.31%.
      * @return Amount of collateral.
      */
     function getCollateralAmount(
-        address creditAddress, uint256 creditAmount, address collateralAddress, uint256 loanToValue
+        address creditAddress,
+        uint256 creditAmount,
+        address collateralAddress,
+        address[] memory feedIntermediaryDenominations,
+        bool[] memory feedInvertFlags,
+        uint256 loanToValue
     ) public view returns (uint256) {
         // check L2 sequencer uptime if necessary
         l2SequencerUptimeFeed.checkSequencerUptime();
 
-        // fetch asset prices
+        // don't allow more than 2 intermediary denominations
+        if (feedIntermediaryDenominations.length > MAX_INTERMEDIARY_DENOMINATIONS) {
+            revert IntermediaryDenominationsOutOfBounds({
+                current: feedIntermediaryDenominations.length,
+                limit: MAX_INTERMEDIARY_DENOMINATIONS
+            });
+        }
+
+        // fetch credit asset price with collateral asset as denomination
         // Note: use ETH price feed for WETH asset due to absence of WETH price feed
-        (uint256 creditPrice, uint256 collateralPrice) = chainlinkFeedRegistry.fetchPricesWithCommonDenominator({
-            creditAsset: creditAddress == WETH ? ChainlinkDenominations.ETH : creditAddress,
-            collateralAsset: collateralAddress == WETH ? ChainlinkDenominations.ETH : collateralAddress
+        (uint256 price, uint8 priceDecimals) = chainlinkFeedRegistry.fetchCreditPriceWithCollateralDenomination({
+            creditAsset: creditAddress == WETH ? Chainlink.ETH : creditAddress,
+            collateralAsset: collateralAddress == WETH ? Chainlink.ETH : collateralAddress,
+            feedIntermediaryDenominations: feedIntermediaryDenominations,
+            feedInvertFlags: feedInvertFlags
         });
 
         // fetch asset decimals
         uint256 creditDecimals = safeFetchDecimals(creditAddress);
         uint256 collateralDecimals = safeFetchDecimals(collateralAddress);
 
-        // calculate collateral amount
-        return Math.mulDiv(
-            creditAmount * 10 ** (collateralDecimals > creditDecimals ? collateralDecimals - creditDecimals : 0),
-            creditPrice * LOAN_TO_VALUE_DENOMINATOR,
-            collateralPrice * loanToValue
-        ) / 10 ** (collateralDecimals < creditDecimals ? creditDecimals - collateralDecimals : 0);
+        if (collateralDecimals > creditDecimals) {
+            creditAmount *= 10 ** (collateralDecimals - creditDecimals);
+        }
+
+        uint256 collateralAmount = Math.mulDiv(creditAmount, price, 10 ** priceDecimals);
+        collateralAmount = Math.mulDiv(collateralAmount, LOAN_TO_VALUE_DENOMINATOR, loanToValue);
+
+        if (collateralDecimals < creditDecimals) {
+            collateralAmount /= 10 ** (creditDecimals - collateralDecimals);
+        }
+
+        return collateralAmount;
     }
 
     /**
@@ -254,6 +287,8 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
             proposal.creditAddress,
             proposalValues.creditAmount,
             proposal.collateralAddress,
+            proposal.feedIntermediaryDenominations,
+            proposal.feedInvertFlags,
             proposal.loanToValue
         );
 

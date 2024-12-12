@@ -4,8 +4,7 @@ pragma solidity 0.8.16;
 import {
     Chainlink,
     IChainlinkFeedRegistryLike,
-    IChainlinkAggregatorLike,
-    ChainlinkDenominations
+    IChainlinkAggregatorLike
 } from "pwn/loan/lib/Chainlink.sol";
 
 
@@ -15,44 +14,45 @@ contract ChainlinkHarness {
         return Chainlink.checkSequencerUptime(l2SequencerUptimeFeed);
     }
 
-    function fetchPricesWithCommonDenominator(
+    function fetchCreditPriceWithCollateralDenomination(
         IChainlinkFeedRegistryLike feedRegistry,
         address creditAsset,
-        address collateralAsset
-    ) external view returns (uint256, uint256) {
-        return Chainlink.fetchPricesWithCommonDenominator(feedRegistry, creditAsset, collateralAsset);
-    }
-
-    function findPrice(IChainlinkFeedRegistryLike feedRegistry, address asset)
-        external
-        view
-        returns (uint256, uint8, address)
-    {
-        return Chainlink.findPrice(feedRegistry, asset);
-    }
-
-    function fetchPrice(IChainlinkFeedRegistryLike feedRegistry, address asset, address denominator)
-        external
-        view
-        returns (bool, uint256, uint8)
-    {
-        return Chainlink.fetchPrice(feedRegistry, asset, denominator);
-    }
-
-    function convertPriceDenominator(
-        IChainlinkFeedRegistryLike feedRegistry,
-        uint256 nominatorPrice,
-        uint8 nominatorDecimals,
-        address originalDenominator,
-        address newDenominator
-    ) external view returns (bool, uint256, uint8) {
-        return Chainlink.convertPriceDenominator(
-            feedRegistry, nominatorPrice, nominatorDecimals, originalDenominator, newDenominator
+        address collateralAsset,
+        address[] memory feedIntermediaryDenominations,
+        bool[] memory feedInvertFlags
+    ) external view returns (uint256, uint8) {
+        return Chainlink.fetchCreditPriceWithCollateralDenomination(
+            feedRegistry, creditAsset, collateralAsset, feedIntermediaryDenominations, feedInvertFlags
         );
     }
 
-    function scalePrice(uint256 price, uint8 priceDecimals, uint8 newDecimals) external pure returns (uint256) {
-        return Chainlink.scalePrice(price, priceDecimals, newDecimals);
+    function convertPriceDenomination(
+        IChainlinkFeedRegistryLike feedRegistry,
+        uint256 currentPrice,
+        uint8 currentDecimals,
+        address currentDenomination,
+        address nextDenomination,
+        bool nextInvert
+    ) external view returns (uint256, uint8) {
+        return Chainlink.convertPriceDenomination(
+            feedRegistry, currentPrice, currentDecimals, currentDenomination, nextDenomination, nextInvert
+        );
+    }
+
+    function fetchPrice(IChainlinkFeedRegistryLike feedRegistry, address asset, address denomination)
+        external
+        view
+        returns (uint256, uint8)
+    {
+        return Chainlink.fetchPrice(feedRegistry, asset, denomination);
+    }
+
+    function syncDecimalsUp(uint256 price1, uint8 decimals1, uint256 price2, uint8 decimals2)
+        external
+        pure
+        returns (uint256, uint256, uint8)
+    {
+        return Chainlink.syncDecimalsUp(price1, decimals1, price2, decimals2);
     }
 
 }

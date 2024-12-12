@@ -8,10 +8,10 @@ import {
     PWNSimpleLoan,
     IChainlinkAggregatorLike,
     IChainlinkFeedRegistryLike,
-    ChainlinkDenominations,
     Chainlink
 } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticChainlinkProposal.sol";
 
+import { ChainlinkDenominations } from "test/helper/ChainlinkDenominations.sol";
 import {
     MultiToken,
     Math,
@@ -27,9 +27,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
     PWNSimpleLoanElasticChainlinkProposal.ProposalValues proposalValues;
 
     address feedRegistry = makeAddr("feedRegistry");
-    address generalAggregator = makeAddr("generalAggregator");
-    address credAggregator = makeAddr("credAggregator");
-    address collAggregator = makeAddr("collAggregator");
+    address feed = makeAddr("feed");
     address weth = makeAddr("weth");
     address l2SequencerUptimeFeed = makeAddr("l2SequencerUptimeFeed");
 
@@ -43,6 +41,9 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
         proposalContract = new PWNSimpleLoanElasticChainlinkProposal(hub, revokedNonce, config, utilizedCredit, feedRegistry, address(0), weth);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
+        bool[] memory feedInvertFlags = new bool[](1);
+        feedInvertFlags[0] = false;
+
         proposal = PWNSimpleLoanElasticChainlinkProposal.Proposal({
             collateralCategory: MultiToken.Category.ERC1155,
             collateralAddress: token,
@@ -50,6 +51,8 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
             checkCollateralStateFingerprint: true,
             collateralStateFingerprint: keccak256("some state fingerprint"),
             creditAddress: token,
+            feedIntermediaryDenominations: new address[](0),
+            feedInvertFlags: feedInvertFlags,
             loanToValue: 10000, // 100%
             minCreditAmount: 1,
             availableCreditLimit: 0,
@@ -72,9 +75,9 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
             creditAmount: 1000
         });
 
-        _mockFeed(generalAggregator);
-        _mockLastRoundData(generalAggregator, 1e18, 1);
-        _mockFeedDecimals(generalAggregator, 18);
+        _mockFeed(feed);
+        _mockLastRoundData(feed, 1e18, 1);
+        _mockFeedDecimals(feed, 18);
         _mockSequencerUptimeFeed(true, block.timestamp - 1);
     }
 
@@ -90,7 +93,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
                 proposalContractAddr
             )),
             keccak256(abi.encodePacked(
-                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
+                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
                 abi.encode(_proposal)
             ))
         ));
@@ -120,7 +123,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
 
 
     function _callAcceptProposalWith(Params memory _params) internal override returns (bytes32, PWNSimpleLoan.Terms memory) {
-        _mockLastRoundData(generalAggregator, 1e18, block.timestamp); // To avoid "ChainlinkFeedPriceTooOld" error
+        _mockLastRoundData(feed, 1e18, block.timestamp); // To avoid "ChainlinkFeedPriceTooOld" error
 
         _updateProposal(_params.common);
         return proposalContract.acceptProposal({
@@ -137,33 +140,33 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
         return _proposalHash(proposal);
     }
 
-    function _mockFeed(address aggregator) internal {
+    function _mockFeed(address _feed) internal {
         vm.mockCall(
             feedRegistry,
             abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector),
-            abi.encode(aggregator)
+            abi.encode(_feed)
         );
     }
 
-    function _mockFeed(address aggregator, address base, address quote) internal {
+    function _mockFeed(address _feed, address base, address quote) internal {
         vm.mockCall(
             feedRegistry,
             abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, base, quote),
-            abi.encode(aggregator)
+            abi.encode(_feed)
         );
     }
 
-    function _mockLastRoundData(address aggregator, int256 answer, uint256 updatedAt) internal {
+    function _mockLastRoundData(address _feed, int256 answer, uint256 updatedAt) internal {
         vm.mockCall(
-            aggregator,
+            _feed,
             abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector),
             abi.encode(0, answer, 0, updatedAt, 0)
         );
     }
 
-    function _mockFeedDecimals(address aggregator, uint8 decimals) internal {
+    function _mockFeedDecimals(address _feed, uint8 decimals) internal {
         vm.mockCall(
-            aggregator,
+            _feed,
             abi.encodeWithSelector(IChainlinkAggregatorLike.decimals.selector),
             abi.encode(decimals)
         );
@@ -287,6 +290,14 @@ contract PWNSimpleLoanElasticChainlinkProposal_DecodeProposalData_Test is PWNSim
         assertEq(_proposal.checkCollateralStateFingerprint, proposal.checkCollateralStateFingerprint);
         assertEq(_proposal.collateralStateFingerprint, proposal.collateralStateFingerprint);
         assertEq(_proposal.creditAddress, proposal.creditAddress);
+        assertEq(_proposal.feedIntermediaryDenominations.length, proposal.feedIntermediaryDenominations.length);
+        for (uint256 i; i < _proposal.feedIntermediaryDenominations.length; ++i) {
+            assertEq(_proposal.feedIntermediaryDenominations[i], proposal.feedIntermediaryDenominations[i]);
+        }
+        assertEq(_proposal.feedInvertFlags.length, proposal.feedInvertFlags.length);
+        for (uint256 i; i < _proposal.feedInvertFlags.length; ++i) {
+            assertEq(_proposal.feedInvertFlags[i], proposal.feedInvertFlags[i]);
+        }
         assertEq(_proposal.loanToValue, proposal.loanToValue);
         assertEq(_proposal.minCreditAmount, proposal.minCreditAmount);
         assertEq(_proposal.availableCreditLimit, proposal.availableCreditLimit);
@@ -317,31 +328,22 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
 
     address collAddr = makeAddr("collAddr");
     address credAddr = makeAddr("credAddr");
-    uint256 credAmount = 100e8;
+    uint256 credAmount = 100e18;
     uint256 loanToValue = 5000; // 50%
+    address[] feedIntermediaryDenominations;
+    bool[] feedInvertFlags;
     uint256 L2_GRACE_PERIOD;
 
     function setUp() virtual override public {
         super.setUp();
 
+        feedIntermediaryDenominations = new address[](0);
+        feedInvertFlags = new bool[](1);
+        feedInvertFlags[0] = false;
         L2_GRACE_PERIOD = Chainlink.L2_GRACE_PERIOD;
 
         _mockAssetDecimals(collAddr, 18);
         _mockAssetDecimals(credAddr, 18);
-
-        _mockFeed(collAggregator, collAddr, ChainlinkDenominations.USD);
-        _mockFeed(collAggregator, collAddr, ChainlinkDenominations.ETH);
-        _mockLastRoundData(collAggregator, 1e18, 1);
-        _mockFeedDecimals(collAggregator, 18);
-
-        _mockFeed(credAggregator, credAddr, ChainlinkDenominations.USD);
-        _mockFeed(credAggregator, credAddr, ChainlinkDenominations.ETH);
-        _mockLastRoundData(credAggregator, 1e18, 1);
-        _mockFeedDecimals(credAggregator, 18);
-
-        _mockFeed(generalAggregator, ChainlinkDenominations.ETH, ChainlinkDenominations.USD);
-        _mockLastRoundData(generalAggregator, 1e18, 1);
-        _mockFeedDecimals(generalAggregator, 18);
     }
 
 
@@ -350,15 +352,14 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
 
         proposalContract = new PWNSimpleLoanElasticChainlinkProposal(hub, revokedNonce, config, utilizedCredit, feedRegistry, l2SequencerUptimeFeed, weth);
         _mockSequencerUptimeFeed(true, block.timestamp - L2_GRACE_PERIOD - 1);
-        _mockLastRoundData(collAggregator, 1e18, block.timestamp);
-        _mockLastRoundData(credAggregator, 1e18, block.timestamp);
+        _mockLastRoundData(feed, 1e18, block.timestamp);
 
         vm.expectCall(
             l2SequencerUptimeFeed,
             abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector)
         );
 
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, feedIntermediaryDenominations, feedInvertFlags, loanToValue);
     }
 
     function test_shouldFail_whenL2SequencerDown_whenFeedSet() external {
@@ -368,7 +369,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
         _mockSequencerUptimeFeed(false, block.timestamp - L2_GRACE_PERIOD - 1);
 
         vm.expectRevert(abi.encodeWithSelector(Chainlink.L2SequencerDown.selector));
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, feedIntermediaryDenominations, feedInvertFlags, loanToValue);
     }
 
     function testFuzz_shouldFail_whenL2SequencerUp_whenInGracePeriod_whenFeedSet(uint256 startedAt) external {
@@ -384,7 +385,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
                 block.timestamp - startedAt, L2_GRACE_PERIOD
             )
         );
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, feedIntermediaryDenominations, feedInvertFlags, loanToValue);
     }
 
     function test_shouldNotFetchSequencerUptimeFeed_whenFeedNotSet() external {
@@ -394,20 +395,44 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
             0
         );
 
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, feedIntermediaryDenominations, feedInvertFlags, loanToValue);
+    }
+
+    function test_shouldFail_whenIntermediaryDenominationsOutOfBounds() external {
+        feedIntermediaryDenominations = new address[](3);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PWNSimpleLoanElasticChainlinkProposal.IntermediaryDenominationsOutOfBounds.selector,
+                3, proposalContract.MAX_INTERMEDIARY_DENOMINATIONS()
+            )
+        );
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, feedIntermediaryDenominations, feedInvertFlags, loanToValue);
     }
 
     function test_shouldFetchCreditAndCollateralPrices() external {
+        feedIntermediaryDenominations = new address[](2);
+        feedIntermediaryDenominations[0] = makeAddr("inter1");
+        feedIntermediaryDenominations[1] = makeAddr("inter2");
+        feedInvertFlags = new bool[](3);
+        feedInvertFlags[0] = false;
+        feedInvertFlags[1] = false;
+        feedInvertFlags[2] = false;
+
         vm.expectCall(
             feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.USD)
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, feedIntermediaryDenominations[0])
         );
         vm.expectCall(
             feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD)
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, feedIntermediaryDenominations[0], feedIntermediaryDenominations[1])
+        );
+        vm.expectCall(
+            feedRegistry,
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, feedIntermediaryDenominations[1], collAddr)
         );
 
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
+        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, feedIntermediaryDenominations, feedInvertFlags, loanToValue);
     }
 
     function test_shouldFetchETHPrice_whenWETH() external {
@@ -415,293 +440,67 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
 
         vm.expectCall(
             feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD)
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, collAddr)
         );
-        proposalContract.getCollateralAmount(weth, credAmount, collAddr, loanToValue);
+        proposalContract.getCollateralAmount(weth, credAmount, collAddr, feedIntermediaryDenominations, feedInvertFlags, loanToValue);
 
         vm.expectCall(
             feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD)
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.ETH)
         );
-        proposalContract.getCollateralAmount(credAddr, credAmount, weth, loanToValue);
+        proposalContract.getCollateralAmount(credAddr, credAmount, weth, feedIntermediaryDenominations, feedInvertFlags, loanToValue);
     }
 
-    function test_shouldFetchETHPriceInUSD_whenCreditPriceInUSD_whenCollateralPriceNotInUSD() external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD)
-        );
-
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
-    }
-
-    function test_shouldFetchETHPriceInUSD_whenCreditPriceNotInUSD_whenCollateralPriceInUSD() external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD)
-        );
-
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
-    }
-
-    function test_shouldNotFetchETHPriceInUSD_whenCreditPriceInUSD_whenCollateralPriceInUSD() external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD),
-            0
-        );
-
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
-    }
-
-    function test_shouldNotFetchETHPriceInUSD_whenCreditPriceInETH_whenCollateralPriceInETH() external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-
-        vm.expectCall(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD),
-            0
-        );
-
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
-    }
-
-    function test_shouldFail_whenNoCommonDenominator() external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Chainlink.ChainlinkFeedCommonDenominatorNotFound.selector, credAddr, collAddr
-            )
-        );
-        proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, loanToValue);
-    }
-
-    function test_shouldReturnCollateralAmount_whenBothPricesInUSD() external {
-        _mockLastRoundData(credAggregator, 1e8, 1);
-        _mockFeedDecimals(credAggregator, 8);
-        _mockLastRoundData(collAggregator, 1e18, 1);
-        _mockFeedDecimals(collAggregator, 18);
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 9876, collAddr, 10000),
-            9876
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 6890, collAddr, 5000),
-            13780
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 5000, collAddr, 100),
-            500000
-        );
-
-        _mockLastRoundData(credAggregator, 1e25, 1);
-        _mockFeedDecimals(credAggregator, 25);
-        _mockLastRoundData(collAggregator, 200e18, 1);
-        _mockFeedDecimals(collAggregator, 18);
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 10000),
-            0.5e18
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 5000),
-            1e18
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 100),
-            50e18
-        );
-    }
-
-    function test_shouldReturnCollateralAmount_whenBothPricesInETH() external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-
-        _mockLastRoundData(credAggregator, 1e8, 1);
-        _mockFeedDecimals(credAggregator, 8);
-        _mockLastRoundData(collAggregator, 1e18, 1);
-        _mockFeedDecimals(collAggregator, 18);
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 9876, collAddr, 10000),
-            9876
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 6890, collAddr, 5000),
-            13780
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 5000, collAddr, 100),
-            500000
-        );
-
-        _mockLastRoundData(credAggregator, 1e25, 1);
-        _mockFeedDecimals(credAggregator, 25);
-        _mockLastRoundData(collAggregator, 200e18, 1);
-        _mockFeedDecimals(collAggregator, 18);
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 10000),
-            0.5e18
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 5000),
-            1e18
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 100),
-            50e18
-        );
-    }
-
-    function test_shouldReturnCollateralAmount_whenCreditInUSD_whenCollateralInETH() external {
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, credAddr, ChainlinkDenominations.ETH),
-            "whatnot"
-        );
-        vm.mockCallRevert(
-            feedRegistry,
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, ChainlinkDenominations.USD),
-            "whatnot"
-        );
-
-        _mockLastRoundData(credAggregator, 2500e2, 1);
-        _mockFeedDecimals(credAggregator, 2);
-        _mockLastRoundData(collAggregator, 1e18, 1);
-        _mockFeedDecimals(collAggregator, 18);
-        _mockLastRoundData(generalAggregator, 2500e8, 1);
-        _mockFeedDecimals(generalAggregator, 8);
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 9876, collAddr, 10000),
-            9876
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 6890, collAddr, 5000),
-            13780
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 5000, collAddr, 100),
-            500000
-        );
-
-        _mockLastRoundData(credAggregator, 2500e25, 1);
-        _mockFeedDecimals(credAggregator, 25);
-        _mockLastRoundData(collAggregator, 200e18, 1);
-        _mockFeedDecimals(collAggregator, 18);
-        _mockLastRoundData(generalAggregator, 2500e8, 1);
-        _mockFeedDecimals(generalAggregator, 8);
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 10000),
-            0.5e18
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 5000),
-            1e18
-        );
-        assertEq(
-            proposalContract.getCollateralAmount(credAddr, 100e18, collAddr, 100),
-            50e18
-        );
-    }
-
-    function test_shouldReturnCollateralAmountWithCorrectDecimals() external {
-        _mockLastRoundData(credAggregator, 1e8, 1);
-        _mockFeedDecimals(credAggregator, 8);
-        _mockLastRoundData(collAggregator, 2500e8, 1);
-        _mockFeedDecimals(collAggregator, 8);
+    function test_shouldReturnCorrectDecimals() external {
+        // price = 1
 
         _mockAssetDecimals(collAddr, 18);
         _mockAssetDecimals(credAddr, 6);
         assertEq(
-            proposalContract.getCollateralAmount(credAddr, 500e6, collAddr, 8000),
-            0.25e18
+            proposalContract.getCollateralAmount(credAddr, 8e6, collAddr, feedIntermediaryDenominations, feedInvertFlags, 2000),
+            40e18
         );
 
         _mockAssetDecimals(collAddr, 6);
         _mockAssetDecimals(credAddr, 18);
         assertEq(
-            proposalContract.getCollateralAmount(credAddr, 500e18, collAddr, 8000),
-            0.25e6
+            proposalContract.getCollateralAmount(credAddr, 8e18, collAddr, feedIntermediaryDenominations, feedInvertFlags, 2000),
+            40e6
+        );
+
+        _mockAssetDecimals(weth, 0);
+        _mockAssetDecimals(credAddr, 18);
+        assertEq(
+            proposalContract.getCollateralAmount(credAddr, 8e18, weth, feedIntermediaryDenominations, feedInvertFlags, 2000),
+            40
         );
     }
 
-    function test_shouldUseZeroDecimals_whenDecimalsNotImplemented() external {
-        address credAddrWithoutDecimals = makeAddr("credAddrWithoutDecimals");
-        vm.etch(credAddrWithoutDecimals, "bytes");
+    function test_shouldReturnCollateralAmount() external {
+        _mockFeedDecimals(feed, 8);
 
-        _mockFeed(credAggregator, credAddrWithoutDecimals, ChainlinkDenominations.USD);
-        _mockLastRoundData(credAggregator, 1e8, 1);
-        _mockFeedDecimals(credAggregator, 8);
-        _mockLastRoundData(collAggregator, 2500e8, 1);
-        _mockFeedDecimals(collAggregator, 8);
-
-        _mockAssetDecimals(collAddr, 18);
+        _mockLastRoundData(feed, 300e8, 1);
         assertEq(
-            proposalContract.getCollateralAmount(credAddrWithoutDecimals, 500, collAddr, 8000),
-            0.25e18
+            proposalContract.getCollateralAmount(credAddr, 8e18, collAddr, feedIntermediaryDenominations, feedInvertFlags, 2000),
+            12000e18
+        );
+
+        _mockLastRoundData(feed, 1e8, 1);
+        assertEq(
+            proposalContract.getCollateralAmount(credAddr, 0, collAddr, feedIntermediaryDenominations, feedInvertFlags, 2000),
+            0
+        );
+
+        _mockLastRoundData(feed, 0.5e8, 1);
+        assertEq(
+            proposalContract.getCollateralAmount(credAddr, 20e18, collAddr, feedIntermediaryDenominations, feedInvertFlags, 8000),
+            12.5e18
+        );
+
+        _mockLastRoundData(feed, 4e8, 1);
+        assertEq(
+            proposalContract.getCollateralAmount(credAddr, 20e18, collAddr, feedIntermediaryDenominations, feedInvertFlags, 20000),
+            40e18
         );
     }
 
