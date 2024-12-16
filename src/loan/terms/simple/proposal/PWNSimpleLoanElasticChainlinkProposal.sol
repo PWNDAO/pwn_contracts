@@ -162,7 +162,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      * @return Proposal struct hash.
      */
     function getProposalHash(Proposal calldata proposal) public view returns (bytes32) {
-        return _getProposalHash(PROPOSAL_TYPEHASH, abi.encode(proposal));
+        return _getProposalHash(PROPOSAL_TYPEHASH, _erc712EncodeProposal(proposal));
     }
 
     /**
@@ -270,7 +270,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         (Proposal memory proposal, ProposalValues memory proposalValues) = decodeProposalData(proposalData);
 
         // Make proposal hash
-        proposalHash = _getProposalHash(PROPOSAL_TYPEHASH, abi.encode(proposal));
+        proposalHash = _getProposalHash(PROPOSAL_TYPEHASH, _erc712EncodeProposal(proposal));
 
         // Check min credit amount
         if (proposal.minCreditAmount == 0) {
@@ -338,6 +338,47 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
             lenderSpecHash: proposal.isOffer ? proposal.proposerSpecHash : bytes32(0),
             borrowerSpecHash: proposal.isOffer ? bytes32(0) : proposal.proposerSpecHash
         });
+    }
+
+
+    /**
+     * @notice Encode proposal data for EIP-712.
+     * @param proposal Proposal struct to be encoded.
+     * @return encodedProposal Encoded proposal data.
+     */
+    function _erc712EncodeProposal(Proposal memory proposal) internal pure returns (bytes memory encodedProposal) {
+        encodedProposal = abi.encode(
+            proposal.collateralCategory,
+            proposal.collateralAddress,
+            proposal.collateralId,
+            proposal.checkCollateralStateFingerprint,
+            proposal.collateralStateFingerprint,
+            proposal.creditAddress,
+            keccak256(abi.encodePacked(proposal.feedIntermediaryDenominations)),
+            keccak256(abi.encodePacked(proposal.feedInvertFlags)),
+            proposal.loanToValue,
+            proposal.minCreditAmount,
+            proposal.availableCreditLimit,
+            proposal.utilizedCreditId
+        );
+
+        encodedProposal = abi.encodePacked(
+            encodedProposal,
+            abi.encode(
+                proposal.fixedInterestAmount,
+                proposal.accruingInterestAPR,
+                proposal.durationOrDate,
+                proposal.expiration,
+                proposal.allowedAcceptor,
+                proposal.proposer,
+                proposal.proposerSpecHash,
+                proposal.isOffer,
+                proposal.refinancingLoanId,
+                proposal.nonceSpace,
+                proposal.nonce,
+                proposal.loanContract
+            )
+        );
     }
 
 }
