@@ -30,7 +30,7 @@ import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
 contract PWNSimpleLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvider {
     using MultiToken for address;
 
-    string public constant VERSION = "1.2.2";
+    string public constant VERSION = "1.3";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
