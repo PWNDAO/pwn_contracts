@@ -3,6 +3,7 @@ pragma solidity 0.8.16;
 
 import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.sol";
 
+import { ReentrancyGuard } from "openzeppelin/security/ReentrancyGuard.sol";
 import { Math } from "openzeppelin/utils/math/Math.sol";
 import { SafeCast } from "openzeppelin/utils/math/SafeCast.sol";
 
@@ -26,7 +27,7 @@ import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
  * @notice Contract managing a simple loan in PWN protocol.
  * @dev Acts as a vault for every loan created by this contract.
  */
-contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
+contract PWNSimpleLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvider {
     using MultiToken for address;
 
     string public constant VERSION = "1.2.2";
@@ -373,7 +374,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         LenderSpec calldata lenderSpec,
         CallerSpec calldata callerSpec,
         bytes calldata extra
-    ) external returns (uint256 loanId) {
+    ) external nonReentrant returns (uint256 loanId) {
         // Check provided proposal contract
         if (!hub.hasTag(proposalSpec.proposalContract, PWNHubTags.LOAN_PROPOSAL)) {
             revert AddressMissingHubTag({ addr: proposalSpec.proposalContract, tag: PWNHubTags.LOAN_PROPOSAL });
@@ -680,7 +681,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      a vault, waiting on a LOAN token holder to claim it. The function assumes a prior token approval to a contract address.
      * @param loanId Id of a loan that is being repaid.
      */
-    function repayLOAN(uint256 loanId) external {
+    function repayLOAN(uint256 loanId) external nonReentrant {
         LOAN storage loan = LOANs[loanId];
 
         _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
@@ -788,7 +789,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      Claim will transfer the repaid credit or collateral to a LOAN token holder address and burn the LOAN token.
      * @param loanId Id of a loan that is being claimed.
      */
-    function claimLOAN(uint256 loanId) external {
+    function claimLOAN(uint256 loanId) external nonReentrant {
         LOAN storage loan = LOANs[loanId];
 
         // Check that caller is LOAN token holder
@@ -934,7 +935,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     function extendLOAN(
         ExtensionProposal calldata extension,
         bytes calldata signature
-    ) external {
+    ) external nonReentrant {
         LOAN storage loan = LOANs[extension.loanId];
 
         // Check that loan is in the right state

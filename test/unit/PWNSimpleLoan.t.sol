@@ -21,8 +21,8 @@ import { DummyPoolAdapter } from "test/helper/DummyPoolAdapter.sol";
 
 abstract contract PWNSimpleLoanTest is Test {
 
-    bytes32 internal constant LOANS_SLOT = bytes32(uint256(0)); // `LOANs` mapping position
-    bytes32 internal constant EXTENSION_PROPOSALS_MADE_SLOT = bytes32(uint256(1)); // `extensionProposalsMade` mapping position
+    bytes32 internal constant LOANS_SLOT = bytes32(uint256(1)); // `LOANs` mapping position
+    bytes32 internal constant EXTENSION_PROPOSALS_MADE_SLOT = bytes32(uint256(2)); // `extensionProposalsMade` mapping position
 
     PWNSimpleLoan loan;
     address hub = makeAddr("hub");
