@@ -11,11 +11,12 @@ import {
     PWNHubTags,
     PWNSimpleLoan,
     PWNSimpleLoanDutchAuctionProposal,
-    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,
-    PWNRevokedNonce
+    PWNRevokedNonce,
+    PWNUtilizedCredit
 } from "test/integration/BaseIntegrationTest.t.sol";
 
 
@@ -34,9 +35,10 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             creditAddress: address(credit),
             creditAmount: 100e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 7 days,
+            durationOrDate: 7 days,
             expiration: uint40(block.timestamp + 1 days),
             allowedAcceptor: borrower,
             proposer: lender,
@@ -83,8 +85,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -119,9 +120,10 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             creditAddress: address(credit),
             creditAmount: 100e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 7 days,
+            durationOrDate: 7 days,
             expiration: uint40(block.timestamp + 1 days),
             allowedAcceptor: borrower,
             proposer: lender,
@@ -174,8 +176,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -195,20 +196,21 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         assertEq(deployment.loanToken.loanContract(loanId), address(deployment.simpleLoan));
     }
 
-    function test_shouldCreateLOAN_fromFungibleProposal() external {
-        PWNSimpleLoanFungibleProposal.Proposal memory proposal = PWNSimpleLoanFungibleProposal.Proposal({
+    function test_shouldCreateLOAN_fromElasticProposal() external {
+        PWNSimpleLoanElasticProposal.Proposal memory proposal = PWNSimpleLoanElasticProposal.Proposal({
             collateralCategory: MultiToken.Category.ERC1155,
             collateralAddress: address(t1155),
             collateralId: 42,
-            minCollateralAmount: 1,
             checkCollateralStateFingerprint: false,
             collateralStateFingerprint: bytes32(0),
             creditAddress: address(credit),
-            creditPerCollateralUnit: 10e18 * deployment.simpleLoanFungibleProposal.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR(),
+            creditPerCollateralUnit: 10e18 * deployment.simpleLoanElasticProposal.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR(),
+            minCreditAmount: 10e18,
             availableCreditLimit: 100e18,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 7 days,
+            durationOrDate: 7 days,
             expiration: uint40(block.timestamp + 1 days),
             allowedAcceptor: borrower,
             proposer: lender,
@@ -220,8 +222,8 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             loanContract: address(deployment.simpleLoan)
         });
 
-        PWNSimpleLoanFungibleProposal.ProposalValues memory proposalValues = PWNSimpleLoanFungibleProposal.ProposalValues({
-            collateralAmount: 7
+        PWNSimpleLoanElasticProposal.ProposalValues memory proposalValues = PWNSimpleLoanElasticProposal.ProposalValues({
+            creditAmount: 70e18
         });
 
         // Mint initial state
@@ -232,7 +234,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         t1155.setApprovalForAll(address(deployment.simpleLoan), true);
 
         // Sign proposal
-        bytes32 proposalHash = deployment.simpleLoanFungibleProposal.getProposalHash(proposal);
+        bytes32 proposalHash = deployment.simpleLoanElasticProposal.getProposalHash(proposal);
         bytes memory signature = _sign(lenderPK, proposalHash);
 
         // Mint initial state
@@ -243,13 +245,13 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         credit.approve(address(deployment.simpleLoan), 100e18);
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
-        bytes memory proposalData = deployment.simpleLoanFungibleProposal.encodeProposalData(proposal, proposalValues);
+        bytes memory proposalData = deployment.simpleLoanElasticProposal.encodeProposalData(proposal, proposalValues);
 
         // Create LOAN
         vm.prank(borrower);
         uint256 loanId = deployment.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanFungibleProposal),
+                proposalContract: address(deployment.simpleLoanElasticProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: signature
@@ -260,8 +262,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -278,7 +279,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         assertEq(t1155.balanceOf(address(deployment.simpleLoan), 42), 7);
 
         assertEq(deployment.revokedNonce.isNonceRevoked(lender, proposal.nonceSpace, proposal.nonce), false);
-        assertEq(deployment.simpleLoanFungibleProposal.creditUsed(proposalHash), 70e18);
+        assertEq(deployment.utilizedCredit.utilizedCredit(lender, proposal.utilizedCreditId), 70e18);
         assertEq(deployment.loanToken.loanContract(loanId), address(deployment.simpleLoan));
     }
 
@@ -294,9 +295,10 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             minCreditAmount: 10e18,
             maxCreditAmount: 100e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 7 days,
+            durationOrDate: 7 days,
             auctionStart: uint40(block.timestamp),
             auctionDuration: 30 hours,
             allowedAcceptor: lender,
@@ -354,8 +356,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -464,7 +465,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         uint256 loanId = _createERC1155Loan();
 
         // Default on a loan
-        uint256 expiration = block.timestamp + uint256(simpleProposal.duration);
+        uint256 expiration = block.timestamp + uint256(simpleProposal.durationOrDate);
         vm.warp(expiration);
 
         // Try to repay loan
@@ -514,7 +515,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         uint256 loanId = _createERC1155Loan();
 
         // Loan defaulted
-        vm.warp(block.timestamp + uint256(simpleProposal.duration));
+        vm.warp(block.timestamp + uint256(simpleProposal.durationOrDate));
 
         // Claim defaulted loan
         vm.prank(lender);

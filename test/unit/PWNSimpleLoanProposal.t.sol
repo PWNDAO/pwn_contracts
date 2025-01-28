@@ -15,6 +15,7 @@ import {
     PWNSimpleLoan,
     PWNSignatureChecker,
     PWNRevokedNonce,
+    PWNUtilizedCredit,
     AddressMissingHubTag,
     Expired,
     IERC5646
@@ -24,11 +25,11 @@ import {
 abstract contract PWNSimpleLoanProposalTest is Test {
 
     bytes32 public constant PROPOSALS_MADE_SLOT = bytes32(uint256(0)); // `proposalsMade` mapping position
-    bytes32 public constant CREDIT_USED_SLOT = bytes32(uint256(1)); // `creditUsed` mapping position
 
     address public hub = makeAddr("hub");
     address public revokedNonce = makeAddr("revokedNonce");
     address public config = makeAddr("config");
+    address public utilizedCredit = makeAddr("utilizedCredit");
     address public stateFingerprintComputer = makeAddr("stateFingerprintComputer");
     address public activeLoanContract = makeAddr("activeLoanContract");
     address public token = makeAddr("token");
@@ -38,30 +39,50 @@ abstract contract PWNSimpleLoanProposalTest is Test {
     address public acceptor = vm.addr(acceptorPK);
     uint256 public loanId = 421;
 
-    Params public params;
-    bytes public extra;
-
-    PWNSimpleLoanProposal public proposalContractAddr; // Need to set in the inheriting contract
+    struct CommonParams {
+        address collateralAddress;
+        uint256 collateralId;
+        bool checkCollateralStateFingerprint;
+        bytes32 collateralStateFingerprint;
+        uint256 creditAmount;
+        uint256 availableCreditLimit;
+        bytes32 utilizedCreditId;
+        uint32 durationOrDate;
+        uint40 expiration;
+        address allowedAcceptor;
+        address proposer;
+        bool isOffer;
+        uint256 refinancingLoanId;
+        uint256 nonceSpace;
+        uint256 nonce;
+        address loanContract;
+    }
 
     struct Params {
-        PWNSimpleLoanProposal.ProposalBase base;
+        CommonParams common;
         address acceptor;
         uint256 refinancingLoanId;
         bytes32[] proposalInclusionProof;
         bytes signature;
     }
 
+    Params public params;
+    bytes public extra;
+
+    PWNSimpleLoanProposal public proposalContractAddr; // Need to set in the inheriting contract
+
     function setUp() virtual public {
         vm.etch(hub, bytes("data"));
         vm.etch(revokedNonce, bytes("data"));
         vm.etch(token, bytes("data"));
 
-        params.base.creditAmount = 1e10;
-        params.base.checkCollateralStateFingerprint = true;
-        params.base.collateralStateFingerprint = keccak256("some state fingerprint");
-        params.base.expiration = uint40(block.timestamp + 20 minutes);
-        params.base.proposer = proposer;
-        params.base.loanContract = activeLoanContract;
+        params.common.creditAmount = 1e10;
+        params.common.checkCollateralStateFingerprint = true;
+        params.common.collateralStateFingerprint = keccak256("some state fingerprint");
+        params.common.expiration = uint40(block.timestamp + 20 minutes);
+        params.common.proposer = proposer;
+        params.common.loanContract = activeLoanContract;
+        params.common.durationOrDate = 1 days;
         params.acceptor = acceptor;
         params.refinancingLoanId = 0;
 
@@ -86,7 +107,7 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         vm.mockCall(
             stateFingerprintComputer,
             abi.encodeWithSignature("computeStateFingerprint(address,uint256)"),
-            abi.encode(params.base.collateralStateFingerprint)
+            abi.encode(params.common.collateralStateFingerprint)
         );
     }
 
@@ -137,7 +158,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
 
     function testFuzz_shouldFail_whenCallerIsNotProposedLoanContract(address caller) external {
         vm.assume(caller != activeLoanContract);
-        params.base.loanContract = activeLoanContract;
+        params.common.loanContract = activeLoanContract;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectRevert(
@@ -149,7 +170,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
 
     function testFuzz_shouldFail_whenCallerNotTagged_ACTIVE_LOAN(address caller) external {
         vm.assume(caller != activeLoanContract);
-        params.base.loanContract = caller;
+        params.common.loanContract = caller;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, caller, PWNHubTags.ACTIVE_LOAN));
@@ -358,7 +379,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
 
     function testFuzz_shouldFail_whenProposedRefinancingLoanIdNotZero_whenRefinancingLoanIdZero(uint256 proposedRefinancingLoanId) external {
         vm.assume(proposedRefinancingLoanId != 0);
-        params.base.refinancingLoanId = proposedRefinancingLoanId;
+        params.common.refinancingLoanId = proposedRefinancingLoanId;
         params.refinancingLoanId = 0;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -374,8 +395,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     ) external {
         vm.assume(proposedRefinancingLoanId != 0);
         vm.assume(refinancingLoanId != proposedRefinancingLoanId);
-        params.base.refinancingLoanId = proposedRefinancingLoanId;
-        params.base.isOffer = true;
+        params.common.refinancingLoanId = proposedRefinancingLoanId;
+        params.common.isOffer = true;
         params.refinancingLoanId = refinancingLoanId;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -390,8 +411,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         uint256 refinancingLoanId
     ) external {
         vm.assume(refinancingLoanId != 0);
-        params.base.refinancingLoanId = 0;
-        params.base.isOffer = true;
+        params.common.refinancingLoanId = 0;
+        params.common.isOffer = true;
         params.refinancingLoanId = refinancingLoanId;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -403,8 +424,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         uint256 refinancingLoanId, uint256 proposedRefinancingLoanId
     ) external {
         vm.assume(refinancingLoanId != proposedRefinancingLoanId);
-        params.base.refinancingLoanId = proposedRefinancingLoanId;
-        params.base.isOffer = false;
+        params.common.refinancingLoanId = proposedRefinancingLoanId;
+        params.common.isOffer = false;
         params.refinancingLoanId = refinancingLoanId;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -416,19 +437,19 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function testFuzz_shouldFail_whenProposalExpired(uint256 timestamp) external {
-        timestamp = bound(timestamp, params.base.expiration, type(uint256).max);
+        timestamp = bound(timestamp, params.common.expiration, type(uint256).max);
         vm.warp(timestamp);
 
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.expectRevert(abi.encodeWithSelector(Expired.selector, timestamp, params.base.expiration));
+        vm.expectRevert(abi.encodeWithSelector(Expired.selector, timestamp, params.common.expiration));
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }
 
     function testFuzz_shouldFail_whenOfferNonceNotUsable(uint256 nonceSpace, uint256 nonce) external {
-        params.base.nonceSpace = nonceSpace;
-        params.base.nonce = nonce;
+        params.common.nonceSpace = nonceSpace;
+        params.common.nonce = nonce;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
@@ -449,7 +470,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function testFuzz_shouldFail_whenCallerIsNotAllowedAcceptor(address caller) external {
         address allowedAcceptor = makeAddr("allowedAcceptor");
         vm.assume(caller != allowedAcceptor && caller != proposer);
-        params.base.allowedAcceptor = allowedAcceptor;
+        params.common.allowedAcceptor = allowedAcceptor;
         params.acceptor = caller;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -461,9 +482,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldRevokeOffer_whenAvailableCreditLimitEqualToZero(uint256 nonceSpace, uint256 nonce) external {
-        params.base.availableCreditLimit = 0;
-        params.base.nonceSpace = nonceSpace;
-        params.base.nonce = nonce;
+        params.common.availableCreditLimit = 0;
+        params.common.nonceSpace = nonceSpace;
+        params.common.nonce = nonce;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectCall(
@@ -475,51 +496,32 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         _callAcceptProposalWith();
     }
 
-    function testFuzz_shouldFail_whenUsedCreditExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - params.base.creditAmount);
-        limit = bound(limit, used, used + params.base.creditAmount - 1);
-
-        params.base.availableCreditLimit = limit;
+    function testFuzz_shouldUtilizeCredit(bytes32 id, uint256 creditAmount, uint256 limit) external {
+        params.common.creditAmount = bound(creditAmount, 1, type(uint256).max);
+        params.common.availableCreditLimit = bound(limit, 1, type(uint256).max);
+        params.common.utilizedCreditId = id;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.store(
-            address(proposalContractAddr),
-            keccak256(abi.encode(_getProposalHashWith(), CREDIT_USED_SLOT)),
-            bytes32(used)
+        vm.mockCall(
+            utilizedCredit,
+            abi.encodeWithSelector(PWNUtilizedCredit.utilizeCredit.selector),
+            abi.encode("")
         );
 
-        vm.expectRevert(
+        vm.expectCall(
+            utilizedCredit,
             abi.encodeWithSelector(
-                PWNSimpleLoanProposal.AvailableCreditLimitExceeded.selector, used + params.base.creditAmount, limit
+                PWNUtilizedCredit.utilizeCredit.selector,
+                proposer, params.common.utilizedCreditId, params.common.creditAmount, params.common.availableCreditLimit
             )
         );
-        vm.prank(activeLoanContract);
-        _callAcceptProposalWith();
-    }
-
-    function testFuzz_shouldIncreaseUsedCredit_whenUsedCreditNotExceedsAvailableCreditLimit(uint256 used, uint256 limit) external {
-        used = bound(used, 1, type(uint256).max - params.base.creditAmount);
-        limit = bound(limit, used + params.base.creditAmount, type(uint256).max);
-
-        params.base.availableCreditLimit = limit;
-        params.signature = _sign(proposerPK, _getProposalHashWith());
-
-        bytes32 proposalHash = _getProposalHashWith();
-
-        vm.store(
-            address(proposalContractAddr),
-            keccak256(abi.encode(proposalHash, CREDIT_USED_SLOT)),
-            bytes32(used)
-        );
 
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
-
-        assertEq(proposalContractAddr.creditUsed(proposalHash), used + params.base.creditAmount);
     }
 
     function test_shouldNotCallComputerRegistry_whenShouldNotCheckStateFingerprint() external {
-        params.base.checkCollateralStateFingerprint = false;
+        params.common.checkCollateralStateFingerprint = false;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectCall({
@@ -533,12 +535,12 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldCallComputerRegistry_whenShouldCheckStateFingerprint() external {
-        params.base.checkCollateralStateFingerprint = true;
+        params.common.checkCollateralStateFingerprint = true;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.expectCall(
             config,
-            abi.encodeWithSignature("getStateFingerprintComputer(address)", params.base.collateralAddress)
+            abi.encodeWithSignature("getStateFingerprintComputer(address)", params.common.collateralAddress)
         );
 
         vm.prank(activeLoanContract);
@@ -546,7 +548,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldFail_whenComputerRegistryReturnsComputer_whenComputerFails() external {
-        params.base.collateralAddress = token;
+        params.common.collateralAddress = token;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCallRevert(
@@ -563,15 +565,15 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function testFuzz_shouldFail_whenComputerRegistryReturnsComputer_whenComputerReturnsDifferentStateFingerprint(
         bytes32 stateFingerprint
     ) external {
-        vm.assume(stateFingerprint != params.base.collateralStateFingerprint);
-        params.base.collateralAddress = token;
+        vm.assume(stateFingerprint != params.common.collateralStateFingerprint);
+        params.common.collateralAddress = token;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
             stateFingerprintComputer,
             abi.encodeWithSignature(
                 "computeStateFingerprint(address,uint256)",
-                params.base.collateralAddress, params.base.collateralId
+                params.common.collateralAddress, params.common.collateralId
             ),
             abi.encode(stateFingerprint)
         );
@@ -580,7 +582,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encodeWithSelector(
                 PWNSimpleLoanProposal.InvalidCollateralStateFingerprint.selector,
                 stateFingerprint,
-                params.base.collateralStateFingerprint
+                params.common.collateralStateFingerprint
             )
         );
         vm.prank(activeLoanContract);
@@ -588,7 +590,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldFail_whenNoComputerRegistered_whenAssetDoesNotImplementERC165() external {
-        params.base.collateralAddress = token;
+        params.common.collateralAddress = token;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
@@ -597,7 +599,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encode(address(0))
         );
         vm.mockCallRevert(
-            params.base.collateralAddress,
+            params.common.collateralAddress,
             abi.encodeWithSignature("supportsInterface(bytes4)"),
             abi.encode("not implementing ERC165")
         );
@@ -615,7 +617,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encodeWithSignature("getStateFingerprintComputer(address)"),
             abi.encode(address(0))
         );
-        _mockERC5646Support(params.base.collateralAddress, false);
+        _mockERC5646Support(params.common.collateralAddress, false);
 
         vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanProposal.MissingStateFingerprintComputer.selector));
         vm.prank(activeLoanContract);
@@ -625,7 +627,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function testFuzz_shouldFail_whenAssetImplementsERC5646_whenComputerReturnsDifferentStateFingerprint(
         bytes32 stateFingerprint
     ) external {
-        vm.assume(stateFingerprint != params.base.collateralStateFingerprint);
+        vm.assume(stateFingerprint != params.common.collateralStateFingerprint);
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
@@ -633,9 +635,9 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encodeWithSignature("getStateFingerprintComputer(address)"),
             abi.encode(address(0))
         );
-        _mockERC5646Support(params.base.collateralAddress, true);
+        _mockERC5646Support(params.common.collateralAddress, true);
         vm.mockCall(
-            params.base.collateralAddress,
+            params.common.collateralAddress,
             abi.encodeWithSignature("getStateFingerprint(uint256)"),
             abi.encode(stateFingerprint)
         );
@@ -644,7 +646,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encodeWithSelector(
                 PWNSimpleLoanProposal.InvalidCollateralStateFingerprint.selector,
                 stateFingerprint,
-                params.base.collateralStateFingerprint
+                params.common.collateralStateFingerprint
             )
         );
         vm.prank(activeLoanContract);
@@ -662,7 +664,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         vm.mockCall(
             stateFingerprintComputer,
             abi.encodeWithSignature("computeStateFingerprint(address,uint256)"),
-            abi.encode(params.base.collateralStateFingerprint)
+            abi.encode(params.common.collateralStateFingerprint)
         );
 
         vm.prank(activeLoanContract);
@@ -677,13 +679,55 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
             abi.encodeWithSignature("getStateFingerprintComputer(address)"),
             abi.encode(address(0))
         );
-        _mockERC5646Support(params.base.collateralAddress, true);
+        _mockERC5646Support(params.common.collateralAddress, true);
         vm.mockCall(
-            params.base.collateralAddress,
+            params.common.collateralAddress,
             abi.encodeWithSignature("getStateFingerprint(uint256)"),
-            abi.encode(params.base.collateralStateFingerprint)
+            abi.encode(params.common.collateralStateFingerprint)
         );
 
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function testFuzz_shouldReturnDuration_whenPassedAsDate(uint32 timestamp) public virtual {
+        uint32 currentTimestamp = 1e9;
+        vm.warp(currentTimestamp);
+
+        timestamp = uint32(bound(timestamp, 1e9 + 1, type(uint32).max));
+        params.common.durationOrDate = timestamp;
+        params.common.expiration = currentTimestamp + 1 days;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.prank(activeLoanContract);
+        (, PWNSimpleLoan.Terms memory terms) = _callAcceptProposalWith();
+
+        assertEq(terms.duration, timestamp - block.timestamp);
+    }
+
+    function testFuzz_shouldReturnDuration_whenPassedAsDuration(uint32 duration) external {
+        duration = uint32(bound(duration, 0, 1e9));
+        params.common.durationOrDate = duration;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.prank(activeLoanContract);
+        (, PWNSimpleLoan.Terms memory terms) = _callAcceptProposalWith();
+
+        assertEq(terms.duration, duration);
+    }
+
+    function testFuzz_shouldFail_whenDefaultDateInPast(uint32 timestamp) public virtual {
+        uint32 currentTimestamp = 1.7e9;
+        vm.warp(currentTimestamp);
+
+        timestamp = uint32(bound(timestamp, 1e9 + 1, currentTimestamp));
+        params.common.durationOrDate = timestamp;
+        params.common.expiration = currentTimestamp + 1 days;
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.expectRevert(
+            abi.encodeWithSelector(PWNSimpleLoanProposal.DefaultDateInPast.selector, timestamp, currentTimestamp)
+        );
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }

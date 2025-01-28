@@ -3,10 +3,10 @@ pragma solidity 0.8.16;
 
 import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import {
-    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanElasticProposal,
     PWNSimpleLoanProposal,
     PWNSimpleLoan
-} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanFungibleProposal.sol";
+} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticProposal.sol";
 
 import {
     MultiToken,
@@ -16,33 +16,34 @@ import {
 } from "test/unit/PWNSimpleLoanProposal.t.sol";
 
 
-abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest {
+abstract contract PWNSimpleLoanElasticProposalTest is PWNSimpleLoanProposalTest {
 
-    PWNSimpleLoanFungibleProposal proposalContract;
-    PWNSimpleLoanFungibleProposal.Proposal proposal;
-    PWNSimpleLoanFungibleProposal.ProposalValues proposalValues;
+    PWNSimpleLoanElasticProposal proposalContract;
+    PWNSimpleLoanElasticProposal.Proposal proposal;
+    PWNSimpleLoanElasticProposal.ProposalValues proposalValues;
 
-    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanFungibleProposal.Proposal proposal);
+    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanElasticProposal.Proposal proposal);
 
     function setUp() virtual public override {
         super.setUp();
 
-        proposalContract = new PWNSimpleLoanFungibleProposal(hub, revokedNonce, config);
+        proposalContract = new PWNSimpleLoanElasticProposal(hub, revokedNonce, config, utilizedCredit);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
-        proposal = PWNSimpleLoanFungibleProposal.Proposal({
+        proposal = PWNSimpleLoanElasticProposal.Proposal({
             collateralCategory: MultiToken.Category.ERC1155,
             collateralAddress: token,
             collateralId: 0,
-            minCollateralAmount: 1,
             checkCollateralStateFingerprint: true,
             collateralStateFingerprint: keccak256("some state fingerprint"),
             creditAddress: token,
             creditPerCollateralUnit: 1 * proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR(),
+            minCreditAmount: 1,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 1,
             accruingInterestAPR: 0,
-            duration: 1000,
+            durationOrDate: 1 days,
             expiration: 60303,
             allowedAcceptor: address(0),
             proposer: proposer,
@@ -54,50 +55,52 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
             loanContract: activeLoanContract
         });
 
-        proposalValues = PWNSimpleLoanFungibleProposal.ProposalValues({
-            collateralAmount: 1000
+        proposalValues = PWNSimpleLoanElasticProposal.ProposalValues({
+            creditAmount: 1000
         });
     }
 
 
-    function _proposalHash(PWNSimpleLoanFungibleProposal.Proposal memory _proposal) internal view returns (bytes32) {
+    function _proposalHash(PWNSimpleLoanElasticProposal.Proposal memory _proposal) internal view returns (bytes32) {
         return keccak256(abi.encodePacked(
             "\x19\x01",
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("PWNSimpleLoanFungibleProposal"),
-                keccak256("1.0"),
+                keccak256("PWNSimpleLoanElasticProposal"),
+                keccak256("1.1"),
                 block.chainid,
                 proposalContractAddr
             )),
             keccak256(abi.encodePacked(
-                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 minCollateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
+                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
                 abi.encode(_proposal)
             ))
         ));
     }
 
-    function _updateProposal(PWNSimpleLoanProposal.ProposalBase memory _proposal) internal {
-        proposal.collateralAddress = _proposal.collateralAddress;
-        proposal.collateralId = _proposal.collateralId;
-        proposal.checkCollateralStateFingerprint = _proposal.checkCollateralStateFingerprint;
-        proposal.collateralStateFingerprint = _proposal.collateralStateFingerprint;
-        proposal.availableCreditLimit = _proposal.availableCreditLimit;
-        proposal.expiration = _proposal.expiration;
-        proposal.allowedAcceptor = _proposal.allowedAcceptor;
-        proposal.proposer = _proposal.proposer;
-        proposal.isOffer = _proposal.isOffer;
-        proposal.refinancingLoanId = _proposal.refinancingLoanId;
-        proposal.nonceSpace = _proposal.nonceSpace;
-        proposal.nonce = _proposal.nonce;
-        proposal.loanContract = _proposal.loanContract;
+    function _updateProposal(CommonParams memory _params) internal {
+        proposal.collateralAddress = _params.collateralAddress;
+        proposal.collateralId = _params.collateralId;
+        proposal.checkCollateralStateFingerprint = _params.checkCollateralStateFingerprint;
+        proposal.collateralStateFingerprint = _params.collateralStateFingerprint;
+        proposal.availableCreditLimit = _params.availableCreditLimit;
+        proposal.utilizedCreditId = _params.utilizedCreditId;
+        proposal.durationOrDate = _params.durationOrDate;
+        proposal.expiration = _params.expiration;
+        proposal.allowedAcceptor = _params.allowedAcceptor;
+        proposal.proposer = _params.proposer;
+        proposal.isOffer = _params.isOffer;
+        proposal.refinancingLoanId = _params.refinancingLoanId;
+        proposal.nonceSpace = _params.nonceSpace;
+        proposal.nonce = _params.nonce;
+        proposal.loanContract = _params.loanContract;
 
-        proposalValues.collateralAmount = _proposal.creditAmount;
+        proposalValues.creditAmount = _params.creditAmount;
     }
 
 
     function _callAcceptProposalWith(Params memory _params) internal override returns (bytes32, PWNSimpleLoan.Terms memory) {
-        _updateProposal(_params.base);
+        _updateProposal(_params.common);
         return proposalContract.acceptProposal({
             acceptor: _params.acceptor,
             refinancingLoanId: _params.refinancingLoanId,
@@ -108,23 +111,8 @@ abstract contract PWNSimpleLoanFungibleProposalTest is PWNSimpleLoanProposalTest
     }
 
     function _getProposalHashWith(Params memory _params) internal override returns (bytes32) {
-        _updateProposal(_params.base);
+        _updateProposal(_params.common);
         return _proposalHash(proposal);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # CREDIT USED                                           *|
-|*----------------------------------------------------------*/
-
-contract PWNSimpleLoanFungibleProposal_CreditUsed_Test is PWNSimpleLoanFungibleProposalTest {
-
-    function testFuzz_shouldReturnUsedCredit(uint256 used) external {
-        vm.store(address(proposalContract), keccak256(abi.encode(_proposalHash(proposal), CREDIT_USED_SLOT)), bytes32(used));
-
-        assertEq(proposalContract.creditUsed(_proposalHash(proposal)), used);
     }
 
 }
@@ -134,7 +122,7 @@ contract PWNSimpleLoanFungibleProposal_CreditUsed_Test is PWNSimpleLoanFungibleP
 |*  # REVOKE NONCE                                          *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_RevokeNonce_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_RevokeNonce_Test is PWNSimpleLoanElasticProposalTest {
 
     function testFuzz_shouldCallRevokeNonce(address caller, uint256 nonceSpace, uint256 nonce) external {
         vm.expectCall(
@@ -153,7 +141,7 @@ contract PWNSimpleLoanFungibleProposal_RevokeNonce_Test is PWNSimpleLoanFungible
 |*  # GET PROPOSAL HASH                                     *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_GetProposalHash_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_GetProposalHash_Test is PWNSimpleLoanElasticProposalTest {
 
     function test_shouldReturnProposalHash() external {
         assertEq(_proposalHash(proposal), proposalContract.getProposalHash(proposal));
@@ -166,7 +154,7 @@ contract PWNSimpleLoanFungibleProposal_GetProposalHash_Test is PWNSimpleLoanFung
 |*  # MAKE PROPOSAL                                         *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_MakeProposal_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_MakeProposal_Test is PWNSimpleLoanElasticProposalTest {
 
     function testFuzz_shouldFail_whenCallerIsNotProposer(address caller) external {
         vm.assume(caller != proposal.proposer);
@@ -203,7 +191,7 @@ contract PWNSimpleLoanFungibleProposal_MakeProposal_Test is PWNSimpleLoanFungibl
 |*  # ENCODE PROPOSAL DATA                                  *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_EncodeProposalData_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_EncodeProposalData_Test is PWNSimpleLoanElasticProposalTest {
 
     function test_shouldReturnEncodedProposalData() external {
         assertEq(
@@ -219,26 +207,27 @@ contract PWNSimpleLoanFungibleProposal_EncodeProposalData_Test is PWNSimpleLoanF
 |*  # DECODE PROPOSAL DATA                                  *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_DecodeProposalData_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_DecodeProposalData_Test is PWNSimpleLoanElasticProposalTest {
 
     function test_shouldReturnDecodedProposalData() external {
         (
-            PWNSimpleLoanFungibleProposal.Proposal memory _proposal,
-            PWNSimpleLoanFungibleProposal.ProposalValues memory _proposalValues
+            PWNSimpleLoanElasticProposal.Proposal memory _proposal,
+            PWNSimpleLoanElasticProposal.ProposalValues memory _proposalValues
         ) = proposalContract.decodeProposalData(abi.encode(proposal, proposalValues));
 
         assertEq(uint8(_proposal.collateralCategory), uint8(proposal.collateralCategory));
         assertEq(_proposal.collateralAddress, proposal.collateralAddress);
         assertEq(_proposal.collateralId, proposal.collateralId);
-        assertEq(_proposal.minCollateralAmount, proposal.minCollateralAmount);
         assertEq(_proposal.checkCollateralStateFingerprint, proposal.checkCollateralStateFingerprint);
         assertEq(_proposal.collateralStateFingerprint, proposal.collateralStateFingerprint);
         assertEq(_proposal.creditAddress, proposal.creditAddress);
         assertEq(_proposal.creditPerCollateralUnit, proposal.creditPerCollateralUnit);
+        assertEq(_proposal.minCreditAmount, proposal.minCreditAmount);
         assertEq(_proposal.availableCreditLimit, proposal.availableCreditLimit);
+        assertEq(_proposal.utilizedCreditId, proposal.utilizedCreditId);
         assertEq(_proposal.fixedInterestAmount, proposal.fixedInterestAmount);
         assertEq(_proposal.accruingInterestAPR, proposal.accruingInterestAPR);
-        assertEq(_proposal.duration, proposal.duration);
+        assertEq(_proposal.durationOrDate, proposal.durationOrDate);
         assertEq(_proposal.expiration, proposal.expiration);
         assertEq(_proposal.allowedAcceptor, proposal.allowedAcceptor);
         assertEq(_proposal.proposer, proposal.proposer);
@@ -248,27 +237,45 @@ contract PWNSimpleLoanFungibleProposal_DecodeProposalData_Test is PWNSimpleLoanF
         assertEq(_proposal.nonce, proposal.nonce);
         assertEq(_proposal.loanContract, proposal.loanContract);
 
-        assertEq(_proposalValues.collateralAmount, proposalValues.collateralAmount);
+        assertEq(_proposalValues.creditAmount, proposalValues.creditAmount);
     }
 
 }
 
 
 /*----------------------------------------------------------*|
-|*  # GET CREDIT AMOUNT                                     *|
+|*  # GET COLLATERAL AMOUNT                                 *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_GetCreditAmount_Test is PWNSimpleLoanFungibleProposalTest {
+contract PWNSimpleLoanElasticProposal_GetCollateralAmount_Test is PWNSimpleLoanElasticProposalTest {
 
-    function testFuzz_shouldReturnCreditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) external {
-        collateralAmount = bound(collateralAmount, 0, 1e70);
-        creditPerCollateralUnit = bound(
-            creditPerCollateralUnit, 1, collateralAmount == 0 ? type(uint256).max : type(uint256).max / collateralAmount
-        );
+    function test_shouldFail_whenZeroCreditPerCollateralUnit() external {
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanElasticProposal.ZeroCreditPerCollateralUnit.selector));
+        proposalContract.getCollateralAmount(100e18, 0);
+    }
+
+    function test_shouldReturnCollateralAmount() external {
+        uint256 CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR = proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR();
 
         assertEq(
-            proposalContract.getCreditAmount(collateralAmount, creditPerCollateralUnit),
-            Math.mulDiv(collateralAmount, creditPerCollateralUnit, proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR())
+            proposalContract.getCollateralAmount(100e18, 100 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            1e18
+        );
+        assertEq(
+            proposalContract.getCollateralAmount(50, 25 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            2
+        );
+        assertEq(
+            proposalContract.getCollateralAmount(1033220e18, 10e18 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            103322
+        );
+        assertEq(
+            proposalContract.getCollateralAmount(5e50, 1e30 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            5e20
+        );
+        assertEq(
+            proposalContract.getCollateralAmount(0, 1e30 * CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR),
+            0
         );
     }
 
@@ -279,17 +286,17 @@ contract PWNSimpleLoanFungibleProposal_GetCreditAmount_Test is PWNSimpleLoanFung
 |*  # ACCEPT PROPOSAL                                       *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungibleProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test {
+contract PWNSimpleLoanElasticProposal_AcceptProposal_Test is PWNSimpleLoanElasticProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test {
 
-    function setUp() virtual public override(PWNSimpleLoanFungibleProposalTest, PWNSimpleLoanProposalTest) {
+    function setUp() virtual public override(PWNSimpleLoanElasticProposalTest, PWNSimpleLoanProposalTest) {
         super.setUp();
     }
 
 
-    function test_shouldFail_whenZeroMinCollateralAmount() external {
-        proposal.minCollateralAmount = 0;
+    function test_shouldFail_whenZeroMinCreditAmount() external {
+        proposal.minCreditAmount = 0;
 
-        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanFungibleProposal.MinCollateralAmountNotSet.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanElasticProposal.MinCreditAmountNotSet.selector));
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,
@@ -300,17 +307,18 @@ contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungi
         });
     }
 
-    function testFuzz_shouldFail_whenCollateralAmountLessThanMinCollateralAmount(
-        uint256 minCollateralAmount, uint256 collateralAmount
+    function testFuzz_shouldFail_whenCreditAmountLessThanMinCreditAmount(
+        uint256 minCreditAmount, uint256 creditAmount
     ) external {
-        proposal.minCollateralAmount = bound(minCollateralAmount, 1, type(uint256).max);
-        proposalValues.collateralAmount = bound(collateralAmount, 0, proposal.minCollateralAmount - 1);
+        proposal.creditPerCollateralUnit = 1 * proposalContract.CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR();
+        proposal.minCreditAmount = bound(minCreditAmount, 1, type(uint256).max);
+        proposalValues.creditAmount = bound(creditAmount, 0, proposal.minCreditAmount - 1);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNSimpleLoanFungibleProposal.InsufficientCollateralAmount.selector,
-                proposalValues.collateralAmount,
-                proposal.minCollateralAmount
+                PWNSimpleLoanElasticProposal.InsufficientCreditAmount.selector,
+                proposalValues.creditAmount,
+                proposal.minCreditAmount
             )
         );
         vm.prank(activeLoanContract);
@@ -323,11 +331,22 @@ contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungi
         });
     }
 
-    function testFuzz_shouldCallLoanContractWithLoanTerms(
-        uint256 collateralAmount, uint256 creditPerCollateralUnit, bool isOffer
-    ) external {
-        proposalValues.collateralAmount = bound(collateralAmount, proposal.minCollateralAmount, 1e40);
-        proposal.creditPerCollateralUnit = bound(creditPerCollateralUnit, 1, type(uint256).max / proposalValues.collateralAmount);
+    function test_shouldFail_whenZeroCreditPerCollateralUnit() external {
+        proposal.creditPerCollateralUnit = 0;
+
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanElasticProposal.ZeroCreditPerCollateralUnit.selector));
+        vm.prank(activeLoanContract);
+        proposalContract.acceptProposal({
+            acceptor: acceptor,
+            refinancingLoanId: 0,
+            proposalData: abi.encode(proposal, proposalValues),
+            proposalInclusionProof: new bytes32[](0),
+            signature: _sign(proposerPK, _proposalHash(proposal))
+        });
+    }
+
+    function testFuzz_shouldCallLoanContractWithLoanTerms(uint256 creditAmount, bool isOffer) external {
+        proposalValues.creditAmount = bound(creditAmount, proposal.minCreditAmount, 1e40);
         proposal.isOffer = isOffer;
 
         vm.prank(activeLoanContract);
@@ -342,15 +361,15 @@ contract PWNSimpleLoanFungibleProposal_AcceptProposal_Test is PWNSimpleLoanFungi
         assertEq(proposalHash, _proposalHash(proposal));
         assertEq(terms.lender, isOffer ? proposal.proposer : acceptor);
         assertEq(terms.borrower, isOffer ? acceptor : proposal.proposer);
-        assertEq(terms.duration, proposal.duration);
+        assertEq(terms.duration, proposal.durationOrDate);
         assertEq(uint8(terms.collateral.category), uint8(proposal.collateralCategory));
         assertEq(terms.collateral.assetAddress, proposal.collateralAddress);
         assertEq(terms.collateral.id, proposal.collateralId);
-        assertEq(terms.collateral.amount, proposalValues.collateralAmount);
+        assertEq(terms.collateral.amount, proposalContract.getCollateralAmount(proposalValues.creditAmount, proposal.creditPerCollateralUnit));
         assertEq(uint8(terms.credit.category), uint8(MultiToken.Category.ERC20));
         assertEq(terms.credit.assetAddress, proposal.creditAddress);
         assertEq(terms.credit.id, 0);
-        assertEq(terms.credit.amount, proposalContract.getCreditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit));
+        assertEq(terms.credit.amount, proposalValues.creditAmount);
         assertEq(terms.fixedInterestAmount, proposal.fixedInterestAmount);
         assertEq(terms.accruingInterestAPR, proposal.accruingInterestAPR);
         assertEq(terms.lenderSpecHash, isOffer ? proposal.proposerSpecHash : bytes32(0));

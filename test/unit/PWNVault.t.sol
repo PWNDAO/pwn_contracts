@@ -9,8 +9,7 @@ import {
     IERC721Receiver,
     IERC1155Receiver,
     PWNVault,
-    IPoolAdapter,
-    Permit
+    IPoolAdapter
 } from "pwn/loan/vault/PWNVault.sol";
 
 import { DummyPoolAdapter } from "test/helper/DummyPoolAdapter.sol";
@@ -38,10 +37,6 @@ contract PWNVaultHarness is PWNVault {
 
     function supplyToPool(MultiToken.Asset memory asset, IPoolAdapter poolAdapter, address pool, address owner) external {
         _supplyToPool(asset, poolAdapter, pool, owner);
-    }
-
-    function exposed_tryPermit(Permit calldata permit) external {
-        _tryPermit(permit);
     }
 
 }
@@ -107,6 +102,14 @@ contract PWNVault_Pull_Test is PWNVaultTest {
         vault.pull(asset, alice);
     }
 
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        t721.mint(address(vault), 42);
+
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, address(vault)));
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 0);
+        vault.pull(asset, address(vault));
+    }
+
     function test_shouldEmitEvent_VaultPull() external {
         t721.mint(alice, 42);
         vm.prank(alice);
@@ -153,6 +156,14 @@ contract PWNVault_Push_Test is PWNVaultTest {
         vault.push(asset, alice);
     }
 
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        t721.mint(address(vault), 42);
+
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, address(vault)));
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 0);
+        vault.push(asset, address(vault));
+    }
+
     function test_shouldEmitEvent_VaultPush() external {
         t721.mint(address(vault), 42);
 
@@ -197,6 +208,16 @@ contract PWNVault_PushFrom_Test is PWNVaultTest {
         vm.expectRevert(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
         MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, token, 42, 0);
         vault.pushFrom(asset, alice, bob);
+    }
+
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        t721.mint(alice, 42);
+        vm.prank(alice);
+        t721.approve(address(vault), 42);
+
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, alice));
+        MultiToken.Asset memory asset = MultiToken.Asset(MultiToken.Category.ERC721, address(t721), 42, 0);
+        vault.pushFrom(asset, alice, alice);
     }
 
     function test_shouldEmitEvent_VaultPushFrom() external {
@@ -255,6 +276,11 @@ contract PWNVault_WithdrawFromPool_Test is PWNVaultTest {
 
         vm.expectRevert(abi.encodeWithSelector(PWNVault.IncompleteTransfer.selector));
         vault.withdrawFromPool(asset, poolAdapter, pool, alice);
+    }
+
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, pool));
+        vault.withdrawFromPool(asset, poolAdapter, pool, pool);
     }
 
     function test_shouldEmitEvent_PoolWithdraw() external {
@@ -316,73 +342,16 @@ contract PWNVault_SupplyToPool_Test is PWNVaultTest {
         vault.supplyToPool(asset, poolAdapter, pool, alice);
     }
 
+    function test_shouldFail_whenSameSourceAndDestination() external {
+        vm.expectRevert(abi.encodeWithSelector(PWNVault.VaultTransferSameSourceAndDestination.selector, address(vault)));
+        vault.supplyToPool(asset, poolAdapter, address(vault), alice);
+    }
+
     function test_shouldEmitEvent_PoolSupply() external {
         vm.expectEmit();
         emit PoolSupply(asset, address(poolAdapter), pool, alice);
 
         vault.supplyToPool(asset, poolAdapter, pool, alice);
-    }
-
-}
-
-
-/*----------------------------------------------------------*|
-|*  # TRY PERMIT                                            *|
-|*----------------------------------------------------------*/
-
-contract PWNVault_TryPermit_Test is PWNVaultTest {
-
-    Permit permit;
-    string permitSignature = "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)";
-
-    function setUp() public override {
-        super.setUp();
-
-        vm.mockCall(
-            token,
-            abi.encodeWithSignature("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)"),
-            abi.encode("")
-        );
-
-        permit = Permit({
-            asset: token,
-            owner: alice,
-            amount: 100,
-            deadline: 1,
-            v: 4,
-            r: bytes32(uint256(2)),
-            s: bytes32(uint256(3))
-        });
-    }
-
-
-    function test_shouldCallPermit_whenPermitAssetNonZero() external {
-        vm.expectCall(
-            token,
-            abi.encodeWithSignature(
-                permitSignature,
-                permit.owner, address(vault), permit.amount, permit.deadline, permit.v, permit.r, permit.s
-            )
-        );
-
-        vault.exposed_tryPermit(permit);
-    }
-
-    function test_shouldNotCallPermit_whenPermitIsZero() external {
-        vm.expectCall({
-            callee: token,
-            data: abi.encodeWithSignature(permitSignature),
-            count: 0
-        });
-
-        permit.asset = address(0);
-        vault.exposed_tryPermit(permit);
-    }
-
-    function test_shouldNotFail_whenPermitReverts() external {
-        vm.mockCallRevert(token, abi.encodeWithSignature(permitSignature), abi.encode(""));
-
-        vault.exposed_tryPermit(permit);
     }
 
 }

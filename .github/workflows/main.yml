@@ -4,7 +4,7 @@ on: push
 
 jobs:
   build:
-    name: Unit & Integration tests
+    name: Tests
 
     env:
       ETHEREUM_URL: ${{ secrets.ETHEREUM_URL }}
@@ -30,15 +30,10 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install Foundry
-        uses: onbjerg/foundry-toolchain@v1
-        with:
-          version: nightly
+        uses: foundry-rs/foundry-toolchain@v1
 
       - name: Install dependencies
         run: forge install
 
-      - name: Run unit tests
-        run: forge test --match-path "test/unit/*" --force -vvv
-
-      - name: Run integration tests
-        run: forge test --match-path "test/integration/*" -vvv
+      - name: Run tests
+        run: forge test --force -vvv

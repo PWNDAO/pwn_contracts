@@ -8,14 +8,14 @@ import { PWNConfig } from "pwn/config/PWNConfig.sol";
 
 abstract contract PWNConfigTest is Test {
 
-    bytes32 internal constant OWNER_SLOT = bytes32(uint256(0)); // `_owner` property position
-    bytes32 internal constant PENDING_OWNER_SLOT = bytes32(uint256(1)); // `_pendingOwner` property position
-    bytes32 internal constant INITIALIZED_SLOT = bytes32(uint256(1)); // `_initialized` property position
-    bytes32 internal constant FEE_SLOT = bytes32(uint256(1)); // `fee` property position
-    bytes32 internal constant FEE_COLLECTOR_SLOT = bytes32(uint256(2)); // `feeCollector` property position
-    bytes32 internal constant LOAN_METADATA_URI_SLOT = bytes32(uint256(3)); // `loanMetadataUri` mapping position
-    bytes32 internal constant SFC_REGISTRY_SLOT = bytes32(uint256(4)); // `_sfComputerRegistry` mapping position
-    bytes32 internal constant POOL_ADAPTER_REGISTRY_SLOT = bytes32(uint256(5)); // `_poolAdapterRegistry` mapping position
+    bytes32 internal constant INITIALIZED_SLOT = bytes32(uint256(0)); // `_initialized` property position
+    bytes32 internal constant OWNER_SLOT = bytes32(uint256(51)); // `_owner` property position
+    bytes32 internal constant PENDING_OWNER_SLOT = bytes32(uint256(101)); // `_pendingOwner` property position
+    bytes32 internal constant FEE_SLOT = bytes32(uint256(151)); // `fee` property position
+    bytes32 internal constant FEE_COLLECTOR_SLOT = bytes32(uint256(151)); // `feeCollector` property position
+    bytes32 internal constant LOAN_METADATA_URI_SLOT = bytes32(uint256(152)); // `loanMetadataUri` mapping position
+    bytes32 internal constant SFC_REGISTRY_SLOT = bytes32(uint256(153)); // `_sfComputerRegistry` mapping position
+    bytes32 internal constant POOL_ADAPTER_REGISTRY_SLOT = bytes32(uint256(154)); // `_poolAdapterRegistry` mapping position
 
     PWNConfig config;
     address owner = makeAddr("owner");
@@ -33,7 +33,7 @@ abstract contract PWNConfigTest is Test {
     function _initialize() internal {
         // initialize owner to `owner`, fee to 0 and feeCollector to `feeCollector`
         vm.store(address(config), OWNER_SLOT, bytes32(uint256(uint160(owner))));
-        vm.store(address(config), FEE_COLLECTOR_SLOT, bytes32(uint256(uint160(feeCollector))));
+        vm.store(address(config), FEE_COLLECTOR_SLOT, bytes32(uint256(uint160(feeCollector))) << 16);
     }
 
     function _mockSupportsToken(address computer, address token, bool result) internal {
@@ -58,13 +58,13 @@ contract PWNConfig_Constructor_Test is PWNConfigTest {
         assertEq(address(uint160(uint256(ownerValue))), address(0));
 
         bytes32 initializedSlotValue = vm.load(address(config), INITIALIZED_SLOT);
-        assertEq(uint16(uint256(initializedSlotValue << 88 >> 248)), 255); // disable initializers
+        assertEq(uint16(uint256(initializedSlotValue << 248 >> 248)), 255); // disable initializers
 
         bytes32 feeSlotValue = vm.load(address(config), FEE_SLOT);
-        assertEq(uint16(uint256(feeSlotValue << 64 >> 240)), 0);
+        assertEq(uint16(uint256(feeSlotValue << 240 >> 240)), 0);
 
         bytes32 feeCollectorValue = vm.load(address(config), FEE_COLLECTOR_SLOT);
-        assertEq(address(uint160(uint256(feeCollectorValue))), address(0));
+        assertEq(address(uint160(uint256(feeCollectorValue >> 16))), address(0));
     }
 
 }
@@ -92,10 +92,10 @@ contract PWNConfig_Initialize_Test is PWNConfigTest {
         assertEq(address(uint160(uint256(ownerValue))), owner);
 
         bytes32 feeSlotValue = vm.load(address(config), FEE_SLOT);
-        assertEq(uint16(uint256(feeSlotValue << 64 >> 240)), fee);
+        assertEq(uint16(uint256(feeSlotValue << 240 >> 240)), fee);
 
         bytes32 feeCollectorValue = vm.load(address(config), FEE_COLLECTOR_SLOT);
-        assertEq(address(uint160(uint256(feeCollectorValue))), feeCollector);
+        assertEq(address(uint160(uint256(feeCollectorValue >> 16))), feeCollector);
     }
 
     function test_shouldFail_whenCalledSecondTime() external {
@@ -152,7 +152,7 @@ contract PWNConfig_SetFee_Test is PWNConfigTest {
         config.setFee(fee);
 
         bytes32 feeSlotValue = vm.load(address(config), FEE_SLOT);
-        assertEq(uint16(uint256(feeSlotValue >> 176)), fee);
+        assertEq(uint16(uint256(feeSlotValue << 240 >> 240)), fee);
     }
 
     function test_shouldEmitEvent_FeeUpdated() external {
@@ -197,7 +197,7 @@ contract PWNConfig_SetFeeCollector_Test is PWNConfigTest {
         config.setFeeCollector(newFeeCollector);
 
         bytes32 feeCollectorValue = vm.load(address(config), FEE_COLLECTOR_SLOT);
-        assertEq(uint160(uint256(feeCollectorValue)), uint160(newFeeCollector));
+        assertEq(uint160(uint256(feeCollectorValue >> 16)), uint160(newFeeCollector));
     }
 
     function test_shouldEmitEvent_FeeCollectorUpdated() external {

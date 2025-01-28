@@ -3,10 +3,11 @@ pragma solidity 0.8.16;
 
 import { MultiToken, ICryptoKitties, IERC20, IERC721 } from "MultiToken/MultiToken.sol";
 
-import { Permit } from "pwn/loan/vault/Permit.sol";
 import { PWNVault } from "pwn/loan/vault/PWNVault.sol";
 
+import { DummyPoolAdapter } from "test/helper/DummyPoolAdapter.sol";
 import { T20 } from "test/helper/T20.sol";
+import { T721 } from "test/helper/T721.sol";
 import {
     DeploymentTest,
     PWNSimpleLoan,
@@ -26,8 +27,6 @@ abstract contract UseCasesTest is DeploymentTest {
     address DOODLE = 0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e;
 
     T20 credit;
-    address lender = makeAddr("lender");
-    address borrower = makeAddr("borrower");
 
     PWNSimpleLoanSimpleProposal.Proposal proposal;
 
@@ -57,9 +56,10 @@ abstract contract UseCasesTest is DeploymentTest {
             creditAddress: address(credit),
             creditAmount: 1e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 0,
             accruingInterestAPR: 0,
-            duration: 1 days,
+            durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
             allowedAcceptor: address(0),
             proposer: lender,
@@ -102,8 +102,7 @@ abstract contract UseCasesTest is DeploymentTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -285,10 +284,7 @@ contract IncompleteERC20TokensTest is UseCasesTest {
 
         // Repay loan
         vm.prank(borrower);
-        deployment.simpleLoan.repayLOAN({
-            loanId: loanId,
-            permitData: ""
-        });
+        deployment.simpleLoan.repayLOAN(loanId);
 
         // Check balance
         assertEq(T20(USDT).balanceOf(borrower), 10e6);
@@ -329,10 +325,7 @@ contract IncompleteERC20TokensTest is UseCasesTest {
 
         // Repay loan
         vm.prank(borrower);
-        deployment.simpleLoan.repayLOAN({
-            loanId: loanId,
-            permitData: ""
-        });
+        deployment.simpleLoan.repayLOAN(loanId);
 
         // Check balance - repaid directly to lender
         assertEq(T20(USDT).balanceOf(lender), 10e6);
@@ -378,11 +371,15 @@ contract CategoryRegistryForIncompleteERCTokensTest is UseCasesTest {
 
 contract RefinacningTest is UseCasesTest {
 
+    T721 coll;
+    uint256 collId = 666;
+
+
     function testUseCase_shouldRefinanceRunningLoan() external {
         proposal.creditAmount = 10 ether;
         proposal.fixedInterestAmount = 1 ether;
         proposal.availableCreditLimit = 20 ether;
-        proposal.duration = 5 days;
+        proposal.durationOrDate = 5 days;
 
         // Make proposal
         vm.prank(lender);
@@ -405,8 +402,7 @@ contract RefinacningTest is UseCasesTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -437,8 +433,7 @@ contract RefinacningTest is UseCasesTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: loanId,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -447,6 +442,225 @@ contract RefinacningTest is UseCasesTest {
         assertEq(credit.balanceOf(lender), 91 ether); // -10 credit, +1 refinance
         assertEq(credit.balanceOf(borrower), 99 ether); // -10 coll, +10 credit, -1 refinance
         assertEq(credit.balanceOf(address(deployment.simpleLoan)), 10 ether); // +10 coll
+    }
+
+    function testUseCase_shouldTransferCommonOnFailedAutoclaim_1() external {
+        address secondLender = makeAddr("secondLender");
+
+        credit = new T20();
+        coll = new T721();
+
+        coll.mint(borrower, collId);
+        vm.prank(borrower);
+        coll.setApprovalForAll(address(deployment.simpleLoan), true);
+
+        credit.mint(address(deployment.simpleLoan), 1);
+        credit.mint(lender, 1);
+        credit.mint(secondLender, 1);
+
+        vm.prank(lender);
+        credit.approve(address(deployment.simpleLoan), type(uint256).max);
+        vm.prank(secondLender);
+        credit.approve(address(deployment.simpleLoan), type(uint256).max);
+        vm.prank(borrower);
+        credit.approve(address(deployment.simpleLoan), type(uint256).max);
+
+        uint256 vaultBalance = credit.balanceOf(address(deployment.simpleLoan));
+
+        proposal.collateralCategory = MultiToken.Category.ERC721;
+        proposal.collateralAddress = address(coll);
+        proposal.collateralAmount = 0;
+        proposal.collateralId = collId;
+        proposal.creditAddress = address(credit);
+        proposal.creditAmount = 1;
+
+        // Make proposal
+        vm.prank(lender);
+        deployment.simpleLoanSimpleProposal.makeProposal(proposal);
+
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+
+        // Create a loan
+        vm.prank(borrower);
+        uint256 loanId = deployment.simpleLoan.createLOAN({
+            proposalSpec: PWNSimpleLoan.ProposalSpec({
+                proposalContract: address(deployment.simpleLoanSimpleProposal),
+                proposalData: proposalData,
+                proposalInclusionProof: new bytes32[](0),
+                signature: ""
+            }),
+            lenderSpec: PWNSimpleLoan.LenderSpec({
+                sourceOfFunds: lender
+            }),
+            callerSpec: PWNSimpleLoan.CallerSpec({
+                refinancingLoanId: 0,
+                revokeNonce: false,
+                nonce: 0
+            }),
+            extra: ""
+        });
+
+        assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
+
+        vm.prank(lender);
+        deployment.loanToken.transferFrom(lender, secondLender, loanId);
+
+        // Make refinance proposal
+        proposal.proposer = secondLender;
+        proposal.proposerSpecHash = deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(secondLender));
+
+        vm.prank(secondLender);
+        deployment.simpleLoanSimpleProposal.makeProposal(proposal);
+
+        proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+
+        // Refinance original loan
+        vm.prank(borrower);
+        uint256 rLoanId = deployment.simpleLoan.createLOAN({
+            proposalSpec: PWNSimpleLoan.ProposalSpec({
+                proposalContract: address(deployment.simpleLoanSimpleProposal),
+                proposalData: proposalData,
+                proposalInclusionProof: new bytes32[](0),
+                signature: ""
+            }),
+            lenderSpec: PWNSimpleLoan.LenderSpec({
+                sourceOfFunds: secondLender
+            }),
+            callerSpec: PWNSimpleLoan.CallerSpec({
+                refinancingLoanId: loanId,
+                revokeNonce: false,
+                nonce: 0
+            }),
+            extra: ""
+        });
+
+        assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
+
+        vm.prank(secondLender);
+        deployment.simpleLoan.claimLOAN(loanId);
+
+        assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
+
+        vm.prank(borrower);
+        deployment.simpleLoan.repayLOAN(rLoanId);
+
+        assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
+    }
+
+    function testUseCase_shouldTransferCommonOnFailedAutoclaim_2() external {
+        credit = new T20();
+        coll = new T721();
+
+        address sofAdapter = address(new DummyPoolAdapter());
+        address sof = makeAddr("sof");
+
+        vm.mockCallRevert(
+            sofAdapter,
+            abi.encodeWithSignature("supply(address,address,address,uint256)"),
+            "mock revert"
+        );
+
+        vm.prank(sof);
+        credit.approve(sofAdapter, type(uint256).max);
+
+        vm.prank(deployment.config.owner());
+        deployment.config.registerPoolAdapter(sof, sofAdapter);
+
+        coll.mint(borrower, collId);
+        vm.prank(borrower);
+        coll.setApprovalForAll(address(deployment.simpleLoan), true);
+
+        credit.mint(address(deployment.simpleLoan), 10);
+        credit.mint(sof, 20);
+
+        vm.prank(lender);
+        credit.approve(address(deployment.simpleLoan), type(uint256).max);
+        vm.prank(borrower);
+        credit.approve(address(deployment.simpleLoan), type(uint256).max);
+
+        uint256 vaultBalance = credit.balanceOf(address(deployment.simpleLoan));
+
+        proposal.collateralCategory = MultiToken.Category.ERC721;
+        proposal.collateralAddress = address(coll);
+        proposal.collateralAmount = 0;
+        proposal.collateralId = collId;
+        proposal.creditAddress = address(credit);
+        proposal.creditAmount = 10;
+        proposal.proposerSpecHash = deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(sof));
+
+        // Make proposal
+        vm.prank(lender);
+        deployment.simpleLoanSimpleProposal.makeProposal(proposal);
+
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+
+        // Create a loan
+        vm.prank(borrower);
+        uint256 loanId = deployment.simpleLoan.createLOAN({
+            proposalSpec: PWNSimpleLoan.ProposalSpec({
+                proposalContract: address(deployment.simpleLoanSimpleProposal),
+                proposalData: proposalData,
+                proposalInclusionProof: new bytes32[](0),
+                signature: ""
+            }),
+            lenderSpec: PWNSimpleLoan.LenderSpec({
+                sourceOfFunds: sof
+            }),
+            callerSpec: PWNSimpleLoan.CallerSpec({
+                refinancingLoanId: 0,
+                revokeNonce: false,
+                nonce: 0
+            }),
+            extra: ""
+        });
+
+        assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
+
+        // Make refinance proposal
+        proposal.creditAmount = 9;
+        proposal.nonce = proposal.nonce + 1;
+
+        vm.prank(lender);
+        deployment.simpleLoanSimpleProposal.makeProposal(proposal);
+
+        proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+
+        // Refinance original loan
+        vm.prank(borrower);
+        uint256 rLoanId = deployment.simpleLoan.createLOAN({
+            proposalSpec: PWNSimpleLoan.ProposalSpec({
+                proposalContract: address(deployment.simpleLoanSimpleProposal),
+                proposalData: proposalData,
+                proposalInclusionProof: new bytes32[](0),
+                signature: ""
+            }),
+            lenderSpec: PWNSimpleLoan.LenderSpec({
+                sourceOfFunds: sof
+            }),
+            callerSpec: PWNSimpleLoan.CallerSpec({
+                refinancingLoanId: loanId,
+                revokeNonce: false,
+                nonce: 0
+            }),
+            extra: ""
+        });
+
+        assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
+
+        vm.prank(lender);
+        deployment.simpleLoan.claimLOAN(loanId);
+
+        assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
+
+        vm.prank(borrower);
+        deployment.simpleLoan.repayLOAN(rLoanId);
+
+        assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
+
+        vm.prank(lender);
+        deployment.simpleLoan.claimLOAN(rLoanId);
+
+        assertGe(credit.balanceOf(address(deployment.simpleLoan)), vaultBalance);
     }
 
 }

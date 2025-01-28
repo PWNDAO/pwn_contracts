@@ -10,14 +10,14 @@ import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleL
 
 
 /**
- * @title PWN Simple Loan Fungible Proposal
- * @notice Contract for creating and accepting fungible loan proposals.
- *         Proposals are fungible, which means that they are not tied to a specific collateral or credit amount.
+ * @title PWN Simple Loan Elastic Proposal
+ * @notice Contract for creating and accepting elastic loan proposals.
+ *         Proposals are elastic, which means that they are not tied to a specific collateral or credit amount.
  *         The amount of collateral and credit is specified during the proposal acceptance.
  */
-contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
+contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
 
-    string public constant VERSION = "1.0";
+    string public constant VERSION = "1.1";
 
     /**
      * @notice Credit per collateral unit denominator. It is used to calculate credit amount from collateral amount.
@@ -28,23 +28,24 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
      * @dev EIP-712 simple proposal struct type hash.
      */
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 minCollateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 availableCreditLimit,uint256 fixedInterestAmount,uint40 accruingInterestAPR,uint32 duration,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 creditPerCollateralUnit,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
-     * @notice Construct defining a fungible proposal.
+     * @notice Construct defining an elastic proposal.
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
      * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
-     * @param minCollateralAmount Minimal amount of tokens used as a collateral.
      * @param checkCollateralStateFingerprint If true, the collateral state fingerprint will be checked during proposal acceptance.
      * @param collateralStateFingerprint Fingerprint of a collateral state. It is used to check if a collateral is in a valid state.
      * @param creditAddress Address of an asset which is lended to a borrower.
      * @param creditPerCollateralUnit Amount of tokens which are offered per collateral unit with 38 decimals.
+     * @param minCreditAmount Minimum amount of tokens which can be borrowed using the proposal.
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal. If non-zero, proposal can be accepted more than once, until the credit limit is reached.
+     * @param utilizedCreditId Id of utilized credit. Can be shared between multiple proposals.
      * @param fixedInterestAmount Fixed interest amount in credit tokens. It is the minimum amount of interest which has to be paid by a borrower.
      * @param accruingInterestAPR Accruing interest APR with 2 decimals.
-     * @param duration Loan duration in seconds.
+     * @param durationOrDate Duration of a loan in seconds. If the value is greater than 10^9, it is treated as a timestamp of a loan end.
      * @param expiration Proposal expiration timestamp in seconds.
      * @param allowedAcceptor Address that is allowed to accept proposal. If the address is zero address, anybody can accept the proposal.
      * @param proposer Address of a proposal signer. If `isOffer` is true, the proposer is the lender. If `isOffer` is false, the proposer is the borrower.
@@ -59,15 +60,16 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         MultiToken.Category collateralCategory;
         address collateralAddress;
         uint256 collateralId;
-        uint256 minCollateralAmount;
         bool checkCollateralStateFingerprint;
         bytes32 collateralStateFingerprint;
         address creditAddress;
         uint256 creditPerCollateralUnit;
+        uint256 minCreditAmount;
         uint256 availableCreditLimit;
+        bytes32 utilizedCreditId;
         uint256 fixedInterestAmount;
         uint24 accruingInterestAPR;
-        uint32 duration;
+        uint32 durationOrDate;
         uint40 expiration;
         address allowedAcceptor;
         address proposer;
@@ -81,10 +83,10 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
 
     /**
      * @notice Construct defining proposal concrete values.
-     * @param collateralAmount Amount of collateral to be used in the loan.
+     * @param creditAmount Amount of credit to be borrowed.
      */
     struct ProposalValues {
-        uint256 collateralAmount;
+        uint256 creditAmount;
     }
 
     /**
@@ -93,20 +95,26 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, Proposal proposal);
 
     /**
-     * @notice Thrown when proposal has no minimal collateral amount set.
+     * @notice Thrown when proposal has no minimum credit amount set.
      */
-    error MinCollateralAmountNotSet();
+    error MinCreditAmountNotSet();
 
     /**
-     * @notice Thrown when acceptor provides insufficient collateral amount.
+     * @notice Throw when proposal credit amount is insufficient.
      */
-    error InsufficientCollateralAmount(uint256 current, uint256 limit);
+    error InsufficientCreditAmount(uint256 current, uint256 limit);
+
+    /**
+     * @notice Throw when value of provided credit per collateral unit is zero.
+     */
+    error ZeroCreditPerCollateralUnit();
 
     constructor(
         address _hub,
         address _revokedNonce,
-        address _config
-    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, "PWNSimpleLoanFungibleProposal", VERSION) {}
+        address _config,
+        address _utilizedCredit
+    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanElasticProposal", VERSION) {}
 
     /**
      * @notice Get an proposal hash according to EIP-712
@@ -153,13 +161,17 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @notice Compute credit amount from collateral amount and credit per collateral unit.
-     * @param collateralAmount Amount of collateral.
+     * @notice Compute collateral amount from credit amount and credit per collateral unit.
+     * @param creditAmount Amount of credit.
      * @param creditPerCollateralUnit Amount of credit per collateral unit with 38 decimals.
-     * @return Amount of credit.
+     * @return Amount of collateral.
      */
-    function getCreditAmount(uint256 collateralAmount, uint256 creditPerCollateralUnit) public pure returns (uint256) {
-        return Math.mulDiv(collateralAmount, creditPerCollateralUnit, CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR);
+    function getCollateralAmount(uint256 creditAmount, uint256 creditPerCollateralUnit) public pure returns (uint256) {
+        if (creditPerCollateralUnit == 0) {
+            revert ZeroCreditPerCollateralUnit();
+        }
+
+        return Math.mulDiv(creditAmount, CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR, creditPerCollateralUnit);
     }
 
     /**
@@ -178,19 +190,18 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         // Make proposal hash
         proposalHash = _getProposalHash(PROPOSAL_TYPEHASH, abi.encode(proposal));
 
-        // Check min collateral amount
-        if (proposal.minCollateralAmount == 0) {
-            revert MinCollateralAmountNotSet();
+        // Check min credit amount
+        if (proposal.minCreditAmount == 0) {
+            revert MinCreditAmountNotSet();
         }
-        if (proposalValues.collateralAmount < proposal.minCollateralAmount) {
-            revert InsufficientCollateralAmount({
-                current: proposalValues.collateralAmount,
-                limit: proposal.minCollateralAmount
-            });
+
+        // Check sufficient credit amount
+        if (proposalValues.creditAmount < proposal.minCreditAmount) {
+            revert InsufficientCreditAmount({ current: proposalValues.creditAmount, limit: proposal.minCreditAmount });
         }
 
         // Calculate credit amount
-        uint256 creditAmount = getCreditAmount(proposalValues.collateralAmount, proposal.creditPerCollateralUnit);
+        uint256 collateralAmount = getCollateralAmount(proposalValues.creditAmount, proposal.creditPerCollateralUnit);
 
         // Try to accept proposal
         _acceptProposal(
@@ -204,8 +215,9 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
                 collateralId: proposal.collateralId,
                 checkCollateralStateFingerprint: proposal.checkCollateralStateFingerprint,
                 collateralStateFingerprint: proposal.collateralStateFingerprint,
-                creditAmount: creditAmount,
+                creditAmount: proposalValues.creditAmount,
                 availableCreditLimit: proposal.availableCreditLimit,
+                utilizedCreditId: proposal.utilizedCreditId,
                 expiration: proposal.expiration,
                 allowedAcceptor: proposal.allowedAcceptor,
                 proposer: proposal.proposer,
@@ -221,16 +233,16 @@ contract PWNSimpleLoanFungibleProposal is PWNSimpleLoanProposal {
         loanTerms = PWNSimpleLoan.Terms({
             lender: proposal.isOffer ? proposal.proposer : acceptor,
             borrower: proposal.isOffer ? acceptor : proposal.proposer,
-            duration: proposal.duration,
+            duration: _getLoanDuration(proposal.durationOrDate),
             collateral: MultiToken.Asset({
                 category: proposal.collateralCategory,
                 assetAddress: proposal.collateralAddress,
                 id: proposal.collateralId,
-                amount: proposalValues.collateralAmount
+                amount: collateralAmount
             }),
             credit: MultiToken.ERC20({
                 assetAddress: proposal.creditAddress,
-                amount: creditAmount
+                amount: proposalValues.creditAmount
             }),
             fixedInterestAmount: proposal.fixedInterestAmount,
             accruingInterestAPR: proposal.accruingInterestAPR,

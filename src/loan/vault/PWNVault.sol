@@ -3,12 +3,10 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 import { IERC721Receiver } from "openzeppelin/token/ERC721/IERC721Receiver.sol";
 import { IERC1155Receiver, IERC165 } from "openzeppelin/token/ERC1155/IERC1155Receiver.sol";
 
 import { IPoolAdapter } from "pwn/interfaces/IPoolAdapter.sol";
-import { Permit } from "pwn/loan/vault/Permit.sol";
 
 
 /**
@@ -63,6 +61,11 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
      */
     error IncompleteTransfer();
 
+    /**
+     * @notice Thrown when an asset transfer source and destination address are the same.
+     */
+    error VaultTransferSameSourceAndDestination(address addr);
+
 
     /*----------------------------------------------------------*|
     |*  # TRANSFER FUNCTIONS                                    *|
@@ -78,7 +81,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256 originalBalance = asset.balanceOf(address(this));
 
         asset.transferAssetFrom(origin, address(this));
-        _checkTransfer(asset, originalBalance, address(this), true);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: address(this),
+            counterPartyAddress: origin,
+            checkIncreasingBalance: true
+        });
 
         emit VaultPull(asset, origin);
     }
@@ -93,7 +102,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256 originalBalance = asset.balanceOf(beneficiary);
 
         asset.safeTransferAssetFrom(address(this), beneficiary);
-        _checkTransfer(asset, originalBalance, beneficiary, true);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: beneficiary,
+            counterPartyAddress: address(this),
+            checkIncreasingBalance: true
+        });
 
         emit VaultPush(asset, beneficiary);
     }
@@ -109,7 +124,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256 originalBalance = asset.balanceOf(beneficiary);
 
         asset.safeTransferAssetFrom(origin, beneficiary);
-        _checkTransfer(asset, originalBalance, beneficiary, true);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: beneficiary,
+            counterPartyAddress: origin,
+            checkIncreasingBalance: true
+        });
 
         emit VaultPushFrom(asset, origin, beneficiary);
     }
@@ -126,7 +147,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         uint256 originalBalance = asset.balanceOf(owner);
 
         poolAdapter.withdraw(pool, owner, asset.assetAddress, asset.amount);
-        _checkTransfer(asset, originalBalance, owner, true);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: owner,
+            counterPartyAddress: pool,
+            checkIncreasingBalance: true
+        });
 
         emit PoolWithdraw(asset, address(poolAdapter), pool, owner);
     }
@@ -145,7 +172,13 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
 
         asset.transferAssetFrom(address(this), address(poolAdapter));
         poolAdapter.supply(pool, owner, asset.assetAddress, asset.amount);
-        _checkTransfer(asset, originalBalance, address(this), false);
+        _checkTransfer({
+            asset: asset,
+            originalBalance: originalBalance,
+            checkedAddress: address(this),
+            counterPartyAddress: pool,
+            checkIncreasingBalance: false
+        });
 
         // Note: Assuming pool will revert supply transaction if it fails.
 
@@ -156,40 +189,19 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
         MultiToken.Asset memory asset,
         uint256 originalBalance,
         address checkedAddress,
+        address counterPartyAddress,
         bool checkIncreasingBalance
     ) private view {
+        if (checkedAddress == counterPartyAddress) {
+            revert VaultTransferSameSourceAndDestination({ addr: checkedAddress });
+        }
+
         uint256 expectedBalance = checkIncreasingBalance
             ? originalBalance + asset.getTransferAmount()
             : originalBalance - asset.getTransferAmount();
 
         if (expectedBalance != asset.balanceOf(checkedAddress)) {
             revert IncompleteTransfer();
-        }
-    }
-
-
-    /*----------------------------------------------------------*|
-    |*  # PERMIT                                                *|
-    |*----------------------------------------------------------*/
-
-    /**
-     * @notice Try to execute a permit for an ERC20 token.
-     * @dev If the permit execution fails, the function will not revert.
-     * @param permit The permit data.
-     */
-    function _tryPermit(Permit memory permit) internal {
-        if (permit.asset != address(0)) {
-            try IERC20Permit(permit.asset).permit({
-                owner: permit.owner,
-                spender: address(this),
-                value: permit.amount,
-                deadline: permit.deadline,
-                v: permit.v,
-                r: permit.r,
-                s: permit.s
-            }) {} catch {
-                // Note: Permit execution can be frontrun, so we don't revert on failure.
-            }
         }
     }
 

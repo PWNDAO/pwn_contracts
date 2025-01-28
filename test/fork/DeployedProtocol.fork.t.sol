@@ -42,6 +42,18 @@ contract DeployedProtocolTest is DeploymentTest {
         // - owner is protocol timelock
         assertEq(deployment.hub.owner(), deployment.protocolTimelock);
 
+        // REVOKED NONCE
+        // - has correct access tag
+        assertEq(deployment.revokedNonce.accessTag(), PWNHubTags.NONCE_MANAGER);
+        // - has correct hub address
+        assertEq(address(deployment.revokedNonce.hub()), address(deployment.hub));
+
+        // UTILIZED CREDIT
+        // - has correct access tag
+        assertEq(deployment.utilizedCredit.accessTag(), PWNHubTags.LOAN_PROPOSAL);
+        // - has correct hub address
+        assertEq(address(deployment.utilizedCredit.hub()), address(deployment.hub));
+
         // HUB TAGS
         // - simple loan
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoan), PWNHubTags.NONCE_MANAGER));
@@ -52,9 +64,9 @@ contract DeployedProtocolTest is DeploymentTest {
         // - simple loan list proposal
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanListProposal), PWNHubTags.NONCE_MANAGER));
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanListProposal), PWNHubTags.LOAN_PROPOSAL));
-        // - simple loan fungible proposal
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanFungibleProposal), PWNHubTags.NONCE_MANAGER));
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanFungibleProposal), PWNHubTags.LOAN_PROPOSAL));
+        // - simple loan elastic proposal
+        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticProposal), PWNHubTags.NONCE_MANAGER));
+        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticProposal), PWNHubTags.LOAN_PROPOSAL));
         // - simple loan dutch auction proposal
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanDutchAuctionProposal), PWNHubTags.NONCE_MANAGER));
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanDutchAuctionProposal), PWNHubTags.LOAN_PROPOSAL));

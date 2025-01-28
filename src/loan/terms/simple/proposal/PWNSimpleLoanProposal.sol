@@ -10,6 +10,7 @@ import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
 import { PWNSignatureChecker } from "pwn/loan/lib/PWNSignatureChecker.sol";
 import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { PWNUtilizedCredit } from "pwn/utilized-credit/PWNUtilizedCredit.sol";
 import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
 import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
 
@@ -29,6 +30,7 @@ abstract contract PWNSimpleLoanProposal {
     PWNHub public immutable hub;
     PWNRevokedNonce public immutable revokedNonce;
     PWNConfig public immutable config;
+    PWNUtilizedCredit public immutable utilizedCredit;
 
     bytes32 public constant MULTIPROPOSAL_TYPEHASH = keccak256("Multiproposal(bytes32 multiproposalMerkleRoot)");
 
@@ -43,6 +45,7 @@ abstract contract PWNSimpleLoanProposal {
         bytes32 collateralStateFingerprint;
         uint256 creditAmount;
         uint256 availableCreditLimit;
+        bytes32 utilizedCreditId;
         uint40 expiration;
         address allowedAcceptor;
         address proposer;
@@ -59,12 +62,6 @@ abstract contract PWNSimpleLoanProposal {
      *      (proposal hash => is made)
      */
     mapping (bytes32 => bool) public proposalsMade;
-
-    /**
-     * @dev Mapping of credit used by a proposal with defined available credit limit.
-     *      (proposal hash => credit used)
-     */
-    mapping (bytes32 => uint256) public creditUsed;
 
 
     /*----------------------------------------------------------*|
@@ -102,14 +99,14 @@ abstract contract PWNSimpleLoanProposal {
     error InvalidRefinancingLoanId(uint256 refinancingLoanId);
 
     /**
-     * @notice Thrown when a proposal would exceed the available credit limit.
-     */
-    error AvailableCreditLimitExceeded(uint256 used, uint256 limit);
-
-    /**
      * @notice Thrown when caller is not allowed to accept a proposal.
      */
     error CallerNotAllowedAcceptor(address current, address allowed);
+
+    /**
+     * @notice Thrown when a default date is in the past.
+     */
+    error DefaultDateInPast(uint32 defaultDate, uint32 current);
 
 
     /*----------------------------------------------------------*|
@@ -120,12 +117,14 @@ abstract contract PWNSimpleLoanProposal {
         address _hub,
         address _revokedNonce,
         address _config,
+        address _utilizedCredit,
         string memory name,
         string memory version
     ) {
         hub = PWNHub(_hub);
         revokedNonce = PWNRevokedNonce(_revokedNonce);
         config = PWNConfig(_config);
+        utilizedCredit = PWNUtilizedCredit(_utilizedCredit);
 
         DOMAIN_SEPARATOR = keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -222,6 +221,23 @@ abstract contract PWNSimpleLoanProposal {
     }
 
     /**
+     * @notice Get loan duration from a duration or date value.
+     * @param durationOrDate Duration or date value.
+     * @return Loan duration.
+     */
+    function _getLoanDuration(uint32 durationOrDate) internal view returns (uint32) {
+        if (durationOrDate <= 1e9) {
+            // Value is duration
+            return durationOrDate;
+        } else if (durationOrDate > block.timestamp) {
+            // Value is date
+            return uint32(uint256(durationOrDate) - block.timestamp);
+        } else {
+            revert DefaultDateInPast({ defaultDate: durationOrDate, current: uint32(block.timestamp) });
+        }
+    }
+
+    /**
      * @notice Try to accept proposal base.
      * @param acceptor Address of a proposal acceptor.
      * @param refinancingLoanId Refinancing loan ID.
@@ -309,15 +325,12 @@ abstract contract PWNSimpleLoanProposal {
         if (proposal.availableCreditLimit == 0) {
             // Revoke nonce if credit limit is 0, proposal can be accepted only once
             revokedNonce.revokeNonce(proposal.proposer, proposal.nonceSpace, proposal.nonce);
-        } else if (creditUsed[proposalHash] + proposal.creditAmount <= proposal.availableCreditLimit) {
-            // Increase used credit if credit limit is not exceeded
-            creditUsed[proposalHash] += proposal.creditAmount;
         } else {
-            // Revert if credit limit is exceeded
-            revert AvailableCreditLimitExceeded({
-                used: creditUsed[proposalHash] + proposal.creditAmount,
-                limit: proposal.availableCreditLimit
-            });
+            // Update utilized credit
+            // Note: This will revert if utilized credit would exceed the available credit limit
+            utilizedCredit.utilizeCredit(
+                proposal.proposer, proposal.utilizedCreditId, proposal.creditAmount, proposal.availableCreditLimit
+            );
         }
 
         // Check collateral state fingerprint if needed

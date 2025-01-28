@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { Ownable2Step } from "openzeppelin/access/Ownable2Step.sol";
-import { Initializable } from "openzeppelin/proxy/utils/Initializable.sol";
+import { Ownable2StepUpgradeable } from "openzeppelin-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import { IPoolAdapter } from "pwn/interfaces/IPoolAdapter.sol";
 import { IStateFingerpringComputer } from "pwn/interfaces/IStateFingerpringComputer.sol";
@@ -13,9 +12,9 @@ import { IStateFingerpringComputer } from "pwn/interfaces/IStateFingerpringCompu
  * @notice Contract holding configurable values of PWN protocol.
  * @dev Is intended to be used as a proxy via `TransparentUpgradeableProxy`.
  */
-contract PWNConfig is Ownable2Step, Initializable {
+contract PWNConfig is Ownable2StepUpgradeable {
 
-    string internal constant VERSION = "1.2";
+    string internal constant VERSION = "1.3";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -106,7 +105,7 @@ contract PWNConfig is Ownable2Step, Initializable {
     |*  # CONSTRUCTOR                                           *|
     |*----------------------------------------------------------*/
 
-    constructor() Ownable2Step() {
+    constructor() Ownable2StepUpgradeable() {
         // PWNConfig is used as a proxy. Use initializer to setup initial properties.
         _disableInitializers();
         _transferOwnership(address(0));

@@ -3,6 +3,7 @@ pragma solidity 0.8.16;
 
 import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.sol";
 
+import { ReentrancyGuard } from "openzeppelin/security/ReentrancyGuard.sol";
 import { Math } from "openzeppelin/utils/math/Math.sol";
 import { SafeCast } from "openzeppelin/utils/math/SafeCast.sol";
 
@@ -16,7 +17,6 @@ import { PWNFeeCalculator } from "pwn/loan/lib/PWNFeeCalculator.sol";
 import { PWNSignatureChecker } from "pwn/loan/lib/PWNSignatureChecker.sol";
 import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 import { PWNLOAN } from "pwn/loan/token/PWNLOAN.sol";
-import { Permit, InvalidPermitOwner, InvalidPermitAsset } from "pwn/loan/vault/Permit.sol";
 import { PWNVault } from "pwn/loan/vault/PWNVault.sol";
 import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
 import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
@@ -27,10 +27,10 @@ import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
  * @notice Contract managing a simple loan in PWN protocol.
  * @dev Acts as a vault for every loan created by this contract.
  */
-contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
+contract PWNSimpleLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvider {
     using MultiToken for address;
 
-    string public constant VERSION = "1.2.2";
+    string public constant VERSION = "1.3";
 
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
@@ -117,13 +117,11 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param refinancingLoanId Id of a loan to be refinanced. 0 if creating a new loan.
      * @param revokeNonce Flag if the callers nonce should be revoked.
      * @param nonce Callers nonce to be revoked. Nonce is revoked from the current nonce space.
-     * @param permitData Callers permit data for a loans credit asset.
      */
     struct CallerSpec {
         uint256 refinancingLoanId;
         bool revokeNonce;
         uint256 nonce;
-        bytes permitData;
     }
 
     /**
@@ -246,7 +244,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     /**
      * @notice Thrown when managed loan is defaulted.
      */
-    error LoanDefaulted(uint40);
+    error LoanDefaulted(uint40 timestap);
 
     /**
      * @notice Thrown when loan doesn't exist.
@@ -376,7 +374,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         LenderSpec calldata lenderSpec,
         CallerSpec calldata callerSpec,
         bytes calldata extra
-    ) external returns (uint256 loanId) {
+    ) external nonReentrant returns (uint256 loanId) {
         // Check provided proposal contract
         if (!hub.hasTag(proposalSpec.proposalContract, PWNHubTags.LOAN_PROPOSAL)) {
             revert AddressMissingHubTag({ addr: proposalSpec.proposalContract, tag: PWNHubTags.LOAN_PROPOSAL });
@@ -461,23 +459,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     }
 
     /**
-     * @notice Check that permit data have correct owner and asset.
-     * @param caller Caller address.
-     * @param creditAddress Address of a credit to be used.
-     * @param permit Permit to be checked.
-     */
-    function _checkPermit(address caller, address creditAddress, Permit memory permit) private pure {
-        if (permit.asset != address(0)) {
-            if (permit.owner != caller) {
-                revert InvalidPermitOwner({ current: permit.owner, expected: caller });
-            }
-            if (permit.asset != creditAddress) {
-                revert InvalidPermitAsset({ current: permit.asset, expected: creditAddress });
-            }
-        }
-    }
-
-    /**
      * @notice Check if the loan terms are valid for refinancing.
      * @dev The function will revert if the loan terms are not valid for refinancing.
      * @param loanId Original loan id.
@@ -540,7 +521,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     /**
      * @notice Transfer collateral to Vault and credit to borrower.
-     * @dev The function assumes a prior token approval to a contract address or signed permits.
+     * @dev The function assumes a prior token approval to a contract address.
      * @param loanTerms Loan terms struct.
      */
     function _settleNewLoan(
@@ -578,7 +559,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @notice Settle the refinanced loan. If the new lender is the same as the current LOAN owner,
      *         the function will transfer only the surplus to the borrower, if any.
      *         If the new loan amount is not enough to cover the original loan, the borrower needs to contribute.
-     *         The function assumes a prior token approval to a contract address or signed permits.
+     *         The function assumes a prior token approval to a contract address.
      * @param refinancingLoanId Id of a loan to be refinanced.
      * @param loanTerms Loan terms struct.
      * @param lenderSpec Lender specification struct.
@@ -697,28 +678,16 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @dev Any address can repay a running loan, but a collateral will be transferred to a borrower address associated with the loan.
      *      If the LOAN token holder is the same as the original lender, the repayment credit asset will be
      *      transferred to the LOAN token holder directly. Otherwise it will transfer the repayment credit asset to
-     *      a vault, waiting on a LOAN token holder to claim it. The function assumes a prior token approval to a contract address
-     *      or a signed permit.
+     *      a vault, waiting on a LOAN token holder to claim it. The function assumes a prior token approval to a contract address.
      * @param loanId Id of a loan that is being repaid.
-     * @param permitData Callers credit permit data.
      */
-    function repayLOAN(
-        uint256 loanId,
-        bytes calldata permitData
-    ) external {
+    function repayLOAN(uint256 loanId) external nonReentrant {
         LOAN storage loan = LOANs[loanId];
 
         _checkLoanCanBeRepaid(loan.status, loan.defaultTimestamp);
 
         // Update loan to repaid state
         _updateRepaidLoan(loanId);
-
-        // Execute permit for the caller
-        if (permitData.length > 0) {
-            Permit memory permit = abi.decode(permitData, (Permit));
-            _checkPermit(msg.sender, loan.creditAddress, permit);
-            _tryPermit(permit);
-        }
 
         // Transfer the repaid credit to the Vault
         uint256 repaymentAmount = loanRepaymentAmount(loanId);
@@ -750,7 +719,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             revert LoanNotRunning();
         // Check that loan is not defaulted
         if (defaultTimestamp <= block.timestamp)
-            revert LoanDefaulted(defaultTimestamp);
+            revert LoanDefaulted({ timestap: defaultTimestamp });
     }
 
     /**
@@ -820,7 +789,7 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      *      Claim will transfer the repaid credit or collateral to a LOAN token holder address and burn the LOAN token.
      * @param loanId Id of a loan that is being claimed.
      */
-    function claimLOAN(uint256 loanId) external {
+    function claimLOAN(uint256 loanId) external nonReentrant {
         LOAN storage loan = LOANs[loanId];
 
         // Check that caller is LOAN token holder
@@ -959,16 +928,14 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
     /**
      * @notice Extend loans default date with signed extension proposal signed by borrower or LOAN token owner.
-     * @dev The function assumes a prior token approval to a contract address or a signed permit.
+     * @dev The function assumes a prior token approval to a contract address.
      * @param extension Extension proposal struct.
      * @param signature Signature of the extension proposal.
-     * @param permitData Callers credit permit data.
      */
     function extendLOAN(
         ExtensionProposal calldata extension,
-        bytes calldata signature,
-        bytes calldata permitData
-    ) external {
+        bytes calldata signature
+    ) external nonReentrant {
         LOAN storage loan = LOANs[extension.loanId];
 
         // Check that loan is in the right state
@@ -1052,11 +1019,6 @@ contract PWNSimpleLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
             _checkValidAsset(compensation);
 
             // Transfer compensation to the loan owner
-            if (permitData.length > 0) {
-                Permit memory permit = abi.decode(permitData, (Permit));
-                _checkPermit(msg.sender, extension.compensationAddress, permit);
-                _tryPermit(permit);
-            }
             _pushFrom(compensation, loan.borrower, loanOwner);
         }
     }

@@ -3,8 +3,6 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { Permit } from "pwn/loan/vault/Permit.sol";
-
 import { T20 } from "test/helper/T20.sol";
 import { T721 } from "test/helper/T721.sol";
 import { T1155 } from "test/helper/T1155.sol";
@@ -16,11 +14,12 @@ import {
     PWNHubTags,
     PWNSimpleLoan,
     PWNSimpleLoanDutchAuctionProposal,
-    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,
     PWNRevokedNonce,
+    PWNUtilizedCredit,
     MultiTokenCategoryRegistry
 } from "test/DeploymentTest.t.sol";
 
@@ -32,10 +31,6 @@ abstract contract BaseIntegrationTest is DeploymentTest {
     T1155 t1155;
     T20 credit;
 
-    uint256 lenderPK = uint256(777);
-    address lender = vm.addr(lenderPK);
-    uint256 borrowerPK = uint256(888);
-    address borrower = vm.addr(borrowerPK);
     PWNSimpleLoanSimpleProposal.Proposal simpleProposal;
 
     function setUp() public override {
@@ -58,9 +53,10 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             creditAddress: address(credit),
             creditAmount: 100e18,
             availableCreditLimit: 0,
+            utilizedCreditId: 0,
             fixedInterestAmount: 10e18,
             accruingInterestAPR: 0,
-            duration: 3600,
+            durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
             allowedAcceptor: borrower,
             proposer: lender,
@@ -73,11 +69,6 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         });
     }
 
-
-    function _sign(uint256 pk, bytes32 digest) internal pure returns (bytes memory) {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
-        return abi.encodePacked(r, s, v);
-    }
 
     // Create from proposal
 
@@ -171,8 +162,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             callerSpec: PWNSimpleLoan.CallerSpec({
                 refinancingLoanId: 0,
                 revokeNonce: false,
-                nonce: 0,
-                permitData: ""
+                nonce: 0
             }),
             extra: ""
         });
@@ -197,10 +187,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             vm.expectRevert(revertData);
         }
         vm.prank(borrower);
-        deployment.simpleLoan.repayLOAN({
-            loanId: loanId,
-            permitData: ""
-        });
+        deployment.simpleLoan.repayLOAN(loanId);
     }
 
 }

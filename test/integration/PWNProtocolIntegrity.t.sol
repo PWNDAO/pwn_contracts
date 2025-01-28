@@ -14,7 +14,7 @@ import {
     PWNHubTags,
     PWNSimpleLoan,
     PWNSimpleLoanDutchAuctionProposal,
-    PWNSimpleLoanFungibleProposal,
+    PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
     PWNLOAN,

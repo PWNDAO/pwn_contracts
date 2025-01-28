@@ -109,8 +109,9 @@ contract PWNRevokedNonce {
      * @param nonces List of nonces to be revoked.
      */
     function revokeNonces(uint256[] calldata nonces) external {
+        uint256 nonceSpace = _nonceSpace[msg.sender];
         for (uint256 i; i < nonces.length; ++i) {
-            _revokeNonce(msg.sender, _nonceSpace[msg.sender], nonces[i]);
+            _revokeNonce(msg.sender, nonceSpace, nonces[i]);
         }
     }
 
