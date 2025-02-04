@@ -131,7 +131,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         vm.prank(deployment.protocolTimelock);
         deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
-        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(simpleProposal);
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(simpleProposal, simpleProposalValues);
 
         vm.expectRevert(
             abi.encodeWithSelector(

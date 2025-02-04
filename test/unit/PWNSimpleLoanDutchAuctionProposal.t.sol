@@ -8,6 +8,7 @@ import {
     PWNSimpleLoan
 } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
 
+import { PWNSimpleLoanDutchAuctionProposalHarness } from "test/harness/PWNSimpleLoanDutchAuctionProposalHarness.sol";
 import {
     MultiToken,
     Math,
@@ -19,7 +20,7 @@ import {
 
 abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposalTest {
 
-    PWNSimpleLoanDutchAuctionProposal proposalContract;
+    PWNSimpleLoanDutchAuctionProposalHarness proposalContract;
     PWNSimpleLoanDutchAuctionProposal.Proposal proposal;
     PWNSimpleLoanDutchAuctionProposal.ProposalValues proposalValues;
 
@@ -28,7 +29,7 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
     function setUp() virtual public override {
         super.setUp();
 
-        proposalContract = new PWNSimpleLoanDutchAuctionProposal(hub, revokedNonce, config, utilizedCredit);
+        proposalContract = new PWNSimpleLoanDutchAuctionProposalHarness(hub, revokedNonce, config, utilizedCredit);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
         proposal = PWNSimpleLoanDutchAuctionProposal.Proposal({
@@ -48,7 +49,8 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
             durationOrDate: 1 days,
             auctionStart: uint40(block.timestamp),
             auctionDuration: 100 minutes,
-            allowedAcceptor: address(0),
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: proposer,
             proposerSpecHash: keccak256("proposer spec"),
             isOffer: true,
@@ -60,7 +62,8 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
 
         proposalValues = PWNSimpleLoanDutchAuctionProposal.ProposalValues({
             intendedCreditAmount: 10000,
-            slippage: 0
+            slippage: 0,
+            acceptorControllerData: ""
         });
     }
 
@@ -71,13 +74,13 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256("PWNSimpleLoanDutchAuctionProposal"),
-                keccak256("1.1"),
+                keccak256("1.2"),
                 block.chainid,
                 proposalContractAddr
             )),
             keccak256(abi.encodePacked(
-                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 minCreditAmount,uint256 maxCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 auctionStart,uint40 auctionDuration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
-                abi.encode(_proposal)
+                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,uint256 minCreditAmount,uint256 maxCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 auctionStart,uint40 auctionDuration,address acceptorController,bytes acceptorControllerData,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
+                proposalContract.exposed_erc712EncodeProposal(_proposal)
             ))
         ));
     }
@@ -101,13 +104,16 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
         proposal.utilizedCreditId = _params.utilizedCreditId;
         proposal.durationOrDate = _params.durationOrDate;
         proposal.auctionDuration = _params.expiration - proposal.auctionStart - 1 minutes;
-        proposal.allowedAcceptor = _params.allowedAcceptor;
+        proposal.acceptorController = _params.acceptorController;
+        proposal.acceptorControllerData = _params.acceptorControllerProposerData;
         proposal.proposer = _params.proposer;
         proposal.isOffer = _params.isOffer;
         proposal.refinancingLoanId = _params.refinancingLoanId;
         proposal.nonceSpace = _params.nonceSpace;
         proposal.nonce = _params.nonce;
         proposal.loanContract = _params.loanContract;
+
+        proposalValues.acceptorControllerData = _params.acceptorControllerAcceptorData;
     }
 
 
@@ -243,7 +249,8 @@ contract PWNSimpleLoanDutchAuctionProposal_DecodeProposalData_Test is PWNSimpleL
         assertEq(_proposal.durationOrDate, proposal.durationOrDate);
         assertEq(_proposal.auctionStart, proposal.auctionStart);
         assertEq(_proposal.auctionDuration, proposal.auctionDuration);
-        assertEq(_proposal.allowedAcceptor, proposal.allowedAcceptor);
+        assertEq(_proposal.acceptorController, proposal.acceptorController);
+        assertEq(_proposal.acceptorControllerData, proposal.acceptorControllerData);
         assertEq(_proposal.proposer, proposal.proposer);
         assertEq(_proposal.isOffer, proposal.isOffer);
         assertEq(_proposal.refinancingLoanId, proposal.refinancingLoanId);
@@ -253,6 +260,7 @@ contract PWNSimpleLoanDutchAuctionProposal_DecodeProposalData_Test is PWNSimpleL
 
         assertEq(_proposalValues.intendedCreditAmount, proposalValues.intendedCreditAmount);
         assertEq(_proposalValues.slippage, proposalValues.slippage);
+        assertEq(_proposalValues.acceptorControllerData, proposalValues.acceptorControllerData);
     }
 
 }
@@ -415,6 +423,8 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
             || intendedCreditAmount > auctionCreditAmount
         );
 
+        bytes32 proposalHash = _proposalHash(proposal);
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 PWNSimpleLoanDutchAuctionProposal.InvalidCreditAmount.selector,
@@ -429,7 +439,7 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
             refinancingLoanId: 0,
             proposalData: abi.encode(proposal, proposalValues),
             proposalInclusionProof: new bytes32[](0),
-            signature: _sign(proposerPK, _proposalHash(proposal))
+            signature: _sign(proposerPK, proposalHash)
         });
     }
 
@@ -455,6 +465,8 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
             || intendedCreditAmount - proposalValues.slippage > auctionCreditAmount
         );
 
+        bytes32 proposalHash = _proposalHash(proposal);
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 PWNSimpleLoanDutchAuctionProposal.InvalidCreditAmount.selector,
@@ -469,7 +481,7 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
             refinancingLoanId: 0,
             proposalData: abi.encode(proposal, proposalValues),
             proposalInclusionProof: new bytes32[](0),
-            signature: _sign(proposerPK, _proposalHash(proposal))
+            signature: _sign(proposerPK, proposalHash)
         });
     }
 
@@ -506,16 +518,18 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
         proposalValues.intendedCreditAmount = creditAmount;
         proposalValues.slippage = 0;
 
+        bytes32 proposalHash = _proposalHash(proposal);
+
         vm.prank(activeLoanContract);
-        (bytes32 proposalHash, PWNSimpleLoan.Terms memory terms) = proposalContract.acceptProposal({
+        (bytes32 proposalHash_, PWNSimpleLoan.Terms memory terms) = proposalContract.acceptProposal({
             acceptor: acceptor,
             refinancingLoanId: 0,
             proposalData: abi.encode(proposal, proposalValues),
             proposalInclusionProof: new bytes32[](0),
-            signature: _sign(proposerPK, _proposalHash(proposal))
+            signature: _sign(proposerPK, proposalHash)
         });
 
-        assertEq(proposalHash, _proposalHash(proposal));
+        assertEq(proposalHash_, proposalHash);
         assertEq(terms.lender, isOffer ? proposal.proposer : acceptor);
         assertEq(terms.borrower, isOffer ? acceptor : proposal.proposer);
         assertEq(terms.duration, proposal.durationOrDate);
@@ -531,6 +545,50 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
         assertEq(terms.accruingInterestAPR, proposal.accruingInterestAPR);
         assertEq(terms.lenderSpecHash, isOffer ? proposal.proposerSpecHash : bytes32(0));
         assertEq(terms.borrowerSpecHash, isOffer ? bytes32(0) : proposal.proposerSpecHash);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
+|*  # ERC712 ENCODE PROPOSAL                                *|
+|*----------------------------------------------------------*/
+
+contract PWNSimpleLoanDutchAuctionProposalTest_Erc712EncodeProposal_Test is PWNSimpleLoanDutchAuctionProposalTest {
+
+    function test_shouldERC712EncodeProposal() external {
+        PWNSimpleLoanDutchAuctionProposal.ERC712Proposal memory proposalErc712 = PWNSimpleLoanDutchAuctionProposal.ERC712Proposal(
+            uint8(proposal.collateralCategory),
+            proposal.collateralAddress,
+            proposal.collateralId,
+            proposal.collateralAmount,
+            proposal.checkCollateralStateFingerprint,
+            proposal.collateralStateFingerprint,
+            proposal.creditAddress,
+            proposal.minCreditAmount,
+            proposal.maxCreditAmount,
+            proposal.availableCreditLimit,
+            proposal.utilizedCreditId,
+            proposal.fixedInterestAmount,
+            proposal.accruingInterestAPR,
+            proposal.durationOrDate,
+            proposal.auctionStart,
+            proposal.auctionDuration,
+            proposal.acceptorController,
+            keccak256(proposal.acceptorControllerData),
+            proposal.proposer,
+            proposal.proposerSpecHash,
+            proposal.isOffer,
+            proposal.refinancingLoanId,
+            proposal.nonceSpace,
+            proposal.nonce,
+            proposal.loanContract
+        );
+
+        assertEq(
+            keccak256(abi.encode(proposalErc712)),
+            keccak256(proposalContract.exposed_erc712EncodeProposal(proposal))
+        );
     }
 
 }

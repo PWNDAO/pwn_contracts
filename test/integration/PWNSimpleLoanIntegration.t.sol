@@ -40,7 +40,8 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             accruingInterestAPR: 0,
             durationOrDate: 7 days,
             expiration: uint40(block.timestamp + 1 days),
-            allowedAcceptor: borrower,
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -48,6 +49,10 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             nonceSpace: 0,
             nonce: 0,
             loanContract: address(deployment.simpleLoan)
+        });
+
+        PWNSimpleLoanSimpleProposal.ProposalValues memory proposalValues = PWNSimpleLoanSimpleProposal.ProposalValues({
+            acceptorControllerData: ""
         });
 
         // Mint initial state
@@ -68,7 +73,7 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         credit.approve(address(deployment.simpleLoan), 100e18);
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
-        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal, proposalValues);
 
         // Create LOAN
         vm.prank(borrower);
@@ -125,7 +130,8 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             accruingInterestAPR: 0,
             durationOrDate: 7 days,
             expiration: uint40(block.timestamp + 1 days),
-            allowedAcceptor: borrower,
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -137,7 +143,8 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
 
         PWNSimpleLoanListProposal.ProposalValues memory proposalValues = PWNSimpleLoanListProposal.ProposalValues({
             collateralId: 42,
-            merkleInclusionProof: new bytes32[](1)
+            merkleInclusionProof: new bytes32[](1),
+            acceptorControllerData: ""
         });
         proposalValues.merkleInclusionProof[0] = id1Hash;
 
@@ -212,7 +219,8 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             accruingInterestAPR: 0,
             durationOrDate: 7 days,
             expiration: uint40(block.timestamp + 1 days),
-            allowedAcceptor: borrower,
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -223,7 +231,8 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
         });
 
         PWNSimpleLoanElasticProposal.ProposalValues memory proposalValues = PWNSimpleLoanElasticProposal.ProposalValues({
-            creditAmount: 70e18
+            creditAmount: 70e18,
+            acceptorControllerData: ""
         });
 
         // Mint initial state
@@ -301,7 +310,8 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
             durationOrDate: 7 days,
             auctionStart: uint40(block.timestamp),
             auctionDuration: 30 hours,
-            allowedAcceptor: lender,
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: borrower,
             proposerSpecHash: bytes32(0),
             isOffer: false,
@@ -313,7 +323,8 @@ contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
 
         PWNSimpleLoanDutchAuctionProposal.ProposalValues memory proposalValues = PWNSimpleLoanDutchAuctionProposal.ProposalValues({
             intendedCreditAmount: 90e18,
-            slippage: 10e18
+            slippage: 10e18,
+            acceptorControllerData: ""
         });
 
         // Mint initial state

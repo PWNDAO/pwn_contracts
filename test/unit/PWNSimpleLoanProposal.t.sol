@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { Test } from "forge-std/Test.sol";
+import { Test, console2 } from "forge-std/Test.sol";
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
@@ -18,7 +18,8 @@ import {
     PWNUtilizedCredit,
     AddressMissingHubTag,
     Expired,
-    IERC5646
+    IERC5646,
+    IPWNAcceptorController
 } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 
 
@@ -49,7 +50,9 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         bytes32 utilizedCreditId;
         uint32 durationOrDate;
         uint40 expiration;
-        address allowedAcceptor;
+        address acceptorController;
+        bytes acceptorControllerProposerData;
+        bytes acceptorControllerAcceptorData;
         address proposer;
         bool isOffer;
         uint256 refinancingLoanId;
@@ -467,16 +470,72 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         _callAcceptProposalWith();
     }
 
-    function testFuzz_shouldFail_whenCallerIsNotAllowedAcceptor(address caller) external {
-        address allowedAcceptor = makeAddr("allowedAcceptor");
-        vm.assume(caller != allowedAcceptor && caller != proposer);
-        params.common.allowedAcceptor = allowedAcceptor;
-        params.acceptor = caller;
+    function test_shouldNotCallAcceptorController_whenZero() external {
+        params.common.acceptorController = address(0);
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
-        vm.expectRevert(
-            abi.encodeWithSelector(PWNSimpleLoanProposal.CallerNotAllowedAcceptor.selector, caller, allowedAcceptor)
+        vm.expectCall({
+            callee: params.common.acceptorController,
+            data: abi.encodeWithSelector(IPWNAcceptorController.checkAcceptor.selector),
+            count: 0
+        });
+
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldFail_whenAcceptorControllerReverts() external {
+        params.common.acceptorController = makeAddr("acceptorController");
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.mockCallRevert(
+            params.common.acceptorController,
+            abi.encodeWithSelector(IPWNAcceptorController.checkAcceptor.selector),
+            "some error"
         );
+
+        vm.expectRevert("some error");
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldFail_whenAcceptorControllerReturnsInvalidValue() external {
+        params.common.acceptorController = makeAddr("acceptorController");
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.mockCall(
+            params.common.acceptorController,
+            abi.encodeWithSelector(IPWNAcceptorController.checkAcceptor.selector),
+            abi.encode(bytes4(0x42424242))
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanProposal.InvalidAcceptorController.selector, params.common.acceptorController));
+        vm.prank(activeLoanContract);
+        _callAcceptProposalWith();
+    }
+
+    function test_shouldCallAcceptorController() external {
+        params.common.acceptorController = makeAddr("acceptorController");
+        params.common.acceptorControllerProposerData = "proposer data";
+        params.common.acceptorControllerAcceptorData = "acceptor data";
+        params.signature = _sign(proposerPK, _getProposalHashWith());
+
+        vm.mockCall(
+            params.common.acceptorController,
+            abi.encodeWithSelector(IPWNAcceptorController.checkAcceptor.selector),
+            abi.encode(type(IPWNAcceptorController).interfaceId)
+        );
+
+        console2.logBytes4(type(IPWNAcceptorController).interfaceId);
+
+        vm.expectCall(
+            params.common.acceptorController,
+            abi.encodeWithSelector(
+                IPWNAcceptorController.checkAcceptor.selector,
+                params.acceptor, params.common.acceptorControllerProposerData, params.common.acceptorControllerAcceptorData
+            )
+        );
+
         vm.prank(activeLoanContract);
         _callAcceptProposalWith();
     }

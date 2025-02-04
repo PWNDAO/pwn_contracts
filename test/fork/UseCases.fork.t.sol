@@ -29,6 +29,7 @@ abstract contract UseCasesTest is DeploymentTest {
     T20 credit;
 
     PWNSimpleLoanSimpleProposal.Proposal proposal;
+    PWNSimpleLoanSimpleProposal.ProposalValues proposalValues;
 
 
     function setUp() public override virtual {
@@ -61,7 +62,8 @@ abstract contract UseCasesTest is DeploymentTest {
             accruingInterestAPR: 0,
             durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
-            allowedAcceptor: address(0),
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -69,6 +71,10 @@ abstract contract UseCasesTest is DeploymentTest {
             nonceSpace: 0,
             nonce: 0,
             loanContract: address(deployment.simpleLoan)
+        });
+
+        proposalValues = PWNSimpleLoanSimpleProposal.ProposalValues({
+            acceptorControllerData: ""
         });
     }
 
@@ -82,7 +88,7 @@ abstract contract UseCasesTest is DeploymentTest {
         vm.prank(lender);
         deployment.simpleLoanSimpleProposal.makeProposal(proposal);
 
-        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal, proposalValues);
 
         // Create a loan
         if (revertData.length > 0) {
@@ -385,7 +391,7 @@ contract RefinacningTest is UseCasesTest {
         vm.prank(lender);
         deployment.simpleLoanSimpleProposal.makeProposal(proposal);
 
-        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal, proposalValues);
 
         // Create a loan
         vm.prank(borrower);
@@ -478,7 +484,7 @@ contract RefinacningTest is UseCasesTest {
         vm.prank(lender);
         deployment.simpleLoanSimpleProposal.makeProposal(proposal);
 
-        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal, proposalValues);
 
         // Create a loan
         vm.prank(borrower);
@@ -512,7 +518,7 @@ contract RefinacningTest is UseCasesTest {
         vm.prank(secondLender);
         deployment.simpleLoanSimpleProposal.makeProposal(proposal);
 
-        proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+        proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal, proposalValues);
 
         // Refinance original loan
         vm.prank(borrower);
@@ -592,7 +598,7 @@ contract RefinacningTest is UseCasesTest {
         vm.prank(lender);
         deployment.simpleLoanSimpleProposal.makeProposal(proposal);
 
-        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal, proposalValues);
 
         // Create a loan
         vm.prank(borrower);
@@ -623,7 +629,7 @@ contract RefinacningTest is UseCasesTest {
         vm.prank(lender);
         deployment.simpleLoanSimpleProposal.makeProposal(proposal);
 
-        proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal);
+        proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(proposal, proposalValues);
 
         // Refinance original loan
         vm.prank(borrower);
