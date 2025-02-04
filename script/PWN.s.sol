@@ -307,7 +307,7 @@ forge script script/PWN.s.sol:Deploy \
         // cronos, world are not supported by Chainlink atm
 
         for (uint256 i; i < chains.length; ++i) {
-            deployNewProtocolVersion(chains[i]);
+            deployChainlinkSupport(chains[i]);
         }
 
     }
