@@ -100,7 +100,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             accruingInterestAPR: 0,
             durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
-            allowedAcceptor: address(0),
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -111,7 +112,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
-            creditAmount: 300e18
+            creditAmount: 300e18,
+            acceptorControllerData: ""
         });
 
         vm.prank(borrower);
@@ -192,7 +194,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             accruingInterestAPR: 0,
             durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
-            allowedAcceptor: address(0),
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -203,7 +206,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
-            creditAmount: 500e6
+            creditAmount: 500e6,
+            acceptorControllerData: ""
         });
 
         vm.prank(borrower);
@@ -289,7 +293,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             accruingInterestAPR: 0,
             durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
-            allowedAcceptor: address(0),
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -300,7 +305,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
-            creditAmount: 500e18
+            creditAmount: 500e18,
+            acceptorControllerData: ""
         });
 
         vm.prank(borrower);
@@ -383,7 +389,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             accruingInterestAPR: 0,
             durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
-            allowedAcceptor: address(0),
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -394,7 +401,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
-            creditAmount: 500e6
+            creditAmount: 500e6,
+            acceptorControllerData: ""
         });
 
         vm.prank(borrower);
@@ -480,7 +488,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             accruingInterestAPR: 0,
             durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
-            allowedAcceptor: address(0),
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -491,7 +500,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
-            creditAmount: 500e18
+            creditAmount: 500e18,
+            acceptorControllerData: ""
         });
 
         vm.prank(borrower);

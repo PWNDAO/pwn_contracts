@@ -32,6 +32,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
     T20 credit;
 
     PWNSimpleLoanSimpleProposal.Proposal simpleProposal;
+    PWNSimpleLoanSimpleProposal.ProposalValues simpleProposalValues;
 
     function setUp() public override {
         super.setUp();
@@ -58,7 +59,8 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             accruingInterestAPR: 0,
             durationOrDate: 1 days,
             expiration: uint40(block.timestamp + 7 days),
-            allowedAcceptor: borrower,
+            acceptorController: address(0),
+            acceptorControllerData: "",
             proposer: lender,
             proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
@@ -66,6 +68,10 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             nonceSpace: 0,
             nonce: 0,
             loanContract: address(deployment.simpleLoan)
+        });
+
+        simpleProposalValues = PWNSimpleLoanSimpleProposal.ProposalValues({
+            acceptorControllerData: ""
         });
     }
 
@@ -87,7 +93,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         t20.approve(address(deployment.simpleLoan), 10e18);
 
         // Create LOAN
-        return _createLoan(simpleProposal, "");
+        return _createLoan(simpleProposal, simpleProposalValues, "");
     }
 
     function _createERC721Loan() internal returns (uint256) {
@@ -105,7 +111,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         t721.approve(address(deployment.simpleLoan), 42);
 
         // Create LOAN
-        return _createLoan(simpleProposal, "");
+        return _createLoan(simpleProposal, simpleProposalValues, "");
     }
 
     function _createERC1155Loan() internal returns (uint256) {
@@ -127,10 +133,14 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         t1155.setApprovalForAll(address(deployment.simpleLoan), true);
 
         // Create LOAN
-        return _createLoan(simpleProposal, revertData);
+        return _createLoan(simpleProposal, simpleProposalValues, revertData);
     }
 
-    function _createLoan(PWNSimpleLoanSimpleProposal.Proposal memory _proposal, bytes memory revertData) private returns (uint256) {
+    function _createLoan(
+        PWNSimpleLoanSimpleProposal.Proposal memory _proposal,
+        PWNSimpleLoanSimpleProposal.ProposalValues memory _proposalValues,
+        bytes memory revertData
+    ) private returns (uint256) {
         // Sign proposal
         bytes memory signature = _sign(lenderPK, deployment.simpleLoanSimpleProposal.getProposalHash(_proposal));
 
@@ -142,7 +152,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         credit.approve(address(deployment.simpleLoan), 100e18);
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
-        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(_proposal);
+        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(_proposal, _proposalValues);
 
         // Create LOAN
         if (keccak256(revertData) != keccak256("")) {

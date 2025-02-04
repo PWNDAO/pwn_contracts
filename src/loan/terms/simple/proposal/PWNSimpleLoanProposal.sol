@@ -8,6 +8,7 @@ import { PWNConfig, IStateFingerpringComputer } from "pwn/config/PWNConfig.sol";
 import { PWNHub } from "pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
+import { IPWNAcceptorController } from "pwn/interfaces/IPWNAcceptorController.sol";
 import { PWNSignatureChecker } from "pwn/loan/lib/PWNSignatureChecker.sol";
 import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNUtilizedCredit } from "pwn/utilized-credit/PWNUtilizedCredit.sol";
@@ -47,13 +48,20 @@ abstract contract PWNSimpleLoanProposal {
         uint256 availableCreditLimit;
         bytes32 utilizedCreditId;
         uint40 expiration;
-        address allowedAcceptor;
+        address acceptorController;
+        bytes acceptorControllerData;
         address proposer;
         bool isOffer;
         uint256 refinancingLoanId;
         uint256 nonceSpace;
         uint256 nonce;
         address loanContract;
+    }
+
+    struct ProposalValuesBase {
+        uint256 refinancingLoanId;
+        address acceptor;
+        bytes acceptorControllerData;
     }
 
     /**
@@ -99,9 +107,9 @@ abstract contract PWNSimpleLoanProposal {
     error InvalidRefinancingLoanId(uint256 refinancingLoanId);
 
     /**
-     * @notice Thrown when caller is not allowed to accept a proposal.
+     * @notice Thrown when acceptor controller is invalid.
      */
-    error CallerNotAllowedAcceptor(address current, address allowed);
+    error InvalidAcceptorController(address acceptorController);
 
     /**
      * @notice Thrown when a default date is in the past.
@@ -239,20 +247,18 @@ abstract contract PWNSimpleLoanProposal {
 
     /**
      * @notice Try to accept proposal base.
-     * @param acceptor Address of a proposal acceptor.
-     * @param refinancingLoanId Refinancing loan ID.
      * @param proposalHash Proposal hash.
      * @param proposalInclusionProof Multiproposal inclusion proof. Empty if single proposal.
      * @param signature Signature of a proposal.
      * @param proposal Proposal base struct.
+     * @param proposalValues Proposal values struct.
      */
     function _acceptProposal(
-        address acceptor,
-        uint256 refinancingLoanId,
         bytes32 proposalHash,
         bytes32[] calldata proposalInclusionProof,
         bytes calldata signature,
-        ProposalBase memory proposal
+        ProposalBase memory proposal,
+        ProposalValuesBase memory proposalValues
     ) internal {
         // Check loan contract
         if (msg.sender != proposal.loanContract) {
@@ -286,17 +292,17 @@ abstract contract PWNSimpleLoanProposal {
         }
 
         // Check proposer is not acceptor
-        if (proposal.proposer == acceptor) {
-            revert AcceptorIsProposer({ addr: acceptor});
+        if (proposal.proposer == proposalValues.acceptor) {
+            revert AcceptorIsProposer({ addr: proposalValues.acceptor});
         }
 
         // Check refinancing proposal
-        if (refinancingLoanId == 0) {
+        if (proposalValues.refinancingLoanId == 0) {
             if (proposal.refinancingLoanId != 0) {
                 revert InvalidRefinancingLoanId({ refinancingLoanId: proposal.refinancingLoanId });
             }
         } else {
-            if (refinancingLoanId != proposal.refinancingLoanId) {
+            if (proposalValues.refinancingLoanId != proposal.refinancingLoanId) {
                 if (proposal.refinancingLoanId != 0 || !proposal.isOffer) {
                     revert InvalidRefinancingLoanId({ refinancingLoanId: proposal.refinancingLoanId });
                 }
@@ -317,9 +323,15 @@ abstract contract PWNSimpleLoanProposal {
             });
         }
 
-        // Check propsal is accepted by an allowed address
-        if (proposal.allowedAcceptor != address(0) && acceptor != proposal.allowedAcceptor) {
-            revert CallerNotAllowedAcceptor({ current: acceptor, allowed: proposal.allowedAcceptor });
+        // Check proposal acceptor controller
+        if (proposal.acceptorController != address(0)) {
+            if (IPWNAcceptorController(proposal.acceptorController).checkAcceptor({
+                acceptor: proposalValues.acceptor,
+                proposerData: proposal.acceptorControllerData,
+                acceptorData: proposalValues.acceptorControllerData
+            }) != type(IPWNAcceptorController).interfaceId) {
+                revert InvalidAcceptorController({ acceptorController: proposal.acceptorController });
+            }
         }
 
         if (proposal.availableCreditLimit == 0) {

@@ -25,7 +25,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     using Chainlink for IChainlinkFeedRegistryLike;
     using Chainlink for IChainlinkAggregatorLike;
 
-    string public constant VERSION = "1.0";
+    string public constant VERSION = "1.1";
 
     uint256 public constant MAX_INTERMEDIARY_DENOMINATIONS = 2;
 
@@ -38,7 +38,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      * @dev EIP-712 simple proposal struct type hash.
      */
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
+        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address acceptorController,bytes acceptorControllerData,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
 
     /**
@@ -59,7 +59,8 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      * @param accruingInterestAPR Accruing interest APR with 2 decimals.
      * @param durationOrDate Duration of a loan in seconds. If the value is greater than 10^9, it is treated as a timestamp of a loan end.
      * @param expiration Proposal expiration timestamp in seconds.
-     * @param allowedAcceptor Address that is allowed to accept proposal. If the address is zero address, anybody can accept the proposal.
+     * @param acceptorController Address of an acceptor controller contract. It is used to check if an address can accept the proposal.
+     * @param acceptorControllerData Proposer data for an acceptor controller contract.
      * @param proposer Address of a proposal signer. If `isOffer` is true, the proposer is the lender. If `isOffer` is false, the proposer is the borrower.
      * @param proposerSpecHash Hash of a proposer specific data, which must be provided during a loan creation.
      * @param isOffer If true, the proposal is an offer. If false, the proposal is a request.
@@ -85,7 +86,40 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         uint24 accruingInterestAPR;
         uint32 durationOrDate;
         uint40 expiration;
-        address allowedAcceptor;
+        address acceptorController;
+        bytes acceptorControllerData;
+        address proposer;
+        bytes32 proposerSpecHash;
+        bool isOffer;
+        uint256 refinancingLoanId;
+        uint256 nonceSpace;
+        uint256 nonce;
+        address loanContract;
+    }
+
+    /**
+     * @notice Proposal struct that can be encoded for EIP-712.
+     * @dev Is typecasting dynamic values to bytes32 to allow EIP-712 encoding.
+     */
+    struct ERC712Proposal {
+        uint8 collateralCategory;
+        address collateralAddress;
+        uint256 collateralId;
+        bool checkCollateralStateFingerprint;
+        bytes32 collateralStateFingerprint;
+        address creditAddress;
+        bytes32 feedIntermediaryDenominationsHash;
+        bytes32 feedInvertFlagsHash;
+        uint256 loanToValue;
+        uint256 minCreditAmount;
+        uint256 availableCreditLimit;
+        bytes32 utilizedCreditId;
+        uint256 fixedInterestAmount;
+        uint24 accruingInterestAPR;
+        uint32 durationOrDate;
+        uint40 expiration;
+        address acceptorController;
+        bytes32 acceptorControllerDataHash;
         address proposer;
         bytes32 proposerSpecHash;
         bool isOffer;
@@ -98,9 +132,11 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     /**
      * @notice Construct defining proposal concrete values.
      * @param creditAmount Amount of credit to be borrowed.
+     * @param acceptorControllerData Acceptor data for an acceptor controller contract.
      */
     struct ProposalValues {
         uint256 creditAmount;
+        bytes acceptorControllerData;
     }
 
     /**
@@ -292,10 +328,14 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
             proposal.loanToValue
         );
 
+        ProposalValuesBase memory proposalValuesBase = ProposalValuesBase({
+            refinancingLoanId: refinancingLoanId,
+            acceptor: acceptor,
+            acceptorControllerData: proposalValues.acceptorControllerData
+        });
+
         // Try to accept proposal
         _acceptProposal(
-            acceptor,
-            refinancingLoanId,
             proposalHash,
             proposalInclusionProof,
             signature,
@@ -308,14 +348,16 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
                 availableCreditLimit: proposal.availableCreditLimit,
                 utilizedCreditId: proposal.utilizedCreditId,
                 expiration: proposal.expiration,
-                allowedAcceptor: proposal.allowedAcceptor,
+                acceptorController: proposal.acceptorController,
+                acceptorControllerData: proposal.acceptorControllerData,
                 proposer: proposal.proposer,
                 isOffer: proposal.isOffer,
                 refinancingLoanId: proposal.refinancingLoanId,
                 nonceSpace: proposal.nonceSpace,
                 nonce: proposal.nonce,
                 loanContract: proposal.loanContract
-            })
+            }),
+            proposalValuesBase
         );
 
         // Create loan terms object
@@ -340,45 +382,40 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         });
     }
 
-
     /**
      * @notice Encode proposal data for EIP-712.
      * @param proposal Proposal struct to be encoded.
-     * @return encodedProposal Encoded proposal data.
+     * @return Encoded proposal data.
      */
-    function _erc712EncodeProposal(Proposal memory proposal) internal pure returns (bytes memory encodedProposal) {
-        encodedProposal = abi.encode(
-            proposal.collateralCategory,
-            proposal.collateralAddress,
-            proposal.collateralId,
-            proposal.checkCollateralStateFingerprint,
-            proposal.collateralStateFingerprint,
-            proposal.creditAddress,
-            keccak256(abi.encodePacked(proposal.feedIntermediaryDenominations)),
-            keccak256(abi.encodePacked(proposal.feedInvertFlags)),
-            proposal.loanToValue,
-            proposal.minCreditAmount,
-            proposal.availableCreditLimit,
-            proposal.utilizedCreditId
-        );
-
-        encodedProposal = abi.encodePacked(
-            encodedProposal,
-            abi.encode(
-                proposal.fixedInterestAmount,
-                proposal.accruingInterestAPR,
-                proposal.durationOrDate,
-                proposal.expiration,
-                proposal.allowedAcceptor,
-                proposal.proposer,
-                proposal.proposerSpecHash,
-                proposal.isOffer,
-                proposal.refinancingLoanId,
-                proposal.nonceSpace,
-                proposal.nonce,
-                proposal.loanContract
-            )
-        );
+    function _erc712EncodeProposal(Proposal memory proposal) internal pure returns (bytes memory) {
+        ERC712Proposal memory erc712Proposal = ERC712Proposal({
+            collateralCategory: uint8(proposal.collateralCategory),
+            collateralAddress: proposal.collateralAddress,
+            collateralId: proposal.collateralId,
+            checkCollateralStateFingerprint: proposal.checkCollateralStateFingerprint,
+            collateralStateFingerprint: proposal.collateralStateFingerprint,
+            creditAddress: proposal.creditAddress,
+            feedIntermediaryDenominationsHash: keccak256(abi.encodePacked(proposal.feedIntermediaryDenominations)),
+            feedInvertFlagsHash: keccak256(abi.encodePacked(proposal.feedInvertFlags)),
+            loanToValue: proposal.loanToValue,
+            minCreditAmount: proposal.minCreditAmount,
+            availableCreditLimit: proposal.availableCreditLimit,
+            utilizedCreditId: proposal.utilizedCreditId,
+            fixedInterestAmount: proposal.fixedInterestAmount,
+            accruingInterestAPR: proposal.accruingInterestAPR,
+            durationOrDate: proposal.durationOrDate,
+            expiration: proposal.expiration,
+            acceptorController: proposal.acceptorController,
+            acceptorControllerDataHash: keccak256(proposal.acceptorControllerData),
+            proposer: proposal.proposer,
+            proposerSpecHash: proposal.proposerSpecHash,
+            isOffer: proposal.isOffer,
+            refinancingLoanId: proposal.refinancingLoanId,
+            nonceSpace: proposal.nonceSpace,
+            nonce: proposal.nonce,
+            loanContract: proposal.loanContract
+        });
+        return abi.encode(erc712Proposal);
     }
 
 }
