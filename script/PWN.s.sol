@@ -564,6 +564,7 @@ forge script script/PWN.s.sol:Deploy \
         console2.log("PWNSimpleLoanSimpleProposal:", address(deployment.simpleLoanSimpleProposal));
         console2.log("PWNSimpleLoanListProposal:", address(deployment.simpleLoanListProposal));
         console2.log("PWNSimpleLoanElasticProposal:", address(deployment.simpleLoanElasticProposal));
+        console2.log("PWNSimpleLoanElasticChainlinkProposal:", address(deployment.simpleLoanElasticProposal));
         console2.log("PWNSimpleLoanDutchAuctionProposal:", address(deployment.simpleLoanDutchAuctionProposal));
 
         vm.stopBroadcast();
@@ -702,13 +703,12 @@ forge script script/PWN.s.sol:Setup --sig "printTagsCalldata(string)" "polygon"
         require(address(deployment.simpleLoanSimpleProposal) != address(0), "Simple loan simple proposal not set");
         require(address(deployment.simpleLoanListProposal) != address(0), "Simple loan list proposal not set");
         require(address(deployment.simpleLoanElasticProposal) != address(0), "Simple loan elastic proposal not set");
-        require(address(deployment.simpleLoanElasticChainlinkProposal) != address(0), "Simple loan elastic chainlink proposal not set");
         require(address(deployment.simpleLoanDutchAuctionProposal) != address(0), "Simple loan dutch auctin proposal not set");
         require(address(deployment.protocolTimelock) != address(0), "Protocol timelock not set");
         require(address(deployment.daoSafe) != address(0), "DAO safe not set");
         require(address(deployment.hub) != address(0), "Hub not set");
 
-        address[] memory addrs = new address[](12);
+        address[] memory addrs = new address[](10);
         addrs[0] = address(deployment.simpleLoanSimpleProposal);
         addrs[1] = address(deployment.simpleLoanSimpleProposal);
 
@@ -721,13 +721,10 @@ forge script script/PWN.s.sol:Setup --sig "printTagsCalldata(string)" "polygon"
         addrs[6] = address(deployment.simpleLoanDutchAuctionProposal);
         addrs[7] = address(deployment.simpleLoanDutchAuctionProposal);
 
-        addrs[8] = address(deployment.simpleLoanElasticChainlinkProposal);
-        addrs[9] = address(deployment.simpleLoanElasticChainlinkProposal);
+        addrs[8] = address(deployment.simpleLoan);
+        addrs[9] = address(deployment.simpleLoan);
 
-        addrs[10] = address(deployment.simpleLoan);
-        addrs[11] = address(deployment.simpleLoan);
-
-        bytes32[] memory tags = new bytes32[](12);
+        bytes32[] memory tags = new bytes32[](10);
         tags[0] = PWNHubTags.LOAN_PROPOSAL;
         tags[1] = PWNHubTags.NONCE_MANAGER;
 
@@ -740,11 +737,8 @@ forge script script/PWN.s.sol:Setup --sig "printTagsCalldata(string)" "polygon"
         tags[6] = PWNHubTags.LOAN_PROPOSAL;
         tags[7] = PWNHubTags.NONCE_MANAGER;
 
-        tags[8] = PWNHubTags.LOAN_PROPOSAL;
+        tags[8] = PWNHubTags.ACTIVE_LOAN;
         tags[9] = PWNHubTags.NONCE_MANAGER;
-
-        tags[10] = PWNHubTags.ACTIVE_LOAN;
-        tags[11] = PWNHubTags.NONCE_MANAGER;
 
         TimelockController(payable(deployment.protocolTimelock)).scheduleAndExecute(
             GnosisSafeLike(deployment.daoSafe),

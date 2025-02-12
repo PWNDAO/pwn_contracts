@@ -83,5 +83,6 @@ contract DeployedProtocolTest is DeploymentTest {
     function test_deployedProtocol_linea() external { _test_deployedProtocol("linea"); }
     function test_deployedProtocol_gnosis() external { _test_deployedProtocol("gnosis"); }
     function test_deployedProtocol_world() external { _test_deployedProtocol("world"); }
+    function test_deployedProtocol_unichain() external { _test_deployedProtocol("unichain"); }
 
 }

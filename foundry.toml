@@ -20,6 +20,7 @@ bsc = "${BSC_URL}"
 linea = "${LINEA_URL}"
 gnosis = "${GNOSIS_URL}"
 world = "${WORLDCHAIN_URL}"
+unichain = "${UNICHAIN_URL}"
 # Testnets
 sepolia = "${SEPOLIA_URL}"
 unichain-sepolia = "${UNICHAIN_SEPOLIA_URL}"

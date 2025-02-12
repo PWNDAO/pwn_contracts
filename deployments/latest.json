@@ -1,5 +1,5 @@
 {
-    "deployedChains": [1, 10, 25, 56, 100, 137, 480, 1301, 8453, 42161, 59144, 11155111],
+    "deployedChains": [1, 10, 25, 56, 100, 130, 137, 480, 1301, 8453, 42161, 59144, 11155111],
     "chains": {
         "1": {
             "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
@@ -105,6 +105,27 @@
             "simpleLoanElasticChainlinkProposal": "0x116A5E7A95883973de303122025B4Af23512F315",
             "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
+        },
+        "130": {
+            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
+            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
+            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
+            "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
+            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
+            "chainlinkFeedRegistry": "0x0000000000000000000000000000000000000000",
+            "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
+            "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
+            "config": "0xd52a2898d61636bB3eEF0d145f05352FF543bdCC",
+            "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+            "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+            "revokedNonce": "0x972204fF33348ee6889B2d0A3967dB67d7b08e4c",
+            "utilizedCredit": "0x585C2D4d5D84b296921BF96598961Eec6Ae5C09C",
+            "simpleLoan": "0x322e86E6c813d77a904C5B4aa808a13E0AD4412f",
+            "simpleLoanSimpleProposal": "0xCAec7F837930dC9fB36B0E584FEf498714B2a951",
+            "simpleLoanListProposal": "0x2ECd36747A4a18Dc578798A79c87035D610EDE9F",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticProposal": "0x2Bf2dC42eF08FA2C5BD15f6aDca402bf2Be75A1A",
+            "simpleLoanDutchAuctionProposal": "0x469B2C01FBb8D2073562F4Fe28aaA67D59c05Dc2"
         },
         "137": {
             "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
