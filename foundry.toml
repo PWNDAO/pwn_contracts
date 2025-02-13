@@ -40,3 +40,4 @@ bsc = { key = "${BSCSCAN_API_KEY}" }
 linea = { key = "${LINEASCAN_API_KEY}" }
 gnosis = { key = "${GNOSISSCAN_API_KEY}" }
 world = { key = "${WORLDSCAN_API_KEY}" }
+unichain = { key = "${UNISCAN_API_KEY}", url = "https://api.uniscan.xyz/api", chain = 130 }
