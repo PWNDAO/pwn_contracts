@@ -12,7 +12,7 @@ import { Math } from "openzeppelin/utils/math/Math.sol";
 import {
     PWNSimpleLoanProposal,
     PWNHubTags,
-    PWNSimpleLoan,
+    SimpleTerms,
     PWNSignatureChecker,
     PWNRevokedNonce,
     PWNUtilizedCredit,
@@ -135,7 +135,7 @@ abstract contract PWNSimpleLoanProposalTest is Test {
         return abi.encodePacked(r, bytes32(uint256(v) - 27) << 255 | s);
     }
 
-    function _callAcceptProposalWith() internal returns (bytes32, PWNSimpleLoan.Terms memory) {
+    function _callAcceptProposalWith() internal returns (bytes32, SimpleTerms memory) {
         return _callAcceptProposalWith(params);
     }
 
@@ -144,7 +144,7 @@ abstract contract PWNSimpleLoanProposalTest is Test {
     }
 
     // Virtual functions to be implemented in inheriting contract
-    function _callAcceptProposalWith(Params memory _params) internal virtual returns (bytes32, PWNSimpleLoan.Terms memory);
+    function _callAcceptProposalWith(Params memory _params) internal virtual returns (bytes32, SimpleTerms memory);
     function _getProposalHashWith(Params memory _params) internal virtual returns (bytes32);
 
 }
@@ -700,7 +700,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.prank(activeLoanContract);
-        (, PWNSimpleLoan.Terms memory terms) = _callAcceptProposalWith();
+        (, SimpleTerms memory terms) = _callAcceptProposalWith();
 
         assertEq(terms.duration, timestamp - block.timestamp);
     }
@@ -711,7 +711,7 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.prank(activeLoanContract);
-        (, PWNSimpleLoan.Terms memory terms) = _callAcceptProposalWith();
+        (, SimpleTerms memory terms) = _callAcceptProposalWith();
 
         assertEq(terms.duration, duration);
     }
