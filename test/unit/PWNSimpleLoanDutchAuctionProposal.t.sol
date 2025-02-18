@@ -5,7 +5,7 @@ import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import {
     PWNSimpleLoanDutchAuctionProposal,
     PWNSimpleLoanProposal,
-    PWNSimpleLoan
+    SimpleTerms
 } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
 
 import {
@@ -111,7 +111,7 @@ abstract contract PWNSimpleLoanDutchAuctionProposalTest is PWNSimpleLoanProposal
     }
 
 
-    function _callAcceptProposalWith(Params memory _params) internal override returns (bytes32, PWNSimpleLoan.Terms memory) {
+    function _callAcceptProposalWith(Params memory _params) internal override returns (bytes32, SimpleTerms memory) {
         _updateProposal(_params.common);
         return proposalContract.acceptProposal({
             acceptor: _params.acceptor,
@@ -507,7 +507,7 @@ contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanD
         proposalValues.slippage = 0;
 
         vm.prank(activeLoanContract);
-        (bytes32 proposalHash, PWNSimpleLoan.Terms memory terms) = proposalContract.acceptProposal({
+        (bytes32 proposalHash, SimpleTerms memory terms) = proposalContract.acceptProposal({
             acceptor: acceptor,
             refinancingLoanId: 0,
             proposalData: abi.encode(proposal, proposalValues),

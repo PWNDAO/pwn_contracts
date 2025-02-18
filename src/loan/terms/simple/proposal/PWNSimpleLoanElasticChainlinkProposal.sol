@@ -10,8 +10,8 @@ import {
     IChainlinkFeedRegistryLike,
     IChainlinkAggregatorLike
 } from "pwn/loan/lib/Chainlink.sol";
-import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import { PWNSimpleLoanProposal, SimpleTerms } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 import { safeFetchDecimals } from "pwn/loan/utils/safeFetchDecimals.sol";
 
 
@@ -265,7 +265,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         bytes calldata proposalData,
         bytes32[] calldata proposalInclusionProof,
         bytes calldata signature
-    ) override external returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms) {
+    ) override external returns (bytes32 proposalHash, SimpleTerms memory loanTerms) {
         // Decode proposal data
         (Proposal memory proposal, ProposalValues memory proposalValues) = decodeProposalData(proposalData);
 
@@ -319,7 +319,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         );
 
         // Create loan terms object
-        loanTerms = PWNSimpleLoan.Terms({
+        loanTerms = SimpleTerms({
             lender: proposal.isOffer ? proposal.proposer : acceptor,
             borrower: proposal.isOffer ? acceptor : proposal.proposer,
             duration: _getLoanDuration(proposal.durationOrDate),

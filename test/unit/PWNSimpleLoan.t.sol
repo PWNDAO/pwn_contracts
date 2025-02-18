@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 
 import {
     PWNSimpleLoan,
+    Terms as SimpleTerms,
     PWNHubTags,
     Math,
     MultiToken,
@@ -43,7 +44,7 @@ abstract contract PWNSimpleLoanTest is Test {
     uint256 loanDurationInDays = 101;
     PWNSimpleLoan.LOAN simpleLoan;
     PWNSimpleLoan.LOAN nonExistingLoan;
-    PWNSimpleLoan.Terms simpleLoanTerms;
+    SimpleTerms simpleLoanTerms;
     PWNSimpleLoan.ProposalSpec proposalSpec;
     PWNSimpleLoan.LenderSpec lenderSpec;
     PWNSimpleLoan.CallerSpec callerSpec;
@@ -53,7 +54,7 @@ abstract contract PWNSimpleLoanTest is Test {
 
     bytes32 proposalHash = keccak256("proposalHash");
 
-    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, uint256 refinancingLoanId, PWNSimpleLoan.Terms terms, PWNSimpleLoan.LenderSpec lenderSpec, bytes extra);
+    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, uint256 refinancingLoanId, SimpleTerms terms, PWNSimpleLoan.LenderSpec lenderSpec, bytes extra);
     event LOANPaidBack(uint256 indexed loanId);
     event LOANClaimed(uint256 indexed loanId, bool indexed defaulted);
     event LOANExtended(uint256 indexed loanId, uint40 originalDefaultTimestamp, uint40 extendedDefaultTimestamp);
@@ -109,7 +110,7 @@ abstract contract PWNSimpleLoanTest is Test {
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2)
         });
 
-        simpleLoanTerms = PWNSimpleLoan.Terms({
+        simpleLoanTerms = SimpleTerms({
             lender: lender,
             borrower: borrower,
             duration: uint32(loanDurationInDays * 1 days),
@@ -244,7 +245,7 @@ abstract contract PWNSimpleLoanTest is Test {
         _storeLOANWord(loanSlot + 8, abi.encodePacked(_simpleLoan.collateral.amount));
     }
 
-    function _mockLoanTerms(PWNSimpleLoan.Terms memory _terms) internal {
+    function _mockLoanTerms(SimpleTerms memory _terms) internal {
         vm.mockCall(
             proposalContract,
             abi.encodeWithSignature("acceptProposal(address,uint256,bytes,bytes32[],bytes)"),
@@ -666,7 +667,7 @@ contract PWNSimpleLoan_CreateLOAN_Test is PWNSimpleLoanTest {
 contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
 
     PWNSimpleLoan.LOAN refinancedLoan;
-    PWNSimpleLoan.Terms refinancedLoanTerms;
+    SimpleTerms refinancedLoanTerms;
     uint256 refinancingLoanId = 44;
     address newLender = makeAddr("newLender");
 
@@ -691,7 +692,7 @@ contract PWNSimpleLoan_RefinanceLOAN_Test is PWNSimpleLoanTest {
             collateral: MultiToken.ERC721(address(nonFungibleAsset), 2)
         });
 
-        refinancedLoanTerms = PWNSimpleLoan.Terms({
+        refinancedLoanTerms = SimpleTerms({
             lender: lender,
             borrower: borrower,
             duration: 40039,
