@@ -11,6 +11,7 @@ import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
 import { IPWNAcceptorController } from "pwn/interfaces/IPWNAcceptorController.sol";
 import { PWNSignatureChecker } from "pwn/loan/lib/PWNSignatureChecker.sol";
 import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { SimpleTerms } from "pwn/loan/terms/simple/SimpleTerms.sol";
 import { PWNUtilizedCredit } from "pwn/utilized-credit/PWNUtilizedCredit.sol";
 import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
 import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
@@ -191,7 +192,7 @@ abstract contract PWNSimpleLoanProposal {
         bytes calldata proposalData,
         bytes32[] calldata proposalInclusionProof,
         bytes calldata signature
-    ) virtual external returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms);
+    ) virtual external returns (bytes32 proposalHash, SimpleTerms memory loanTerms);
 
 
     /*----------------------------------------------------------*|
