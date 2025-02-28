@@ -35,7 +35,6 @@ Elastic Chainlink Proposal addresses differ across chains due to unique construc
 |----------------------------------------|--------------------------------------------|
 | Ethereum                               | 0xBA58E16BE93dAdcBB74a194bDfD9E5933b24016B |
 | Optimism                               | 0x983b0916dBA60F58Ea3E4190549DFD7a0c8aF7b4 |
-| Cronos                                 | --- not deployed ---                       |
 | Binance Smart Chain                    | 0x2d5F60E96442a45e9E3754412189ACaa3aA1AE3a |
 | Gnosis Chain                           | 0x116A5E7A95883973de303122025B4Af23512F315 |
 | Unichain                               | --- not deployed ---                       |
@@ -66,7 +65,6 @@ PWN is deployed on the following chains:
 
 - Ethereum (1)
 - Optimism (10)
-- Cronos (25)
 - Binance Smart Chain (56)
 - Gnosis Chain (100)
 - Unichain (130)

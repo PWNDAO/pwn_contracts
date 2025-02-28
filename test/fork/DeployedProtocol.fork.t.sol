@@ -64,6 +64,9 @@ contract DeployedProtocolTest is DeploymentTest {
         // - simple loan list proposal
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanListProposal), PWNHubTags.NONCE_MANAGER));
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanListProposal), PWNHubTags.LOAN_PROPOSAL));
+        // - todo: simple loan elastic chainlink proposal (after setting tags in PWNHub)
+        // assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticChainlinkProposal), PWNHubTags.NONCE_MANAGER));
+        // assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticChainlinkProposal), PWNHubTags.LOAN_PROPOSAL));
         // - simple loan elastic proposal
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticProposal), PWNHubTags.NONCE_MANAGER));
         assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticProposal), PWNHubTags.LOAN_PROPOSAL));
@@ -78,7 +81,6 @@ contract DeployedProtocolTest is DeploymentTest {
     function test_deployedProtocol_arbitrum() external { _test_deployedProtocol("arbitrum"); }
     function test_deployedProtocol_optimism() external { _test_deployedProtocol("optimism"); }
     function test_deployedProtocol_base() external { _test_deployedProtocol("base"); }
-    function test_deployedProtocol_cronos() external { _test_deployedProtocol("cronos"); }
     function test_deployedProtocol_bsc() external { _test_deployedProtocol("bsc"); }
     function test_deployedProtocol_linea() external { _test_deployedProtocol("linea"); }
     function test_deployedProtocol_gnosis() external { _test_deployedProtocol("gnosis"); }
