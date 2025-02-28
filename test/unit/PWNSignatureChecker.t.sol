@@ -5,12 +5,21 @@ import { Test } from "forge-std/Test.sol";
 
 import { PWNSignatureChecker } from "pwn/loan/lib/PWNSignatureChecker.sol";
 
+import { PWNSignatureCheckerHarness } from "../harness/PWNSignatureCheckerHarness.sol";
+
 
 abstract contract PWNSignatureCheckerTest is Test {
     uint256 signerPK = uint256(93081283);
     address signer = vm.addr(signerPK);
     bytes32 digest = keccak256("Hey, anybody know a good tailor?");
     bytes signature;
+
+    PWNSignatureCheckerHarness signatureChecker;
+
+    function setUp() public virtual {
+        signatureChecker = new PWNSignatureCheckerHarness();
+    }
+
 
     function _sign(uint256 pk, bytes32 _digest) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _digest);
@@ -86,14 +95,14 @@ contract PWNSignatureChecker_isValidSignatureNow_Test is PWNSignatureCheckerTest
         signature = abi.encodePacked(uint256(1), uint256(2), uint256(3));
 
         vm.expectRevert(abi.encodeWithSelector(PWNSignatureChecker.InvalidSignatureLength.selector, 96));
-        PWNSignatureChecker.isValidSignatureNow(signer, digest, signature);
+        signatureChecker.exposed_isValidSignatureNow(signer, digest, signature);
     }
 
-    // `isValidSignatureNow` will revert, but revert message cannot be catched.
-    function testFail_shouldFail_whenSignerIsEOA_whenInvalidSignature() external {
+    function test_shouldFail_whenSignerIsEOA_whenInvalidSignature() external {
         signature = abi.encodePacked(uint8(1), uint256(2), uint256(3));
 
-        PWNSignatureChecker.isValidSignatureNow(signer, digest, signature);
+        vm.expectRevert("ECDSA: invalid signature");
+        signatureChecker.exposed_isValidSignatureNow(signer, digest, signature);
     }
 
     function test_shouldReturnTrue_whenSignerIsEOA_whenSignerIsRecoveredAddressOfSignature() external {
