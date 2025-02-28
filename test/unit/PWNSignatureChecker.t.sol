@@ -55,8 +55,12 @@ contract PWNSignatureChecker_isValidSignatureNow_Test is PWNSignatureCheckerTest
         PWNSignatureChecker.isValidSignatureNow(signer, digest, "");
     }
 
-    // TODO: Would need a mockRevert function. Skip for now.
-    // function test_shouldReturnFalse_whenSignerIsContractAccount_whenEIP1271FunctionCallFails() external {}
+    function test_shouldReturnFalse_whenSignerIsContractAccount_whenEIP1271FunctionCallFails() external {
+        vm.etch(signer, "No. I am just looking for a man to draw on me with chalk.");
+        vm.mockCallRevert(signer, abi.encodeWithSignature("isValidSignature(bytes32,bytes)"), "not today");
+
+        assertFalse(PWNSignatureChecker.isValidSignatureNow(signer, digest, ""));
+    }
 
     function test_shouldFail_whenSignerIsContractAccount_whenEIP1271FunctionReturnsWrongDataLength() external {
         vm.etch(signer, "No. I am just looking for a man to draw on me with chalk.");
