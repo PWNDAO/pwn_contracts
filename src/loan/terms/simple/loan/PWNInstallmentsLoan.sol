@@ -22,11 +22,11 @@ import { AddressMissingHubTag } from "pwn/PWNErrors.sol";
 
 
 /**
- * @title PWN Bordel Loan
- * @notice Contract managing a bordel (mortgage) loan in PWN protocol.
+ * @title PWN Installments Loan
+ * @notice Contract managing a loan with flexible installments in PWN protocol.
  * @dev Acts as a vault for every loan created by this contract.
  */
-contract PWNBordelLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvider {
+contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvider {
     using MultiToken for address;
 
     string public constant VERSION = "1.0";

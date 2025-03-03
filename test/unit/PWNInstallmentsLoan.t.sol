@@ -4,24 +4,24 @@ pragma solidity 0.8.16;
 import { Test } from "forge-std/Test.sol";
 
 import {
-    PWNBordelLoan,
+    PWNInstallmentsLoan,
     Terms as SimpleTerms,
     PWNHubTags,
     Math,
     MultiToken,
     AddressMissingHubTag
-} from "pwn/loan/terms/simple/loan/PWNBordelLoan.sol";
+} from "pwn/loan/terms/simple/loan/PWNInstallmentsLoan.sol";
 
 import { T20 } from "test/helper/T20.sol";
 import { T721 } from "test/helper/T721.sol";
-import { PWNBordelLoanHarness } from "test/harness/PWNBordelLoanHarness.sol";
+import { PWNInstallmentsLoanHarness } from "test/harness/PWNInstallmentsLoanHarness.sol";
 
 
-abstract contract PWNBordelLoanTest is Test {
+abstract contract PWNInstallmentsLoanTest is Test {
 
     bytes32 internal constant LOANS_SLOT = bytes32(uint256(1)); // `LOANs` mapping position
 
-    PWNBordelLoanHarness loan;
+    PWNInstallmentsLoanHarness loan;
     address hub = makeAddr("hub");
     address loanToken = makeAddr("loanToken");
     address config = makeAddr("config");
@@ -34,10 +34,10 @@ abstract contract PWNBordelLoanTest is Test {
     address lender = makeAddr("lender");
     address borrower = makeAddr("borrower");
     uint256 loanDurationInDays = 500;
-    PWNBordelLoan.LOAN bordelLoan;
-    PWNBordelLoan.LOAN nonExistingLoan;
+    PWNInstallmentsLoan.LOAN installmentsLoan;
+    PWNInstallmentsLoan.LOAN nonExistingLoan;
     SimpleTerms simpleLoanTerms;
-    PWNBordelLoan.ProposalSpec proposalSpec;
+    PWNInstallmentsLoan.ProposalSpec proposalSpec;
     T20 fungibleAsset;
     T721 nonFungibleAsset;
 
@@ -54,7 +54,7 @@ abstract contract PWNBordelLoanTest is Test {
         vm.etch(proposalContract, bytes("data"));
         vm.etch(config, bytes("data"));
 
-        loan = new PWNBordelLoanHarness(hub, loanToken, config, categoryRegistry);
+        loan = new PWNInstallmentsLoanHarness(hub, loanToken, config, categoryRegistry);
         fungibleAsset = new T20();
         nonFungibleAsset = new T721();
 
@@ -76,7 +76,7 @@ abstract contract PWNBordelLoanTest is Test {
         vm.prank(borrower);
         nonFungibleAsset.approve(address(loan), 2);
 
-        bordelLoan = PWNBordelLoan.LOAN({
+        installmentsLoan = PWNInstallmentsLoan.LOAN({
             creditAddress: address(fungibleAsset),
             lastUpdateTimestamp: uint40(block.timestamp),
             defaultTimestamp: uint40(block.timestamp + loanDurationInDays * 1 days),
@@ -101,13 +101,13 @@ abstract contract PWNBordelLoanTest is Test {
             borrowerSpecHash: bytes32(0)
         });
 
-        proposalSpec = PWNBordelLoan.ProposalSpec({
+        proposalSpec = PWNInstallmentsLoan.ProposalSpec({
             proposalContract: proposalContract,
             proposalData: proposalData,
             signature: signature
         });
 
-        nonExistingLoan = PWNBordelLoan.LOAN({
+        nonExistingLoan = PWNInstallmentsLoan.LOAN({
             creditAddress: address(0),
             lastUpdateTimestamp: 0,
             defaultTimestamp: 0,
@@ -142,7 +142,7 @@ abstract contract PWNBordelLoanTest is Test {
     }
 
 
-    function _assertLOANEq(PWNBordelLoan.LOAN memory _simpleLoan1, PWNBordelLoan.LOAN memory _simpleLoan2) internal {
+    function _assertLOANEq(PWNInstallmentsLoan.LOAN memory _simpleLoan1, PWNInstallmentsLoan.LOAN memory _simpleLoan2) internal {
         assertEq(_simpleLoan1.creditAddress, _simpleLoan2.creditAddress);
         assertEq(_simpleLoan1.lastUpdateTimestamp, _simpleLoan2.lastUpdateTimestamp);
         assertEq(_simpleLoan1.defaultTimestamp, _simpleLoan2.defaultTimestamp);
@@ -158,7 +158,7 @@ abstract contract PWNBordelLoanTest is Test {
         assertEq(_simpleLoan1.collateral.amount, _simpleLoan2.collateral.amount);
     }
 
-    function _assertLOANEq(uint256 _loanId, PWNBordelLoan.LOAN memory _simpleLoan) internal {
+    function _assertLOANEq(uint256 _loanId, PWNInstallmentsLoan.LOAN memory _simpleLoan) internal {
         uint256 loanSlot = uint256(keccak256(abi.encode(_loanId, LOANS_SLOT)));
 
         _assertLOANWord(loanSlot + 0, abi.encodePacked(uint16(0), _simpleLoan.defaultTimestamp, _simpleLoan.lastUpdateTimestamp, _simpleLoan.creditAddress));
@@ -179,7 +179,7 @@ abstract contract PWNBordelLoanTest is Test {
         );
     }
 
-    function _storeLOAN(uint256 _loanId, PWNBordelLoan.LOAN memory _simpleLoan) internal {
+    function _storeLOAN(uint256 _loanId, PWNInstallmentsLoan.LOAN memory _simpleLoan) internal {
         uint256 loanSlot = uint256(keccak256(abi.encode(_loanId, LOANS_SLOT)));
 
         _storeLOANWord(loanSlot + 0, abi.encodePacked(uint16(0), _simpleLoan.defaultTimestamp, _simpleLoan.lastUpdateTimestamp, _simpleLoan.creditAddress));
@@ -233,7 +233,7 @@ abstract contract PWNBordelLoanTest is Test {
 |*  # CREATE LOAN                                           *|
 |*----------------------------------------------------------*/
 
-contract PWNBordelLoan_CreateLOAN_Test is PWNBordelLoanTest {
+contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
 
     function testFuzz_shouldFail_whenProposalContractNotTagged_LOAN_PROPOSAL(address _proposalContract) external {
         vm.assume(_proposalContract != proposalContract);
@@ -273,7 +273,7 @@ contract PWNBordelLoan_CreateLOAN_Test is PWNBordelLoanTest {
         simpleLoanTerms.duration = uint32(duration);
         _mockLoanTerms(simpleLoanTerms);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNBordelLoan.InvalidDuration.selector, duration, minDuration));
+        vm.expectRevert(abi.encodeWithSelector(PWNInstallmentsLoan.InvalidDuration.selector, duration, minDuration));
         loan.createLOAN({
             proposalSpec: proposalSpec,
             extra: ""
@@ -287,7 +287,7 @@ contract PWNBordelLoan_CreateLOAN_Test is PWNBordelLoanTest {
         _mockLoanTerms(simpleLoanTerms);
 
         vm.expectRevert(
-            abi.encodeWithSelector(PWNBordelLoan.InterestAPROutOfBounds.selector, interestAPR, maxInterest)
+            abi.encodeWithSelector(PWNInstallmentsLoan.InterestAPROutOfBounds.selector, interestAPR, maxInterest)
         );
         loan.createLOAN({
             proposalSpec: proposalSpec,
@@ -304,7 +304,7 @@ contract PWNBordelLoan_CreateLOAN_Test is PWNBordelLoanTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNBordelLoan.InvalidMultiTokenAsset.selector,
+                PWNInstallmentsLoan.InvalidMultiTokenAsset.selector,
                 uint8(simpleLoanTerms.credit.category),
                 simpleLoanTerms.credit.assetAddress,
                 simpleLoanTerms.credit.id,
@@ -326,7 +326,7 @@ contract PWNBordelLoan_CreateLOAN_Test is PWNBordelLoanTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNBordelLoan.InvalidMultiTokenAsset.selector,
+                PWNInstallmentsLoan.InvalidMultiTokenAsset.selector,
                 uint8(simpleLoanTerms.collateral.category),
                 simpleLoanTerms.collateral.assetAddress,
                 simpleLoanTerms.collateral.id,
@@ -354,7 +354,7 @@ contract PWNBordelLoan_CreateLOAN_Test is PWNBordelLoanTest {
             extra: ""
         });
 
-        _assertLOANEq(loanId, bordelLoan);
+        _assertLOANEq(loanId, installmentsLoan);
     }
 
     function test_shouldEmit_LOANCreated() external {
@@ -438,7 +438,7 @@ contract PWNBordelLoan_CreateLOAN_Test is PWNBordelLoanTest {
 |*  # DEBT LIMIT TANGENT                                    *|
 |*----------------------------------------------------------*/
 
-contract PWNBordelLoan_DebtLimitTangent_Test is PWNBordelLoanTest {
+contract PWNInstallmentsLoan_DebtLimitTangent_Test is PWNInstallmentsLoanTest {
 
     function testFuzz_shouldComputeDebtLimitTangent(uint256 principal, uint256 fixedInterest, uint256 duration) external {
         principal = bound(principal, 1e6, 1e40);
@@ -461,15 +461,15 @@ contract PWNBordelLoan_DebtLimitTangent_Test is PWNBordelLoanTest {
 |*  # REPAY LOAN                                            *|
 |*----------------------------------------------------------*/
 
-contract PWNBordelLoan_RepayLOAN_Test is PWNBordelLoanTest {
+contract PWNInstallmentsLoan_RepayLOAN_Test is PWNInstallmentsLoanTest {
 
     address notOriginalLender = makeAddr("notOriginalLender");
 
     function setUp() override public {
         super.setUp();
 
-        bordelLoan.fixedInterestAmount = 0;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.fixedInterestAmount = 0;
+        _storeLOAN(loanId, installmentsLoan);
 
         // Move collateral to vault
         vm.prank(borrower);
@@ -478,32 +478,32 @@ contract PWNBordelLoan_RepayLOAN_Test is PWNBordelLoanTest {
 
 
     function test_shouldFail_whenLoanDoesNotExist() external {
-        vm.expectRevert(abi.encodeWithSelector(PWNBordelLoan.NonExistingLoan.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNInstallmentsLoan.NonExistingLoan.selector));
         loan.repayLOAN(loanId + 1, 0);
     }
 
     function test_shouldFail_whenLoanRepaid() external {
-        bordelLoan.principalAmount = 0;
-        bordelLoan.unclaimedAmount = 1;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 0;
+        installmentsLoan.unclaimedAmount = 1;
+        _storeLOAN(loanId, installmentsLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNBordelLoan.LoanRepaid.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNInstallmentsLoan.LoanRepaid.selector));
         loan.repayLOAN(loanId, 0);
     }
 
     function test_shouldFail_whenLoanIsDefaulted() external {
-        vm.warp(bordelLoan.defaultTimestamp);
+        vm.warp(installmentsLoan.defaultTimestamp);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNBordelLoan.LoanDefaulted.selector, bordelLoan.defaultTimestamp));
+        vm.expectRevert(abi.encodeWithSelector(PWNInstallmentsLoan.LoanDefaulted.selector, installmentsLoan.defaultTimestamp));
         loan.repayLOAN(loanId, 0);
     }
 
     function testFuzz_shouldFail_whenInvalidRepaymentAmount(uint256 repayment) external {
-        repayment = bound(repayment, bordelLoan.principalAmount + 1, type(uint256).max);
+        repayment = bound(repayment, installmentsLoan.principalAmount + 1, type(uint256).max);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNBordelLoan.InvalidRepaymentAmount.selector,
+                PWNInstallmentsLoan.InvalidRepaymentAmount.selector,
                 repayment, loan.loanRepaymentAmount(loanId)
             )
         );
@@ -511,69 +511,69 @@ contract PWNBordelLoan_RepayLOAN_Test is PWNBordelLoanTest {
     }
 
     function testFuzz_shouldUpdateLoanData_whenPartialInterestPayment(uint256 repayment) external {
-        bordelLoan.fixedInterestAmount = 1e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.fixedInterestAmount = 1e18;
+        _storeLOAN(loanId, installmentsLoan);
 
-        repayment = bound(repayment, 1, bordelLoan.fixedInterestAmount - 1);
+        repayment = bound(repayment, 1, installmentsLoan.fixedInterestAmount - 1);
 
         loan.repayLOAN(loanId, repayment);
 
-        (, PWNBordelLoan.LOAN memory loan) = loan.getLOAN(loanId);
-        assertEq(uint256(loan.fixedInterestAmount), bordelLoan.fixedInterestAmount - repayment);
-        assertEq(uint256(loan.principalAmount), bordelLoan.principalAmount);
+        (, PWNInstallmentsLoan.LOAN memory loan) = loan.getLOAN(loanId);
+        assertEq(uint256(loan.fixedInterestAmount), installmentsLoan.fixedInterestAmount - repayment);
+        assertEq(uint256(loan.principalAmount), installmentsLoan.principalAmount);
     }
 
     function testFuzz_shouldUpdateLoanData_whenFullInterestPayment(uint256 repayment) external {
-        bordelLoan.fixedInterestAmount = 1e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.fixedInterestAmount = 1e18;
+        _storeLOAN(loanId, installmentsLoan);
 
-        repayment = bound(repayment, bordelLoan.fixedInterestAmount, bordelLoan.principalAmount);
+        repayment = bound(repayment, installmentsLoan.fixedInterestAmount, installmentsLoan.principalAmount);
 
         loan.repayLOAN(loanId, repayment);
 
-        (, PWNBordelLoan.LOAN memory loan) = loan.getLOAN(loanId);
+        (, PWNInstallmentsLoan.LOAN memory loan) = loan.getLOAN(loanId);
         assertEq(uint256(loan.fixedInterestAmount), 0);
-        assertEq(uint256(loan.principalAmount), bordelLoan.principalAmount + bordelLoan.fixedInterestAmount - repayment);
+        assertEq(uint256(loan.principalAmount), installmentsLoan.principalAmount + installmentsLoan.fixedInterestAmount - repayment);
     }
 
     function testFuzz_shouldUpdate_unclaimedAmount(uint256 repayment, uint256 unclaimedAmount) external {
-        repayment = bound(repayment, 1, bordelLoan.principalAmount);
+        repayment = bound(repayment, 1, installmentsLoan.principalAmount);
         unclaimedAmount = bound(unclaimedAmount, 0, 1e40);
 
-        bordelLoan.unclaimedAmount = unclaimedAmount;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.unclaimedAmount = unclaimedAmount;
+        _storeLOAN(loanId, installmentsLoan);
 
         loan.repayLOAN(loanId, repayment);
 
-        (, PWNBordelLoan.LOAN memory loan) = loan.getLOAN(loanId);
+        (, PWNInstallmentsLoan.LOAN memory loan) = loan.getLOAN(loanId);
         assertEq(uint256(loan.unclaimedAmount), unclaimedAmount + repayment);
     }
 
     function testFuzz_shouldUpdate_lastUpdateTimestamp(uint256 timestmap) external {
         uint256 postponement = loan.DEBT_LIMIT_POSTPONEMENT();
-        timestmap = bound(timestmap, bordelLoan.lastUpdateTimestamp + 1, bordelLoan.lastUpdateTimestamp + postponement - 1);
+        timestmap = bound(timestmap, installmentsLoan.lastUpdateTimestamp + 1, installmentsLoan.lastUpdateTimestamp + postponement - 1);
 
         vm.warp(timestmap);
         loan.repayLOAN(loanId, 0);
 
-        (, PWNBordelLoan.LOAN memory loan) = loan.getLOAN(loanId);
+        (, PWNInstallmentsLoan.LOAN memory loan) = loan.getLOAN(loanId);
         assertEq(uint256(loan.lastUpdateTimestamp), timestmap);
     }
 
     function testFuzz_shouldEmit_LOANRepaymentMade(uint256 repayment) external {
-        repayment = bound(repayment, 1, bordelLoan.principalAmount);
+        repayment = bound(repayment, 1, installmentsLoan.principalAmount);
 
         vm.expectEmit();
-        emit LOANRepaymentMade(loanId, repayment, bordelLoan.principalAmount - repayment); // Note: not testing correct interest repayment
+        emit LOANRepaymentMade(loanId, repayment, installmentsLoan.principalAmount - repayment); // Note: not testing correct interest repayment
 
         loan.repayLOAN(loanId, repayment);
     }
 
     function testFuzz_shouldTransferRepaymentToVault(uint256 repayment) external {
-        repayment = bound(repayment, 1, bordelLoan.principalAmount);
+        repayment = bound(repayment, 1, installmentsLoan.principalAmount);
 
         vm.expectCall(
-            bordelLoan.creditAddress,
+            installmentsLoan.creditAddress,
             abi.encodeWithSignature(
                 "transferFrom(address,address,uint256)", borrower, address(loan), repayment
             )
@@ -584,7 +584,7 @@ contract PWNBordelLoan_RepayLOAN_Test is PWNBordelLoanTest {
     }
 
     function testFuzz_shouldKeepLoanInRunningState_whenPartialRepayment(uint256 repayment) external {
-        repayment = bound(repayment, 1, bordelLoan.principalAmount - 1);
+        repayment = bound(repayment, 1, installmentsLoan.principalAmount - 1);
 
         loan.repayLOAN(loanId, repayment);
 
@@ -601,10 +601,10 @@ contract PWNBordelLoan_RepayLOAN_Test is PWNBordelLoanTest {
 
     function test_shouldTransferCollateralToBorrower_whenFullRepayment() external {
         vm.expectCall(
-            bordelLoan.collateral.assetAddress,
+            installmentsLoan.collateral.assetAddress,
             abi.encodeWithSignature(
                 "safeTransferFrom(address,address,uint256,bytes)",
-                address(loan), bordelLoan.borrower, bordelLoan.collateral.id
+                address(loan), installmentsLoan.borrower, installmentsLoan.collateral.id
             )
         );
 
@@ -625,7 +625,7 @@ contract PWNBordelLoan_RepayLOAN_Test is PWNBordelLoanTest {
 |*  # LOAN REPAYMENT AMOUNT                                 *|
 |*----------------------------------------------------------*/
 
-contract PWNBordelLoan_LoanRepaymentAmount_Test is PWNBordelLoanTest {
+contract PWNInstallmentsLoan_LoanRepaymentAmount_Test is PWNInstallmentsLoanTest {
 
     function test_shouldReturnZero_whenLoanDoesNotExist() external {
         assertEq(loan.loanRepaymentAmount(loanId), 0);
@@ -638,13 +638,13 @@ contract PWNBordelLoan_LoanRepaymentAmount_Test is PWNBordelLoanTest {
         _principal = bound(_principal, 1, 1e40);
         _fixedInterest = bound(_fixedInterest, 0, 1e40);
 
-        bordelLoan.defaultTimestamp = bordelLoan.lastUpdateTimestamp + 101 * 1 days;
-        bordelLoan.principalAmount = _principal;
-        bordelLoan.fixedInterestAmount = _fixedInterest;
-        bordelLoan.accruingInterestAPR = 0;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.defaultTimestamp = installmentsLoan.lastUpdateTimestamp + 101 * 1 days;
+        installmentsLoan.principalAmount = _principal;
+        installmentsLoan.fixedInterestAmount = _fixedInterest;
+        installmentsLoan.accruingInterestAPR = 0;
+        _storeLOAN(loanId, installmentsLoan);
 
-        vm.warp(bordelLoan.lastUpdateTimestamp + _days + 1 days); // should not have an effect
+        vm.warp(installmentsLoan.lastUpdateTimestamp + _days + 1 days); // should not have an effect
 
         assertEq(loan.loanRepaymentAmount(loanId), _principal + _fixedInterest);
     }
@@ -657,13 +657,13 @@ contract PWNBordelLoan_LoanRepaymentAmount_Test is PWNBordelLoanTest {
         _fixedInterest = bound(_fixedInterest, 0, 1e40);
         _interestAPR = bound(_interestAPR, 1, 16e6);
 
-        bordelLoan.defaultTimestamp = bordelLoan.lastUpdateTimestamp + 101 * 1 days;
-        bordelLoan.principalAmount = _principal;
-        bordelLoan.fixedInterestAmount = _fixedInterest;
-        bordelLoan.accruingInterestAPR = uint24(_interestAPR);
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.defaultTimestamp = installmentsLoan.lastUpdateTimestamp + 101 * 1 days;
+        installmentsLoan.principalAmount = _principal;
+        installmentsLoan.fixedInterestAmount = _fixedInterest;
+        installmentsLoan.accruingInterestAPR = uint24(_interestAPR);
+        _storeLOAN(loanId, installmentsLoan);
 
-        vm.warp(bordelLoan.lastUpdateTimestamp + _minutes * 1 minutes + 1);
+        vm.warp(installmentsLoan.lastUpdateTimestamp + _minutes * 1 minutes + 1);
 
         uint256 expectedInterest = _fixedInterest + _principal * _interestAPR * _minutes / (1e2 * 60 * 24 * 365) / 100;
         uint256 expectedLoanRepaymentAmount = _principal + expectedInterest;
@@ -671,23 +671,23 @@ contract PWNBordelLoan_LoanRepaymentAmount_Test is PWNBordelLoanTest {
     }
 
     function test_shouldReturnAccuredInterest() external {
-        bordelLoan.defaultTimestamp = bordelLoan.lastUpdateTimestamp + 101 * 1 days;
-        bordelLoan.principalAmount = 100e18;
-        bordelLoan.fixedInterestAmount = 10e18;
-        bordelLoan.accruingInterestAPR = uint24(365e2);
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.defaultTimestamp = installmentsLoan.lastUpdateTimestamp + 101 * 1 days;
+        installmentsLoan.principalAmount = 100e18;
+        installmentsLoan.fixedInterestAmount = 10e18;
+        installmentsLoan.accruingInterestAPR = uint24(365e2);
+        _storeLOAN(loanId, installmentsLoan);
 
-        vm.warp(bordelLoan.lastUpdateTimestamp);
-        assertEq(loan.loanRepaymentAmount(loanId), bordelLoan.principalAmount + bordelLoan.fixedInterestAmount);
+        vm.warp(installmentsLoan.lastUpdateTimestamp);
+        assertEq(loan.loanRepaymentAmount(loanId), installmentsLoan.principalAmount + installmentsLoan.fixedInterestAmount);
 
-        vm.warp(bordelLoan.lastUpdateTimestamp + 1 days);
-        assertEq(loan.loanRepaymentAmount(loanId), bordelLoan.principalAmount + bordelLoan.fixedInterestAmount + 1e18);
+        vm.warp(installmentsLoan.lastUpdateTimestamp + 1 days);
+        assertEq(loan.loanRepaymentAmount(loanId), installmentsLoan.principalAmount + installmentsLoan.fixedInterestAmount + 1e18);
 
-        bordelLoan.accruingInterestAPR = uint24(100e2);
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.accruingInterestAPR = uint24(100e2);
+        _storeLOAN(loanId, installmentsLoan);
 
-        vm.warp(bordelLoan.lastUpdateTimestamp + 365 days);
-        assertEq(loan.loanRepaymentAmount(loanId), 2 * bordelLoan.principalAmount + bordelLoan.fixedInterestAmount);
+        vm.warp(installmentsLoan.lastUpdateTimestamp + 365 days);
+        assertEq(loan.loanRepaymentAmount(loanId), 2 * installmentsLoan.principalAmount + installmentsLoan.fixedInterestAmount);
     }
 
 }
@@ -697,14 +697,14 @@ contract PWNBordelLoan_LoanRepaymentAmount_Test is PWNBordelLoanTest {
 |*  # CLAIM LOAN                                            *|
 |*----------------------------------------------------------*/
 
-contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
+contract PWNInstallmentsLoan_ClaimLOAN_Test is PWNInstallmentsLoanTest {
 
     function setUp() override public {
         super.setUp();
 
-        bordelLoan.unclaimedAmount = bordelLoan.principalAmount;
-        bordelLoan.principalAmount = 0;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.unclaimedAmount = installmentsLoan.principalAmount;
+        installmentsLoan.principalAmount = 0;
+        _storeLOAN(loanId, installmentsLoan);
 
         // Move collateral to vault
         vm.prank(borrower);
@@ -715,81 +715,81 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
     function testFuzz_shouldFail_whenCallerIsNotLOANTokenHolder(address caller) external {
         vm.assume(caller != lender);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNBordelLoan.CallerNotLOANTokenHolder.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNInstallmentsLoan.CallerNotLOANTokenHolder.selector));
         vm.prank(caller);
         loan.claimLOAN(loanId);
     }
 
     function test_shouldFail_whenLoanDoesNotExist() external {
-        bordelLoan.principalAmount = 0;
-        bordelLoan.unclaimedAmount = 0;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 0;
+        installmentsLoan.unclaimedAmount = 0;
+        _storeLOAN(loanId, installmentsLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNBordelLoan.NonExistingLoan.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNInstallmentsLoan.NonExistingLoan.selector));
         vm.prank(lender);
         loan.claimLOAN(loanId);
     }
 
     function test_shouldFail_whenNothingToClaim() external {
-        bordelLoan.principalAmount = 1;
-        bordelLoan.unclaimedAmount = 0;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 1;
+        installmentsLoan.unclaimedAmount = 0;
+        _storeLOAN(loanId, installmentsLoan);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNBordelLoan.NothingToClaim.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNInstallmentsLoan.NothingToClaim.selector));
         vm.prank(lender);
         loan.claimLOAN(loanId);
     }
 
     function test_shouldEmit_LOANClaimed_whenRunning() external {
-        bordelLoan.principalAmount = 1;
-        bordelLoan.unclaimedAmount = 10e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 1;
+        installmentsLoan.unclaimedAmount = 10e18;
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status,) = loan.getLOAN(loanId);
         assertEq(status, 2); // Note: sanity check
 
         vm.expectEmit();
-        emit LOANClaimed(loanId, bordelLoan.unclaimedAmount, false);
+        emit LOANClaimed(loanId, installmentsLoan.unclaimedAmount, false);
 
         vm.prank(lender);
         loan.claimLOAN(loanId);
     }
 
     function test_shouldEmit_LOANClaimed_whenRepaid() external {
-        bordelLoan.principalAmount = 0;
-        bordelLoan.unclaimedAmount = 10e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 0;
+        installmentsLoan.unclaimedAmount = 10e18;
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status,) = loan.getLOAN(loanId);
         assertEq(status, 3); // Note: sanity check
 
         vm.expectEmit();
-        emit LOANClaimed(loanId, bordelLoan.unclaimedAmount, false);
+        emit LOANClaimed(loanId, installmentsLoan.unclaimedAmount, false);
 
         vm.prank(lender);
         loan.claimLOAN(loanId);
     }
 
     function test_shouldEmit_LOANClaimed_whenDefaulted() external {
-        bordelLoan.principalAmount = 1;
-        bordelLoan.unclaimedAmount = 10e18;
-        bordelLoan.defaultTimestamp = 1;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 1;
+        installmentsLoan.unclaimedAmount = 10e18;
+        installmentsLoan.defaultTimestamp = 1;
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status,) = loan.getLOAN(loanId);
         assertEq(status, 4); // Note: sanity check
 
         vm.expectEmit();
-        emit LOANClaimed(loanId, bordelLoan.unclaimedAmount, true);
+        emit LOANClaimed(loanId, installmentsLoan.unclaimedAmount, true);
 
         vm.prank(lender);
         loan.claimLOAN(loanId);
     }
 
     function test_shouldUpdateUnclaimedAmount_whenRunning() external {
-        bordelLoan.principalAmount = 1;
-        bordelLoan.unclaimedAmount = 10e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 1;
+        installmentsLoan.unclaimedAmount = 10e18;
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status,) = loan.getLOAN(loanId);
         assertEq(status, 2); // Note: sanity check
@@ -797,14 +797,14 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
         vm.prank(lender);
         loan.claimLOAN(loanId);
 
-        bordelLoan.unclaimedAmount = 0;
-        _assertLOANEq(loanId, bordelLoan);
+        installmentsLoan.unclaimedAmount = 0;
+        _assertLOANEq(loanId, installmentsLoan);
     }
 
     function test_shouldDeleteLoanData_whenFullyRepaid() external {
-        bordelLoan.principalAmount = 0;
-        bordelLoan.unclaimedAmount = 10e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 0;
+        installmentsLoan.unclaimedAmount = 10e18;
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status,) = loan.getLOAN(loanId);
         assertEq(status, 3); // Note: sanity check
@@ -816,10 +816,10 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
     }
 
     function test_shouldDeleteLoanData_whenDefaulted() external {
-        bordelLoan.principalAmount = 1;
-        bordelLoan.unclaimedAmount = 10e18;
-        bordelLoan.defaultTimestamp = 1;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 1;
+        installmentsLoan.unclaimedAmount = 10e18;
+        installmentsLoan.defaultTimestamp = 1;
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status,) = loan.getLOAN(loanId);
         assertEq(status, 4); // Note: sanity check
@@ -831,9 +831,9 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
     }
 
     function test_shouldBurnLOANToken_whenFullyRepaid() external {
-        bordelLoan.principalAmount = 0;
-        bordelLoan.unclaimedAmount = 10e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 0;
+        installmentsLoan.unclaimedAmount = 10e18;
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status,) = loan.getLOAN(loanId);
         assertEq(status, 3); // Note: sanity check
@@ -848,10 +848,10 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
     }
 
     function test_shouldBurnLOANToken_whenDefaulted() external {
-        bordelLoan.principalAmount = 1;
-        bordelLoan.unclaimedAmount = 10e18;
-        bordelLoan.defaultTimestamp = 1;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 1;
+        installmentsLoan.unclaimedAmount = 10e18;
+        installmentsLoan.defaultTimestamp = 1;
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status,) = loan.getLOAN(loanId);
         assertEq(status, 4); // Note: sanity check
@@ -866,15 +866,15 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
     }
 
     function test_shouldTransferUnclaimedAmount_whenRunning() external {
-        bordelLoan.principalAmount = 1;
-        bordelLoan.unclaimedAmount = 10e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 1;
+        installmentsLoan.unclaimedAmount = 10e18;
+        _storeLOAN(loanId, installmentsLoan);
 
-        fungibleAsset.mint(address(loan), bordelLoan.unclaimedAmount);
+        fungibleAsset.mint(address(loan), installmentsLoan.unclaimedAmount);
 
         vm.expectCall(
-            bordelLoan.creditAddress,
-            abi.encodeWithSignature("transfer(address,uint256)", lender, bordelLoan.unclaimedAmount)
+            installmentsLoan.creditAddress,
+            abi.encodeWithSignature("transfer(address,uint256)", lender, installmentsLoan.unclaimedAmount)
         );
 
         vm.prank(lender);
@@ -882,15 +882,15 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
     }
 
     function test_shouldTransferUnclaimedAmount_whenRepaid() external {
-        bordelLoan.principalAmount = 0;
-        bordelLoan.unclaimedAmount = 10e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 0;
+        installmentsLoan.unclaimedAmount = 10e18;
+        _storeLOAN(loanId, installmentsLoan);
 
-        fungibleAsset.mint(address(loan), bordelLoan.unclaimedAmount);
+        fungibleAsset.mint(address(loan), installmentsLoan.unclaimedAmount);
 
         vm.expectCall(
-            bordelLoan.creditAddress,
-            abi.encodeWithSignature("transfer(address,uint256)", lender, bordelLoan.unclaimedAmount)
+            installmentsLoan.creditAddress,
+            abi.encodeWithSignature("transfer(address,uint256)", lender, installmentsLoan.unclaimedAmount)
         );
 
         vm.prank(lender);
@@ -898,16 +898,16 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
     }
 
     function test_shouldTransferUnclaimedAmount_whenDefaulted() external {
-        bordelLoan.principalAmount = 1;
-        bordelLoan.unclaimedAmount = 10e18;
-        bordelLoan.defaultTimestamp = 1;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 1;
+        installmentsLoan.unclaimedAmount = 10e18;
+        installmentsLoan.defaultTimestamp = 1;
+        _storeLOAN(loanId, installmentsLoan);
 
-        fungibleAsset.mint(address(loan), bordelLoan.unclaimedAmount);
+        fungibleAsset.mint(address(loan), installmentsLoan.unclaimedAmount);
 
         vm.expectCall(
-            bordelLoan.creditAddress,
-            abi.encodeWithSignature("transfer(address,uint256)", lender, bordelLoan.unclaimedAmount)
+            installmentsLoan.creditAddress,
+            abi.encodeWithSignature("transfer(address,uint256)", lender, installmentsLoan.unclaimedAmount)
         );
 
         vm.prank(lender);
@@ -915,16 +915,16 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
     }
 
     function test_shouldTransferCollateral_whenDefaulted() external {
-        bordelLoan.principalAmount = 1;
-        bordelLoan.unclaimedAmount = 10e18;
-        bordelLoan.defaultTimestamp = 1;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 1;
+        installmentsLoan.unclaimedAmount = 10e18;
+        installmentsLoan.defaultTimestamp = 1;
+        _storeLOAN(loanId, installmentsLoan);
 
         vm.expectCall(
-            bordelLoan.collateral.assetAddress,
+            installmentsLoan.collateral.assetAddress,
             abi.encodeWithSignature(
                 "safeTransferFrom(address,address,uint256,bytes)",
-                address(loan), lender, bordelLoan.collateral.id, ""
+                address(loan), lender, installmentsLoan.collateral.id, ""
             )
         );
 
@@ -939,30 +939,30 @@ contract PWNBordelLoan_ClaimLOAN_Test is PWNBordelLoanTest {
 |*  # GET LOAN                                              *|
 |*----------------------------------------------------------*/
 
-contract PWNBordelLoan_GetLOAN_Test is PWNBordelLoanTest {
+contract PWNInstallmentsLoan_GetLOAN_Test is PWNInstallmentsLoanTest {
 
     function test_shouldReturnStoredLOANData_FirstPart() external {
-        _storeLOAN(loanId, bordelLoan);
+        _storeLOAN(loanId, installmentsLoan);
 
-        (, PWNBordelLoan.LOAN memory loan) = loan.getLOAN(loanId);
+        (, PWNInstallmentsLoan.LOAN memory loan) = loan.getLOAN(loanId);
 
         _assertLOANEq(loanId, loan);
     }
 
     function test_shouldReturnCorrectStatus() external {
-        _storeLOAN(loanId, bordelLoan);
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status,) = loan.getLOAN(loanId);
         assertEq(status, 2);
 
-        vm.warp(bordelLoan.defaultTimestamp);
+        vm.warp(installmentsLoan.defaultTimestamp);
 
         (status,) = loan.getLOAN(loanId);
         assertEq(status, 4);
 
-        bordelLoan.principalAmount = 0;
-        bordelLoan.unclaimedAmount = 1;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 0;
+        installmentsLoan.unclaimedAmount = 1;
+        _storeLOAN(loanId, installmentsLoan);
 
         (status,) = loan.getLOAN(loanId);
         assertEq(status, 3);
@@ -971,7 +971,7 @@ contract PWNBordelLoan_GetLOAN_Test is PWNBordelLoanTest {
     function test_shouldReturnEmptyLOANDataForNonExistingLoan() external {
         uint256 nonExistingLoanId = loanId + 1;
 
-        (uint8 status, PWNBordelLoan.LOAN memory loan) = loan.getLOAN(nonExistingLoanId);
+        (uint8 status, PWNInstallmentsLoan.LOAN memory loan) = loan.getLOAN(nonExistingLoanId);
 
         assertEq(status, 0);
         _assertLOANEq(nonExistingLoan, loan);
@@ -984,12 +984,12 @@ contract PWNBordelLoan_GetLOAN_Test is PWNBordelLoanTest {
 |*  # DEFAULT CONDITIONS                                    *|
 |*----------------------------------------------------------*/
 
-contract PWNBordelLoan_DefaultConditions_Test is PWNBordelLoanTest {
+contract PWNInstallmentsLoan_DefaultConditions_Test is PWNInstallmentsLoanTest {
 
     function testFuzz_shouldDefault_whenPassedDefaultTimestamp(uint256 timestamp) external {
-        bordelLoan.defaultTimestamp = 500;
-        _storeLOAN(loanId, bordelLoan);
-        timestamp = bound(timestamp, bordelLoan.defaultTimestamp, 1e9);
+        installmentsLoan.defaultTimestamp = 500;
+        _storeLOAN(loanId, installmentsLoan);
+        timestamp = bound(timestamp, installmentsLoan.defaultTimestamp, 1e9);
 
         vm.warp(timestamp);
 
@@ -1000,13 +1000,13 @@ contract PWNBordelLoan_DefaultConditions_Test is PWNBordelLoanTest {
     function test_shouldDefault_whenDebtAboveLimit() external {
         vm.warp(1);
 
-        bordelLoan.lastUpdateTimestamp = 1;
-        bordelLoan.defaultTimestamp = 1 + 360 days;
-        bordelLoan.principalAmount = 800e18;
-        bordelLoan.fixedInterestAmount = 200e18;
-        bordelLoan.accruingInterestAPR = 0;
-        bordelLoan.debtLimitTangent = _getInitialDebtLimitTangent(bordelLoan.principalAmount, bordelLoan.fixedInterestAmount, bordelLoan.defaultTimestamp);
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.lastUpdateTimestamp = 1;
+        installmentsLoan.defaultTimestamp = 1 + 360 days;
+        installmentsLoan.principalAmount = 800e18;
+        installmentsLoan.fixedInterestAmount = 200e18;
+        installmentsLoan.accruingInterestAPR = 0;
+        installmentsLoan.debtLimitTangent = _getInitialDebtLimitTangent(installmentsLoan.principalAmount, installmentsLoan.fixedInterestAmount, installmentsLoan.defaultTimestamp);
+        _storeLOAN(loanId, installmentsLoan);
 
         vm.warp(block.timestamp + loan.DEBT_LIMIT_POSTPONEMENT() - 1);
 
@@ -1020,9 +1020,9 @@ contract PWNBordelLoan_DefaultConditions_Test is PWNBordelLoanTest {
 
         vm.warp(block.timestamp + 120 days - 1); // 50% of the debt limit value
 
-        bordelLoan.principalAmount = 400e18;
-        bordelLoan.fixedInterestAmount = 100e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 400e18;
+        installmentsLoan.fixedInterestAmount = 100e18;
+        _storeLOAN(loanId, installmentsLoan);
 
         (status, ) = loan.getLOAN(loanId);
         assertEq(status, 2);
@@ -1034,16 +1034,16 @@ contract PWNBordelLoan_DefaultConditions_Test is PWNBordelLoanTest {
 
         vm.warp(block.timestamp + 60 days);
 
-        bordelLoan.principalAmount = 200e18;
-        bordelLoan.fixedInterestAmount = 40e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 200e18;
+        installmentsLoan.fixedInterestAmount = 40e18;
+        _storeLOAN(loanId, installmentsLoan);
 
         (status, ) = loan.getLOAN(loanId);
         assertEq(status, 2);
 
-        bordelLoan.principalAmount = 200e18;
-        bordelLoan.fixedInterestAmount = 51e18;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = 200e18;
+        installmentsLoan.fixedInterestAmount = 51e18;
+        _storeLOAN(loanId, installmentsLoan);
 
         (status, ) = loan.getLOAN(loanId);
         assertEq(status, 4);
@@ -1052,22 +1052,22 @@ contract PWNBordelLoan_DefaultConditions_Test is PWNBordelLoanTest {
     function testFuzz_shouldDefault_whenDebtAboveLimit(uint256 debt, uint256 duration) external {
         vm.warp(1);
 
-        bordelLoan.lastUpdateTimestamp = 1;
-        bordelLoan.defaultTimestamp = 1 + 360 days;
-        bordelLoan.principalAmount = 100e18;
-        bordelLoan.fixedInterestAmount = 0;
-        bordelLoan.accruingInterestAPR = 0;
-        bordelLoan.debtLimitTangent = _getInitialDebtLimitTangent(bordelLoan.principalAmount, bordelLoan.fixedInterestAmount, bordelLoan.defaultTimestamp);
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.lastUpdateTimestamp = 1;
+        installmentsLoan.defaultTimestamp = 1 + 360 days;
+        installmentsLoan.principalAmount = 100e18;
+        installmentsLoan.fixedInterestAmount = 0;
+        installmentsLoan.accruingInterestAPR = 0;
+        installmentsLoan.debtLimitTangent = _getInitialDebtLimitTangent(installmentsLoan.principalAmount, installmentsLoan.fixedInterestAmount, installmentsLoan.defaultTimestamp);
+        _storeLOAN(loanId, installmentsLoan);
 
         duration = bound(duration, 0, 240 days);
-        uint256 limit = bordelLoan.principalAmount * (240 days - duration) / 240 days;
+        uint256 limit = installmentsLoan.principalAmount * (240 days - duration) / 240 days;
         debt = bound(debt, limit, type(uint256).max);
 
         vm.warp(block.timestamp + loan.DEBT_LIMIT_POSTPONEMENT() + duration);
 
-        bordelLoan.principalAmount = debt;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.principalAmount = debt;
+        _storeLOAN(loanId, installmentsLoan);
 
         (uint8 status, ) = loan.getLOAN(loanId);
         assertEq(status, 4);
@@ -1080,7 +1080,7 @@ contract PWNBordelLoan_DefaultConditions_Test is PWNBordelLoanTest {
 |*  # LOAN METADATA URI                                     *|
 |*----------------------------------------------------------*/
 
-contract PWNBordelLoan_LoanMetadataUri_Test is PWNBordelLoanTest {
+contract PWNInstallmentsLoan_LoanMetadataUri_Test is PWNInstallmentsLoanTest {
 
     string tokenUri;
 
@@ -1119,7 +1119,7 @@ contract PWNBordelLoan_LoanMetadataUri_Test is PWNBordelLoanTest {
 |*  # ERC5646                                               *|
 |*----------------------------------------------------------*/
 
-contract PWNBordelLoan_GetStateFingerprint_Test is PWNBordelLoanTest {
+contract PWNInstallmentsLoan_GetStateFingerprint_Test is PWNInstallmentsLoanTest {
 
     function test_shouldReturnZeroIfLoanDoesNotExist() external {
         bytes32 fingerprint = loan.getStateFingerprint(loanId);
@@ -1128,34 +1128,34 @@ contract PWNBordelLoan_GetStateFingerprint_Test is PWNBordelLoanTest {
     }
 
     function test_shouldUpdateStateFingerprint_whenLoanDefaulted() external {
-        _storeLOAN(loanId, bordelLoan);
+        _storeLOAN(loanId, installmentsLoan);
 
-        vm.warp(bordelLoan.lastUpdateTimestamp);
+        vm.warp(installmentsLoan.lastUpdateTimestamp);
         assertEq(
             loan.getStateFingerprint(loanId),
-            keccak256(abi.encode(2, bordelLoan.lastUpdateTimestamp, bordelLoan.fixedInterestAmount, bordelLoan.principalAmount, bordelLoan.unclaimedAmount))
+            keccak256(abi.encode(2, installmentsLoan.lastUpdateTimestamp, installmentsLoan.fixedInterestAmount, installmentsLoan.principalAmount, installmentsLoan.unclaimedAmount))
         );
 
-        vm.warp(bordelLoan.defaultTimestamp);
+        vm.warp(installmentsLoan.defaultTimestamp);
         assertEq(
             loan.getStateFingerprint(loanId),
-            keccak256(abi.encode(4, bordelLoan.lastUpdateTimestamp, bordelLoan.fixedInterestAmount, bordelLoan.principalAmount, bordelLoan.unclaimedAmount))
+            keccak256(abi.encode(4, installmentsLoan.lastUpdateTimestamp, installmentsLoan.fixedInterestAmount, installmentsLoan.principalAmount, installmentsLoan.unclaimedAmount))
         );
     }
 
     function test_shouldReturnCorrectStateFingerprint() external {
-        bordelLoan.debtLimitTangent = type(uint256).max;
+        installmentsLoan.debtLimitTangent = type(uint256).max;
 
-        bordelLoan.lastUpdateTimestamp = 1;
-        bordelLoan.principalAmount = 1e22;
-        bordelLoan.fixedInterestAmount = 1e6;
-        bordelLoan.unclaimedAmount = 1e30;
-        _storeLOAN(loanId, bordelLoan);
+        installmentsLoan.lastUpdateTimestamp = 1;
+        installmentsLoan.principalAmount = 1e22;
+        installmentsLoan.fixedInterestAmount = 1e6;
+        installmentsLoan.unclaimedAmount = 1e30;
+        _storeLOAN(loanId, installmentsLoan);
 
         vm.warp(1);
         assertEq(
             loan.getStateFingerprint(loanId),
-            keccak256(abi.encode(2, bordelLoan.lastUpdateTimestamp, bordelLoan.fixedInterestAmount, bordelLoan.principalAmount, bordelLoan.unclaimedAmount))
+            keccak256(abi.encode(2, installmentsLoan.lastUpdateTimestamp, installmentsLoan.fixedInterestAmount, installmentsLoan.principalAmount, installmentsLoan.unclaimedAmount))
         );
     }
 
