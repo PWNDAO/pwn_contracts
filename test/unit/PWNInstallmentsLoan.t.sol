@@ -9,7 +9,8 @@ import {
     PWNHubTags,
     Math,
     MultiToken,
-    AddressMissingHubTag
+    AddressMissingHubTag,
+    IPWNLenderHook
 } from "pwn/loan/terms/simple/loan/PWNInstallmentsLoan.sol";
 
 import { T20 } from "test/helper/T20.sol";
@@ -38,12 +39,13 @@ abstract contract PWNInstallmentsLoanTest is Test {
     PWNInstallmentsLoan.LOAN nonExistingLoan;
     SimpleTerms simpleLoanTerms;
     PWNInstallmentsLoan.ProposalSpec proposalSpec;
+    PWNInstallmentsLoan.LenderSpec lenderSpec;
     T20 fungibleAsset;
     T721 nonFungibleAsset;
 
     bytes32 proposalHash = keccak256("proposalHash");
 
-    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, SimpleTerms terms, bytes extra);
+    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, SimpleTerms terms, PWNInstallmentsLoan.LenderSpec lenderSpec, bytes extra);
     event LOANRepaymentMade(uint256 indexed loanId, uint256 repaymentAmount, uint256 newPrincipal);
     event LOANPaidBack(uint256 indexed loanId);
     event LOANClaimed(uint256 indexed loanId, uint256 claimedAmount, bool claimedCollateral);
@@ -105,6 +107,11 @@ abstract contract PWNInstallmentsLoanTest is Test {
             proposalContract: proposalContract,
             proposalData: proposalData,
             signature: signature
+        });
+
+        lenderSpec = PWNInstallmentsLoan.LenderSpec({
+            lenderHook: IPWNLenderHook(address(0)),
+            lenderHookParameters: ""
         });
 
         nonExistingLoan = PWNInstallmentsLoan.LOAN({
@@ -230,6 +237,19 @@ abstract contract PWNInstallmentsLoanTest is Test {
 
 
 /*----------------------------------------------------------*|
+|*  # GET LENDER SPEC HASH                                  *|
+|*----------------------------------------------------------*/
+
+contract PWNInstallmentsLoan_GetLenderSpecHash_Test is PWNInstallmentsLoanTest {
+
+    function test_shouldReturnLenderSpecHash() external {
+        assertEq(keccak256(abi.encode(lenderSpec)), loan.getLenderSpecHash(lenderSpec));
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
 |*  # CREATE LOAN                                           *|
 |*----------------------------------------------------------*/
 
@@ -243,6 +263,7 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
         vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, _proposalContract, PWNHubTags.LOAN_PROPOSAL));
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
     }
@@ -263,6 +284,25 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
         vm.prank(caller);
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
+            extra: ""
+        });
+    }
+
+    function testFuzz_shouldFail_whenLenderSpecHashNotMatch(bytes32 lenderSpecHash) external {
+        simpleLoanTerms.lenderSpecHash = lenderSpecHash;
+        _mockLoanTerms(simpleLoanTerms);
+        lenderSpec.lenderHook = IPWNLenderHook(makeAddr("lenderHook"));
+        lenderSpec.lenderHookParameters = "lenderHookParameters";
+        bytes32 expectedLenderSpecHash = loan.getLenderSpecHash(lenderSpec);
+        vm.assume(lenderSpecHash != expectedLenderSpecHash);
+
+        vm.expectRevert(abi.encodeWithSelector(
+            PWNInstallmentsLoan.InvalidLenderSpecHash.selector, simpleLoanTerms.lenderSpecHash, expectedLenderSpecHash
+        ));
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
     }
@@ -276,6 +316,7 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
         vm.expectRevert(abi.encodeWithSelector(PWNInstallmentsLoan.InvalidDuration.selector, duration, minDuration));
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
     }
@@ -291,6 +332,7 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
         );
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
     }
@@ -313,6 +355,7 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
         );
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
     }
@@ -335,6 +378,7 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
         );
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
     }
@@ -344,6 +388,7 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
 
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
     }
@@ -351,6 +396,7 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
     function test_shouldStoreLoanData() external {
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
 
@@ -359,10 +405,11 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
 
     function test_shouldEmit_LOANCreated() external {
         vm.expectEmit();
-        emit LOANCreated(loanId, proposalHash, proposalContract, simpleLoanTerms, "lil extra");
+        emit LOANCreated(loanId, proposalHash, proposalContract, simpleLoanTerms, lenderSpec, "lil extra");
 
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: "lil extra"
         });
     }
@@ -383,6 +430,51 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
 
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
+            extra: ""
+        });
+    }
+
+    function test_shouldCallLenderHook_whenNonZero() external {
+        lenderSpec.lenderHook = IPWNLenderHook(makeAddr("lenderHook"));
+        lenderSpec.lenderHookParameters = "lenderHookParameters";
+        simpleLoanTerms.lenderSpecHash = loan.getLenderSpecHash(lenderSpec);
+        _mockLoanTerms(simpleLoanTerms);
+        vm.etch(address(lenderSpec.lenderHook), bytes("data"));
+
+        vm.expectCall(
+            address(lenderSpec.lenderHook),
+            abi.encodeWithSelector(
+                IPWNLenderHook.onLoanCreated.selector,
+                loanId, proposalHash, lender, simpleLoanTerms.credit.assetAddress, simpleLoanTerms.credit.amount, lenderSpec.lenderHookParameters
+            )
+        );
+
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
+            extra: ""
+        });
+    }
+
+    function test_shouldNotCallLenderHook_whenZero() external {
+        lenderSpec.lenderHook = IPWNLenderHook(address(0));
+        lenderSpec.lenderHookParameters = "";
+        simpleLoanTerms.lenderSpecHash = bytes32(0);
+        _mockLoanTerms(simpleLoanTerms);
+
+        vm.expectCall(
+            address(lenderSpec.lenderHook),
+            abi.encodeWithSelector(
+                IPWNLenderHook.onLoanCreated.selector,
+                loanId, proposalHash, lender, simpleLoanTerms.credit.assetAddress, simpleLoanTerms.credit.amount, lenderSpec.lenderHookParameters
+            ),
+            0
+        );
+
+        loan.createLOAN({
+            proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
     }
@@ -416,6 +508,7 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
 
         loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
     }
@@ -425,6 +518,7 @@ contract PWNInstallmentsLoan_CreateLOAN_Test is PWNInstallmentsLoanTest {
 
         uint256 createdLoanId = loan.createLOAN({
             proposalSpec: proposalSpec,
+            lenderSpec: lenderSpec,
             extra: ""
         });
 

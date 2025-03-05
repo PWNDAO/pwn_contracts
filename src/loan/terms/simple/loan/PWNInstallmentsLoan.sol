@@ -11,6 +11,7 @@ import { PWNConfig } from "pwn/config/PWNConfig.sol";
 import { PWNHub } from "pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
+import { IPWNLenderHook } from "pwn/interfaces/IPWNLenderHook.sol";
 import { IPWNLoanMetadataProvider } from "pwn/interfaces/IPWNLoanMetadataProvider.sol";
 import { LOANStatus } from "pwn/loan/lib/LOANStatus.sol";
 import { PWNFeeCalculator } from "pwn/loan/lib/PWNFeeCalculator.sol";
@@ -63,6 +64,16 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
     }
 
     /**
+     * @notice Lender specification during loan creation.
+     * @param lenderHook Address of a lender hook contract that will be called before credit transfer.
+     * @param lenderHookParameters Data that is passed to the lender hook contract as lender parameters.
+     */
+    struct LenderSpec {
+        IPWNLenderHook lenderHook;
+        bytes lenderHookParameters;
+    }
+
+    /**
      * @notice Struct defining a simple loan.
      * @param creditAddress Address of an asset used as a loan credit.
      * @param lastUpdateTimestamp Unix timestamp (in seconds) of the last loan update.
@@ -102,7 +113,7 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
     /**
      * @notice Emitted when a new loan in created.
      */
-    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, Terms terms, bytes extra);
+    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, Terms terms, LenderSpec lenderSpec, bytes extra);
 
     /**
      * @notice Emitted when a loan repayment is made.
@@ -155,6 +166,11 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
     error CallerNotLOANTokenHolder();
 
     /**
+     * @notice Thrown when hash of provided lender spec doesn't match the one in loan terms.
+     */
+    error InvalidLenderSpecHash(bytes32 current, bytes32 expected);
+
+    /**
      * @notice Thrown when loan duration is below the minimum.
      */
     error InvalidDuration(uint256 current, uint256 limit);
@@ -199,6 +215,20 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
 
 
     /*----------------------------------------------------------*|
+    |*  # LENDER SPEC                                           *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Get hash of a lender specification.
+     * @param lenderSpec Lender specification struct.
+     * @return Hash of a lender specification.
+     */
+    function getLenderSpecHash(LenderSpec calldata lenderSpec) public pure returns (bytes32) {
+        return keccak256(abi.encode(lenderSpec));
+    }
+
+
+    /*----------------------------------------------------------*|
     |*  # CREATE LOAN                                           *|
     |*----------------------------------------------------------*/
 
@@ -206,11 +236,13 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
      * @notice Create a new loan.
      * @dev The function assumes a prior token approval to a contract address.
      * @param proposalSpec Proposal specification struct.
+     * @param lenderSpec Lender specification struct.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return loanId Id of the created LOAN token.
      */
     function createLOAN(
         ProposalSpec calldata proposalSpec,
+        LenderSpec calldata lenderSpec,
         bytes calldata extra
     ) external nonReentrant returns (uint256 loanId) {
         // Check provided proposal contract
@@ -227,6 +259,15 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
                 proposalInclusionProof: new bytes32[](0),
                 signature: proposalSpec.signature
             });
+
+        // Check that provided lender spec is correct
+        if (msg.sender != loanTerms.lender) {
+            if (loanTerms.lenderSpecHash != bytes32(0) && loanTerms.lenderSpecHash != getLenderSpecHash(lenderSpec)) {
+                revert InvalidLenderSpecHash({ current: loanTerms.lenderSpecHash, expected: getLenderSpecHash(lenderSpec) });
+            } else if (loanTerms.lenderSpecHash == bytes32(0) && address(lenderSpec.lenderHook) != address(0)) {
+                revert InvalidLenderSpecHash({ current: loanTerms.lenderSpecHash, expected: getLenderSpecHash(lenderSpec) });
+            }
+        }
 
         // Check minimum loan duration
         if (loanTerms.duration < MIN_LOAN_DURATION) {
@@ -249,10 +290,11 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
             proposalHash: proposalHash,
             proposalContract: proposalSpec.proposalContract,
             terms: loanTerms,
+            lenderSpec: lenderSpec,
             extra: extra
         });
 
-        _settleNewLoan(loanTerms);
+        _settleNewLoan(loanId, proposalHash, loanTerms, lenderSpec);
     }
 
     /**
@@ -294,9 +336,21 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
      * @dev The function assumes a prior token approval to a contract address.
      * @param loanTerms Loan terms struct.
      */
-    function _settleNewLoan(Terms memory loanTerms) private {
+    function _settleNewLoan(uint256 loanId, bytes32 proposalHash, Terms memory loanTerms, LenderSpec calldata lenderSpec) private {
         // Transfer collateral to Vault
         _pull(loanTerms.collateral, loanTerms.borrower);
+
+        // Call lender hook
+        if (address(lenderSpec.lenderHook) != address(0)) {
+            lenderSpec.lenderHook.onLoanCreated({
+                loanId: loanId,
+                proposalHash: proposalHash,
+                lender: loanTerms.lender,
+                creditAddress: loanTerms.credit.assetAddress,
+                creditAmount: loanTerms.credit.amount,
+                lenderParameters: lenderSpec.lenderHookParameters
+            });
+        }
 
         // Calculate fee amount and new loan amount
         (uint256 feeAmount, uint256 newLoanAmount)
