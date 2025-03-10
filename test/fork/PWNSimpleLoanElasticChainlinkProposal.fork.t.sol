@@ -27,20 +27,6 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         vm.createSelectFork("mainnet");
 
         super.setUp();
-
-        vm.prank(deployment.protocolTimelock);
-        deployment.chainlinkFeedRegistry.acceptOwnership();
-
-        address[] memory addrs = new address[](2);
-        addrs[0] = address(deployment.simpleLoanElasticChainlinkProposal);
-        addrs[1] = address(deployment.simpleLoanElasticChainlinkProposal);
-
-        bytes32[] memory tags = new bytes32[](2);
-        tags[0] = PWNHubTags.LOAN_PROPOSAL;
-        tags[1] = PWNHubTags.NONCE_MANAGER;
-
-        vm.prank(deployment.protocolTimelock);
-        deployment.hub.setTags(addrs, tags, true);
     }
 
 
