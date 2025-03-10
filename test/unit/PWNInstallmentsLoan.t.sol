@@ -1075,6 +1075,34 @@ contract PWNInstallmentsLoan_GetLOAN_Test is PWNInstallmentsLoanTest {
 
 
 /*----------------------------------------------------------*|
+|*  # GET DEFAULT DEBT LIMIT                                *|
+|*----------------------------------------------------------*/
+
+contract PWNInstallmentsLoan_GetDefaultDebtLimit_Test is PWNInstallmentsLoanTest {
+
+    function testFuzz_shouldReturnZero_whenPastDefaultTimestamp(uint256 timestamp) external {
+        timestamp = bound(timestamp, installmentsLoan.defaultTimestamp, type(uint256).max);
+        assertEq(loan.getDefaultDebtLimit(loanId, timestamp), 0);
+    }
+
+    function test_shouldReturnDebtLimit() external {
+        uint256 duration = 360 days; // 31_104_000 .... 86_400
+        installmentsLoan.defaultTimestamp = uint40(1 + duration);
+        installmentsLoan.debtLimitTangent = 100e8; // 8 = debt limit tangent decimal
+        _storeLOAN(loanId, installmentsLoan);
+
+        assertEq(loan.getDefaultDebtLimit(loanId, 1), duration * 100);
+        assertEq(loan.getDefaultDebtLimit(loanId, 1 + 12 days), (duration - 12 days) * 100);
+        assertEq(loan.getDefaultDebtLimit(loanId, 1 + 120 days), (duration - 120 days) * 100);
+        assertEq(loan.getDefaultDebtLimit(loanId, 1 + 180 days), (duration - 180 days) * 100);
+        assertEq(loan.getDefaultDebtLimit(loanId, 1 + 300 days), (duration - 300 days) * 100);
+        assertEq(loan.getDefaultDebtLimit(loanId, 1 + 360 days), 0);
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
 |*  # DEFAULT CONDITIONS                                    *|
 |*----------------------------------------------------------*/
 
@@ -1154,11 +1182,10 @@ contract PWNInstallmentsLoan_DefaultConditions_Test is PWNInstallmentsLoanTest {
         installmentsLoan.debtLimitTangent = _getInitialDebtLimitTangent(installmentsLoan.principalAmount, installmentsLoan.fixedInterestAmount, installmentsLoan.defaultTimestamp);
         _storeLOAN(loanId, installmentsLoan);
 
-        duration = bound(duration, 0, 240 days);
-        uint256 limit = installmentsLoan.principalAmount * (240 days - duration) / 240 days;
-        debt = bound(debt, limit, type(uint256).max);
+        vm.warp(block.timestamp + loan.DEBT_LIMIT_POSTPONEMENT() + bound(duration, 0, 240 days));
 
-        vm.warp(block.timestamp + loan.DEBT_LIMIT_POSTPONEMENT() + duration);
+        uint256 limit = loan.getDefaultDebtLimit(loanId, 0); // installmentsLoan.principalAmount * (240 days - duration) / 240 days;
+        debt = bound(debt, limit + 1, type(uint256).max);
 
         installmentsLoan.principalAmount = debt;
         _storeLOAN(loanId, installmentsLoan);

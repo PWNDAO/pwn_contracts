@@ -520,6 +520,18 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
     }
 
     /**
+     * @notice Return a default debt limit value.
+     * @dev The default debt limit is a linear decreasing function of the total debt from the original debt amount
+     * at the time of loan creation postponed by `DEBT_LIMIT_POSTPONEMENT` to 0 at the default timestamp.
+     * @param loanId Id of a loan.
+     * @param timestamp Timestamp to calculate the default debt limit. Use 0 for the current timestamp.
+     * @return Default debt limit.
+     */
+    function getDefaultDebtLimit(uint256 loanId, uint256 timestamp) external view returns (uint256) {
+        return _defaultDebtLimit(LOANs[loanId], timestamp);
+    }
+
+    /**
      * @notice Return a LOAN status associated with a loan id.
      * @param loan Storage pointer to a LOAN struct.
      * @return status LOAN status.
@@ -528,29 +540,28 @@ contract PWNInstallmentsLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMet
         if (loan.principalAmount == 0) {
             return loan.unclaimedAmount == 0 ? LOANStatus.DEAD : LOANStatus.REPAID;
         } else {
-            return _isDefaulted(loan) ? LOANStatus.DEFAULTED : LOANStatus.RUNNING;
+            return _totalDebt(loan) > _defaultDebtLimit(loan, 0) ? LOANStatus.DEFAULTED : LOANStatus.RUNNING;
         }
     }
 
     /**
-     * @notice Check if the loan is defaulted.
-     * @dev The loan is defaulted if the current timestamp is greater than the default timestamp
-     * or the total debt is greater than the default limit. The default limit is a linear decreasing
-     * function of the total debt from original amount at the time of loan creation postponed
-     * by `DEBT_LIMIT_POSTPONEMENT` to 0 at the default timestamp.
+     * @notice Calculate the default debt limit.
+     * @dev The default debt limit is a linear decreasing function of the total debt from the original debt amount
+     * at the time of loan creation postponed by `DEBT_LIMIT_POSTPONEMENT` to 0 at the default timestamp.
      * @param loan Storage pointer to a LOAN struct.
-     * @return True if the loan is defaulted.
+     * @param timestamp Timestamp to calculate the default debt limit.
+     * @return Default debt limit.
      */
-    function _isDefaulted(LOAN storage loan) internal view returns (bool) {
-        if (block.timestamp >= loan.defaultTimestamp) {
-            return true;
+    function _defaultDebtLimit(LOAN storage loan, uint256 timestamp) internal view returns (uint256) {
+        timestamp = timestamp == 0 ? block.timestamp : timestamp;
+        if (timestamp >= loan.defaultTimestamp) {
+            return 0;
         }
 
-        uint256 debtLimit = Math.mulDiv(
-            loan.debtLimitTangent, uint256(loan.defaultTimestamp) - block.timestamp,
+        return Math.mulDiv(
+            loan.debtLimitTangent, uint256(loan.defaultTimestamp) - timestamp,
             10 ** DEBT_LIMIT_TANGENT_DECIMALS
         );
-        return _totalDebt(loan) >= debtLimit;
     }
 
 
