@@ -25,7 +25,7 @@
         "10": {
             "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
             "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
+            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
             "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
             "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
@@ -46,7 +46,7 @@
         "25": {
             "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
             "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
+            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
             "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
             "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x0000000000000000000000000000000000000000",
@@ -172,7 +172,7 @@
         "8453": {
             "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
             "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
+            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
             "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
             "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
@@ -214,7 +214,7 @@
         "59144": {
             "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
             "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
+            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
             "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
             "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
@@ -258,7 +258,7 @@
         "11155111": {
             "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
             "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0x282D9663815b1F9929a3C84a9a1290BE882E125f",
+            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
             "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
             "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
