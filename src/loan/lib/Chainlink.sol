@@ -5,50 +5,90 @@ import { Math } from "openzeppelin/utils/math/Math.sol";
 
 import { IChainlinkAggregatorLike } from "pwn/interfaces/IChainlinkAggregatorLike.sol";
 import { IChainlinkFeedRegistryLike } from "pwn/interfaces/IChainlinkFeedRegistryLike.sol";
+import { safeFetchDecimals } from "pwn/loan/utils/safeFetchDecimals.sol";
 
 
 library Chainlink {
+    using Math for uint256;
 
-    /**
-     * @notice Maximum Chainlink feed price age.
-     */
+    /** @notice Maximum Chainlink feed price age.*/
     uint256 public constant MAX_CHAINLINK_FEED_PRICE_AGE = 1 days;
-
-    /**
-     * @notice Grace period time for L2 Sequencer uptime feed.
-     */
+    /** @notice Grace period time for L2 Sequencer uptime feed.*/
     uint256 public constant L2_GRACE_PERIOD = 10 minutes;
-
-    /**
-     * @notice Chainlink address of ETH asset.
-     */
+    /** @notice Chainlink address of ETH asset.*/
     address public constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-    /**
-     * @notice Throw when Chainlink feed returns negative price.
-     */
+    /** @notice Throw when Chainlink feed returns negative price.*/
     error ChainlinkFeedReturnedNegativePrice(address feed, int256 price, uint256 updatedAt);
-
-    /**
-     * @notice Throw when Chainlink feed price is too old.
-     */
+    /** @notice Throw when Chainlink feed price is too old.*/
     error ChainlinkFeedPriceTooOld(address feed, uint256 updatedAt);
-
-    /**
-     * @notice Throw when feed invert array is not exactly one item longer than intermediary feed array.
-     */
+    /** @notice Throw when feed invert array is not exactly one item longer than intermediary feed array.*/
     error ChainlinkInvalidInputLenghts();
-
-    /**
-     * @notice Throw when L2 Sequencer uptime feed returns that the sequencer is down.
-     */
+    /** @notice Throw when L2 Sequencer uptime feed returns that the sequencer is down.*/
     error L2SequencerDown();
+    /** @notice Throw when L2 Sequencer uptime feed grace period is not over.*/
+    error GracePeriodNotOver(uint256 timeSinceUp, uint256 gracePeriod);
+    /** @notice Thrown when intermediary denominations are out of bounds.*/
+    error IntermediaryDenominationsOutOfBounds(uint256 current, uint256 limit);
+
+
+    struct Config {
+        IChainlinkAggregatorLike l2SequencerUptimeFeed;
+        IChainlinkFeedRegistryLike chainlinkFeedRegistry;
+        uint256 maxIntermediaryDenominations;
+        address weth;
+    }
 
     /**
-     * @notice Throw when L2 Sequencer uptime feed grace period is not over.
+     * @notice Converts the amount with the old denomination to the new denomination.
+     * @param amount The amount to convert.
+     * @param oldDenomination The address of the old denomination.
+     * @param newDenomination The address of the new denomination.
+     * @param feedIntermediaryDenominations List of intermediary price feeds that will be fetched to get to the quote asset denominator.
+     * @param feedInvertFlags List of flags indicating if price feeds exist only for inverted base and quote assets.
+     * @param config The Chainlink configuration.
+     * @return The amount in the new denomination.
      */
-    error GracePeriodNotOver(uint256 timeSinceUp, uint256 gracePeriod);
+    function convertDenomination(
+        uint256 amount,
+        address oldDenomination,
+        address newDenomination,
+        address[] memory feedIntermediaryDenominations,
+        bool[] memory feedInvertFlags,
+        Config memory config
+    ) internal view returns (uint256) {
+        // check L2 sequencer uptime if necessary
+        checkSequencerUptime(config.l2SequencerUptimeFeed);
 
+        // don't allow more than max intermediary denominations
+        if (feedIntermediaryDenominations.length > config.maxIntermediaryDenominations) {
+            revert IntermediaryDenominationsOutOfBounds({
+                current: feedIntermediaryDenominations.length,
+                limit: config.maxIntermediaryDenominations
+            });
+        }
+
+        // calculate price of base asset with quote asset as denomination
+        // Note: use ETH price feed for WETH asset due to absence of WETH price feed
+        (uint256 price, uint8 priceDecimals) = calculatePrice({
+            feedRegistry: config.chainlinkFeedRegistry,
+            baseAsset: oldDenomination == config.weth ? Chainlink.ETH : oldDenomination,
+            quoteAsset: newDenomination == config.weth ? Chainlink.ETH : newDenomination,
+            feedIntermediaryDenominations: feedIntermediaryDenominations,
+            feedInvertFlags: feedInvertFlags
+        });
+
+        // fetch denomination decimals
+        uint256 oldDenominationDecimals = safeFetchDecimals(oldDenomination);
+        uint256 newDenominationDecimals = safeFetchDecimals(newDenomination);
+        uint256 maxDecimals = Math.max(oldDenominationDecimals, newDenominationDecimals);
+
+        // calculate amount in new denomination
+        uint256 amount_ = amount; // yes, I know, it's just to avoid stack too deep error
+        return (amount_ * 10 ** (maxDecimals - oldDenominationDecimals))
+            .mulDiv(price, 10 ** priceDecimals)
+            / 10 ** (maxDecimals - newDenominationDecimals);
+    }
 
     /**
      * @notice Checks the uptime status of the L2 sequencer.
@@ -72,20 +112,20 @@ library Chainlink {
     }
 
     /**
-     * @notice Fetches the prices of the credit with collateral assets as denomination.
+     * @notice Fetches the prices of the base asset with quote asset as denomination.
      * @dev `feedInvertFlags` array must be exactly one item longer than `feedIntermediaryDenominations`.
      * @param feedRegistry The Chainlink feed registry contract that provides the price feeds.
-     * @param creditAsset The address of the credit asset.
-     * @param collateralAsset The address of the collateral asset.
-     * @param feedIntermediaryDenominations List of intermediary price feeds that will be fetched to get to the collateral asset denominator.
+     * @param baseAsset The address of the base asset.
+     * @param quoteAsset The address of the quote asset.
+     * @param feedIntermediaryDenominations List of intermediary price feeds that will be fetched to get to the quote asset denominator.
      * @param feedInvertFlags List of flags indicating if price feeds exist only for inverted base and quote assets.
-     * @return The price of the credit assets denominated in collateral assets.
+     * @return The price of the base asset denominated in quote asset.
      * @return The price decimals.
      */
-    function fetchCreditPriceWithCollateralDenomination(
+    function calculatePrice(
         IChainlinkFeedRegistryLike feedRegistry,
-        address creditAsset,
-        address collateralAsset,
+        address baseAsset,
+        address quoteAsset,
         address[] memory feedIntermediaryDenominations,
         bool[] memory feedInvertFlags
     ) internal view returns (uint256, uint8) {
@@ -97,14 +137,14 @@ library Chainlink {
         uint256 price = 1;
         uint8 priceDecimals = 0;
 
-        // iterate until collateral asset is denominator
+        // iterate until quote asset is the denominator
         for (uint256 i; i < feedInvertFlags.length; ++i) {
             (price, priceDecimals) = convertPriceDenomination({
                 feedRegistry: feedRegistry,
                 currentPrice: price,
                 currentDecimals: priceDecimals,
-                currentDenomination: i == 0 ? creditAsset : feedIntermediaryDenominations[i - 1],
-                nextDenomination: i == feedIntermediaryDenominations.length ? collateralAsset : feedIntermediaryDenominations[i],
+                currentDenomination: i == 0 ? baseAsset : feedIntermediaryDenominations[i - 1],
+                nextDenomination: i == feedIntermediaryDenominations.length ? quoteAsset : feedIntermediaryDenominations[i],
                 nextInvert: feedInvertFlags[i]
             });
         }
@@ -195,16 +235,12 @@ library Chainlink {
         pure
         returns (uint256, uint256, uint8)
     {
-        uint8 syncedDecimals;
-        if (decimals1 > decimals2) {
-            syncedDecimals = decimals1;
-            price2 *= 10 ** (decimals1 - decimals2);
-        } else {
-            syncedDecimals = decimals2;
-            price1 *= 10 ** (decimals2 - decimals1);
-        }
-
-        return (price1, price2, syncedDecimals);
+        uint8 syncedDecimals = uint8(Math.max(decimals1, decimals2));
+        return (
+            price1 * 10 ** (syncedDecimals - decimals1),
+            price2 * 10 ** (syncedDecimals - decimals2),
+            syncedDecimals
+        );
     }
 
 }

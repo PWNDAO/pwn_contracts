@@ -12,31 +12,26 @@ import {
 } from "pwn/loan/lib/Chainlink.sol";
 import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
-import { safeFetchDecimals } from "pwn/loan/utils/safeFetchDecimals.sol";
 
 
 /**
  * @title PWN Simple Loan Elastic Chainlink Proposal
  * @notice Contract for creating and accepting elastic loan proposals using Chainlink oracles.
- *         Proposals are elastic, which means that they are not tied to a specific collateral or credit amount.
- *         The amount of collateral and credit is specified during the proposal acceptance.
+ * Proposals are elastic, which means that they are not tied to a specific collateral or credit amount.
+ * The amount of collateral and credit is specified during the proposal acceptance.
  */
 contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     using Chainlink for IChainlinkFeedRegistryLike;
     using Chainlink for IChainlinkAggregatorLike;
+    using Math for uint256;
 
     string public constant VERSION = "1.1";
 
+    /** @notice Maximum number of intermediary denominations for price conversion.*/
     uint256 public constant MAX_INTERMEDIARY_DENOMINATIONS = 2;
-
-    /**
-     * @notice Loan to value denominator. It is used to calculate collateral amount from credit amount.
-     */
+    /** @notice Loan to value denominator. It is used to calculate collateral amount from credit amount.*/
     uint256 public constant LOAN_TO_VALUE_DENOMINATOR = 1e4;
-
-    /**
-     * @dev EIP-712 simple proposal struct type hash.
-     */
+    /** @dev EIP-712 proposal type hash.*/
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
         "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address acceptorController,bytes acceptorControllerData,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
     );
@@ -98,38 +93,6 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     }
 
     /**
-     * @notice Proposal struct that can be encoded for EIP-712.
-     * @dev Is typecasting dynamic values to bytes32 to allow EIP-712 encoding.
-     */
-    struct ERC712Proposal {
-        uint8 collateralCategory;
-        address collateralAddress;
-        uint256 collateralId;
-        bool checkCollateralStateFingerprint;
-        bytes32 collateralStateFingerprint;
-        address creditAddress;
-        bytes32 feedIntermediaryDenominationsHash;
-        bytes32 feedInvertFlagsHash;
-        uint256 loanToValue;
-        uint256 minCreditAmount;
-        uint256 availableCreditLimit;
-        bytes32 utilizedCreditId;
-        uint256 fixedInterestAmount;
-        uint24 accruingInterestAPR;
-        uint32 durationOrDate;
-        uint40 expiration;
-        address acceptorController;
-        bytes32 acceptorControllerDataHash;
-        address proposer;
-        bytes32 proposerSpecHash;
-        bool isOffer;
-        uint256 refinancingLoanId;
-        uint256 nonceSpace;
-        uint256 nonce;
-        address loanContract;
-    }
-
-    /**
      * @notice Construct defining proposal concrete values.
      * @param creditAmount Amount of credit to be borrowed.
      * @param acceptorControllerData Acceptor data for an acceptor controller contract.
@@ -143,38 +106,24 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
      * @notice Chainlink feed registry contract.
      */
     IChainlinkFeedRegistryLike public immutable chainlinkFeedRegistry;
-
     /**
      * @notice Chainlink feed for L2 Sequencer uptime.
      * @dev Must be address(0) for L1s.
      */
     IChainlinkAggregatorLike public immutable l2SequencerUptimeFeed;
-
     /**
      * @notice WETH address.
      * @dev WETH price is fetched from the ETH price feed.
      */
     address public immutable WETH;
 
-    /**
-     * @notice Emitted when a proposal is made via an on-chain transaction.
-     */
+    /** @notice Emitted when a proposal is made via an on-chain transaction.*/
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, Proposal proposal);
 
-    /**
-     * @notice Thrown when proposal has no minimum credit amount set.
-     */
+    /** @notice Thrown when proposal has no minimum credit amount set.*/
     error MinCreditAmountNotSet();
-
-    /**
-     * @notice Thrown when proposal credit amount is insufficient.
-     */
+    /** @notice Thrown when proposal credit amount is insufficient.*/
     error InsufficientCreditAmount(uint256 current, uint256 limit);
-
-    /**
-     * @notice Thrown when intermediary denominations are out of bounds.
-     */
-    error IntermediaryDenominationsOutOfBounds(uint256 current, uint256 limit);
 
 
     constructor(
@@ -254,47 +203,17 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         bool[] memory feedInvertFlags,
         uint256 loanToValue
     ) public view returns (uint256) {
-        // check L2 sequencer uptime if necessary
-        l2SequencerUptimeFeed.checkSequencerUptime();
-
-        // don't allow more than 2 intermediary denominations
-        if (feedIntermediaryDenominations.length > MAX_INTERMEDIARY_DENOMINATIONS) {
-            revert IntermediaryDenominationsOutOfBounds({
-                current: feedIntermediaryDenominations.length,
-                limit: MAX_INTERMEDIARY_DENOMINATIONS
-            });
-        }
-
-        // fetch credit asset price with collateral asset as denomination
-        // Note: use ETH price feed for WETH asset due to absence of WETH price feed
-        (uint256 price, uint8 priceDecimals) = chainlinkFeedRegistry.fetchCreditPriceWithCollateralDenomination({
-            creditAsset: creditAddress == WETH ? Chainlink.ETH : creditAddress,
-            collateralAsset: collateralAddress == WETH ? Chainlink.ETH : collateralAddress,
+        return Chainlink.convertDenomination({
+            amount: creditAmount,
+            oldDenomination: creditAddress,
+            newDenomination: collateralAddress,
             feedIntermediaryDenominations: feedIntermediaryDenominations,
-            feedInvertFlags: feedInvertFlags
-        });
-
-        // fetch asset decimals
-        uint256 creditDecimals = safeFetchDecimals(creditAddress);
-        uint256 collateralDecimals = safeFetchDecimals(collateralAddress);
-
-        if (collateralDecimals > creditDecimals) {
-            creditAmount *= 10 ** (collateralDecimals - creditDecimals);
-        }
-
-        uint256 collateralAmount = Math.mulDiv(creditAmount, price, 10 ** priceDecimals);
-        collateralAmount = Math.mulDiv(collateralAmount, LOAN_TO_VALUE_DENOMINATOR, loanToValue);
-
-        if (collateralDecimals < creditDecimals) {
-            collateralAmount /= 10 ** (creditDecimals - collateralDecimals);
-        }
-
-        return collateralAmount;
+            feedInvertFlags: feedInvertFlags,
+            config: _chainlinkConfig()
+        }).mulDiv(LOAN_TO_VALUE_DENOMINATOR, loanToValue);
     }
 
-    /**
-     * @inheritdoc PWNSimpleLoanProposal
-     */
+    /** @inheritdoc PWNSimpleLoanProposal*/
     function acceptProposal(
         address acceptor,
         uint256 refinancingLoanId,
@@ -383,6 +302,38 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     }
 
     /**
+     * @notice Proposal struct that can be encoded for EIP-712.
+     * @dev Is typecasting dynamic values to bytes32 to allow EIP-712 encoding.
+     */
+    struct ERC712Proposal {
+        uint8 collateralCategory;
+        address collateralAddress;
+        uint256 collateralId;
+        bool checkCollateralStateFingerprint;
+        bytes32 collateralStateFingerprint;
+        address creditAddress;
+        bytes32 feedIntermediaryDenominationsHash;
+        bytes32 feedInvertFlagsHash;
+        uint256 loanToValue;
+        uint256 minCreditAmount;
+        uint256 availableCreditLimit;
+        bytes32 utilizedCreditId;
+        uint256 fixedInterestAmount;
+        uint24 accruingInterestAPR;
+        uint32 durationOrDate;
+        uint40 expiration;
+        address acceptorController;
+        bytes32 acceptorControllerDataHash;
+        address proposer;
+        bytes32 proposerSpecHash;
+        bool isOffer;
+        uint256 refinancingLoanId;
+        uint256 nonceSpace;
+        uint256 nonce;
+        address loanContract;
+    }
+
+    /**
      * @notice Encode proposal data for EIP-712.
      * @param proposal Proposal struct to be encoded.
      * @return Encoded proposal data.
@@ -416,6 +367,15 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
             loanContract: proposal.loanContract
         });
         return abi.encode(erc712Proposal);
+    }
+
+    function _chainlinkConfig() internal view returns (Chainlink.Config memory) {
+        return Chainlink.Config({
+            l2SequencerUptimeFeed: l2SequencerUptimeFeed,
+            chainlinkFeedRegistry: chainlinkFeedRegistry,
+            maxIntermediaryDenominations: MAX_INTERMEDIARY_DENOMINATIONS,
+            weth: WETH
+        });
     }
 
 }
