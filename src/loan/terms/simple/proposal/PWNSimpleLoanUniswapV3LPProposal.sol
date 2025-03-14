@@ -4,20 +4,16 @@ pragma solidity 0.8.16;
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
 import { Math } from "openzeppelin/utils/math/Math.sol";
-import { SafeCast } from "openzeppelin/utils/math/SafeCast.sol";
-
-import { TickMath } from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
-
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
-import { OracleLibrary } from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
-import { PoolAddress } from "@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol";
-import { PositionValue } from "@uniswap/v3-periphery/contracts/libraries/PositionValue.sol";
 
 import {
     Chainlink,
     IChainlinkFeedRegistryLike,
     IChainlinkAggregatorLike
 } from "pwn/loan/lib/Chainlink.sol";
+import {
+    UniswapV3,
+    INonfungiblePositionManager
+} from "pwn/loan/lib/UniswapV3.sol";
 import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
 import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
 
@@ -28,9 +24,6 @@ import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleL
  * Proposal uses Chainlink price feeds to get LP token value in credit token.
  */
 contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
-    using Chainlink for IChainlinkFeedRegistryLike;
-    using Chainlink for IChainlinkAggregatorLike;
-    using SafeCast for uint256;
     using Math for uint256;
 
     string public constant VERSION = "1.0";
@@ -211,7 +204,11 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
         bool[] memory feedInvertFlags,
         uint256 loanToValue
     ) public view returns (uint256) {
-        (uint256 lpValue, address denominator) = _getLPValue(collateralId, token0Denominator);
+        (uint256 lpValue, address denominator) = UniswapV3.getLPValue({
+            tokenId: collateralId,
+            token0Denominator: token0Denominator,
+            config: _uniswapConfig()
+        });
 
         if (creditAddress != denominator) {
             lpValue = Chainlink.convertDenomination({
@@ -331,24 +328,6 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
         return token0 == tokenA;
     }
 
-    function _getLPValue(uint256 tokenId, bool token0Denominator) internal view returns (uint256 value, address denominator) {
-        // get LP pool price as a tick
-        (,, address token0, address token1, uint24 fee,,,,,,,) = uniswapNFTPositionManager.positions(tokenId);
-        address pool = PoolAddress.computeAddress(uniswapV3Factory, PoolAddress.getPoolKey(token0, token1, fee));
-        (int24 tick, ) = OracleLibrary.getBlockStartingTickAndLiquidity(pool);
-
-        // get LP token amounts
-        (uint256 amount0, uint256 amount1) = PositionValue
-            .total(uniswapNFTPositionManager, tokenId, TickMath.getSqrtRatioAtTick(tick));
-
-        // get LP value with tokenA denomination
-        value = token0Denominator ?
-            amount0 + OracleLibrary.getQuoteAtTick(tick, amount1.toUint128(), token1, token0) :
-            amount1 + OracleLibrary.getQuoteAtTick(tick, amount0.toUint128(), token0, token1);
-
-        denominator = token0Denominator ? token0 : token1;
-    }
-
     /** @notice Proposal struct that is typecasting dynamic values to bytes32 to enable easy EIP-712 encoding.*/
     struct ERC712Proposal {
         bytes32 tokenAAllowlistHash;
@@ -401,6 +380,13 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
             loanContract: proposal.loanContract
         });
         return abi.encode(erc712Proposal);
+    }
+
+    function _uniswapConfig() internal view returns (UniswapV3.Config memory) {
+        return UniswapV3.Config({
+            uniswapNFTPositionManager: uniswapNFTPositionManager,
+            uniswapV3Factory: uniswapV3Factory
+        });
     }
 
     function _chainlinkConfig() internal view returns (Chainlink.Config memory) {
