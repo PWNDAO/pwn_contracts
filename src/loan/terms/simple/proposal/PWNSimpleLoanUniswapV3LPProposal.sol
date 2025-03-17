@@ -136,7 +136,7 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
         address _chainlinkFeedRegistry,
         address _l2SequencerUptimeFeed,
         address _weth
-    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanUniswapLPProposal", VERSION) {
+    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanUniswapV3LPProposal", VERSION) {
         uniswapV3Factory = _uniswapV3Factory;
         uniswapNFTPositionManager = INonfungiblePositionManager(_uniswapNFTPositionManager);
         chainlinkFeedRegistry = IChainlinkFeedRegistryLike(_chainlinkFeedRegistry);
