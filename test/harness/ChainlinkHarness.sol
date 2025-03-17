@@ -10,19 +10,32 @@ import {
 
 contract ChainlinkHarness {
 
+    function convertDenomination(
+        Chainlink.Config memory config,
+        uint256 amount,
+        address oldDenomination,
+        address newDenomination,
+        address[] memory feedIntermediaryDenominations,
+        bool[] memory feedInvertFlags
+    ) external view returns (uint256) {
+        return Chainlink.convertDenomination(
+            config, amount, oldDenomination, newDenomination, feedIntermediaryDenominations, feedInvertFlags
+        );
+    }
+
     function checkSequencerUptime(IChainlinkAggregatorLike l2SequencerUptimeFeed) external view {
         return Chainlink.checkSequencerUptime(l2SequencerUptimeFeed);
     }
 
-    function fetchCreditPriceWithCollateralDenomination(
+    function calculatePrice(
         IChainlinkFeedRegistryLike feedRegistry,
-        address creditAsset,
-        address collateralAsset,
+        address baseAsset,
+        address quoteAsset,
         address[] memory feedIntermediaryDenominations,
         bool[] memory feedInvertFlags
     ) external view returns (uint256, uint8) {
-        return Chainlink.fetchCreditPriceWithCollateralDenomination(
-            feedRegistry, creditAsset, collateralAsset, feedIntermediaryDenominations, feedInvertFlags
+        return Chainlink.calculatePrice(
+            feedRegistry, baseAsset, quoteAsset, feedIntermediaryDenominations, feedInvertFlags
         );
     }
 

@@ -42,7 +42,7 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
     /** @notice Chainlink feed registry contract.*/
     IChainlinkFeedRegistryLike public immutable chainlinkFeedRegistry;
     /** @notice Chainlink feed for L2 Sequencer uptime. Must be address(0) for L1s.*/
-    IChainlinkAggregatorLike public immutable l2SequencerUptimeFeed;
+    IChainlinkAggregatorLike public immutable chainlinkL2SequencerUptimeFeed;
     /** @notice WETH address. ETH price feed is used for WETH price.*/
     address public immutable WETH;
 
@@ -134,13 +134,13 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
         address _uniswapV3Factory,
         address _uniswapNFTPositionManager,
         address _chainlinkFeedRegistry,
-        address _l2SequencerUptimeFeed,
+        address _chainlinkL2SequencerUptimeFeed,
         address _weth
     ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanUniswapV3LPProposal", VERSION) {
         uniswapV3Factory = _uniswapV3Factory;
         uniswapNFTPositionManager = INonfungiblePositionManager(_uniswapNFTPositionManager);
         chainlinkFeedRegistry = IChainlinkFeedRegistryLike(_chainlinkFeedRegistry);
-        l2SequencerUptimeFeed = IChainlinkAggregatorLike(_l2SequencerUptimeFeed);
+        chainlinkL2SequencerUptimeFeed = IChainlinkAggregatorLike(_chainlinkL2SequencerUptimeFeed);
         WETH = _weth;
     }
 
@@ -391,8 +391,8 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
 
     function chainlink() internal view returns (Chainlink.Config memory) {
         return Chainlink.Config({
-            l2SequencerUptimeFeed: l2SequencerUptimeFeed,
-            chainlinkFeedRegistry: chainlinkFeedRegistry,
+            l2SequencerUptimeFeed: chainlinkL2SequencerUptimeFeed,
+            feedRegistry: chainlinkFeedRegistry,
             maxIntermediaryDenominations: MAX_INTERMEDIARY_DENOMINATIONS,
             weth: WETH
         });

@@ -30,6 +30,14 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
     uint256 public constant MAX_INTERMEDIARY_DENOMINATIONS = 2;
     /** @notice Loan to value denominator. It is used to calculate collateral amount from credit amount.*/
     uint256 public constant LOAN_TO_VALUE_DENOMINATOR = 1e4;
+
+    /** @notice Chainlink feed registry contract.*/
+    IChainlinkFeedRegistryLike public immutable chainlinkFeedRegistry;
+    /** @notice Chainlink feed for L2 Sequencer uptime. Must be address(0) for L1s.*/
+    IChainlinkAggregatorLike public immutable chainlinkL2SequencerUptimeFeed;
+    /** @notice WETH address. ETH price feed is used for WETH price.*/
+    address public immutable WETH;
+
     /** @dev EIP-712 proposal type hash.*/
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
         "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address acceptorController,bytes acceptorControllerData,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"
@@ -101,21 +109,6 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         bytes acceptorControllerData;
     }
 
-    /**
-     * @notice Chainlink feed registry contract.
-     */
-    IChainlinkFeedRegistryLike public immutable chainlinkFeedRegistry;
-    /**
-     * @notice Chainlink feed for L2 Sequencer uptime.
-     * @dev Must be address(0) for L1s.
-     */
-    IChainlinkAggregatorLike public immutable l2SequencerUptimeFeed;
-    /**
-     * @notice WETH address.
-     * @dev WETH price is fetched from the ETH price feed.
-     */
-    address public immutable WETH;
-
     /** @notice Emitted when a proposal is made via an on-chain transaction.*/
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, Proposal proposal);
 
@@ -131,11 +124,11 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         address _config,
         address _utilizedCredit,
         address _chainlinkFeedRegistry,
-        address _l2SequencerUptimeFeed,
+        address _chainlinkL2SequencerUptimeFeed,
         address _weth
     ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanElasticChainlinkProposal", VERSION) {
         chainlinkFeedRegistry = IChainlinkFeedRegistryLike(_chainlinkFeedRegistry);
-        l2SequencerUptimeFeed = IChainlinkAggregatorLike(_l2SequencerUptimeFeed);
+        chainlinkL2SequencerUptimeFeed = IChainlinkAggregatorLike(_chainlinkL2SequencerUptimeFeed);
         WETH = _weth;
     }
 
@@ -369,8 +362,8 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
 
     function chainlink() internal view returns (Chainlink.Config memory) {
         return Chainlink.Config({
-            l2SequencerUptimeFeed: l2SequencerUptimeFeed,
-            chainlinkFeedRegistry: chainlinkFeedRegistry,
+            l2SequencerUptimeFeed: chainlinkL2SequencerUptimeFeed,
+            feedRegistry: chainlinkFeedRegistry,
             maxIntermediaryDenominations: MAX_INTERMEDIARY_DENOMINATIONS,
             weth: WETH
         });

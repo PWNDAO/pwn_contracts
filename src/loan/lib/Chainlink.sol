@@ -34,7 +34,7 @@ library Chainlink {
 
     struct Config {
         IChainlinkAggregatorLike l2SequencerUptimeFeed;
-        IChainlinkFeedRegistryLike chainlinkFeedRegistry;
+        IChainlinkFeedRegistryLike feedRegistry;
         uint256 maxIntermediaryDenominations;
         address weth;
     }
@@ -71,7 +71,7 @@ library Chainlink {
         // calculate price of base asset with quote asset as denomination
         // Note: use ETH price feed for WETH asset due to absence of WETH price feed
         (uint256 price, uint8 priceDecimals) = calculatePrice({
-            feedRegistry: config.chainlinkFeedRegistry,
+            feedRegistry: config.feedRegistry,
             baseAsset: oldDenomination == config.weth ? Chainlink.ETH : oldDenomination,
             quoteAsset: newDenomination == config.weth ? Chainlink.ETH : newDenomination,
             feedIntermediaryDenominations: feedIntermediaryDenominations,

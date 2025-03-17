@@ -410,7 +410,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNSimpleLoanElasticChainlinkProposal.IntermediaryDenominationsOutOfBounds.selector,
+                Chainlink.IntermediaryDenominationsOutOfBounds.selector,
                 3, proposalContract.MAX_INTERMEDIARY_DENOMINATIONS()
             )
         );

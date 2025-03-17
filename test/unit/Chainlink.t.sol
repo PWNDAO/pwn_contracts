@@ -81,6 +81,186 @@ abstract contract ChainlinkTest is Test {
 
 
 /*----------------------------------------------------------*|
+|*  # CONVERT DENOMINATION                                  *|
+|*----------------------------------------------------------*/
+
+contract Chainlink_ConvertDenomination_Test is ChainlinkTest {
+
+    Chainlink.Config config;
+    address[] feedIntermediaryDenominations;
+    bool[] feedInvertFlags;
+    uint256 baseAmount = 1e18;
+    address baseAddr = makeAddr("baseAddr");
+    address quoteAddr = makeAddr("quoteAddr");
+
+    function setUp() public override virtual {
+        super.setUp();
+
+        config = Chainlink.Config({
+            l2SequencerUptimeFeed: l2SequencerUptimeFeed,
+            feedRegistry: feedRegistry,
+            maxIntermediaryDenominations: 2,
+            weth: makeAddr("weth")
+        });
+
+        feedIntermediaryDenominations = new address[](2);
+        feedIntermediaryDenominations[0] = makeAddr("inter1");
+        feedIntermediaryDenominations[1] = makeAddr("inter2");
+
+        feedInvertFlags = new bool[](3);
+        feedInvertFlags[0] = false;
+        feedInvertFlags[1] = false;
+        feedInvertFlags[2] = false;
+
+        vm.warp(block.timestamp + Chainlink.L2_GRACE_PERIOD + 1);
+    }
+
+
+    function test_shouldFetchSequencerUptimeFeed_whenFeedSet() external {
+        vm.expectCall(
+            address(l2SequencerUptimeFeed),
+            abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector)
+        );
+
+        chainlink.convertDenomination(config, baseAmount, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
+    }
+
+    function test_shouldFail_whenL2SequencerDown_whenFeedSet() external {
+        _mockSequencerUptimeFeed(false, block.timestamp - Chainlink.L2_GRACE_PERIOD - 1);
+
+        vm.expectRevert(abi.encodeWithSelector(Chainlink.L2SequencerDown.selector));
+        chainlink.convertDenomination(config, baseAmount, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
+    }
+
+    function testFuzz_shouldFail_whenL2SequencerUp_whenInGracePeriod_whenFeedSet(uint256 startedAt) external {
+        startedAt = bound(startedAt, block.timestamp - Chainlink.L2_GRACE_PERIOD, block.timestamp);
+
+        _mockSequencerUptimeFeed(true, startedAt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(Chainlink.GracePeriodNotOver.selector, block.timestamp - startedAt, Chainlink.L2_GRACE_PERIOD)
+        );
+        chainlink.convertDenomination(config, baseAmount, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
+    }
+
+    function test_shouldNotFetchSequencerUptimeFeed_whenFeedNotSet() external {
+        config.l2SequencerUptimeFeed = IChainlinkAggregatorLike(address(0));
+
+        vm.expectCall(
+            address(l2SequencerUptimeFeed),
+            abi.encodeWithSelector(IChainlinkAggregatorLike.latestRoundData.selector),
+            0
+        );
+
+        chainlink.convertDenomination(config, baseAmount, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
+    }
+
+    function test_shouldFail_whenIntermediaryDenominationsOutOfBounds() external {
+        feedIntermediaryDenominations = new address[](3);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Chainlink.IntermediaryDenominationsOutOfBounds.selector,
+                3, config.maxIntermediaryDenominations
+            )
+        );
+        chainlink.convertDenomination(config, baseAmount, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
+    }
+
+    function test_shouldFetchPrices() external {
+        vm.expectCall(
+            address(feedRegistry),
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, baseAddr, feedIntermediaryDenominations[0])
+        );
+        vm.expectCall(
+            address(feedRegistry),
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, feedIntermediaryDenominations[0], feedIntermediaryDenominations[1])
+        );
+        vm.expectCall(
+            address(feedRegistry),
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, feedIntermediaryDenominations[1], quoteAddr)
+        );
+
+        chainlink.convertDenomination(config, baseAmount, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
+    }
+
+    function test_shouldFetchETHPrice_whenWETH() external {
+        _mockAssetDecimals(config.weth, 18);
+        feedIntermediaryDenominations = new address[](0);
+        feedInvertFlags = new bool[](1);
+        feedInvertFlags[0] = false;
+
+        vm.expectCall(
+            address(feedRegistry),
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, ChainlinkDenominations.ETH, quoteAddr)
+        );
+        chainlink.convertDenomination(config, baseAmount, config.weth, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
+
+        vm.expectCall(
+            address(feedRegistry),
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, baseAddr, ChainlinkDenominations.ETH)
+        );
+        chainlink.convertDenomination(config, baseAmount, baseAddr, config.weth, feedIntermediaryDenominations, feedInvertFlags);
+    }
+
+    function test_shouldReturnCorrectDecimals() external {
+        _mockAssetDecimals(quoteAddr, 18);
+        _mockAssetDecimals(baseAddr, 6);
+        assertEq(
+            chainlink.convertDenomination(config, 8e6, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags),
+            8e18
+        );
+
+        _mockAssetDecimals(quoteAddr, 6);
+        _mockAssetDecimals(baseAddr, 18);
+        assertEq(
+            chainlink.convertDenomination(config, 8e18, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags),
+            8e6
+        );
+
+        _mockAssetDecimals(config.weth, 0);
+        _mockAssetDecimals(baseAddr, 18);
+        assertEq(
+            chainlink.convertDenomination(config, 8e18, baseAddr, config.weth, feedIntermediaryDenominations, feedInvertFlags),
+            8
+        );
+    }
+
+    function test_shouldReturnNewAmount() external {
+        _mockFeedDecimals(aggregator, 8);
+        feedIntermediaryDenominations = new address[](0);
+        feedInvertFlags = new bool[](1);
+        feedInvertFlags[0] = false;
+
+        _mockLastRoundData(aggregator, 300e8, 1);
+        assertEq(
+            chainlink.convertDenomination(config, 8e18, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags),
+            2400e18
+        );
+
+        _mockLastRoundData(aggregator, 1e8, 1);
+        assertEq(
+            chainlink.convertDenomination(config, 0, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags),
+            0
+        );
+
+        _mockLastRoundData(aggregator, 0.5e8, 1);
+        assertEq(
+            chainlink.convertDenomination(config, 20e18, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags),
+            10e18
+        );
+
+        _mockLastRoundData(aggregator, 4e8, 1);
+        assertEq(
+            chainlink.convertDenomination(config, 20e18, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags),
+            80e18
+        );
+    }
+
+}
+
+
+/*----------------------------------------------------------*|
 |*  # CHECK SEQUENCER UPTIME                                *|
 |*----------------------------------------------------------*/
 
@@ -135,13 +315,13 @@ contract Chainlink_CheckSequencerUptime_Test is ChainlinkTest {
 
 
 /*----------------------------------------------------------*|
-|*  # FETCH CREDIT PRICE WITH COLLATERAL DENOMINATION       *|
+|*  # CALCULATE PRICE                                       *|
 |*----------------------------------------------------------*/
 
-contract Chainlink_FetchCreditPriceWithCollateralDenomination_Test is ChainlinkTest {
+contract Chainlink_CalculatePrice_Test is ChainlinkTest {
 
-    address credAddr = makeAddr("credAddr");
-    address collAddr = makeAddr("collAddr");
+    address baseAddr = makeAddr("baseAddr");
+    address quoteAddr = makeAddr("quoteAddr");
 
 
     function test_shouldFail_whenInvalidInputLength() external {
@@ -151,22 +331,22 @@ contract Chainlink_FetchCreditPriceWithCollateralDenomination_Test is ChainlinkT
         feedIntermediaryDenominations = new address[](0);
         feedInvertFlags = new bool[](0);
         vm.expectRevert(abi.encodeWithSelector(Chainlink.ChainlinkInvalidInputLenghts.selector));
-        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
+        chainlink.calculatePrice(feedRegistry, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
 
         feedIntermediaryDenominations = new address[](5);
         feedInvertFlags = new bool[](5);
         vm.expectRevert(abi.encodeWithSelector(Chainlink.ChainlinkInvalidInputLenghts.selector));
-        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
+        chainlink.calculatePrice(feedRegistry, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
 
         feedIntermediaryDenominations = new address[](4);
         feedInvertFlags = new bool[](6);
         vm.expectRevert(abi.encodeWithSelector(Chainlink.ChainlinkInvalidInputLenghts.selector));
-        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
+        chainlink.calculatePrice(feedRegistry, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
 
         feedIntermediaryDenominations = new address[](10);
         feedInvertFlags = new bool[](6);
         vm.expectRevert(abi.encodeWithSelector(Chainlink.ChainlinkInvalidInputLenghts.selector));
-        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
+        chainlink.calculatePrice(feedRegistry, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
     }
 
     function test_shouldFetchIntermediaryPrices() external {
@@ -181,7 +361,7 @@ contract Chainlink_FetchCreditPriceWithCollateralDenomination_Test is ChainlinkT
 
         vm.expectCall(
             address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, feedIntermediaryDenominations[0], credAddr)
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, feedIntermediaryDenominations[0], baseAddr)
         );
         vm.expectCall(
             address(feedRegistry),
@@ -189,10 +369,10 @@ contract Chainlink_FetchCreditPriceWithCollateralDenomination_Test is ChainlinkT
         );
         vm.expectCall(
             address(feedRegistry),
-            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, collAddr, feedIntermediaryDenominations[1])
+            abi.encodeWithSelector(IChainlinkFeedRegistryLike.getFeed.selector, quoteAddr, feedIntermediaryDenominations[1])
         );
 
-        chainlink.fetchCreditPriceWithCollateralDenomination(feedRegistry, credAddr, collAddr, feedIntermediaryDenominations, feedInvertFlags);
+        chainlink.calculatePrice(feedRegistry, baseAddr, quoteAddr, feedIntermediaryDenominations, feedInvertFlags);
     }
 
 }
