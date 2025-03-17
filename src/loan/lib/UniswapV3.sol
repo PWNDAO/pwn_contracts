@@ -27,11 +27,11 @@ library UniswapV3 {
      * @return value The value of the LP token.
      * @return denominator The address of the token used as the denominator. Is token0, if token0Denominator is true, otherwise token1.
      */
-    function getLPValue(uint256 tokenId, bool token0Denominator, Config memory config)
-        internal
-        view
-        returns (uint256 value, address denominator)
-    {
+    function getLPValue(
+        Config memory config,
+        uint256 tokenId,
+        bool token0Denominator
+    ) internal view returns (uint256 value, address denominator) {
         // get LP pool price as a tick
         (,, address token0, address token1, uint24 fee,,,,,,,) = config.uniswapNFTPositionManager.positions(tokenId);
         address pool = PoolAddress.computeAddress(config.uniswapV3Factory, PoolAddress.getPoolKey(token0, token1, fee));

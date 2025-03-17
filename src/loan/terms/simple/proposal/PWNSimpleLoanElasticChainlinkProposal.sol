@@ -21,9 +21,8 @@ import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleL
  * The amount of collateral and credit is specified during the proposal acceptance.
  */
 contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
-    using Chainlink for IChainlinkFeedRegistryLike;
-    using Chainlink for IChainlinkAggregatorLike;
     using Math for uint256;
+    using Chainlink for Chainlink.Config;
 
     string public constant VERSION = "1.1";
 
@@ -203,13 +202,12 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         bool[] memory feedInvertFlags,
         uint256 loanToValue
     ) public view returns (uint256) {
-        return Chainlink.convertDenomination({
+        return chainlink().convertDenomination({
             amount: creditAmount,
             oldDenomination: creditAddress,
             newDenomination: collateralAddress,
             feedIntermediaryDenominations: feedIntermediaryDenominations,
-            feedInvertFlags: feedInvertFlags,
-            config: _chainlinkConfig()
+            feedInvertFlags: feedInvertFlags
         }).mulDiv(LOAN_TO_VALUE_DENOMINATOR, loanToValue);
     }
 
@@ -369,7 +367,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
         return abi.encode(erc712Proposal);
     }
 
-    function _chainlinkConfig() internal view returns (Chainlink.Config memory) {
+    function chainlink() internal view returns (Chainlink.Config memory) {
         return Chainlink.Config({
             l2SequencerUptimeFeed: l2SequencerUptimeFeed,
             chainlinkFeedRegistry: chainlinkFeedRegistry,

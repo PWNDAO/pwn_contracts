@@ -50,12 +50,12 @@ library Chainlink {
      * @return The amount in the new denomination.
      */
     function convertDenomination(
+        Config memory config,
         uint256 amount,
         address oldDenomination,
         address newDenomination,
         address[] memory feedIntermediaryDenominations,
-        bool[] memory feedInvertFlags,
-        Config memory config
+        bool[] memory feedInvertFlags
     ) internal view returns (uint256) {
         // check L2 sequencer uptime if necessary
         checkSequencerUptime(config.l2SequencerUptimeFeed);

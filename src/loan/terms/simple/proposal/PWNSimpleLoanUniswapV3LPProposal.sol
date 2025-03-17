@@ -25,6 +25,8 @@ import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleL
  */
 contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
     using Math for uint256;
+    using UniswapV3 for UniswapV3.Config;
+    using Chainlink for Chainlink.Config;
 
     string public constant VERSION = "1.0";
 
@@ -204,20 +206,18 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
         bool[] memory feedInvertFlags,
         uint256 loanToValue
     ) public view returns (uint256) {
-        (uint256 lpValue, address denominator) = UniswapV3.getLPValue({
+        (uint256 lpValue, address denominator) = uniswap().getLPValue({
             tokenId: collateralId,
-            token0Denominator: token0Denominator,
-            config: _uniswapConfig()
+            token0Denominator: token0Denominator
         });
 
         if (creditAddress != denominator) {
-            lpValue = Chainlink.convertDenomination({
+            lpValue = chainlink().convertDenomination({
                 amount: lpValue,
                 oldDenomination: denominator,
                 newDenomination: creditAddress,
                 feedIntermediaryDenominations: feedIntermediaryDenominations,
-                feedInvertFlags: feedInvertFlags,
-                config: _chainlinkConfig()
+                feedInvertFlags: feedInvertFlags
             });
         }
 
@@ -382,14 +382,14 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
         return abi.encode(erc712Proposal);
     }
 
-    function _uniswapConfig() internal view returns (UniswapV3.Config memory) {
+    function uniswap() internal view returns (UniswapV3.Config memory) {
         return UniswapV3.Config({
             uniswapNFTPositionManager: uniswapNFTPositionManager,
             uniswapV3Factory: uniswapV3Factory
         });
     }
 
-    function _chainlinkConfig() internal view returns (Chainlink.Config memory) {
+    function chainlink() internal view returns (Chainlink.Config memory) {
         return Chainlink.Config({
             l2SequencerUptimeFeed: l2SequencerUptimeFeed,
             chainlinkFeedRegistry: chainlinkFeedRegistry,
