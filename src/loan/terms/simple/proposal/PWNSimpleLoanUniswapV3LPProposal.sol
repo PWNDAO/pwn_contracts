@@ -384,8 +384,8 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
 
     function uniswap() internal view returns (UniswapV3.Config memory) {
         return UniswapV3.Config({
-            uniswapNFTPositionManager: uniswapNFTPositionManager,
-            uniswapV3Factory: uniswapV3Factory
+            positionManager: uniswapNFTPositionManager,
+            factory: uniswapV3Factory
         });
     }
 

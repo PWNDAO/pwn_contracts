@@ -15,8 +15,8 @@ library UniswapV3 {
     using SafeCast for uint256;
 
     struct Config {
-        INonfungiblePositionManager uniswapNFTPositionManager;
-        address uniswapV3Factory;
+        INonfungiblePositionManager positionManager;
+        address factory;
     }
 
     /**
@@ -25,7 +25,7 @@ library UniswapV3 {
      * @param token0Denominator Whether to use token0 as the denominator.
      * @param config The Uniswap configuration.
      * @return value The value of the LP token.
-     * @return denominator The address of the token used as the denominator. Is token0, if token0Denominator is true, otherwise token1.
+     * @return denominator The address of the token used as the denominator. Token0, if token0Denominator is true, otherwise token1.
      */
     function getLPValue(
         Config memory config,
@@ -33,13 +33,13 @@ library UniswapV3 {
         bool token0Denominator
     ) internal view returns (uint256 value, address denominator) {
         // get LP pool price as a tick
-        (,, address token0, address token1, uint24 fee,,,,,,,) = config.uniswapNFTPositionManager.positions(tokenId);
-        address pool = PoolAddress.computeAddress(config.uniswapV3Factory, PoolAddress.getPoolKey(token0, token1, fee));
+        (,, address token0, address token1, uint24 fee,,,,,,,) = config.positionManager.positions(tokenId);
+        address pool = PoolAddress.computeAddress(config.factory, PoolAddress.getPoolKey(token0, token1, fee));
         (int24 tick, ) = OracleLibrary.getBlockStartingTickAndLiquidity(pool);
 
         // get LP token amounts
         (uint256 amount0, uint256 amount1) = PositionValue
-            .total(config.uniswapNFTPositionManager, tokenId, TickMath.getSqrtRatioAtTick(tick));
+            .total(config.positionManager, tokenId, TickMath.getSqrtRatioAtTick(tick));
 
         // get LP value with tokenA denomination
         value = token0Denominator ?
