@@ -159,6 +159,19 @@ abstract contract PWNSimpleLoanProposalTest is Test {
 
 abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProposalTest {
 
+    bool skippingStateFingerprint;
+    bool skippingUtilizedCredit;
+
+    constructor(uint8 skippingFeatureFlag) {
+        skippingStateFingerprint = _positiveBitAt(skippingFeatureFlag, 0);
+        skippingUtilizedCredit = _positiveBitAt(skippingFeatureFlag, 1);
+    }
+
+    function _positiveBitAt(uint8 skippingFeatureFlag, uint256 index) private pure returns (bool) {
+        return skippingFeatureFlag & (1 << index) != 0;
+    }
+
+
     function testFuzz_shouldFail_whenCallerIsNotProposedLoanContract(address caller) external {
         vm.assume(caller != activeLoanContract);
         params.common.loanContract = activeLoanContract;
@@ -556,6 +569,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function testFuzz_shouldUtilizeCredit(bytes32 id, uint256 creditAmount, uint256 limit) external {
+        vm.skip(skippingUtilizedCredit);
+
         params.common.creditAmount = bound(creditAmount, 1, type(uint256).max);
         params.common.availableCreditLimit = bound(limit, 1, type(uint256).max);
         params.common.utilizedCreditId = id;
@@ -580,6 +595,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldNotCallComputerRegistry_whenShouldNotCheckStateFingerprint() external {
+        vm.skip(skippingStateFingerprint);
+
         params.common.checkCollateralStateFingerprint = false;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -594,6 +611,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldCallComputerRegistry_whenShouldCheckStateFingerprint() external {
+        vm.skip(skippingStateFingerprint);
+
         params.common.checkCollateralStateFingerprint = true;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -607,6 +626,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldFail_whenComputerRegistryReturnsComputer_whenComputerFails() external {
+        vm.skip(skippingStateFingerprint);
+
         params.common.collateralAddress = token;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -624,6 +645,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function testFuzz_shouldFail_whenComputerRegistryReturnsComputer_whenComputerReturnsDifferentStateFingerprint(
         bytes32 stateFingerprint
     ) external {
+        vm.skip(skippingStateFingerprint);
+
         vm.assume(stateFingerprint != params.common.collateralStateFingerprint);
         params.common.collateralAddress = token;
         params.signature = _sign(proposerPK, _getProposalHashWith());
@@ -649,6 +672,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldFail_whenNoComputerRegistered_whenAssetDoesNotImplementERC165() external {
+        vm.skip(skippingStateFingerprint);
+
         params.common.collateralAddress = token;
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -669,6 +694,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldFail_whenNoComputerRegistered_whenAssetDoesNotImplementERC5646() external {
+        vm.skip(skippingStateFingerprint);
+
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
@@ -686,6 +713,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     function testFuzz_shouldFail_whenAssetImplementsERC5646_whenComputerReturnsDifferentStateFingerprint(
         bytes32 stateFingerprint
     ) external {
+        vm.skip(skippingStateFingerprint);
+
         vm.assume(stateFingerprint != params.common.collateralStateFingerprint);
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
@@ -713,6 +742,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldPass_whenComputerReturnsMatchingFingerprint() external {
+        vm.skip(skippingStateFingerprint);
+
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(
@@ -731,6 +762,8 @@ abstract contract PWNSimpleLoanProposal_AcceptProposal_Test is PWNSimpleLoanProp
     }
 
     function test_shouldPass_whenAssetImplementsERC5646_whenReturnsMatchingFingerprint() external {
+        vm.skip(skippingStateFingerprint);
+
         params.signature = _sign(proposerPK, _getProposalHashWith());
 
         vm.mockCall(

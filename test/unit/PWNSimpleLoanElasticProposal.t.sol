@@ -293,7 +293,7 @@ contract PWNSimpleLoanElasticProposal_GetCollateralAmount_Test is PWNSimpleLoanE
 |*  # ACCEPT PROPOSAL                                       *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanElasticProposal_AcceptProposal_Test is PWNSimpleLoanElasticProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test {
+contract PWNSimpleLoanElasticProposal_AcceptProposal_Test is PWNSimpleLoanElasticProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test(0) {
 
     function setUp() virtual public override(PWNSimpleLoanElasticProposalTest, PWNSimpleLoanProposalTest) {
         super.setUp();

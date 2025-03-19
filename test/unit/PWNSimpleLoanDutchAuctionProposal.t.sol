@@ -394,7 +394,7 @@ contract PWNSimpleLoanDutchAuctionProposal_GetCreditAmount_Test is PWNSimpleLoan
 |*  # ACCEPT PROPOSAL                                       *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanDutchAuctionProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test {
+contract PWNSimpleLoanDutchAuctionProposal_AcceptProposal_Test is PWNSimpleLoanDutchAuctionProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test(0) {
 
     function setUp() virtual public override(PWNSimpleLoanDutchAuctionProposalTest, PWNSimpleLoanProposalTest) {
         super.setUp();
