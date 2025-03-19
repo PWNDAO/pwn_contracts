@@ -19,6 +19,7 @@ import { PWNSimpleLoanElasticChainlinkProposal } from "pwn/loan/terms/simple/pro
 import { PWNSimpleLoanElasticProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticProposal.sol";
 import { PWNSimpleLoanListProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
 import { PWNSimpleLoanSimpleProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
+import { PWNSimpleLoanUniswapV3LPProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPProposal.sol";
 import { PWNLOAN } from "pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
 import { PWNUtilizedCredit } from "pwn/utilized-credit/PWNUtilizedCredit.sol";
@@ -54,6 +55,7 @@ abstract contract Deployments is CommonBase {
         PWNSimpleLoanElasticProposal simpleLoanElasticProposal;
         PWNSimpleLoanListProposal simpleLoanListProposal;
         PWNSimpleLoanSimpleProposal simpleLoanSimpleProposal;
+        PWNSimpleLoanUniswapV3LPProposal simpleLoanUniswapV3LPProposal;
         PWNUtilizedCredit utilizedCredit;
     }
 
@@ -71,7 +73,7 @@ abstract contract Deployments is CommonBase {
         bytes memory rawExternal = externalJson.parseRaw(string.concat(".chains.", block.chainid.toString()));
         externalAddrs = abi.decode(rawExternal, (External));
 
-        string memory deploymentsJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/latest.json"));
+        string memory deploymentsJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/v1.4.json"));
         bytes memory rawDeployedChains = deploymentsJson.parseRaw(".deployedChains");
         deployedChains = abi.decode(rawDeployedChains, (uint256[]));
 
