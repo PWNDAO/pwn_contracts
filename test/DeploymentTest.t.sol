@@ -18,6 +18,7 @@ import {
     PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
+    PWNSimpleLoanUniswapV3LPProposal,
     PWNLOAN,
     PWNRevokedNonce,
     PWNUtilizedCredit,
@@ -122,9 +123,20 @@ abstract contract DeploymentTest is Deployments, Test {
             address(deployment.config),
             address(deployment.utilizedCredit)
         );
+        deployment.simpleLoanUniswapV3LPProposal = new PWNSimpleLoanUniswapV3LPProposal(
+            address(deployment.hub),
+            address(deployment.revokedNonce),
+            address(deployment.config),
+            address(deployment.utilizedCredit),
+            externalAddrs.uniswapV3Factory,
+            externalAddrs.uniswapV3NFTPositionManager,
+            address(deployment.chainlinkFeedRegistry),
+            externalAddrs.chainlinkL2SequencerUptimeFeed,
+            externalAddrs.weth
+        );
 
         // Set hub tags
-        address[] memory addrs = new address[](12);
+        address[] memory addrs = new address[](14);
         addrs[0] = address(deployment.simpleLoan);
         addrs[1] = address(deployment.simpleLoan);
 
@@ -143,7 +155,10 @@ abstract contract DeploymentTest is Deployments, Test {
         addrs[10] = address(deployment.simpleLoanDutchAuctionProposal);
         addrs[11] = address(deployment.simpleLoanDutchAuctionProposal);
 
-        bytes32[] memory tags = new bytes32[](12);
+        addrs[12] = address(deployment.simpleLoanUniswapV3LPProposal);
+        addrs[13] = address(deployment.simpleLoanUniswapV3LPProposal);
+
+        bytes32[] memory tags = new bytes32[](14);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
         tags[1] = PWNHubTags.NONCE_MANAGER;
 
@@ -161,6 +176,9 @@ abstract contract DeploymentTest is Deployments, Test {
 
         tags[10] = PWNHubTags.LOAN_PROPOSAL;
         tags[11] = PWNHubTags.NONCE_MANAGER;
+
+        tags[12] = PWNHubTags.LOAN_PROPOSAL;
+        tags[13] = PWNHubTags.NONCE_MANAGER;
 
         vm.prank(deployment.protocolTimelock);
         deployment.hub.setTags(addrs, tags, true);

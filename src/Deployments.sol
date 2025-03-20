@@ -62,6 +62,8 @@ abstract contract Deployments is CommonBase {
     struct External {
         address chainlinkL2SequencerUptimeFeed;
         address dao;
+        address uniswapV3Factory;
+        address uniswapV3NFTPositionManager;
         address weth;
     }
 

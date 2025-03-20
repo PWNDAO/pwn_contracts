@@ -3,18 +3,10 @@ pragma solidity 0.8.16;
 
 import { MultiToken, IERC20 } from "MultiToken/MultiToken.sol";
 
-import { Create2 } from "openzeppelin/utils/Create2.sol";
-
-import {
-    IChainlinkAggregatorLike,
-    IChainlinkFeedRegistryLike
-} from "src/loan/terms/simple/proposal/PWNSimpleLoanElasticChainlinkProposal.sol";
+import { IChainlinkAggregatorLike } from "src/loan/terms/simple/proposal/PWNSimpleLoanElasticChainlinkProposal.sol";
 
 import { ChainlinkDenominations } from "test/helper/ChainlinkDenominations.sol";
 import {
-    IPWNDeployer,
-    PWNHub,
-    PWNHubTags,
     DeploymentTest,
     PWNSimpleLoan,
     PWNSimpleLoanElasticChainlinkProposal
