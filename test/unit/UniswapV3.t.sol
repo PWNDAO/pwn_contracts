@@ -23,7 +23,7 @@ abstract contract UniswapV3Test is Test {
     address token0 = makeAddr("token0");
     address token1 = makeAddr("token1");
     uint24 fee = 3000;
-    address pool = 0xfB03f029AafA71cDA2C36e00cf0780a1D233C23f;
+    address pool = 0xb44E273AE4071AA4a0F2b05ee96f20BB6FfD568b;
 
     function setUp() public virtual {
         uniswap = new UniswapV3Harness();

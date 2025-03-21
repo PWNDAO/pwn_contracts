@@ -37,7 +37,7 @@ abstract contract PWNSimpleLoanUniswapV3LPProposalTest is PWNSimpleLoanProposalT
     address token0 = makeAddr("token0");
     address token1 = makeAddr("token1");
     uint24 fee = 3000;
-    address pool = 0xfB03f029AafA71cDA2C36e00cf0780a1D233C23f;
+    address pool = 0xb44E273AE4071AA4a0F2b05ee96f20BB6FfD568b;
     uint256 token0Value = 101572;
     uint256 token1Value = 331794706808;
 
