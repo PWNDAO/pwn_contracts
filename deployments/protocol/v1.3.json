@@ -1,12 +1,7 @@
 {
-    "deployedChains": [1, 10, 25, 56, 100, 130, 137, 480, 8453, 42161, 59144,    1301, 11155111],
+    "deployedChains": [1, 10, 25, 56, 100, 130, 137, 146, 480, 8453, 42161, 57073, 59144,    1301, 11155111],
     "chains": {
         "1": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -23,11 +18,6 @@
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
         "10": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -44,11 +34,6 @@
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
         "25": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x0000000000000000000000000000000000000000",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -65,11 +50,6 @@
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
         "56": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -86,11 +66,6 @@
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
         "100": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -107,11 +82,6 @@
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
         "130": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x0000000000000000000000000000000000000000",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -128,11 +98,6 @@
             "simpleLoanDutchAuctionProposal": "0x469B2C01FBb8D2073562F4Fe28aaA67D59c05Dc2"
         },
         "137": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -148,12 +113,23 @@
             "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
+        "146": {
+            "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
+            "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
+            "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
+            "config": "0xd52a2898d61636bB3eEF0d145f05352FF543bdCC",
+            "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+            "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+            "revokedNonce": "0x972204fF33348ee6889B2d0A3967dB67d7b08e4c",
+            "utilizedCredit": "0x8E6F44DEa3c11d69C63655BDEcbA25Fa986BCE9D",
+            "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
+            "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
+            "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
+            "simpleLoanElasticChainlinkProposal": "0x49d08582e9c2871F29BEF73D164bFF8fE90c3557",
+            "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
+            "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
+        },
         "480": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x0000000000000000000000000000000000000000",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -170,11 +146,6 @@
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
         "8453": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -191,11 +162,6 @@
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
         "42161": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -211,12 +177,23 @@
             "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
             "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
+        "57073": {
+            "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
+            "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
+            "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
+            "config": "0xd52a2898d61636bB3eEF0d145f05352FF543bdCC",
+            "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+            "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+            "revokedNonce": "0x972204fF33348ee6889B2d0A3967dB67d7b08e4c",
+            "utilizedCredit": "0x8E6F44DEa3c11d69C63655BDEcbA25Fa986BCE9D",
+            "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
+            "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
+            "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
+            "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
+            "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
+            "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
+        },
         "59144": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -235,11 +212,6 @@
 
 
         "1301": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0x0000000000000000000000000000000000000000",
-            "deployerSafe": "0x0000000000000000000000000000000000000000",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x0000000000000000000000000000000000000000",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
@@ -256,11 +228,6 @@
             "simpleLoanDutchAuctionProposal": "0x0000000000000000000000000000000000000000"
         },
         "11155111": {
-            "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
-            "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
-            "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
-            "deployerSafe": "0x1B4B37738De3bb9E6a7a4f99aFe4C145734c071d",
-            "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
             "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
             "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
