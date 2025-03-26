@@ -43,6 +43,8 @@ Elastic Chainlink Proposal addresses differ across chains due to unique construc
 | Base                                   | 0x0dFf6CA171A1A7C7dE14826feB823386D82d1b36 |
 | Arbitrum                               | 0x3b252fD3B958d03C2861DA045ca8A418E7155234 |
 | Linea                                  | 0xEBd31872f39C42dDe954e5182BC4528C388A6a2B |
+| Ink                                    | --- not deployed ---                       |
+| Sonic                                  | 0x49d08582e9c2871F29BEF73D164bFF8fE90c3557 |
 | Sepolia                                | 0x39fd308D651F5add5A4826D12Bf92d9D91E732AC |
 
 Please note that some chains are currently not supported by Chainlink. As a result, the Elastic Chainlink Proposal has not been deployed on these chains. We are closely monitoring the support status and will deploy the necessary contracts as soon as Chainlink becomes available on these networks.
@@ -69,9 +71,11 @@ PWN is deployed on the following chains:
 - Gnosis Chain (100)
 - Unichain (130)
 - Polygon (137)
+- Sonic (146)
 - World Chain (480)
 - Base (8453)
 - Arbitrum (42161)
+- Ink (57073)
 - Linea (59144)
 - Sepolia (11155111)
 

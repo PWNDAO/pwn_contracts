@@ -88,5 +88,7 @@ contract DeployedProtocolTest is DeploymentTest {
     function test_deployedProtocol_gnosis() external { _test_deployedProtocol("gnosis"); }
     function test_deployedProtocol_world() external { _test_deployedProtocol("world"); }
     function test_deployedProtocol_unichain() external { _test_deployedProtocol("unichain"); }
+    function test_deployedProtocol_ink() external { _test_deployedProtocol("ink"); }
+    function test_deployedProtocol_sonic() external { _test_deployedProtocol("sonic"); }
 
 }
