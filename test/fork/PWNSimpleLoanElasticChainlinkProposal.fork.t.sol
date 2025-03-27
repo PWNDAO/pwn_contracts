@@ -29,6 +29,17 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         super.setUp();
     }
 
+    function _registerFeed(address base, address quote, address feed) private {
+        try __d.chainlinkFeedRegistry.getFeed(base, quote) returns (IChainlinkAggregatorLike) {
+            return;
+        } catch {
+            vm.startPrank(__e.protocolTimelock);
+            __d.chainlinkFeedRegistry.proposeFeed(base, quote, feed);
+            __d.chainlinkFeedRegistry.confirmFeed(base, quote, feed);
+            vm.stopPrank();
+        }
+    }
+
 
     function test_oneFeed_APE_WETH() external {
         IERC20 WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
@@ -41,10 +52,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         deal(address(APE), lender, 1000e18, false);
 
         // Register APE/ETH feed
-        vm.startPrank(__e.protocolTimelock);
-        __d.chainlinkFeedRegistry.proposeFeed(address(APE), ChainlinkDenominations.ETH, APE_ETH_Feed);
-        __d.chainlinkFeedRegistry.confirmFeed(address(APE), ChainlinkDenominations.ETH, APE_ETH_Feed);
-        vm.stopPrank();
+        _registerFeed(address(APE), ChainlinkDenominations.ETH, APE_ETH_Feed);
+
 
         address[] memory feedIntermediaryDenominations = new address[](0);
         bool[] memory feedInvertFlags = new bool[](1);
@@ -129,12 +138,9 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         deal(address(USDT), lender, 1000e6, false);
 
         // Register USDT/USD & ETH/USD feed
-        vm.startPrank(__e.protocolTimelock);
-        __d.chainlinkFeedRegistry.proposeFeed(address(USDT), ChainlinkDenominations.USD, USDT_USD_Feed);
-        __d.chainlinkFeedRegistry.confirmFeed(address(USDT), ChainlinkDenominations.USD, USDT_USD_Feed);
-        __d.chainlinkFeedRegistry.proposeFeed(ChainlinkDenominations.ETH, ChainlinkDenominations.USD, ETH_USD_Feed);
-        __d.chainlinkFeedRegistry.confirmFeed(ChainlinkDenominations.ETH, ChainlinkDenominations.USD, ETH_USD_Feed);
-        vm.stopPrank();
+        _registerFeed(address(USDT), ChainlinkDenominations.USD, USDT_USD_Feed);
+        _registerFeed(ChainlinkDenominations.ETH, ChainlinkDenominations.USD, ETH_USD_Feed);
+
 
         address[] memory feedIntermediaryDenominations = new address[](1);
         feedIntermediaryDenominations[0] = ChainlinkDenominations.USD;
@@ -226,12 +232,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         deal(address(ARB), lender, 1000e18, false);
 
         // Register ARB/USD & ETH/USD feed
-        vm.startPrank(__e.protocolTimelock);
-        __d.chainlinkFeedRegistry.proposeFeed(address(ARB), ChainlinkDenominations.USD, ARB_USD_Feed);
-        __d.chainlinkFeedRegistry.confirmFeed(address(ARB), ChainlinkDenominations.USD, ARB_USD_Feed);
-        __d.chainlinkFeedRegistry.proposeFeed(ChainlinkDenominations.ETH, ChainlinkDenominations.USD, ETH_USD_Feed);
-        __d.chainlinkFeedRegistry.confirmFeed(ChainlinkDenominations.ETH, ChainlinkDenominations.USD, ETH_USD_Feed);
-        vm.stopPrank();
+        _registerFeed(address(ARB), ChainlinkDenominations.USD, ARB_USD_Feed);
+        _registerFeed(ChainlinkDenominations.ETH, ChainlinkDenominations.USD, ETH_USD_Feed);
 
         address[] memory feedIntermediaryDenominations = new address[](1);
         feedIntermediaryDenominations[0] = ChainlinkDenominations.USD;
@@ -320,12 +322,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         deal(address(USDT), lender, 1000e6, false);
 
         // Register ARB/USD & ETH/USD feed
-        vm.startPrank(__e.protocolTimelock);
-        __d.chainlinkFeedRegistry.proposeFeed(address(ARB), ChainlinkDenominations.USD, ARB_USD_Feed);
-        __d.chainlinkFeedRegistry.confirmFeed(address(ARB), ChainlinkDenominations.USD, ARB_USD_Feed);
-        __d.chainlinkFeedRegistry.proposeFeed(address(USDT), ChainlinkDenominations.USD, USDT_USD_Feed);
-        __d.chainlinkFeedRegistry.confirmFeed(address(USDT), ChainlinkDenominations.USD, USDT_USD_Feed);
-        vm.stopPrank();
+        _registerFeed(address(ARB), ChainlinkDenominations.USD, ARB_USD_Feed);
+        _registerFeed(address(USDT), ChainlinkDenominations.USD, USDT_USD_Feed);
 
         address[] memory feedIntermediaryDenominations = new address[](1);
         feedIntermediaryDenominations[0] = ChainlinkDenominations.USD;
@@ -417,12 +415,8 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         deal(address(WETH), lender, 1000e18, false);
 
         // Register WBTC/BTC, & BTC/ETH feed
-        vm.startPrank(__e.protocolTimelock);
-        __d.chainlinkFeedRegistry.proposeFeed(address(WBTC), ChainlinkDenominations.BTC, WBTC_BTC_Feed);
-        __d.chainlinkFeedRegistry.confirmFeed(address(WBTC), ChainlinkDenominations.BTC, WBTC_BTC_Feed);
-        __d.chainlinkFeedRegistry.proposeFeed(ChainlinkDenominations.BTC, ChainlinkDenominations.ETH, BTC_ETH_Feed);
-        __d.chainlinkFeedRegistry.confirmFeed(ChainlinkDenominations.BTC, ChainlinkDenominations.ETH, BTC_ETH_Feed);
-        vm.stopPrank();
+        _registerFeed(address(WBTC), ChainlinkDenominations.BTC, WBTC_BTC_Feed);
+        _registerFeed(ChainlinkDenominations.BTC, ChainlinkDenominations.ETH, BTC_ETH_Feed);
 
         address[] memory feedIntermediaryDenominations = new address[](1);
         feedIntermediaryDenominations[0] = ChainlinkDenominations.BTC;
