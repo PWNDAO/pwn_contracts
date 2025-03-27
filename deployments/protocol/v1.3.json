@@ -89,13 +89,13 @@
             "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
             "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
             "revokedNonce": "0x972204fF33348ee6889B2d0A3967dB67d7b08e4c",
-            "utilizedCredit": "0x585C2D4d5D84b296921BF96598961Eec6Ae5C09C",
-            "simpleLoan": "0x322e86E6c813d77a904C5B4aa808a13E0AD4412f",
-            "simpleLoanSimpleProposal": "0xCAec7F837930dC9fB36B0E584FEf498714B2a951",
-            "simpleLoanListProposal": "0x2ECd36747A4a18Dc578798A79c87035D610EDE9F",
+            "utilizedCredit": "0x8E6F44DEa3c11d69C63655BDEcbA25Fa986BCE9D",
+            "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
+            "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
+            "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
             "simpleLoanElasticChainlinkProposal": "0x0000000000000000000000000000000000000000",
-            "simpleLoanElasticProposal": "0x2Bf2dC42eF08FA2C5BD15f6aDca402bf2Be75A1A",
-            "simpleLoanDutchAuctionProposal": "0x469B2C01FBb8D2073562F4Fe28aaA67D59c05Dc2"
+            "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
+            "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
         },
         "137": {
             "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
