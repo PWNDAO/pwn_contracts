@@ -27,7 +27,7 @@ contract DeployedProtocolTest is DeploymentTest {
         // - owner is protocol timelock
         assertEq(__d.config.owner(), __e.protocolTimelock);
         // - feeCollector is dao safe
-        // assertEq(__d.config.feeCollector(), __e.daoSafe);
+        assertEq(__d.config.feeCollector(), __e.daoSafe);
         // - is initialized
         assertEq(vm.load(address(__d.config), bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(1)));
         // - implementation initialization is disabled

@@ -88,24 +88,22 @@ abstract contract Deployments is CommonBase {
     function _loadDeployedAddresses() internal {
         string memory root = vm.projectRoot();
 
+        string memory creationJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/creation/creationCode.json"));
+        bytes memory rawCreation = creationJson.parseRaw(".");
+        __cc = abi.decode(rawCreation, (CreationCode));
+
         string memory externalJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/external/external.json"));
         bytes memory rawExternal = externalJson.parseRaw(string.concat(".", block.chainid.toString()));
         __e = abi.decode(rawExternal, (External));
 
         string memory deploymentsJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/protocol/v1.3.json"));
-        bytes memory rawDeployedChains = deploymentsJson.parseRaw(".deployedChains");
-        deployedChains = abi.decode(rawDeployedChains, (uint256[]));
+        bytes memory rawDeployment = deploymentsJson.parseRaw(string.concat(".", block.chainid.toString()));
 
-        if (_contains(deployedChains, block.chainid)) {
-            bytes memory rawDeployment = deploymentsJson.parseRaw(string.concat(".chains.", block.chainid.toString()));
+        if (rawDeployment.length > 0) {
             __d = abi.decode(rawDeployment, (Deployment));
         } else {
             _protocolNotDeployedOnSelectedChain();
         }
-
-        string memory creationJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/creation/creationCode.json"));
-        bytes memory rawCreation = creationJson.parseRaw(".");
-        __cc = abi.decode(rawCreation, (CreationCode));
     }
 
     function _contains(uint256[] storage array, uint256 value) private view returns (bool) {
