@@ -200,8 +200,7 @@ forge script script/PWN.s.sol:Deploy \
         __d.utilizedCredit = PWNUtilizedCredit(_deploy({
             salt: PWNContractDeployerSalt.UTILIZED_CREDIT,
             bytecode: abi.encodePacked(
-                type(PWNUtilizedCredit).creationCode,
-                abi.encode(address(__d.hub), PWNHubTags.LOAN_PROPOSAL)
+                __cc.utilizedCredit, abi.encode(address(__d.hub), PWNHubTags.LOAN_PROPOSAL)
             )
         }));
 
@@ -209,14 +208,7 @@ forge script script/PWN.s.sol:Deploy \
         __d.simpleLoan = PWNSimpleLoan(_deploy({
             salt: PWNContractDeployerSalt.SIMPLE_LOAN,
             bytecode: abi.encodePacked(
-                type(PWNSimpleLoan).creationCode,
-                abi.encode(
-                    address(__d.hub),
-                    address(__d.loanToken),
-                    address(__d.config),
-                    address(__d.revokedNonce),
-                    address(__d.categoryRegistry)
-                )
+                __cc.simpleLoan_v1_3, abi.encode(address(__d.hub), address(__d.loanToken), address(__d.config), address(__d.revokedNonce), address(__d.categoryRegistry))
             )
         }));
 
@@ -224,52 +216,28 @@ forge script script/PWN.s.sol:Deploy \
         __d.simpleLoanSimpleProposal = PWNSimpleLoanSimpleProposal(_deploy({
             salt: PWNContractDeployerSalt.SIMPLE_LOAN_SIMPLE_PROPOSAL,
             bytecode: abi.encodePacked(
-                type(PWNSimpleLoanSimpleProposal).creationCode,
-                abi.encode(
-                    address(__d.hub),
-                    address(__d.revokedNonce),
-                    address(__d.config),
-                    address(__d.utilizedCredit)
-                )
+                __cc.simpleLoanSimpleProposal_v1_3, abi.encode(address(__d.hub), address(__d.revokedNonce), address(__d.config), address(__d.utilizedCredit))
             )
         }));
 
         __d.simpleLoanListProposal = PWNSimpleLoanListProposal(_deploy({
             salt: PWNContractDeployerSalt.SIMPLE_LOAN_LIST_PROPOSAL,
             bytecode: abi.encodePacked(
-                type(PWNSimpleLoanListProposal).creationCode,
-                abi.encode(
-                    address(__d.hub),
-                    address(__d.revokedNonce),
-                    address(__d.config),
-                    address(__d.utilizedCredit)
-                )
+                __cc.simpleLoanListProposal_v1_3, abi.encode(address(__d.hub), address(__d.revokedNonce), address(__d.config), address(__d.utilizedCredit))
             )
         }));
 
         __d.simpleLoanElasticProposal = PWNSimpleLoanElasticProposal(_deploy({
             salt: PWNContractDeployerSalt.SIMPLE_LOAN_ELASTIC_PROPOSAL,
             bytecode: abi.encodePacked(
-                type(PWNSimpleLoanElasticProposal).creationCode,
-                abi.encode(
-                    address(__d.hub),
-                    address(__d.revokedNonce),
-                    address(__d.config),
-                    address(__d.utilizedCredit)
-                )
+                __cc.simpleLoanElasticProposal_v1_1, abi.encode(address(__d.hub), address(__d.revokedNonce), address(__d.config), address(__d.utilizedCredit))
             )
         }));
 
         __d.simpleLoanDutchAuctionProposal = PWNSimpleLoanDutchAuctionProposal(_deploy({
             salt: PWNContractDeployerSalt.SIMPLE_LOAN_DUTCH_AUCTION_PROPOSAL,
             bytecode: abi.encodePacked(
-                type(PWNSimpleLoanDutchAuctionProposal).creationCode,
-                abi.encode(
-                    address(__d.hub),
-                    address(__d.revokedNonce),
-                    address(__d.config),
-                    address(__d.utilizedCredit)
-                )
+                __cc.simpleLoanDutchAuctionProposal_v1_1, abi.encode(address(__d.hub), address(__d.revokedNonce), address(__d.config), address(__d.utilizedCredit))
             )
         }));
 
@@ -606,7 +574,7 @@ forge script script/PWN.s.sol:Setup \
     }
 
 /*
-forge script script/PWN.s.sol:Setup --sig "printTagsCalldata(string)" "polygon"
+forge script script/PWN.s.sol:Setup --sig "printTagsCalldata(string)" "chain"
 */
     function printTagsCalldata(string memory chain) external {
         vm.createSelectFork(chain);
