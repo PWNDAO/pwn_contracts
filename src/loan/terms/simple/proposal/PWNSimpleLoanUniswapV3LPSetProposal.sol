@@ -19,11 +19,11 @@ import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleL
 
 
 /**
- * @title PWN Simple Loan Uniswap V3 LP Proposal
- * @notice Simple loan proposal contract for Uniswap V3 LP tokens.
+ * @title PWN Simple Loan Uniswap V3 LP Set Proposal
+ * @notice Simple loan proposal contract for a set of Uniswap V3 LP tokens.
  * Proposal uses Chainlink price feeds to get LP token value in credit token.
  */
-contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
+contract PWNSimpleLoanUniswapV3LPSetProposal is PWNSimpleLoanProposal {
     using Math for uint256;
     using UniswapV3 for UniswapV3.Config;
     using Chainlink for Chainlink.Config;
@@ -136,7 +136,7 @@ contract PWNSimpleLoanUniswapV3LPProposal is PWNSimpleLoanProposal {
         address _chainlinkFeedRegistry,
         address _chainlinkL2SequencerUptimeFeed,
         address _weth
-    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanUniswapV3LPProposal", VERSION) {
+    ) PWNSimpleLoanProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanUniswapV3LPSetProposal", VERSION) {
         uniswapV3Factory = _uniswapV3Factory;
         uniswapNFTPositionManager = INonfungiblePositionManager(_uniswapNFTPositionManager);
         chainlinkFeedRegistry = IChainlinkFeedRegistryLike(_chainlinkFeedRegistry);

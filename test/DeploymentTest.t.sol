@@ -18,7 +18,7 @@ import {
     PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
-    PWNSimpleLoanUniswapV3LPProposal,
+    PWNSimpleLoanUniswapV3LPSetProposal,
     PWNLOAN,
     PWNRevokedNonce,
     PWNUtilizedCredit,
@@ -123,7 +123,7 @@ abstract contract DeploymentTest is Deployments, Test {
             address(deployment.config),
             address(deployment.utilizedCredit)
         );
-        deployment.simpleLoanUniswapV3LPProposal = new PWNSimpleLoanUniswapV3LPProposal(
+        deployment.simpleLoanUniswapV3LPSetProposal = new PWNSimpleLoanUniswapV3LPSetProposal(
             address(deployment.hub),
             address(deployment.revokedNonce),
             address(deployment.config),
@@ -155,8 +155,8 @@ abstract contract DeploymentTest is Deployments, Test {
         addrs[10] = address(deployment.simpleLoanDutchAuctionProposal);
         addrs[11] = address(deployment.simpleLoanDutchAuctionProposal);
 
-        addrs[12] = address(deployment.simpleLoanUniswapV3LPProposal);
-        addrs[13] = address(deployment.simpleLoanUniswapV3LPProposal);
+        addrs[12] = address(deployment.simpleLoanUniswapV3LPSetProposal);
+        addrs[13] = address(deployment.simpleLoanUniswapV3LPSetProposal);
 
         bytes32[] memory tags = new bytes32[](14);
         tags[0] = PWNHubTags.ACTIVE_LOAN;

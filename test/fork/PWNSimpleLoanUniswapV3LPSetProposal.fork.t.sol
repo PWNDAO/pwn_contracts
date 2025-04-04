@@ -7,11 +7,11 @@ import { MultiToken, IERC20, IERC721 } from "MultiToken/MultiToken.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import {
-    PWNSimpleLoanUniswapV3LPProposal,
+    PWNSimpleLoanUniswapV3LPSetProposal,
     PWNSimpleLoan,
     INonfungiblePositionManager,
     IChainlinkAggregatorLike
-} from "src/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPProposal.sol";
+} from "src/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPSetProposal.sol";
 
 import { ChainlinkDenominations } from "test/helper/ChainlinkDenominations.sol";
 import { DeploymentTest } from "test/DeploymentTest.t.sol";
@@ -21,7 +21,7 @@ interface IUSDT {
     function approve(address spender, uint256 amount) external;
 }
 
-contract PWNSimpleLoanUniswapV3LPProposalForkTest is DeploymentTest {
+contract PWNSimpleLoanUniswapV3LPSetProposalForkTest is DeploymentTest {
     IERC20 WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     IERC20 USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
@@ -29,8 +29,8 @@ contract PWNSimpleLoanUniswapV3LPProposalForkTest is DeploymentTest {
     IERC20 DAI  = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 UNI  = IERC20(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
 
-    PWNSimpleLoanUniswapV3LPProposal.Proposal proposal;
-    PWNSimpleLoanUniswapV3LPProposal.ProposalValues proposalValues;
+    PWNSimpleLoanUniswapV3LPSetProposal.Proposal proposal;
+    PWNSimpleLoanUniswapV3LPSetProposal.ProposalValues proposalValues;
 
     function setUp() public override virtual {
         vm.createSelectFork("mainnet");
@@ -87,7 +87,7 @@ contract PWNSimpleLoanUniswapV3LPProposalForkTest is DeploymentTest {
     ) internal {
         if (tokenId != 851566) _transferLPOwnership(tokenId); // use token id 851566 to test call for non-existent token
 
-        proposal = PWNSimpleLoanUniswapV3LPProposal.Proposal({
+        proposal = PWNSimpleLoanUniswapV3LPSetProposal.Proposal({
             tokenAAllowlist: new address[](0),
             tokenBAllowlist: new address[](0),
             creditAddress: address(USDT),
@@ -122,22 +122,22 @@ contract PWNSimpleLoanUniswapV3LPProposalForkTest is DeploymentTest {
         proposal.feedInvertFlags.push(true);
 
         vm.prank(lender);
-        deployment.simpleLoanUniswapV3LPProposal.makeProposal(proposal);
+        deployment.simpleLoanUniswapV3LPSetProposal.makeProposal(proposal);
 
-        proposalValues = PWNSimpleLoanUniswapV3LPProposal.ProposalValues({
+        proposalValues = PWNSimpleLoanUniswapV3LPSetProposal.ProposalValues({
             collateralId: tokenId,
             tokenAIndex: tokenAIndex,
             tokenBIndex: tokenBIndex,
             acceptorControllerData: ""
         });
 
-        bytes memory proposalData = deployment.simpleLoanUniswapV3LPProposal.encodeProposalData(proposal, proposalValues);
+        bytes memory proposalData = deployment.simpleLoanUniswapV3LPSetProposal.encodeProposalData(proposal, proposalValues);
 
         if (err.length > 0) { vm.expectRevert(err); }
         vm.prank(borrower);
         deployment.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanUniswapV3LPProposal),
+                proposalContract: address(deployment.simpleLoanUniswapV3LPSetProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: ""
@@ -160,13 +160,13 @@ contract PWNSimpleLoanUniswapV3LPProposalForkTest is DeploymentTest {
     function test_shouldFail_whenInvalidId() external {
         // https://app.uniswap.org/positions/v3/ethereum/3
         // usdc/weth (closed)
-        _test(3, 1, 1, abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPProposal.InsufficientCreditAmount.selector, 0, 1));
+        _test(3, 1, 1, abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPSetProposal.InsufficientCreditAmount.selector, 0, 1));
     }
 
     function test_shouldFail_whenPairNotAllowlisted() external {
         // https://app.uniswap.org/positions/v3/ethereum/951568
         // plume/usdc
-        _test(951568, 1, 0, abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPProposal.InvalidLPTokenPair.selector));
+        _test(951568, 1, 0, abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPSetProposal.InvalidLPTokenPair.selector));
     }
 
     function test_sanity_WETH_USDT() external {

@@ -2,11 +2,11 @@
 pragma solidity 0.8.16;
 
 import {
-    PWNSimpleLoanUniswapV3LPProposal
-} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPProposal.sol";
+    PWNSimpleLoanUniswapV3LPSetProposal
+} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPSetProposal.sol";
 
 
-contract PWNSimpleLoanUniswapV3LPProposalHarness is PWNSimpleLoanUniswapV3LPProposal {
+contract PWNSimpleLoanUniswapV3LPSetProposalHarness is PWNSimpleLoanUniswapV3LPSetProposal {
 
     constructor(
         address _hub,
@@ -18,7 +18,7 @@ contract PWNSimpleLoanUniswapV3LPProposalHarness is PWNSimpleLoanUniswapV3LPProp
         address _chainlinkFeedRegistry,
         address _chainlinkL2SequencerUptimeFeed,
         address _weth
-    ) PWNSimpleLoanUniswapV3LPProposal(
+    ) PWNSimpleLoanUniswapV3LPSetProposal(
         _hub,
         _revokedNonce,
         _config,

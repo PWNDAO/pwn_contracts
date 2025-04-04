@@ -2,15 +2,15 @@
 pragma solidity 0.8.16;
 
 import {
-    PWNSimpleLoanUniswapV3LPProposal,
+    PWNSimpleLoanUniswapV3LPSetProposal,
     PWNSimpleLoanProposal,
     PWNSimpleLoan,
     IChainlinkFeedRegistryLike,
     IChainlinkAggregatorLike,
     INonfungiblePositionManager
-} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPProposal.sol";
+} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPSetProposal.sol";
 
-import { PWNSimpleLoanUniswapV3LPProposalHarness } from "test/harness/PWNSimpleLoanUniswapV3LPProposalHarness.sol";
+import { PWNSimpleLoanUniswapV3LPSetProposalHarness } from "test/harness/PWNSimpleLoanUniswapV3LPSetProposalHarness.sol";
 import {
     MultiToken,
     Math,
@@ -20,11 +20,11 @@ import {
 } from "test/unit/PWNSimpleLoanProposal.t.sol";
 
 
-abstract contract PWNSimpleLoanUniswapV3LPProposalTest is PWNSimpleLoanProposalTest {
+abstract contract PWNSimpleLoanUniswapV3LPSetProposalTest is PWNSimpleLoanProposalTest {
 
-    PWNSimpleLoanUniswapV3LPProposalHarness proposalContract;
-    PWNSimpleLoanUniswapV3LPProposal.Proposal proposal;
-    PWNSimpleLoanUniswapV3LPProposal.ProposalValues proposalValues;
+    PWNSimpleLoanUniswapV3LPSetProposalHarness proposalContract;
+    PWNSimpleLoanUniswapV3LPSetProposal.Proposal proposal;
+    PWNSimpleLoanUniswapV3LPSetProposal.ProposalValues proposalValues;
 
     address uniswapV3Factory = makeAddr("uniswapV3Factory");
     address uniswapNFTPositionManager = makeAddr("uniswapNFTPositionManager");
@@ -41,7 +41,7 @@ abstract contract PWNSimpleLoanUniswapV3LPProposalTest is PWNSimpleLoanProposalT
     uint256 token0Value = 101572;
     uint256 token1Value = 331794706808;
 
-    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanUniswapV3LPProposal.Proposal proposal);
+    event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, PWNSimpleLoanUniswapV3LPSetProposal.Proposal proposal);
 
     function setUp() virtual public override {
         super.setUp();
@@ -49,10 +49,10 @@ abstract contract PWNSimpleLoanUniswapV3LPProposalTest is PWNSimpleLoanProposalT
         vm.etch(token, "bytes");
         vm.etch(uniswapNFTPositionManager, "bytes");
 
-        proposalContract = new PWNSimpleLoanUniswapV3LPProposalHarness(hub, revokedNonce, config, utilizedCredit, uniswapV3Factory, uniswapNFTPositionManager, feedRegistry, address(0), weth);
+        proposalContract = new PWNSimpleLoanUniswapV3LPSetProposalHarness(hub, revokedNonce, config, utilizedCredit, uniswapV3Factory, uniswapNFTPositionManager, feedRegistry, address(0), weth);
         proposalContractAddr = PWNSimpleLoanProposal(proposalContract);
 
-        proposal = PWNSimpleLoanUniswapV3LPProposal.Proposal({
+        proposal = PWNSimpleLoanUniswapV3LPSetProposal.Proposal({
             tokenAAllowlist: new address[](0),
             tokenBAllowlist: new address[](0),
             creditAddress: token0,
@@ -79,7 +79,7 @@ abstract contract PWNSimpleLoanUniswapV3LPProposalTest is PWNSimpleLoanProposalT
         proposal.tokenAAllowlist.push(token0);
         proposal.tokenBAllowlist.push(token1);
 
-        proposalValues = PWNSimpleLoanUniswapV3LPProposal.ProposalValues({
+        proposalValues = PWNSimpleLoanUniswapV3LPSetProposal.ProposalValues({
             collateralId: collateralId,
             tokenAIndex: 0,
             tokenBIndex: 0,
@@ -90,12 +90,12 @@ abstract contract PWNSimpleLoanUniswapV3LPProposalTest is PWNSimpleLoanProposalT
     }
 
 
-    function _proposalHash(PWNSimpleLoanUniswapV3LPProposal.Proposal memory _proposal) internal view returns (bytes32) {
+    function _proposalHash(PWNSimpleLoanUniswapV3LPSetProposal.Proposal memory _proposal) internal view returns (bytes32) {
         return keccak256(abi.encodePacked(
             "\x19\x01",
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("PWNSimpleLoanUniswapV3LPProposal"),
+                keccak256("PWNSimpleLoanUniswapV3LPSetProposal"),
                 keccak256("1.0"),
                 block.chainid,
                 proposalContractAddr
@@ -216,7 +216,7 @@ abstract contract PWNSimpleLoanUniswapV3LPProposalTest is PWNSimpleLoanProposalT
 |*  # REVOKE NONCE                                          *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanUniswapV3LPProposal_RevokeNonce_Test is PWNSimpleLoanUniswapV3LPProposalTest {
+contract PWNSimpleLoanUniswapV3LPSetProposal_RevokeNonce_Test is PWNSimpleLoanUniswapV3LPSetProposalTest {
 
     function testFuzz_shouldCallRevokeNonce(address caller, uint256 nonceSpace, uint256 nonce) external {
         vm.expectCall(
@@ -235,7 +235,7 @@ contract PWNSimpleLoanUniswapV3LPProposal_RevokeNonce_Test is PWNSimpleLoanUnisw
 |*  # GET PROPOSAL HASH                                     *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanUniswapV3LPProposal_GetProposalHash_Test is PWNSimpleLoanUniswapV3LPProposalTest {
+contract PWNSimpleLoanUniswapV3LPSetProposal_GetProposalHash_Test is PWNSimpleLoanUniswapV3LPSetProposalTest {
 
     function test_shouldReturnProposalHash() external {
         assertEq(_proposalHash(proposal), proposalContract.getProposalHash(proposal));
@@ -248,7 +248,7 @@ contract PWNSimpleLoanUniswapV3LPProposal_GetProposalHash_Test is PWNSimpleLoanU
 |*  # MAKE PROPOSAL                                         *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanUniswapV3LPProposal_MakeProposal_Test is PWNSimpleLoanUniswapV3LPProposalTest {
+contract PWNSimpleLoanUniswapV3LPSetProposal_MakeProposal_Test is PWNSimpleLoanUniswapV3LPSetProposalTest {
 
     function testFuzz_shouldFail_whenCallerIsNotProposer(address caller) external {
         vm.assume(caller != proposal.proposer);
@@ -285,7 +285,7 @@ contract PWNSimpleLoanUniswapV3LPProposal_MakeProposal_Test is PWNSimpleLoanUnis
 |*  # ENCODE PROPOSAL DATA                                  *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanUniswapV3LPProposal_EncodeProposalData_Test is PWNSimpleLoanUniswapV3LPProposalTest {
+contract PWNSimpleLoanUniswapV3LPSetProposal_EncodeProposalData_Test is PWNSimpleLoanUniswapV3LPSetProposalTest {
 
     function test_shouldReturnEncodedProposalData() external {
         assertEq(
@@ -301,12 +301,12 @@ contract PWNSimpleLoanUniswapV3LPProposal_EncodeProposalData_Test is PWNSimpleLo
 |*  # DECODE PROPOSAL DATA                                  *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanUniswapV3LPProposal_DecodeProposalData_Test is PWNSimpleLoanUniswapV3LPProposalTest {
+contract PWNSimpleLoanUniswapV3LPSetProposal_DecodeProposalData_Test is PWNSimpleLoanUniswapV3LPSetProposalTest {
 
     function test_shouldReturnDecodedProposalData() external {
         (
-            PWNSimpleLoanUniswapV3LPProposal.Proposal memory _proposal,
-            PWNSimpleLoanUniswapV3LPProposal.ProposalValues memory _proposalValues
+            PWNSimpleLoanUniswapV3LPSetProposal.Proposal memory _proposal,
+            PWNSimpleLoanUniswapV3LPSetProposal.ProposalValues memory _proposalValues
         ) = proposalContract.decodeProposalData(abi.encode(proposal, proposalValues));
 
 
@@ -348,7 +348,7 @@ contract PWNSimpleLoanUniswapV3LPProposal_DecodeProposalData_Test is PWNSimpleLo
 |*  # GET CREDIT AMOUNT                                     *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanUniswapV3LPProposal_GetCreditAmount_Test is PWNSimpleLoanUniswapV3LPProposalTest {
+contract PWNSimpleLoanUniswapV3LPSetProposal_GetCreditAmount_Test is PWNSimpleLoanUniswapV3LPSetProposalTest {
 
     function setUp() virtual override public {
         super.setUp();
@@ -403,9 +403,9 @@ contract PWNSimpleLoanUniswapV3LPProposal_GetCreditAmount_Test is PWNSimpleLoanU
 |*  # ACCEPT PROPOSAL                                       *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanUniswapV3LPProposal_AcceptProposal_Test is PWNSimpleLoanUniswapV3LPProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test(3) {
+contract PWNSimpleLoanUniswapV3LPSetProposal_AcceptProposal_Test is PWNSimpleLoanUniswapV3LPSetProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test(3) {
 
-    function setUp() virtual public override(PWNSimpleLoanUniswapV3LPProposalTest, PWNSimpleLoanProposalTest) {
+    function setUp() virtual public override(PWNSimpleLoanUniswapV3LPSetProposalTest, PWNSimpleLoanProposalTest) {
         super.setUp();
 
         _mockPosition(100_000, 200_000, 100e6, 0, 0);
@@ -418,7 +418,7 @@ contract PWNSimpleLoanUniswapV3LPProposal_AcceptProposal_Test is PWNSimpleLoanUn
 
         bytes32 proposalHash = _proposalHash(proposal);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPProposal.MinCreditAmountNotSet.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPSetProposal.MinCreditAmountNotSet.selector));
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,
@@ -436,7 +436,7 @@ contract PWNSimpleLoanUniswapV3LPProposal_AcceptProposal_Test is PWNSimpleLoanUn
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNSimpleLoanUniswapV3LPProposal.InsufficientCreditAmount.selector,
+                PWNSimpleLoanUniswapV3LPSetProposal.InsufficientCreditAmount.selector,
                 token0Value,
                 proposal.minCreditAmount
             )
@@ -456,7 +456,7 @@ contract PWNSimpleLoanUniswapV3LPProposal_AcceptProposal_Test is PWNSimpleLoanUn
         proposal.tokenBAllowlist[0] = token1;
         bytes32 proposalHash = _proposalHash(proposal);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPProposal.InvalidLPTokenPair.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPSetProposal.InvalidLPTokenPair.selector));
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,
@@ -470,7 +470,7 @@ contract PWNSimpleLoanUniswapV3LPProposal_AcceptProposal_Test is PWNSimpleLoanUn
         proposal.tokenBAllowlist[0] = token;
         proposalHash = _proposalHash(proposal);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPProposal.InvalidLPTokenPair.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPSetProposal.InvalidLPTokenPair.selector));
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,
@@ -484,7 +484,7 @@ contract PWNSimpleLoanUniswapV3LPProposal_AcceptProposal_Test is PWNSimpleLoanUn
         proposal.tokenBAllowlist[0] = token;
         proposalHash = _proposalHash(proposal);
 
-        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPProposal.InvalidLPTokenPair.selector));
+        vm.expectRevert(abi.encodeWithSelector(PWNSimpleLoanUniswapV3LPSetProposal.InvalidLPTokenPair.selector));
         vm.prank(activeLoanContract);
         proposalContract.acceptProposal({
             acceptor: acceptor,
@@ -579,10 +579,10 @@ contract PWNSimpleLoanUniswapV3LPProposal_AcceptProposal_Test is PWNSimpleLoanUn
 |*  # ERC712 ENCODE PROPOSAL                                *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanUniswapV3LPProposal_Erc712EncodeProposal_Test is PWNSimpleLoanUniswapV3LPProposalTest {
+contract PWNSimpleLoanUniswapV3LPSetProposal_Erc712EncodeProposal_Test is PWNSimpleLoanUniswapV3LPSetProposalTest {
 
     function test_shouldERC712EncodeProposal() external {
-        PWNSimpleLoanUniswapV3LPProposal.ERC712Proposal memory proposalErc712 = PWNSimpleLoanUniswapV3LPProposal.ERC712Proposal(
+        PWNSimpleLoanUniswapV3LPSetProposal.ERC712Proposal memory proposalErc712 = PWNSimpleLoanUniswapV3LPSetProposal.ERC712Proposal(
             keccak256(abi.encodePacked(proposal.tokenAAllowlist)),
             keccak256(abi.encodePacked(proposal.tokenBAllowlist)),
             proposal.creditAddress,
