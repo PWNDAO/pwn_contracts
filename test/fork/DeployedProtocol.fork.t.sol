@@ -21,6 +21,8 @@ contract DeployedProtocolTest is DeploymentTest {
         vm.createSelectFork(urlOrAlias);
         super.setUp();
 
+        vm.skip(!wasPredeployedOnFork);
+
         // CONFIG
         // - admin is admin timelock
         assertEq(vm.load(address(__d.config), PROXY_ADMIN_SLOT), bytes32(uint256(uint160(__e.adminTimelock))));

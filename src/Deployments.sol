@@ -32,7 +32,7 @@ abstract contract Deployments is CommonBase {
 
     string public deploymentsSubpath;
 
-    uint256[] deployedChains;
+    bool wasPredeployedOnFork;
     Deployment __d;
     External __e;
     CreationCode __cc;
@@ -106,8 +106,10 @@ abstract contract Deployments is CommonBase {
         bytes memory rawDeployment = deploymentsJson.parseRaw(string.concat(".", block.chainid.toString()));
 
         if (rawDeployment.length > 0) {
+            wasPredeployedOnFork = true;
             __d = abi.decode(rawDeployment, (Deployment));
         } else {
+            wasPredeployedOnFork = false;
             _protocolNotDeployedOnSelectedChain();
         }
     }
