@@ -31,7 +31,7 @@ contract PWNSimpleLoanUniswapV3LPSetProposal is PWNSimpleLoanProposal {
     string public constant VERSION = "1.0";
 
     /** @notice Maximum number of intermediary denominations for price conversion.*/
-    uint256 public constant MAX_INTERMEDIARY_DENOMINATIONS = 2;
+    uint256 public constant MAX_INTERMEDIARY_DENOMINATIONS = 4;
     /** @notice Loan to value denominator.*/
     uint256 public constant LOAN_TO_VALUE_DENOMINATOR = 1e4;
 
