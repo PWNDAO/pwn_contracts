@@ -314,7 +314,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
 
         deal(lender, 10000 ether);
         deal(borrower, 10000 ether);
-        deal(address(ARB), borrower, 2000e18, false);
+        deal(address(ARB), borrower, 3000e18, false);
         deal(address(USDT), lender, 1000e6, false);
 
         // Register ARB/USD & ETH/USD feed
@@ -397,7 +397,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
 
         assertEq(USDT.balanceOf(lender), 500e6);
         assertEq(USDT.balanceOf(borrower), 500e6);
-        assertApproxEqAbs(ARB.balanceOf(borrower), 2000e18 - expectedCollAmount, 0.00001e18);
+        assertApproxEqAbs(ARB.balanceOf(borrower), 3000e18 - expectedCollAmount, 0.00001e18);
         assertApproxEqAbs(ARB.balanceOf(address(__d.simpleLoan)), expectedCollAmount, 0.00001e18);
     }
 
