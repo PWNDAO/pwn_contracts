@@ -19,6 +19,7 @@ import { PWNSimpleLoanElasticChainlinkProposal } from "pwn/loan/terms/simple/pro
 import { PWNSimpleLoanElasticProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticProposal.sol";
 import { PWNSimpleLoanListProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
 import { PWNSimpleLoanSimpleProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
+import { PWNSimpleLoanUniswapV3LPIndividualProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPIndividualProposal.sol";
 import { PWNSimpleLoanUniswapV3LPSetProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPSetProposal.sol";
 import { PWNLOAN } from "pwn/loan/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
@@ -55,6 +56,7 @@ abstract contract Deployments is CommonBase {
         PWNSimpleLoanElasticProposal simpleLoanElasticProposal;
         PWNSimpleLoanListProposal simpleLoanListProposal;
         PWNSimpleLoanSimpleProposal simpleLoanSimpleProposal;
+        PWNSimpleLoanUniswapV3LPIndividualProposal simpleLoanUniswapV3LPIndividualProposal;
         PWNSimpleLoanUniswapV3LPSetProposal simpleLoanUniswapV3LPSetProposal;
         PWNUtilizedCredit utilizedCredit;
     }

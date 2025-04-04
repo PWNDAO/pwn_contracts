@@ -18,6 +18,7 @@ import {
     PWNSimpleLoanElasticProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
+    PWNSimpleLoanUniswapV3LPIndividualProposal,
     PWNSimpleLoanUniswapV3LPSetProposal,
     PWNLOAN,
     PWNRevokedNonce,
@@ -123,6 +124,17 @@ abstract contract DeploymentTest is Deployments, Test {
             address(deployment.config),
             address(deployment.utilizedCredit)
         );
+        deployment.simpleLoanUniswapV3LPIndividualProposal = new PWNSimpleLoanUniswapV3LPIndividualProposal(
+            address(deployment.hub),
+            address(deployment.revokedNonce),
+            address(deployment.config),
+            address(deployment.utilizedCredit),
+            externalAddrs.uniswapV3Factory,
+            externalAddrs.uniswapV3NFTPositionManager,
+            address(deployment.chainlinkFeedRegistry),
+            externalAddrs.chainlinkL2SequencerUptimeFeed,
+            externalAddrs.weth
+        );
         deployment.simpleLoanUniswapV3LPSetProposal = new PWNSimpleLoanUniswapV3LPSetProposal(
             address(deployment.hub),
             address(deployment.revokedNonce),
@@ -136,7 +148,7 @@ abstract contract DeploymentTest is Deployments, Test {
         );
 
         // Set hub tags
-        address[] memory addrs = new address[](14);
+        address[] memory addrs = new address[](16);
         addrs[0] = address(deployment.simpleLoan);
         addrs[1] = address(deployment.simpleLoan);
 
@@ -155,10 +167,13 @@ abstract contract DeploymentTest is Deployments, Test {
         addrs[10] = address(deployment.simpleLoanDutchAuctionProposal);
         addrs[11] = address(deployment.simpleLoanDutchAuctionProposal);
 
-        addrs[12] = address(deployment.simpleLoanUniswapV3LPSetProposal);
-        addrs[13] = address(deployment.simpleLoanUniswapV3LPSetProposal);
+        addrs[12] = address(deployment.simpleLoanUniswapV3LPIndividualProposal);
+        addrs[13] = address(deployment.simpleLoanUniswapV3LPIndividualProposal);
 
-        bytes32[] memory tags = new bytes32[](14);
+        addrs[14] = address(deployment.simpleLoanUniswapV3LPSetProposal);
+        addrs[15] = address(deployment.simpleLoanUniswapV3LPSetProposal);
+
+        bytes32[] memory tags = new bytes32[](16);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
         tags[1] = PWNHubTags.NONCE_MANAGER;
 
@@ -179,6 +194,9 @@ abstract contract DeploymentTest is Deployments, Test {
 
         tags[12] = PWNHubTags.LOAN_PROPOSAL;
         tags[13] = PWNHubTags.NONCE_MANAGER;
+
+        tags[14] = PWNHubTags.LOAN_PROPOSAL;
+        tags[15] = PWNHubTags.NONCE_MANAGER;
 
         vm.prank(deployment.protocolTimelock);
         deployment.hub.setTags(addrs, tags, true);
