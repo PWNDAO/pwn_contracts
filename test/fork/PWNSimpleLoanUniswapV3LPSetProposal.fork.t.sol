@@ -42,12 +42,12 @@ contract PWNSimpleLoanUniswapV3LPSetProposalForkTest is DeploymentTest {
         deal(address(DAI), lender, 1_000_000e6, false);
 
         vm.startPrank(lender);
-        IUSDT(address(USDT)).approve(address(deployment.simpleLoan), type(uint256).max);
-        DAI.approve(address(deployment.simpleLoan), type(uint256).max);
+        IUSDT(address(USDT)).approve(address(__d.simpleLoan), type(uint256).max);
+        DAI.approve(address(__d.simpleLoan), type(uint256).max);
         vm.stopPrank();
 
         vm.prank(borrower);
-        IERC721(externalAddrs.uniswapV3NFTPositionManager).setApprovalForAll(address(deployment.simpleLoan), true);
+        IERC721(__e.uniswapV3NFTPositionManager).setApprovalForAll(address(__d.simpleLoan), true);
 
         _registerFeed(address(USDC), ChainlinkDenominations.USD, 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6);
         _registerFeed(address(USDT), ChainlinkDenominations.USD, 0x3E7d1eAB13ad0104d2750B8863b489D65364e32D);
@@ -55,18 +55,18 @@ contract PWNSimpleLoanUniswapV3LPSetProposalForkTest is DeploymentTest {
     }
 
     function _transferLPOwnership(uint256 tokenId) internal {
-        address owner = IERC721(externalAddrs.uniswapV3NFTPositionManager).ownerOf(tokenId);
+        address owner = IERC721(__e.uniswapV3NFTPositionManager).ownerOf(tokenId);
         vm.prank(owner);
-        IERC721(externalAddrs.uniswapV3NFTPositionManager).transferFrom(owner, borrower, tokenId);
+        IERC721(__e.uniswapV3NFTPositionManager).transferFrom(owner, borrower, tokenId);
     }
 
     function _registerFeed(address base, address quote, address feed) internal {
-        try deployment.chainlinkFeedRegistry.getFeed(base, quote) returns (IChainlinkAggregatorLike) {
+        try __d.chainlinkFeedRegistry.getFeed(base, quote) returns (IChainlinkAggregatorLike) {
             return;
         } catch {
-            vm.startPrank(deployment.protocolTimelock);
-            deployment.chainlinkFeedRegistry.proposeFeed(base, quote, feed);
-            deployment.chainlinkFeedRegistry.confirmFeed(base, quote, feed);
+            vm.startPrank(__e.protocolTimelock);
+            __d.chainlinkFeedRegistry.proposeFeed(base, quote, feed);
+            __d.chainlinkFeedRegistry.confirmFeed(base, quote, feed);
             vm.stopPrank();
         }
     }
@@ -104,12 +104,12 @@ contract PWNSimpleLoanUniswapV3LPSetProposalForkTest is DeploymentTest {
             acceptorController: address(0),
             acceptorControllerData: "",
             proposer: lender,
-            proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
+            proposerSpecHash: __d.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
             refinancingLoanId: 0,
             nonceSpace: 0,
             nonce: 0,
-            loanContract: address(deployment.simpleLoan)
+            loanContract: address(__d.simpleLoan)
         });
         proposal.tokenAAllowlist.push(address(DAI));
         proposal.tokenAAllowlist.push(address(USDC));
@@ -122,7 +122,7 @@ contract PWNSimpleLoanUniswapV3LPSetProposalForkTest is DeploymentTest {
         proposal.feedInvertFlags.push(true);
 
         vm.prank(lender);
-        deployment.simpleLoanUniswapV3LPSetProposal.makeProposal(proposal);
+        __d.simpleLoanUniswapV3LPSetProposal.makeProposal(proposal);
 
         proposalValues = PWNSimpleLoanUniswapV3LPSetProposal.ProposalValues({
             collateralId: tokenId,
@@ -131,13 +131,13 @@ contract PWNSimpleLoanUniswapV3LPSetProposalForkTest is DeploymentTest {
             acceptorControllerData: ""
         });
 
-        bytes memory proposalData = deployment.simpleLoanUniswapV3LPSetProposal.encodeProposalData(proposal, proposalValues);
+        bytes memory proposalData = __d.simpleLoanUniswapV3LPSetProposal.encodeProposalData(proposal, proposalValues);
 
         if (err.length > 0) { vm.expectRevert(err); }
         vm.prank(borrower);
-        deployment.simpleLoan.createLOAN({
+        __d.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanUniswapV3LPSetProposal),
+                proposalContract: address(__d.simpleLoanUniswapV3LPSetProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: ""

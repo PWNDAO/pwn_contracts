@@ -43,21 +43,21 @@ contract Deploy is Deployments, Script {
         bytes32 salt,
         bytes memory bytecode
     ) internal returns (address) {
-        bool success = GnosisSafeLike(deployment.deployerSafe).execTransaction({
-            to: address(deployment.deployer),
+        bool success = GnosisSafeLike(__e.deployerSafe).execTransaction({
+            to: address(__e.deployer),
             data: abi.encodeWithSelector(
                 IPWNDeployer.deploy.selector, salt, bytecode
             )
         });
         require(success, "Deploy failed");
-        return deployment.deployer.computeAddress(salt, keccak256(bytecode));
+        return __e.deployer.computeAddress(salt, keccak256(bytecode));
     }
 
 /*
 forge script script/PWNTimelock.s.sol:Deploy \
 --sig "deployTimelocks()" \
---rpc-url $RPC_URL \
---private-key $PRIVATE_KEY \
+--rpc-url $SONIC_URL \
+--private-key $PRIVATE_KEY_PWN_PROD \
 --with-gas-price $(cast --to-wei 15 gwei) \
 --broadcast
 */
@@ -98,7 +98,7 @@ forge script script/PWNTimelock.s.sol:Deploy \
         vm.startBroadcast(initialConfigHelper);
 
         address initialProposer = vm.addr(initialConfigHelper);
-        address newProposer = deployment.daoSafe;
+        address newProposer = __e.daoSafe;
 
         bytes[] memory payloads = new bytes[](4);
         payloads[0] = abi.encodeWithSignature("grantRole(bytes32,address)", timelock.PROPOSER_ROLE(), newProposer);
@@ -143,7 +143,7 @@ forge script script/PWNTimelock.s.sol:Setup \
     /// @dev Expecting to have protocol, daoSafe & protocolTimelock addresses set in the `deployments.json`
     function updateProtocolTimelockMinDelay() external {
         _loadDeployedAddresses();
-        _updateMinDelay(TimelockController(payable(deployment.protocolTimelock)), 4 days);
+        _updateMinDelay(TimelockController(payable(__e.protocolTimelock)), 4 days);
     }
 
 /*
@@ -157,7 +157,7 @@ forge script script/PWNTimelock.s.sol:Setup \
     /// @dev Expecting to have protocol, daoSafe & adminTimelock addresses set in the `deployments.json
     function updateAdminTimelockMinDelay() external {
         _loadDeployedAddresses();
-        _updateMinDelay(TimelockController(payable(deployment.adminTimelock)), 4 days);
+        _updateMinDelay(TimelockController(payable(__e.adminTimelock)), 4 days);
     }
 
     /// @dev Will schedule and execute min delay update, expecting daoSafe to be proposer of the timelock.
@@ -165,7 +165,7 @@ forge script script/PWNTimelock.s.sol:Setup \
         vm.startBroadcast();
 
         timelock.scheduleAndExecute(
-            GnosisSafeLike(deployment.daoSafe),
+            GnosisSafeLike(__e.daoSafe),
             address(timelock),
             abi.encodeWithSignature("updateDelay(uint256)", minDelay)
         );

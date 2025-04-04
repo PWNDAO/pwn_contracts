@@ -62,12 +62,12 @@ abstract contract BaseIntegrationTest is DeploymentTest {
             acceptorController: address(0),
             acceptorControllerData: "",
             proposer: lender,
-            proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
+            proposerSpecHash: __d.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
             refinancingLoanId: 0,
             nonceSpace: 0,
             nonce: 0,
-            loanContract: address(deployment.simpleLoan)
+            loanContract: address(__d.simpleLoan)
         });
 
         simpleProposalValues = PWNSimpleLoanSimpleProposal.ProposalValues({
@@ -90,7 +90,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
 
         // Approve collateral
         vm.prank(borrower);
-        t20.approve(address(deployment.simpleLoan), 10e18);
+        t20.approve(address(__d.simpleLoan), 10e18);
 
         // Create LOAN
         return _createLoan(simpleProposal, simpleProposalValues, "");
@@ -108,7 +108,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
 
         // Approve collateral
         vm.prank(borrower);
-        t721.approve(address(deployment.simpleLoan), 42);
+        t721.approve(address(__d.simpleLoan), 42);
 
         // Create LOAN
         return _createLoan(simpleProposal, simpleProposalValues, "");
@@ -130,7 +130,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
 
         // Approve collateral
         vm.prank(borrower);
-        t1155.setApprovalForAll(address(deployment.simpleLoan), true);
+        t1155.setApprovalForAll(address(__d.simpleLoan), true);
 
         // Create LOAN
         return _createLoan(simpleProposal, simpleProposalValues, revertData);
@@ -142,26 +142,26 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         bytes memory revertData
     ) private returns (uint256) {
         // Sign proposal
-        bytes memory signature = _sign(lenderPK, deployment.simpleLoanSimpleProposal.getProposalHash(_proposal));
+        bytes memory signature = _sign(lenderPK, __d.simpleLoanSimpleProposal.getProposalHash(_proposal));
 
         // Mint initial state
         credit.mint(lender, 100e18);
 
         // Approve loan asset
         vm.prank(lender);
-        credit.approve(address(deployment.simpleLoan), 100e18);
+        credit.approve(address(__d.simpleLoan), 100e18);
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
-        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(_proposal, _proposalValues);
+        bytes memory proposalData = __d.simpleLoanSimpleProposal.encodeProposalData(_proposal, _proposalValues);
 
         // Create LOAN
         if (keccak256(revertData) != keccak256("")) {
             vm.expectRevert(revertData);
         }
         vm.prank(borrower);
-        return deployment.simpleLoan.createLOAN({
+        return __d.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanSimpleProposal),
+                proposalContract: address(__d.simpleLoanSimpleProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: signature
@@ -190,14 +190,14 @@ abstract contract BaseIntegrationTest is DeploymentTest {
 
         // Approve loan asset
         vm.prank(borrower);
-        credit.approve(address(deployment.simpleLoan), 110e18);
+        credit.approve(address(__d.simpleLoan), 110e18);
 
         // Repay loan
         if (keccak256(revertData) != keccak256("")) {
             vm.expectRevert(revertData);
         }
         vm.prank(borrower);
-        deployment.simpleLoan.repayLOAN(loanId);
+        __d.simpleLoan.repayLOAN(loanId);
     }
 
 }

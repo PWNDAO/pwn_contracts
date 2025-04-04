@@ -33,22 +33,18 @@ abstract contract Deployments is CommonBase {
     string public deploymentsSubpath;
 
     uint256[] deployedChains;
-    Deployment deployment;
-    External externalAddrs;
+    Deployment __d;
+    External __e;
+    CreationCode __cc;
 
-    // Properties need to be in alphabetical order
+    /// @dev Properties need to be in alphabetical order.
     struct Deployment {
-        address adminTimelock;
         MultiTokenCategoryRegistry categoryRegistry;
         IChainlinkFeedRegistryLike chainlinkFeedRegistry;
         PWNConfig config;
         PWNConfig configSingleton;
-        address daoSafe;
-        IPWNDeployer deployer;
-        address deployerSafe;
         PWNHub hub;
         PWNLOAN loanToken;
-        address protocolTimelock;
         PWNRevokedNonce revokedNonce;
         PWNSimpleLoan simpleLoan;
         PWNSimpleLoanDutchAuctionProposal simpleLoanDutchAuctionProposal;
@@ -61,29 +57,56 @@ abstract contract Deployments is CommonBase {
         PWNUtilizedCredit utilizedCredit;
     }
 
+    /// @dev Properties need to be in alphabetical order.
     struct External {
+        address adminTimelock;
         address chainlinkL2SequencerUptimeFeed;
         address dao;
+        address daoSafe;
+        IPWNDeployer deployer;
+        address deployerSafe;
+        bool isL2;
+        address protocolTimelock;
         address uniswapV3Factory;
         address uniswapV3NFTPositionManager;
         address weth;
+    }
+
+    /// @dev Properties need to be in alphabetical order.
+    struct CreationCode {
+        bytes categoryRegistry;
+        bytes chainlinkFeedRegistry;
+        bytes config;
+        bytes configSingleton_v1_2;
+        bytes hub;
+        bytes loanToken;
+        bytes revokedNonce;
+        bytes simpleLoanDutchAuctionProposal_v1_1;
+        bytes simpleLoanElasticChainlinkProposal_v1_0;
+        bytes simpleLoanElasticProposal_v1_1;
+        bytes simpleLoanListProposal_v1_3;
+        bytes simpleLoanSimpleProposal_v1_3;
+        bytes simpleLoan_v1_3;
+        bytes utilizedCredit;
     }
 
 
     function _loadDeployedAddresses() internal {
         string memory root = vm.projectRoot();
 
+        string memory creationJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/creation/creationCode.json"));
+        bytes memory rawCreation = creationJson.parseRaw(".");
+        __cc = abi.decode(rawCreation, (CreationCode));
+
         string memory externalJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/external/external.json"));
-        bytes memory rawExternal = externalJson.parseRaw(string.concat(".chains.", block.chainid.toString()));
-        externalAddrs = abi.decode(rawExternal, (External));
+        bytes memory rawExternal = externalJson.parseRaw(string.concat(".", block.chainid.toString()));
+        __e = abi.decode(rawExternal, (External));
 
-        string memory deploymentsJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/v1.4.json"));
-        bytes memory rawDeployedChains = deploymentsJson.parseRaw(".deployedChains");
-        deployedChains = abi.decode(rawDeployedChains, (uint256[]));
+        string memory deploymentsJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/protocol/v1.4.json"));
+        bytes memory rawDeployment = deploymentsJson.parseRaw(string.concat(".", block.chainid.toString()));
 
-        if (_contains(deployedChains, block.chainid)) {
-            bytes memory rawDeployment = deploymentsJson.parseRaw(string.concat(".chains.", block.chainid.toString()));
-            deployment = abi.decode(rawDeployment, (Deployment));
+        if (rawDeployment.length > 0) {
+            __d = abi.decode(rawDeployment, (Deployment));
         } else {
             _protocolNotDeployedOnSelectedChain();
         }

@@ -22,12 +22,12 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
     }
 
     function _registerFeed(address base, address quote, address feed) private {
-        try deployment.chainlinkFeedRegistry.getFeed(base, quote) returns (IChainlinkAggregatorLike) {
+        try __d.chainlinkFeedRegistry.getFeed(base, quote) returns (IChainlinkAggregatorLike) {
             return;
         } catch {
-            vm.startPrank(deployment.protocolTimelock);
-            deployment.chainlinkFeedRegistry.proposeFeed(base, quote, feed);
-            deployment.chainlinkFeedRegistry.confirmFeed(base, quote, feed);
+            vm.startPrank(__e.protocolTimelock);
+            __d.chainlinkFeedRegistry.proposeFeed(base, quote, feed);
+            __d.chainlinkFeedRegistry.confirmFeed(base, quote, feed);
             vm.stopPrank();
         }
     }
@@ -70,12 +70,12 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             acceptorController: address(0),
             acceptorControllerData: "",
             proposer: lender,
-            proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
+            proposerSpecHash: __d.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
             refinancingLoanId: 0,
             nonceSpace: 0,
             nonce: 0,
-            loanContract: address(deployment.simpleLoan)
+            loanContract: address(__d.simpleLoan)
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
@@ -84,17 +84,17 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         vm.prank(borrower);
-        WETH.approve(address(deployment.simpleLoan), type(uint256).max);
+        WETH.approve(address(__d.simpleLoan), type(uint256).max);
         vm.prank(lender);
-        APE.approve(address(deployment.simpleLoan), type(uint256).max);
+        APE.approve(address(__d.simpleLoan), type(uint256).max);
 
-        bytes memory signature = _sign(lenderPK, deployment.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
-        bytes memory proposalData = deployment.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
+        bytes memory signature = _sign(lenderPK, __d.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
+        bytes memory proposalData = __d.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
 
         vm.prank(borrower);
-        deployment.simpleLoan.createLOAN({
+        __d.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanElasticChainlinkProposal),
+                proposalContract: address(__d.simpleLoanElasticChainlinkProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: signature
@@ -116,7 +116,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         assertEq(APE.balanceOf(lender), 700e18);
         assertEq(APE.balanceOf(borrower), 300e18);
         assertApproxEqAbs(WETH.balanceOf(borrower), 1e18 - expectedCollAmount, 0.00001e18);
-        assertApproxEqAbs(WETH.balanceOf(address(deployment.simpleLoan)), expectedCollAmount, 0.00001e18);
+        assertApproxEqAbs(WETH.balanceOf(address(__d.simpleLoan)), expectedCollAmount, 0.00001e18);
     }
 
     function test_twoFeeds_USDT_WETH() external {
@@ -160,12 +160,12 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             acceptorController: address(0),
             acceptorControllerData: "",
             proposer: lender,
-            proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
+            proposerSpecHash: __d.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
             refinancingLoanId: 0,
             nonceSpace: 0,
             nonce: 0,
-            loanContract: address(deployment.simpleLoan)
+            loanContract: address(__d.simpleLoan)
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
@@ -174,20 +174,20 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         vm.prank(borrower);
-        WETH.approve(address(deployment.simpleLoan), type(uint256).max);
+        WETH.approve(address(__d.simpleLoan), type(uint256).max);
 
         // USDT doesn't return bool and IERC20 interface call fails
         vm.prank(lender);
-        (bool success, ) = address(USDT).call(abi.encodeWithSignature("approve(address,uint256)", address(deployment.simpleLoan), type(uint256).max));
+        (bool success, ) = address(USDT).call(abi.encodeWithSignature("approve(address,uint256)", address(__d.simpleLoan), type(uint256).max));
         require(success);
 
-        bytes memory signature = _sign(lenderPK, deployment.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
-        bytes memory proposalData = deployment.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
+        bytes memory signature = _sign(lenderPK, __d.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
+        bytes memory proposalData = __d.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
 
         vm.prank(borrower);
-        deployment.simpleLoan.createLOAN({
+        __d.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanElasticChainlinkProposal),
+                proposalContract: address(__d.simpleLoanElasticChainlinkProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: signature
@@ -211,7 +211,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         assertEq(USDT.balanceOf(lender), 500e6);
         assertEq(USDT.balanceOf(borrower), 500e6);
         assertApproxEqAbs(WETH.balanceOf(borrower), 1e18 - expectedCollAmount, 0.00001e18);
-        assertApproxEqAbs(WETH.balanceOf(address(deployment.simpleLoan)), expectedCollAmount, 0.00001e18);
+        assertApproxEqAbs(WETH.balanceOf(address(__d.simpleLoan)), expectedCollAmount, 0.00001e18);
     }
 
     function test_twoFeeds_ARB_WETH() external {
@@ -255,12 +255,12 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             acceptorController: address(0),
             acceptorControllerData: "",
             proposer: lender,
-            proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
+            proposerSpecHash: __d.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
             refinancingLoanId: 0,
             nonceSpace: 0,
             nonce: 0,
-            loanContract: address(deployment.simpleLoan)
+            loanContract: address(__d.simpleLoan)
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
@@ -269,17 +269,17 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         vm.prank(borrower);
-        WETH.approve(address(deployment.simpleLoan), type(uint256).max);
+        WETH.approve(address(__d.simpleLoan), type(uint256).max);
         vm.prank(lender);
-        ARB.approve(address(deployment.simpleLoan), type(uint256).max);
+        ARB.approve(address(__d.simpleLoan), type(uint256).max);
 
-        bytes memory signature = _sign(lenderPK, deployment.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
-        bytes memory proposalData = deployment.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
+        bytes memory signature = _sign(lenderPK, __d.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
+        bytes memory proposalData = __d.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
 
         vm.prank(borrower);
-        deployment.simpleLoan.createLOAN({
+        __d.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanElasticChainlinkProposal),
+                proposalContract: address(__d.simpleLoanElasticChainlinkProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: signature
@@ -303,7 +303,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         assertEq(ARB.balanceOf(lender), 500e18);
         assertEq(ARB.balanceOf(borrower), 500e18);
         assertApproxEqAbs(WETH.balanceOf(borrower), 1e18 - expectedCollAmount, 0.00001e18);
-        assertApproxEqAbs(WETH.balanceOf(address(deployment.simpleLoan)), expectedCollAmount, 0.00001e18);
+        assertApproxEqAbs(WETH.balanceOf(address(__d.simpleLoan)), expectedCollAmount, 0.00001e18);
     }
 
     function test_twoFeeds_USDT_ARB() external {
@@ -347,12 +347,12 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             acceptorController: address(0),
             acceptorControllerData: "",
             proposer: lender,
-            proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
+            proposerSpecHash: __d.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
             refinancingLoanId: 0,
             nonceSpace: 0,
             nonce: 0,
-            loanContract: address(deployment.simpleLoan)
+            loanContract: address(__d.simpleLoan)
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
@@ -361,20 +361,20 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         vm.prank(borrower);
-        ARB.approve(address(deployment.simpleLoan), type(uint256).max);
+        ARB.approve(address(__d.simpleLoan), type(uint256).max);
 
         // USDT doesn't return bool and IERC20 interface call fails
         vm.prank(lender);
-        (bool success, ) = address(USDT).call(abi.encodeWithSignature("approve(address,uint256)", address(deployment.simpleLoan), type(uint256).max));
+        (bool success, ) = address(USDT).call(abi.encodeWithSignature("approve(address,uint256)", address(__d.simpleLoan), type(uint256).max));
         require(success);
 
-        bytes memory signature = _sign(lenderPK, deployment.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
-        bytes memory proposalData = deployment.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
+        bytes memory signature = _sign(lenderPK, __d.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
+        bytes memory proposalData = __d.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
 
         vm.prank(borrower);
-        deployment.simpleLoan.createLOAN({
+        __d.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanElasticChainlinkProposal),
+                proposalContract: address(__d.simpleLoanElasticChainlinkProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: signature
@@ -398,7 +398,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         assertEq(USDT.balanceOf(lender), 500e6);
         assertEq(USDT.balanceOf(borrower), 500e6);
         assertApproxEqAbs(ARB.balanceOf(borrower), 2000e18 - expectedCollAmount, 0.00001e18);
-        assertApproxEqAbs(ARB.balanceOf(address(deployment.simpleLoan)), expectedCollAmount, 0.00001e18);
+        assertApproxEqAbs(ARB.balanceOf(address(__d.simpleLoan)), expectedCollAmount, 0.00001e18);
     }
 
     function test_twoFeeds_WETH_WBTC() external {
@@ -442,12 +442,12 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
             acceptorController: address(0),
             acceptorControllerData: "",
             proposer: lender,
-            proposerSpecHash: deployment.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
+            proposerSpecHash: __d.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
             isOffer: true,
             refinancingLoanId: 0,
             nonceSpace: 0,
             nonce: 0,
-            loanContract: address(deployment.simpleLoan)
+            loanContract: address(__d.simpleLoan)
         });
 
         PWNSimpleLoanElasticChainlinkProposal.ProposalValues memory values = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
@@ -456,17 +456,17 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         });
 
         vm.prank(borrower);
-        WBTC.approve(address(deployment.simpleLoan), type(uint256).max);
+        WBTC.approve(address(__d.simpleLoan), type(uint256).max);
         vm.prank(lender);
-        WETH.approve(address(deployment.simpleLoan), type(uint256).max);
+        WETH.approve(address(__d.simpleLoan), type(uint256).max);
 
-        bytes memory signature = _sign(lenderPK, deployment.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
-        bytes memory proposalData = deployment.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
+        bytes memory signature = _sign(lenderPK, __d.simpleLoanElasticChainlinkProposal.getProposalHash(proposal));
+        bytes memory proposalData = __d.simpleLoanElasticChainlinkProposal.encodeProposalData(proposal, values);
 
         vm.prank(borrower);
-        deployment.simpleLoan.createLOAN({
+        __d.simpleLoan.createLOAN({
             proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(deployment.simpleLoanElasticChainlinkProposal),
+                proposalContract: address(__d.simpleLoanElasticChainlinkProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: signature
@@ -491,7 +491,7 @@ contract PWNSimpleLoanElasticChainlinkProposalForkTest is DeploymentTest {
         assertEq(WETH.balanceOf(lender), 500e18);
         assertEq(WETH.balanceOf(borrower), 500e18);
         assertApproxEqAbs(WBTC.balanceOf(borrower), 50e8 - expectedCollAmount, 0.00001e8);
-        assertApproxEqAbs(WBTC.balanceOf(address(deployment.simpleLoan)), expectedCollAmount, 0.00001e8);
+        assertApproxEqAbs(WBTC.balanceOf(address(__d.simpleLoan)), expectedCollAmount, 0.00001e8);
     }
 
 }

@@ -26,12 +26,12 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
     function test_shouldFailToCreateLOAN_whenLoanContractNotActive() external {
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolTimelock);
-        deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
+        vm.prank(__e.protocolTimelock);
+        __d.hub.setTag(address(__d.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Try to create LOAN
         _createERC1155LoanFailing(
-            abi.encodeWithSelector(AddressMissingHubTag.selector, address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN)
+            abi.encodeWithSelector(AddressMissingHubTag.selector, address(__d.simpleLoan), PWNHubTags.ACTIVE_LOAN)
         );
     }
 
@@ -40,23 +40,23 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
         uint256 loanId = _createERC1155Loan();
 
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolTimelock);
-        deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
+        vm.prank(__e.protocolTimelock);
+        __d.hub.setTag(address(__d.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Repay loan directly to original lender
         _repayLoan(loanId);
 
         // Assert final state
         vm.expectRevert("ERC721: invalid token ID");
-        deployment.loanToken.ownerOf(loanId);
+        __d.loanToken.ownerOf(loanId);
 
         assertEq(credit.balanceOf(lender), 110e18);
         assertEq(credit.balanceOf(borrower), 0);
-        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(address(__d.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 10e18);
-        assertEq(t1155.balanceOf(address(deployment.simpleLoan), 42), 0);
+        assertEq(t1155.balanceOf(address(__d.simpleLoan), 42), 0);
     }
 
     function test_shouldRepayLOAN_whenLoanContractNotActive_whenOriginalLenderIsNotLOANOwner() external {
@@ -67,27 +67,27 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
         // Transfer loan to another lender
         vm.prank(lender);
-        deployment.loanToken.transferFrom(lender, lender2, loanId);
+        __d.loanToken.transferFrom(lender, lender2, loanId);
 
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolTimelock);
-        deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
+        vm.prank(__e.protocolTimelock);
+        __d.hub.setTag(address(__d.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Repay loan directly to original lender
         _repayLoan(loanId);
 
         // Assert final state
-        assertEq(deployment.loanToken.ownerOf(loanId), lender2);
+        assertEq(__d.loanToken.ownerOf(loanId), lender2);
 
         assertEq(credit.balanceOf(lender), 0);
         assertEq(credit.balanceOf(lender2), 0);
         assertEq(credit.balanceOf(borrower), 0);
-        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 110e18);
+        assertEq(credit.balanceOf(address(__d.simpleLoan)), 110e18);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(lender2, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 10e18);
-        assertEq(t1155.balanceOf(address(deployment.simpleLoan), 42), 0);
+        assertEq(t1155.balanceOf(address(__d.simpleLoan), 42), 0);
     }
 
     function test_shouldClaimRepaidLOAN_whenLoanContractNotActive() external {
@@ -98,48 +98,48 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
         // Transfer loan to another lender
         vm.prank(lender);
-        deployment.loanToken.transferFrom(lender, lender2, loanId);
+        __d.loanToken.transferFrom(lender, lender2, loanId);
 
         // Repay loan
         _repayLoan(loanId);
 
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolTimelock);
-        deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
+        vm.prank(__e.protocolTimelock);
+        __d.hub.setTag(address(__d.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
         // Claim loan
         vm.prank(lender2);
-        deployment.simpleLoan.claimLOAN(loanId);
+        __d.simpleLoan.claimLOAN(loanId);
 
         // Assert final state
         vm.expectRevert("ERC721: invalid token ID");
-        deployment.loanToken.ownerOf(loanId);
+        __d.loanToken.ownerOf(loanId);
 
         assertEq(credit.balanceOf(lender), 0);
         assertEq(credit.balanceOf(lender2), 110e18);
         assertEq(credit.balanceOf(borrower), 0);
-        assertEq(credit.balanceOf(address(deployment.simpleLoan)), 0);
+        assertEq(credit.balanceOf(address(__d.simpleLoan)), 0);
 
         assertEq(t1155.balanceOf(lender, 42), 0);
         assertEq(t1155.balanceOf(lender2, 42), 0);
         assertEq(t1155.balanceOf(borrower, 42), 10e18);
-        assertEq(t1155.balanceOf(address(deployment.simpleLoan), 42), 0);
+        assertEq(t1155.balanceOf(address(__d.simpleLoan), 42), 0);
     }
 
     function test_shouldFailToCreateLOANTerms_whenCallerIsNotActiveLoan() external {
         // Remove ACTIVE_LOAN tag
-        vm.prank(deployment.protocolTimelock);
-        deployment.hub.setTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
+        vm.prank(__e.protocolTimelock);
+        __d.hub.setTag(address(__d.simpleLoan), PWNHubTags.ACTIVE_LOAN, false);
 
-        bytes memory proposalData = deployment.simpleLoanSimpleProposal.encodeProposalData(simpleProposal, simpleProposalValues);
+        bytes memory proposalData = __d.simpleLoanSimpleProposal.encodeProposalData(simpleProposal, simpleProposalValues);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                AddressMissingHubTag.selector, address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN
+                AddressMissingHubTag.selector, address(__d.simpleLoan), PWNHubTags.ACTIVE_LOAN
             )
         );
-        vm.prank(address(deployment.simpleLoan));
-        deployment.simpleLoanSimpleProposal.acceptProposal({
+        vm.prank(address(__d.simpleLoan));
+        __d.simpleLoanSimpleProposal.acceptProposal({
             acceptor: borrower,
             refinancingLoanId: 0,
             proposalData: proposalData,
@@ -150,13 +150,13 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
     function test_shouldFailToCreateLOAN_whenPassingInvalidTermsFactoryContract() external {
         // Remove LOAN_PROPOSAL tag
-        vm.prank(deployment.protocolTimelock);
-        deployment.hub.setTag(address(deployment.simpleLoanSimpleProposal), PWNHubTags.LOAN_PROPOSAL, false);
+        vm.prank(__e.protocolTimelock);
+        __d.hub.setTag(address(__d.simpleLoanSimpleProposal), PWNHubTags.LOAN_PROPOSAL, false);
 
         // Try to create LOAN
         _createERC1155LoanFailing(
             abi.encodeWithSelector(
-                AddressMissingHubTag.selector, address(deployment.simpleLoanSimpleProposal), PWNHubTags.LOAN_PROPOSAL
+                AddressMissingHubTag.selector, address(__d.simpleLoanSimpleProposal), PWNHubTags.LOAN_PROPOSAL
             )
         );
     }

@@ -1,11 +1,12 @@
 [profile.default]
 solc_version = '0.8.16'
-evm_version = "cancun"
 optimizer = true
 optimizer_runs = 200
+evm_version = "london"
 fs_permissions = [
-    { access = "read", path = "./deployments/v1.4.json"},
-    { access = "read", path = "./deployments/external/external.json"}
+    { access = "read", path = "./deployments/protocol/v1.4.json"},
+    { access = "read", path = "./deployments/external/external.json"},
+    { access = "read", path = "./deployments/creation/creationCode.json"}
 ]
 gas_reports = ["PWNSimpleLoan"]
 
@@ -24,6 +25,8 @@ linea = "${LINEA_URL}"
 gnosis = "${GNOSIS_URL}"
 world = "${WORLDCHAIN_URL}"
 unichain = "${UNICHAIN_URL}"
+ink = "${INK_URL}"
+sonic = "${SONIC_URL}"
 # Testnets
 sepolia = "${SEPOLIA_URL}"
 unichain-sepolia = "${UNICHAIN_SEPOLIA_URL}"

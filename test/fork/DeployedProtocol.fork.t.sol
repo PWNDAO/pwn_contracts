@@ -23,58 +23,58 @@ contract DeployedProtocolTest is DeploymentTest {
 
         // CONFIG
         // - admin is admin timelock
-        assertEq(vm.load(address(deployment.config), PROXY_ADMIN_SLOT), bytes32(uint256(uint160(deployment.adminTimelock))));
+        assertEq(vm.load(address(__d.config), PROXY_ADMIN_SLOT), bytes32(uint256(uint160(__e.adminTimelock))));
         // - owner is protocol timelock
-        assertEq(deployment.config.owner(), deployment.protocolTimelock);
+        assertEq(__d.config.owner(), __e.protocolTimelock);
         // - feeCollector is dao safe
-        assertEq(deployment.config.feeCollector(), deployment.daoSafe);
+        assertEq(__d.config.feeCollector(), __e.daoSafe);
         // - is initialized
-        assertEq(vm.load(address(deployment.config), bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(1)));
+        assertEq(vm.load(address(__d.config), bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(1)));
         // - implementation initialization is disabled
-        address configImplementation = address(uint160(uint256(vm.load(address(deployment.config), PROXY_IMPLEMENTATION_SLOT))));
+        address configImplementation = address(uint160(uint256(vm.load(address(__d.config), PROXY_IMPLEMENTATION_SLOT))));
         assertEq(vm.load(configImplementation, bytes32(uint256(1))) << 88 >> 248, bytes32(uint256(type(uint8).max)));
 
         // CATEGORY REGISTRY
         // - owner is protocol timelock
-        assertEq(deployment.categoryRegistry.owner(), deployment.protocolTimelock);
+        assertEq(__d.categoryRegistry.owner(), __e.protocolTimelock);
 
         // HUB
         // - owner is protocol timelock
-        assertEq(deployment.hub.owner(), deployment.protocolTimelock);
+        assertEq(__d.hub.owner(), __e.protocolTimelock);
 
         // REVOKED NONCE
         // - has correct access tag
-        assertEq(deployment.revokedNonce.accessTag(), PWNHubTags.NONCE_MANAGER);
+        assertEq(__d.revokedNonce.accessTag(), PWNHubTags.NONCE_MANAGER);
         // - has correct hub address
-        assertEq(address(deployment.revokedNonce.hub()), address(deployment.hub));
+        assertEq(address(__d.revokedNonce.hub()), address(__d.hub));
 
         // UTILIZED CREDIT
         // - has correct access tag
-        assertEq(deployment.utilizedCredit.accessTag(), PWNHubTags.LOAN_PROPOSAL);
+        assertEq(__d.utilizedCredit.accessTag(), PWNHubTags.LOAN_PROPOSAL);
         // - has correct hub address
-        assertEq(address(deployment.utilizedCredit.hub()), address(deployment.hub));
+        assertEq(address(__d.utilizedCredit.hub()), address(__d.hub));
 
         // HUB TAGS
         // - simple loan
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoan), PWNHubTags.NONCE_MANAGER));
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoan), PWNHubTags.ACTIVE_LOAN));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoan), PWNHubTags.NONCE_MANAGER));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoan), PWNHubTags.ACTIVE_LOAN));
         // - simple loan simple proposal
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanSimpleProposal), PWNHubTags.NONCE_MANAGER));
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanSimpleProposal), PWNHubTags.LOAN_PROPOSAL));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoanSimpleProposal), PWNHubTags.NONCE_MANAGER));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoanSimpleProposal), PWNHubTags.LOAN_PROPOSAL));
         // - simple loan list proposal
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanListProposal), PWNHubTags.NONCE_MANAGER));
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanListProposal), PWNHubTags.LOAN_PROPOSAL));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoanListProposal), PWNHubTags.NONCE_MANAGER));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoanListProposal), PWNHubTags.LOAN_PROPOSAL));
         // - simple loan elastic chainlink proposal
-        if (address(deployment.simpleLoanElasticChainlinkProposal) != address(0)) {
-            assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticChainlinkProposal), PWNHubTags.NONCE_MANAGER));
-            assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticChainlinkProposal), PWNHubTags.LOAN_PROPOSAL));
+        if (address(__d.simpleLoanElasticChainlinkProposal) != address(0)) {
+            assertTrue(__d.hub.hasTag(address(__d.simpleLoanElasticChainlinkProposal), PWNHubTags.NONCE_MANAGER));
+            assertTrue(__d.hub.hasTag(address(__d.simpleLoanElasticChainlinkProposal), PWNHubTags.LOAN_PROPOSAL));
         }
         // - simple loan elastic proposal
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticProposal), PWNHubTags.NONCE_MANAGER));
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanElasticProposal), PWNHubTags.LOAN_PROPOSAL));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoanElasticProposal), PWNHubTags.NONCE_MANAGER));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoanElasticProposal), PWNHubTags.LOAN_PROPOSAL));
         // - simple loan dutch auction proposal
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanDutchAuctionProposal), PWNHubTags.NONCE_MANAGER));
-        assertTrue(deployment.hub.hasTag(address(deployment.simpleLoanDutchAuctionProposal), PWNHubTags.LOAN_PROPOSAL));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoanDutchAuctionProposal), PWNHubTags.NONCE_MANAGER));
+        assertTrue(__d.hub.hasTag(address(__d.simpleLoanDutchAuctionProposal), PWNHubTags.LOAN_PROPOSAL));
     }
 
 
@@ -88,5 +88,7 @@ contract DeployedProtocolTest is DeploymentTest {
     function test_deployedProtocol_gnosis() external { _test_deployedProtocol("gnosis"); }
     function test_deployedProtocol_world() external { _test_deployedProtocol("world"); }
     function test_deployedProtocol_unichain() external { _test_deployedProtocol("unichain"); }
+    function test_deployedProtocol_ink() external { _test_deployedProtocol("ink"); }
+    function test_deployedProtocol_sonic() external { _test_deployedProtocol("sonic"); }
 
 }
