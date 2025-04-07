@@ -400,12 +400,12 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
     }
 
     function test_shouldFail_whenIntermediaryDenominationsOutOfBounds() external {
-        feedIntermediaryDenominations = new address[](3);
+        uint256 max = proposalContract.MAX_INTERMEDIARY_DENOMINATIONS();
+        feedIntermediaryDenominations = new address[](max + 1);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                PWNSimpleLoanElasticChainlinkProposal.IntermediaryDenominationsOutOfBounds.selector,
-                3, proposalContract.MAX_INTERMEDIARY_DENOMINATIONS()
+                PWNSimpleLoanElasticChainlinkProposal.IntermediaryDenominationsOutOfBounds.selector, max + 1, max
             )
         );
         proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, feedIntermediaryDenominations, feedInvertFlags, loanToValue);

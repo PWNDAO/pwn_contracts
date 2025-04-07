@@ -27,7 +27,7 @@ contract PWNSimpleLoanElasticChainlinkProposal is PWNSimpleLoanProposal {
 
     string public constant VERSION = "1.0";
 
-    uint256 public constant MAX_INTERMEDIARY_DENOMINATIONS = 2;
+    uint256 public constant MAX_INTERMEDIARY_DENOMINATIONS = 4;
 
     /**
      * @notice Loan to value denominator. It is used to calculate collateral amount from credit amount.
