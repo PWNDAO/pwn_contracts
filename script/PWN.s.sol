@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
+import { stdJson } from "forge-std/StdJson.sol";
 import { Script, console2 } from "forge-std/Script.sol";
 
 import { ITransparentUpgradeableProxy } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -86,65 +87,6 @@ contract Deploy is Deployments, Script {
         });
         require(success, "Deploy failed");
         return __e.deployer.computeAddress(salt, keccak256(bytecode));
-    }
-
-/*
-forge script script/PWN.s.sol:Deploy \
---sig "redeploySimpleLoanMultichain()" \
---private-key $PRIVATE_KEY \
---multi --verify --broadcast
-*/
-    /// addresses set in the `deployments/latest.json`.
-    function redeploySimpleLoanMultichain() external {
-        string[] memory chains = new string[](8);
-        chains[0] = "polygon";
-        chains[1] = "arbitrum";
-        chains[2] = "base";
-        chains[3] = "optimism";
-        chains[4] = "bsc";
-        chains[5] = "cronos";
-        chains[6] = "gnosis";
-        chains[7] = "world";
-        // linea - gas estimate is always super low and tx is pending for days -> execute separately
-
-        for (uint256 i; i < chains.length; ++i) {
-            redeploySimpleLoan(chains[i]);
-        }
-
-    }
-
-/*
-forge script script/PWN.s.sol:Deploy \
---sig "redeploySimpleLoan(string)" "sepolia" \
---private-key $PRIVATE_KEY \
---with-gas-price $(cast --to-wei 0.3 gwei) \
---verify --broadcast
-*/
-    function redeploySimpleLoan(string memory chain) public {
-        vm.createSelectFork(chain);
-        _loadDeployedAddresses();
-
-        vm.startBroadcast();
-
-        __d.simpleLoan = PWNSimpleLoan(_deploy({
-            salt: PWNContractDeployerSalt.SIMPLE_LOAN,
-            bytecode: abi.encodePacked(
-                type(PWNSimpleLoan).creationCode,
-                abi.encode(
-                    address(__d.hub),
-                    address(__d.loanToken),
-                    address(__d.config),
-                    address(__d.revokedNonce),
-                    address(__d.categoryRegistry)
-                )
-            )
-        }));
-
-        console2.log("------");
-        console2.log("chain: %s (%s)", chain, block.chainid);
-        console2.log("PWNSimpleLoan:", address(__d.simpleLoan));
-
-        vm.stopBroadcast();
     }
 
 /*
@@ -261,16 +203,17 @@ forge script script/PWN.s.sol:Deploy \
 */
     /// addresses set in the `deployments/latest.json`.
     function deployChainlinkSupportMultichain() external {
-        string[] memory chains = new string[](6);
+        string[] memory chains = new string[](7);
         chains[0] = "polygon";
         chains[1] = "arbitrum";
         chains[2] = "base";
         chains[3] = "optimism";
         chains[4] = "bsc";
         chains[5] = "gnosis";
+        chains[6] = "sonic";
         // linea - gas estimate is always super low and tx is pending for days -> execute separately
         // ethereum - set custom gas price
-        // cronos, world are not supported by Chainlink atm
+        // world, unichain, ink are not supported by Chainlink atm
 
         for (uint256 i; i < chains.length; ++i) {
             deployChainlinkSupport(chains[i]);
@@ -299,32 +242,21 @@ forge script script/PWN.s.sol:Deploy \
 
         vm.startBroadcast();
 
-        // - Chainlink feed registry
-        __d.chainlinkFeedRegistry = IChainlinkFeedRegistryLike(_deployAndTransferOwnership({ // Need ownership acceptance from the new owner
-            salt: PWNContractDeployerSalt.CHAINLINK_FEED_REGISTRY,
-            owner: __e.protocolTimelock,
-            bytecode: __cc.chainlinkFeedRegistry
-        }));
-
         // - Elastic Chainlink Proposal
-        __d.simpleLoanElasticChainlinkProposal = PWNSimpleLoanElasticChainlinkProposal(_deploy({
-            salt: PWNContractDeployerSalt.SIMPLE_LOAN_ELASTIC_CHAINLINK_PROPOSAL,
-            bytecode: abi.encodePacked(
-                type(PWNSimpleLoanElasticChainlinkProposal).creationCode,
-                abi.encode(
-                    address(__d.hub),
-                    address(__d.revokedNonce),
-                    address(__d.config),
-                    address(__d.utilizedCredit),
-                    address(__d.chainlinkFeedRegistry),
-                    __e.chainlinkL2SequencerUptimeFeed,
-                    __e.weth
+        if (__e.weth != address(0) && (
+            (__e.isL2 && __e.chainlinkL2SequencerUptimeFeed != address(0)) || (!__e.isL2 && __e.chainlinkL2SequencerUptimeFeed == address(0))
+        )) {
+            __d.simpleLoanElasticChainlinkProposal = PWNSimpleLoanElasticChainlinkProposal(_deploy({
+                salt: PWNContractDeployerSalt.SIMPLE_LOAN_ELASTIC_CHAINLINK_PROPOSAL,
+                bytecode: abi.encodePacked(
+                    __cc.simpleLoanElasticChainlinkProposal_v1_0, abi.encode(address(__d.hub), address(__d.revokedNonce), address(__d.config), address(__d.utilizedCredit), address(__d.chainlinkFeedRegistry), __e.chainlinkL2SequencerUptimeFeed, __e.weth)
                 )
-            )
-        }));
+            }));
+        } else {
+            revert("Unsupported chain");
+        }
 
         console2.log("Deployment:", chain);
-        console2.log("PWNChainlinkFeedRegistry:", address(__d.chainlinkFeedRegistry));
         console2.log("PWNSimpleLoanElasticChainlinkProposal:", address(__d.simpleLoanElasticChainlinkProposal));
         console2.log("-----------------");
 
@@ -495,6 +427,7 @@ forge script script/PWN.s.sol:Deploy \
 
 
 contract Setup is Deployments, Script {
+    using stdJson for string;
     using GnosisSafeUtils for GnosisSafeLike;
     using TimelockUtils for TimelockController;
 
@@ -680,7 +613,8 @@ forge script script/PWN.s.sol:Setup --sig "printTagsCalldata(string)" "chain"
 
         console2.log("Tags set succeeded (%s)", tags.length);
         for (uint256 i; i < addrs.length; ++i) {
-            console2.log("-- tag set:", addrs[i]);
+            if (set) console2.log("-- tag set:", addrs[i]);
+            else console2.log("-- tag removed:", addrs[i]);
             console2.logBytes32(tags[i]);
         }
     }
@@ -739,6 +673,56 @@ forge script script/PWN.s.sol:Setup \
         console2.log("Category registered:", assetAddress, category);
 
         vm.stopBroadcast();
+    }
+
+/*
+forge script script/PWN.s.sol:Setup --sig "printRegisterPriceFeeds(string)" "polygon"
+*/
+    function printRegisterPriceFeeds(string memory chain) external {
+        vm.createSelectFork(chain);
+        _loadDeployedAddresses();
+
+        require(address(__d.chainlinkFeedRegistry) != address(0), "Chainlink feed registry not set");
+
+        // Assumes that the price feeds are in the `script/priceFeeds.json` file and that the file is in the format:
+        // [
+        //   ["base", "quote", "feed"],
+        //   ...
+        //   ["base", "quote", "feed"]
+        // ]
+        string memory priceFeedsJson = vm.readFile(string.concat(vm.projectRoot(), "/script/priceFeeds.json"));
+        bytes memory rawPriceFeeds = priceFeedsJson.parseRaw(".");
+        address[][] memory feeds = abi.decode(rawPriceFeeds, (address[][]));
+
+        uint256 length = feeds.length;
+        address[] memory targets = new address[](length * 2);
+        uint256[] memory values = new uint256[](length * 2);
+        bytes[] memory payloads = new bytes[](length * 2);
+
+        for (uint256 i; i < length; ++i) {
+            require(feeds[i].length == 3, "Invalid price feed");
+
+            targets[i] = address(__d.chainlinkFeedRegistry);
+            targets[i + length] = address(__d.chainlinkFeedRegistry);
+            payloads[i] = abi.encodeWithSelector(
+                IChainlinkFeedRegistryLike.proposeFeed.selector, feeds[i][0], feeds[i][1], feeds[i][2]
+            );
+            payloads[i + length] = abi.encodeWithSelector(
+                IChainlinkFeedRegistryLike.confirmFeed.selector, feeds[i][0], feeds[i][1], feeds[i][2]
+            );
+        }
+
+        bytes memory sbCalldata = abi.encodeWithSelector(
+            TimelockController.scheduleBatch.selector, targets, values, payloads, bytes32(0), bytes32(0), 0
+        );
+        bytes memory ebCalldata = abi.encodeWithSelector(
+            TimelockController.executeBatch.selector, targets, values, payloads, bytes32(0), bytes32(0)
+        );
+
+        console2.log("scheduleBatch calldata:");
+        console2.logBytes(sbCalldata);
+        console2.log("executeBatch calldata:");
+        console2.logBytes(ebCalldata);
     }
 
 }

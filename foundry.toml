@@ -6,7 +6,8 @@ evm_version = "london"
 fs_permissions = [
     { access = "read", path = "./deployments/protocol/v1.3.json"},
     { access = "read", path = "./deployments/external/external.json"},
-    { access = "read", path = "./deployments/creation/creationCode.json"}
+    { access = "read", path = "./deployments/creation/creationCode.json"},
+    { access = "read", path = "./script/priceFeeds.json"},
 ]
 gas_reports = ["PWNSimpleLoan"]
 
