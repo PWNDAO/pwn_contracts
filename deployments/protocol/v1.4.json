@@ -1,3 +1,20 @@
 {
-
+    "11155111": {
+        "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
+        "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
+        "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
+        "config": "0xd52a2898d61636bB3eEF0d145f05352FF543bdCC",
+        "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+        "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+        "revokedNonce": "0x972204fF33348ee6889B2d0A3967dB67d7b08e4c",
+        "utilizedCredit": "0x8E6F44DEa3c11d69C63655BDEcbA25Fa986BCE9D",
+        "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
+        "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
+        "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
+        "simpleLoanElasticChainlinkProposal": "0x39fd308D651F5add5A4826D12Bf92d9D91E732AC",
+        "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
+        "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369",
+        "simpleLoanUniswapV3LPIndividualProposal": "0xF966696BE0623447679AC830FC5bB7bDB15FEAB4",
+        "simpleLoanUniswapV3LPSetProposal": "0x4D067c921AC90cC4b1e962ea0e743Ef8d85Fb0E9"
+    }
 }

@@ -20,6 +20,8 @@ import {
     PWNSimpleLoanElasticChainlinkProposal,
     PWNSimpleLoanListProposal,
     PWNSimpleLoanSimpleProposal,
+    PWNSimpleLoanUniswapV3LPIndividualProposal,
+    PWNSimpleLoanUniswapV3LPSetProposal,
     PWNLOAN,
     PWNRevokedNonce,
     PWNUtilizedCredit,
@@ -48,6 +50,8 @@ library PWNContractDeployerSalt {
     bytes32 internal constant SIMPLE_LOAN_ELASTIC_PROPOSAL = keccak256("PWNSimpleLoanElasticProposal");
     bytes32 internal constant SIMPLE_LOAN_ELASTIC_CHAINLINK_PROPOSAL = keccak256("PWNSimpleLoanElasticChainlinkProposal");
     bytes32 internal constant SIMPLE_LOAN_DUTCH_AUCTION_PROPOSAL = keccak256("PWNSimpleLoanDutchAuctionProposal");
+    bytes32 internal constant SIMPLE_LOAN_UNISWAP_V3_INDIVIDUAL_PROPOSAL = keccak256("PWNSimpleLoanUniswapV3LPIndividualProposal");
+    bytes32 internal constant SIMPLE_LOAN_UNISWAP_V3_SET_PROPOSAL = keccak256("PWNSimpleLoanUniswapV3LPSetProposal");
 
 }
 
@@ -90,59 +94,75 @@ contract Deploy is Deployments, Script {
 
 /*
 forge script script/PWN.s.sol:Deploy \
---sig "redeploySimpleLoanMultichain()" \
+--sig "deployUniswapProposalsMultichain()" \
 --private-key $PRIVATE_KEY \
 --multi --verify --broadcast
 */
     /// addresses set in the `deployments/latest.json`.
-    function redeploySimpleLoanMultichain() external {
-        string[] memory chains = new string[](8);
-        chains[0] = "polygon";
-        chains[1] = "arbitrum";
-        chains[2] = "base";
-        chains[3] = "optimism";
-        chains[4] = "bsc";
-        chains[5] = "cronos";
-        chains[6] = "gnosis";
-        chains[7] = "world";
+    function deployUniswapProposalsMultichain() external {
+        string[] memory chains = new string[](0);
+
         // linea - gas estimate is always super low and tx is pending for days -> execute separately
 
         for (uint256 i; i < chains.length; ++i) {
-            redeploySimpleLoan(chains[i]);
+            deployUniswapProposals(chains[i]);
         }
 
     }
 
 /*
 forge script script/PWN.s.sol:Deploy \
---sig "redeploySimpleLoan(string)" "sepolia" \
+--sig "deployUniswapProposals(string)" "sepolia" \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 0.3 gwei) \
 --verify --broadcast
 */
-    function redeploySimpleLoan(string memory chain) public {
+    function deployUniswapProposals(string memory chain) public {
         vm.createSelectFork(chain);
         _loadDeployedAddresses();
 
         vm.startBroadcast();
 
-        __d.simpleLoan = PWNSimpleLoan(_deploy({
-            salt: PWNContractDeployerSalt.SIMPLE_LOAN,
+        __d.simpleLoanUniswapV3LPIndividualProposal = PWNSimpleLoanUniswapV3LPIndividualProposal(_deploy({
+            salt: PWNContractDeployerSalt.SIMPLE_LOAN_UNISWAP_V3_INDIVIDUAL_PROPOSAL,
             bytecode: abi.encodePacked(
-                type(PWNSimpleLoan).creationCode,
+                type(PWNSimpleLoanUniswapV3LPIndividualProposal).creationCode,
                 abi.encode(
                     address(__d.hub),
-                    address(__d.loanToken),
-                    address(__d.config),
                     address(__d.revokedNonce),
-                    address(__d.categoryRegistry)
+                    address(__d.config),
+                    address(__d.utilizedCredit),
+                    address(__e.uniswapV3Factory),
+                    address(__e.uniswapV3NFTPositionManager),
+                    address(__d.chainlinkFeedRegistry),
+                    address(__e.chainlinkL2SequencerUptimeFeed),
+                    address(__e.weth)
                 )
             )
         }));
 
-        console2.log("------");
+        __d.simpleLoanUniswapV3LPSetProposal = PWNSimpleLoanUniswapV3LPSetProposal(_deploy({
+            salt: PWNContractDeployerSalt.SIMPLE_LOAN_UNISWAP_V3_SET_PROPOSAL,
+            bytecode: abi.encodePacked(
+                type(PWNSimpleLoanUniswapV3LPSetProposal).creationCode,
+                abi.encode(
+                    address(__d.hub),
+                    address(__d.revokedNonce),
+                    address(__d.config),
+                    address(__d.utilizedCredit),
+                    address(__e.uniswapV3Factory),
+                    address(__e.uniswapV3NFTPositionManager),
+                    address(__d.chainlinkFeedRegistry),
+                    address(__e.chainlinkL2SequencerUptimeFeed),
+                    address(__e.weth)
+                )
+            )
+        }));
+
         console2.log("chain: %s (%s)", chain, block.chainid);
-        console2.log("PWNSimpleLoan:", address(__d.simpleLoan));
+        console2.log("PWNSimpleLoanUniswapV3LPIndividualProposal:", address(__d.simpleLoanUniswapV3LPIndividualProposal));
+        console2.log("PWNSimpleLoanUniswapV3LPSetProposal:", address(__d.simpleLoanUniswapV3LPSetProposal));
+        console2.log("------");
 
         vm.stopBroadcast();
     }
