@@ -23,6 +23,7 @@ jobs:
       UNICHAIN_URL: ${{ secrets.UNICHAIN_URL }}
       INK_URL: ${{ secrets.INK_URL }}
       SONIC_URL: ${{ secrets.SONIC_URL }}
+      CELO_URL: ${{ secrets.CELO_URL }}
       BASE_GOERLI_URL: ${{ secrets.BASE_GOERLI_URL }}
       CRONOS_TESTNET_URL: ${{ secrets.CRONOS_TESTNET_URL }}
       MANTLE_TESTNET_URL: ${{ secrets.MANTLE_TESTNET_URL }}

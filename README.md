@@ -43,6 +43,7 @@ Elastic Chainlink Proposal addresses differ across chains due to unique construc
 | World Chain                            | --- not deployed ---                       |
 | Base                                   | 0xB6E4B8Ba8E26ac8d4979a8227DAda26bD3Ac9A10 |
 | Arbitrum                               | 0xc566994F7c9D65C58a8f0C16F91b00Da6aE32BB6 |
+| Celo                                   | 0x53fb85416cAeEE7f4d142F88685e2094f6E9E985 |
 | Linea                                  | 0x8E9955B34606f601491c14d5cc8247F5E0477ff1 |
 | Ink                                    | --- not deployed ---                       |
 | Sepolia                                | 0xC46170F43b97faE1A8B507d6fdDaFfBb7527D61B |
@@ -63,6 +64,7 @@ PWN is deployed on the following chains:
 - World Chain (480)
 - Base (8453)
 - Arbitrum (42161)
+- Celo (42220)
 - Ink (57073)
 - Linea (59144)
 - Sepolia (11155111)

@@ -90,5 +90,6 @@ contract DeployedProtocolTest is DeploymentTest {
     function test_deployedProtocol_unichain() external { _test_deployedProtocol("unichain"); }
     function test_deployedProtocol_ink() external { _test_deployedProtocol("ink"); }
     function test_deployedProtocol_sonic() external { _test_deployedProtocol("sonic"); }
+    function test_deployedProtocol_celo() external { _test_deployedProtocol("celo"); }
 
 }
