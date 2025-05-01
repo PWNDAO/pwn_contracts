@@ -52,9 +52,11 @@ library PWNContractDeployerSalt {
 
 }
 
+using stdJson for string;
+using GnosisSafeUtils for GnosisSafeLike;
+using TimelockUtils for TimelockController;
 
 contract Deploy is Deployments, Script {
-    using GnosisSafeUtils for GnosisSafeLike;
 
     function _protocolNotDeployedOnSelectedChain() internal pure override {
         revert("PWN: selected chain is not set in deployments/latest.json");
@@ -117,7 +119,7 @@ forge script script/PWN.s.sol:Deploy \
 
 /*
 forge script script/PWN.s.sol:Deploy \
---sig "deployNewProtocolVersion(string)" "mainnet" \
+--sig "deployNewProtocolVersion(string)" "chain" \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 3 gwei) \
 --verify --broadcast
@@ -420,23 +422,19 @@ forge script script/PWN.s.sol:Deploy \
         console2.log("PWNSimpleLoanElasticProposal:", address(__d.simpleLoanElasticProposal));
         console2.log("PWNSimpleLoanDutchAuctionProposal:", address(__d.simpleLoanDutchAuctionProposal));
 
+        _acceptOwnership(__e.daoSafe, __e.protocolTimelock, address(__d.categoryRegistry));
+        _acceptOwnership(__e.daoSafe, __e.protocolTimelock, address(__d.hub));
+        _acceptOwnership(__e.daoSafe, __e.protocolTimelock, address(__d.chainlinkFeedRegistry));
+        _setTags(true);
+
         vm.stopBroadcast();
     }
 
-}
 
-
-contract Setup is Deployments, Script {
-    using stdJson for string;
-    using GnosisSafeUtils for GnosisSafeLike;
-    using TimelockUtils for TimelockController;
-
-    function _protocolNotDeployedOnSelectedChain() internal pure override {
-        revert("PWN: selected chain is not set in deployments/latest.json");
-    }
+    // # Setup
 
 /*
-forge script script/PWN.s.sol:Setup \
+forge script script/PWN.s.sol:Deploy \
 --sig "setupNewProtocolVersion()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
@@ -456,7 +454,7 @@ forge script script/PWN.s.sol:Setup \
     }
 
 /*
-forge script script/PWN.s.sol:Setup \
+forge script script/PWN.s.sol:Deploy \
 --sig "setupProtocol()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
@@ -483,7 +481,7 @@ forge script script/PWN.s.sol:Setup \
     }
 
 /*
-forge script script/PWN.s.sol:Setup \
+forge script script/PWN.s.sol:Deploy \
 --sig "removeCurrentLoanProposalTags()" \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
@@ -507,7 +505,7 @@ forge script script/PWN.s.sol:Setup \
     }
 
 /*
-forge script script/PWN.s.sol:Setup --sig "printTagsCalldata(string)" "chain"
+forge script script/PWN.s.sol:Deploy --sig "printTagsCalldata(string)" "chain"
 */
     function printTagsCalldata(string memory chain) external {
         vm.createSelectFork(chain);
@@ -620,7 +618,7 @@ forge script script/PWN.s.sol:Setup --sig "printTagsCalldata(string)" "chain"
     }
 
 /*
-forge script script/PWN.s.sol:Setup \
+forge script script/PWN.s.sol:Deploy \
 --sig "setDefaultMetadata(string)" $METADATA \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
@@ -648,7 +646,7 @@ forge script script/PWN.s.sol:Setup \
     }
 
 /*
-forge script script/PWN.s.sol:Setup \
+forge script script/PWN.s.sol:Deploy \
 --sig "registerCategory()" {addr} {category} \
 --rpc-url $RPC_URL \
 --private-key $PRIVATE_KEY \
@@ -676,7 +674,7 @@ forge script script/PWN.s.sol:Setup \
     }
 
 /*
-forge script script/PWN.s.sol:Setup --sig "printRegisterPriceFeeds(string)" "polygon"
+forge script script/PWN.s.sol:Deploy --sig "printRegisterPriceFeeds(string)" "chain"
 */
     function printRegisterPriceFeeds(string memory chain) external {
         vm.createSelectFork(chain);
