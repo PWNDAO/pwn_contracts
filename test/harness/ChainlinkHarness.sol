@@ -5,7 +5,7 @@ import {
     Chainlink,
     IChainlinkFeedRegistryLike,
     IChainlinkAggregatorLike
-} from "pwn/loan/lib/Chainlink.sol";
+} from "pwn/core/lib/Chainlink.sol";
 
 
 contract ChainlinkHarness {

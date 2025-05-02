@@ -5,8 +5,8 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 
 import { Math } from "openzeppelin/utils/math/Math.sol";
 
-import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+import { LoanTerms as Terms } from "pwn/core/loan/LoanTerms.sol";
+import { PWNSimpleLoanProposal } from "pwn/core/proposal/PWNSimpleLoanProposal.sol";
 
 
 /**
@@ -217,7 +217,7 @@ contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
         bytes calldata proposalData,
         bytes32[] calldata proposalInclusionProof,
         bytes calldata signature
-    ) override external returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms) {
+    ) override external returns (bytes32 proposalHash, Terms memory loanTerms) {
         // Decode proposal data
         (Proposal memory proposal, ProposalValues memory proposalValues) = decodeProposalData(proposalData);
 
@@ -270,7 +270,7 @@ contract PWNSimpleLoanElasticProposal is PWNSimpleLoanProposal {
         );
 
         // Create loan terms object
-        loanTerms = PWNSimpleLoan.Terms({
+        loanTerms = Terms({
             lender: proposal.isOffer ? proposal.proposer : acceptor,
             borrower: proposal.isOffer ? acceptor : proposal.proposer,
             duration: _getLoanDuration(proposal.durationOrDate),

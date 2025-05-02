@@ -8,20 +8,20 @@ import { MultiTokenCategoryRegistry } from "MultiToken/MultiTokenCategoryRegistr
 
 import { Strings } from "openzeppelin/utils/Strings.sol";
 
-import { PWNConfig } from "pwn/config/PWNConfig.sol";
-import { PWNHub } from "pwn/hub/PWNHub.sol";
-import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
-import { IChainlinkFeedRegistryLike } from "pwn/interfaces/IChainlinkFeedRegistryLike.sol";
-import { IPWNDeployer } from "pwn/interfaces/IPWNDeployer.sol";
-import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanDutchAuctionProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
-import { PWNSimpleLoanElasticChainlinkProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticChainlinkProposal.sol";
-import { PWNSimpleLoanElasticProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanElasticProposal.sol";
-import { PWNSimpleLoanListProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanListProposal.sol";
-import { PWNSimpleLoanSimpleProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanSimpleProposal.sol";
-import { PWNSimpleLoanUniswapV3LPIndividualProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPIndividualProposal.sol";
-import { PWNSimpleLoanUniswapV3LPSetProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPSetProposal.sol";
-import { PWNLOAN } from "pwn/loan/token/PWNLOAN.sol";
+import { PWNConfig } from "pwn/core/config/PWNConfig.sol";
+import { PWNHub } from "pwn/core/hub/PWNHub.sol";
+import { PWNHubTags } from "pwn/core/hub/PWNHubTags.sol";
+import { IChainlinkFeedRegistryLike } from "pwn/core/interfaces/IChainlinkFeedRegistryLike.sol";
+import { IPWNDeployer } from "pwn/core/interfaces/IPWNDeployer.sol";
+import { PWNLoan as PWNSimpleLoan } from "pwn/core/loan/PWNLoan.sol";
+import { PWNSimpleLoanDutchAuctionProposal } from "pwn/core/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
+import { PWNSimpleLoanElasticChainlinkProposal } from "pwn/core/proposal/PWNSimpleLoanElasticChainlinkProposal.sol";
+import { PWNSimpleLoanElasticProposal } from "pwn/core/proposal/PWNSimpleLoanElasticProposal.sol";
+import { PWNSimpleLoanListProposal } from "pwn/core/proposal/PWNSimpleLoanListProposal.sol";
+import { PWNSimpleLoanSimpleProposal } from "pwn/core/proposal/PWNSimpleLoanSimpleProposal.sol";
+import { PWNSimpleLoanUniswapV3LPIndividualProposal } from "pwn/core/proposal/PWNSimpleLoanUniswapV3LPIndividualProposal.sol";
+import { PWNSimpleLoanUniswapV3LPSetProposal } from "pwn/core/proposal/PWNSimpleLoanUniswapV3LPSetProposal.sol";
+import { PWNLOAN } from "pwn/core/token/PWNLOAN.sol";
 import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
 import { PWNUtilizedCredit } from "pwn/utilized-credit/PWNUtilizedCredit.sol";
 

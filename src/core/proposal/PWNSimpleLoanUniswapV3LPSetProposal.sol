@@ -9,13 +9,13 @@ import {
     Chainlink,
     IChainlinkFeedRegistryLike,
     IChainlinkAggregatorLike
-} from "pwn/loan/lib/Chainlink.sol";
+} from "pwn/core/lib/Chainlink.sol";
 import {
     UniswapV3,
     INonfungiblePositionManager
-} from "pwn/loan/lib/UniswapV3.sol";
-import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
-import { PWNSimpleLoanProposal } from "pwn/loan/terms/simple/proposal/PWNSimpleLoanProposal.sol";
+} from "pwn/core/lib/UniswapV3.sol";
+import { LoanTerms as Terms } from "pwn/core/loan/LoanTerms.sol";
+import { PWNSimpleLoanProposal } from "pwn/core/proposal/PWNSimpleLoanProposal.sol";
 
 
 /**
@@ -231,7 +231,7 @@ contract PWNSimpleLoanUniswapV3LPSetProposal is PWNSimpleLoanProposal {
         bytes calldata proposalData,
         bytes32[] calldata proposalInclusionProof,
         bytes calldata signature
-    ) override external returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms) {
+    ) override external returns (bytes32 proposalHash, Terms memory loanTerms) {
         // Decode proposal data
         (Proposal memory proposal, ProposalValues memory proposalValues) = decodeProposalData(proposalData);
 
@@ -245,7 +245,7 @@ contract PWNSimpleLoanUniswapV3LPSetProposal is PWNSimpleLoanProposal {
 
         bool token0Denominator = _checkLPTokenPair(proposal, proposalValues);
         // Fill loan terms object
-        loanTerms = PWNSimpleLoan.Terms({
+        loanTerms = Terms({
             lender: proposal.isOffer ? proposal.proposer : acceptor,
             borrower: proposal.isOffer ? acceptor : proposal.proposer,
             duration: _getLoanDuration(proposal.durationOrDate),

@@ -3,9 +3,9 @@ pragma solidity 0.8.16;
 
 import { Math } from "openzeppelin/utils/math/Math.sol";
 
-import { IChainlinkAggregatorLike } from "pwn/interfaces/IChainlinkAggregatorLike.sol";
-import { IChainlinkFeedRegistryLike } from "pwn/interfaces/IChainlinkFeedRegistryLike.sol";
-import { safeFetchDecimals } from "pwn/loan/utils/safeFetchDecimals.sol";
+import { IChainlinkAggregatorLike } from "pwn/core/interfaces/IChainlinkAggregatorLike.sol";
+import { IChainlinkFeedRegistryLike } from "pwn/core/interfaces/IChainlinkFeedRegistryLike.sol";
+import { safeFetchDecimals } from "pwn/core/utils/safeFetchDecimals.sol";
 
 
 library Chainlink {

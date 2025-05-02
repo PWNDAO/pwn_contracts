@@ -3,8 +3,8 @@ pragma solidity 0.8.16;
 
 import { Ownable2StepUpgradeable } from "openzeppelin-upgradeable/access/Ownable2StepUpgradeable.sol";
 
-import { IPoolAdapter } from "pwn/interfaces/IPoolAdapter.sol";
-import { IStateFingerpringComputer } from "pwn/interfaces/IStateFingerpringComputer.sol";
+import { IPoolAdapter } from "pwn/core/interfaces/IPoolAdapter.sol";
+import { IStateFingerpringComputer } from "pwn/core/interfaces/IStateFingerpringComputer.sol";
 
 
 /**
@@ -28,26 +28,20 @@ contract PWNConfig is Ownable2StepUpgradeable {
      */
     uint16 public fee;
 
-    /**
-     * @notice Address that collects protocol fees.
-     */
+    /** @notice Address that collects protocol fees.*/
     address public feeCollector;
 
     /**
      * @notice Mapping of a loan contract address to LOAN token metadata uri.
      * @dev LOAN token minted by a loan contract will return metadata uri stored in this mapping.
-     *      If there is no metadata uri for a loan contract, default metadata uri will be used stored under address(0).
+     * If there is no metadata uri for a loan contract, default metadata uri will be used stored under address(0).
      */
     mapping (address => string) private _loanMetadataUri;
 
-    /**
-     * @notice Mapping holding registered state fingerprint computer to an asset.
-     */
+    /** @notice Mapping holding registered state fingerprint computer to an asset.*/
     mapping (address => address) private _sfComputerRegistry;
 
-    /**
-     * @notice Mapping holding registered pool adapter to a pool address.
-     */
+    /** @notice Mapping holding registered pool adapter to a pool address.*/
     mapping (address => address) private _poolAdapterRegistry;
 
 
@@ -55,24 +49,13 @@ contract PWNConfig is Ownable2StepUpgradeable {
     |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Emitted when new fee value is set.
-     */
+    /** @notice Emitted when new fee value is set.*/
     event FeeUpdated(uint16 oldFee, uint16 newFee);
-
-    /**
-     * @notice Emitted when new fee collector address is set.
-     */
+    /** @notice Emitted when new fee collector address is set.*/
     event FeeCollectorUpdated(address oldFeeCollector, address newFeeCollector);
-
-    /**
-     * @notice Emitted when new LOAN token metadata uri is set.
-     */
+    /** @notice Emitted when new LOAN token metadata uri is set.*/
     event LOANMetadataUriUpdated(address indexed loanContract, string newUri);
-
-    /**
-     * @notice Emitted when new default LOAN token metadata uri is set.
-     */
+    /** @notice Emitted when new default LOAN token metadata uri is set.*/
     event DefaultLOANMetadataUriUpdated(string newUri);
 
 
@@ -80,24 +63,13 @@ contract PWNConfig is Ownable2StepUpgradeable {
     |*  # ERRORS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Thrown when registering a computer which does not support the asset it is registered for.
-     */
+    /** @notice Thrown when registering a computer which does not support the asset it is registered for.*/
     error InvalidComputerContract(address computer, address asset);
-
-    /**
-     * @notice Thrown when trying to set a fee value higher than `MAX_FEE`.
-     */
+    /** @notice Thrown when trying to set a fee value higher than `MAX_FEE`.*/
     error InvalidFeeValue(uint256 fee, uint256 limit);
-
-    /**
-     * @notice Thrown when trying to set a fee collector to zero address.
-     */
+    /** @notice Thrown when trying to set a fee collector to zero address.*/
     error ZeroFeeCollector();
-
-    /**
-     * @notice Thrown when trying to set a LOAN token metadata uri for zero address loan contract.
-     */
+    /** @notice Thrown when trying to set a LOAN token metadata uri for zero address loan contract.*/
     error ZeroLoanContract();
 
 

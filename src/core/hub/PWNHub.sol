@@ -14,9 +14,7 @@ contract PWNHub is Ownable2Step {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @dev Mapping of address tags. (contract address => tag => is tagged)
-     */
+    /** @dev Mapping of address tags. (contract address => tag => is tagged)*/
     mapping (address => mapping (bytes32 => bool)) private tags;
 
 
@@ -24,9 +22,7 @@ contract PWNHub is Ownable2Step {
     |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Emitted when tag is set for an address.
-     */
+    /** @notice Emitted when tag is set for an address.*/
     event TagSet(address indexed _address, bytes32 indexed tag, bool hasTag);
 
 
@@ -34,9 +30,7 @@ contract PWNHub is Ownable2Step {
     |*  # ERRORS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Thrown when `PWNHub.setTags` inputs lengths are not equal.
-     */
+    /** @notice Thrown when `PWNHub.setTags` inputs lengths are not equal.*/
     error InvalidInputData();
 
 

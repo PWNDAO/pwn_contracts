@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import {
     PWNSimpleLoanUniswapV3LPSetProposal
-} from "pwn/loan/terms/simple/proposal/PWNSimpleLoanUniswapV3LPSetProposal.sol";
+} from "pwn/core/proposal/PWNSimpleLoanUniswapV3LPSetProposal.sol";
 
 
 contract PWNSimpleLoanUniswapV3LPSetProposalHarness is PWNSimpleLoanUniswapV3LPSetProposal {

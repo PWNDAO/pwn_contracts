@@ -4,13 +4,13 @@ pragma solidity 0.8.16;
 import { MerkleProof } from "openzeppelin/utils/cryptography/MerkleProof.sol";
 import { ERC165Checker } from "openzeppelin/utils/introspection/ERC165Checker.sol";
 
-import { PWNConfig, IStateFingerpringComputer } from "pwn/config/PWNConfig.sol";
-import { PWNHub } from "pwn/hub/PWNHub.sol";
-import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
-import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
-import { IPWNAcceptorController } from "pwn/interfaces/IPWNAcceptorController.sol";
-import { PWNSignatureChecker } from "pwn/loan/lib/PWNSignatureChecker.sol";
-import { PWNSimpleLoan } from "pwn/loan/terms/simple/loan/PWNSimpleLoan.sol";
+import { PWNConfig, IStateFingerpringComputer } from "pwn/core/config/PWNConfig.sol";
+import { PWNHub } from "pwn/core/hub/PWNHub.sol";
+import { PWNHubTags } from "pwn/core/hub/PWNHubTags.sol";
+import { IERC5646 } from "pwn/core/interfaces/IERC5646.sol";
+import { IPWNAcceptorController } from "pwn/core/interfaces/IPWNAcceptorController.sol";
+import { PWNSignatureChecker } from "pwn/core/lib/PWNSignatureChecker.sol";
+import { LoanTerms as Terms } from "pwn/core/loan/LoanTerms.sol";
 import { PWNUtilizedCredit } from "pwn/utilized-credit/PWNUtilizedCredit.sol";
 import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
 import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
@@ -191,7 +191,7 @@ abstract contract PWNSimpleLoanProposal {
         bytes calldata proposalData,
         bytes32[] calldata proposalInclusionProof,
         bytes calldata signature
-    ) virtual external returns (bytes32 proposalHash, PWNSimpleLoan.Terms memory loanTerms);
+    ) virtual external returns (bytes32 proposalHash, Terms memory loanTerms);
 
 
     /*----------------------------------------------------------*|

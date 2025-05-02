@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { IChainlinkAggregatorLike } from "pwn/interfaces/IChainlinkAggregatorLike.sol";
+import { IChainlinkAggregatorLike } from "pwn/core/interfaces/IChainlinkAggregatorLike.sol";
 
 
 /**

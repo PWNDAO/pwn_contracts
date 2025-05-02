@@ -3,10 +3,10 @@ pragma solidity 0.8.16;
 
 import { ERC721 } from "openzeppelin/token/ERC721/ERC721.sol";
 
-import { PWNHub } from "pwn/hub/PWNHub.sol";
-import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
-import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
-import { IPWNLoanMetadataProvider } from "pwn/interfaces/IPWNLoanMetadataProvider.sol";
+import { PWNHub } from "pwn/core/hub/PWNHub.sol";
+import { PWNHubTags } from "pwn/core/hub/PWNHubTags.sol";
+import { IERC5646 } from "pwn/core/interfaces/IERC5646.sol";
+import { IPWNLoanMetadataProvider } from "pwn/core/interfaces/IPWNLoanMetadataProvider.sol";
 
 
 /**
@@ -23,14 +23,10 @@ contract PWNLOAN is ERC721, IERC5646 {
 
     PWNHub public immutable hub;
 
-    /**
-     * @dev Last used LOAN id. First LOAN id is 1. This value is incremental.
-     */
+    /** @dev Last used LOAN id. First LOAN id is 1. This value is incremental.*/
     uint256 public lastLoanId;
 
-    /**
-     * @dev Mapping of a LOAN id to a loan contract that minted the LOAN token.
-     */
+    /** @dev Mapping of a LOAN id to a loan contract that minted the LOAN token.*/
     mapping (uint256 => address) public loanContract;
 
 
@@ -38,14 +34,9 @@ contract PWNLOAN is ERC721, IERC5646 {
     |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Emitted when a new LOAN token is minted.
-     */
+    /** @notice Emitted when a new LOAN token is minted.*/
     event LOANMinted(uint256 indexed loanId, address indexed loanContract, address indexed owner);
-
-    /**
-     * @notice Emitted when a LOAN token is burned.
-     */
+    /** @notice Emitted when a LOAN token is burned.*/
     event LOANBurned(uint256 indexed loanId);
 
 
@@ -53,14 +44,9 @@ contract PWNLOAN is ERC721, IERC5646 {
     |*  # ERRORS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Thrown when `PWNLOAN.burn` caller is not a loan contract that minted the LOAN token.
-     */
+    /** @notice Thrown when `PWNLOAN.burn` caller is not a loan contract that minted the LOAN token.*/
     error InvalidLoanContractCaller();
-
-    /**
-     * @notice Thrown when caller is missing a PWN Hub tag.
-     */
+    /** @notice Thrown when caller is missing a PWN Hub tag.*/
     error CallerMissingHubTag(bytes32 tag);
 
 
@@ -104,7 +90,7 @@ contract PWNLOAN is ERC721, IERC5646 {
     /**
      * @notice Burn a LOAN token.
      * @dev Any address that is associated with given loan id can call this function.
-     *      It is enabled to let deprecated loan contracts repay and claim existing loans.
+     * It is enabled to let deprecated loan contracts repay and claim existing loans.
      * @param loanId Id of a LOAN token to be burned.
      */
     function burn(uint256 loanId) external {
@@ -137,9 +123,7 @@ contract PWNLOAN is ERC721, IERC5646 {
     |*  # ERC5646                                               *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @dev See {IERC5646-getStateFingerprint}.
-     */
+    /** @dev See {IERC5646-getStateFingerprint}.*/
     function getStateFingerprint(uint256 tokenId) external view virtual override returns (bytes32) {
         address _loanContract = loanContract[tokenId];
 
@@ -154,9 +138,7 @@ contract PWNLOAN is ERC721, IERC5646 {
     |*  # ERC165                                                *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
+    /** @dev See {IERC165-supportsInterface}.*/
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return super.supportsInterface(interfaceId) ||
             interfaceId == type(IERC5646).interfaceId;
