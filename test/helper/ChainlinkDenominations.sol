@@ -4,5 +4,5 @@ pragma solidity 0.8.16;
 library ChainlinkDenominations {
     address public constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address public constant BTC = 0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB;
-    address public constant USD = address(840);
+    address public constant USD = 0x0000000000000000000000000000000000000348;
 }

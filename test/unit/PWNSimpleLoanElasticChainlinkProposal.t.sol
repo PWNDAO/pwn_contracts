@@ -62,8 +62,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
             accruingInterestAPR: 0,
             durationOrDate: 1 days,
             expiration: 60303,
-            acceptorController: address(0),
-            acceptorControllerData: "",
+            allowedAcceptor: address(0),
             proposer: proposer,
             proposerSpecHash: keccak256("proposer spec"),
             isOffer: true,
@@ -74,8 +73,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
         });
 
         proposalValues = PWNSimpleLoanElasticChainlinkProposal.ProposalValues({
-            creditAmount: 1000,
-            acceptorControllerData: ""
+            creditAmount: 1000
         });
 
         _mockFeed(feed);
@@ -91,12 +89,12 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
             keccak256(abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256("PWNSimpleLoanElasticChainlinkProposal"),
-                keccak256("1.1"),
+                keccak256("1.0"),
                 block.chainid,
                 proposalContractAddr
             )),
             keccak256(abi.encodePacked(
-                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address acceptorController,bytes acceptorControllerData,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
+                keccak256("Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,bool checkCollateralStateFingerprint,bytes32 collateralStateFingerprint,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 fixedInterestAmount,uint24 accruingInterestAPR,uint32 durationOrDate,uint40 expiration,address allowedAcceptor,address proposer,bytes32 proposerSpecHash,bool isOffer,uint256 refinancingLoanId,uint256 nonceSpace,uint256 nonce,address loanContract)"),
                 proposalContract.exposed_erc712EncodeProposal(_proposal)
             ))
         ));
@@ -111,8 +109,7 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
         proposal.utilizedCreditId = _params.utilizedCreditId;
         proposal.durationOrDate = _params.durationOrDate;
         proposal.expiration = _params.expiration;
-        proposal.acceptorController = _params.acceptorController;
-        proposal.acceptorControllerData = _params.acceptorControllerProposerData;
+        proposal.allowedAcceptor = _params.allowedAcceptor;
         proposal.proposer = _params.proposer;
         proposal.isOffer = _params.isOffer;
         proposal.refinancingLoanId = _params.refinancingLoanId;
@@ -121,7 +118,6 @@ abstract contract PWNSimpleLoanElasticChainlinkProposalTest is PWNSimpleLoanProp
         proposal.loanContract = _params.loanContract;
 
         proposalValues.creditAmount = _params.creditAmount;
-        proposalValues.acceptorControllerData = _params.acceptorControllerAcceptorData;
 
         vm.etch(proposal.collateralAddress, "bytes");
     }
@@ -311,8 +307,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_DecodeProposalData_Test is PWNSim
         assertEq(_proposal.accruingInterestAPR, proposal.accruingInterestAPR);
         assertEq(_proposal.durationOrDate, proposal.durationOrDate);
         assertEq(_proposal.expiration, proposal.expiration);
-        assertEq(_proposal.acceptorController, proposal.acceptorController);
-        assertEq(_proposal.acceptorControllerData, proposal.acceptorControllerData);
+        assertEq(_proposal.allowedAcceptor, proposal.allowedAcceptor);
         assertEq(_proposal.proposer, proposal.proposer);
         assertEq(_proposal.isOffer, proposal.isOffer);
         assertEq(_proposal.refinancingLoanId, proposal.refinancingLoanId);
@@ -321,7 +316,6 @@ contract PWNSimpleLoanElasticChainlinkProposal_DecodeProposalData_Test is PWNSim
         assertEq(_proposal.loanContract, proposal.loanContract);
 
         assertEq(_proposalValues.creditAmount, proposalValues.creditAmount);
-        assertEq(_proposalValues.acceptorControllerData, proposalValues.acceptorControllerData);
     }
 
 }
@@ -406,12 +400,12 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
     }
 
     function test_shouldFail_whenIntermediaryDenominationsOutOfBounds() external {
-        feedIntermediaryDenominations = new address[](3);
+        uint256 max = proposalContract.MAX_INTERMEDIARY_DENOMINATIONS();
+        feedIntermediaryDenominations = new address[](max + 1);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Chainlink.IntermediaryDenominationsOutOfBounds.selector,
-                3, proposalContract.MAX_INTERMEDIARY_DENOMINATIONS()
+                PWNSimpleLoanElasticChainlinkProposal.IntermediaryDenominationsOutOfBounds.selector, max + 1, max
             )
         );
         proposalContract.getCollateralAmount(credAddr, credAmount, collAddr, feedIntermediaryDenominations, feedInvertFlags, loanToValue);
@@ -518,7 +512,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_GetCollateralAmount_Test is PWNSi
 |*  # ACCEPT PROPOSAL                                       *|
 |*----------------------------------------------------------*/
 
-contract PWNSimpleLoanElasticChainlinkProposal_AcceptProposal_Test is PWNSimpleLoanElasticChainlinkProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test(0) {
+contract PWNSimpleLoanElasticChainlinkProposal_AcceptProposal_Test is PWNSimpleLoanElasticChainlinkProposalTest, PWNSimpleLoanProposal_AcceptProposal_Test {
 
     function setUp() virtual public override(PWNSimpleLoanElasticChainlinkProposalTest, PWNSimpleLoanProposalTest) {
         super.setUp();
@@ -608,9 +602,37 @@ contract PWNSimpleLoanElasticChainlinkProposal_AcceptProposal_Test is PWNSimpleL
 
 contract PWNSimpleLoanElasticChainlinkProposal_Erc712EncodeProposal_Test is PWNSimpleLoanElasticChainlinkProposalTest {
 
+    struct Proposal_ERC712 {
+        MultiToken.Category collateralCategory;
+        address collateralAddress;
+        uint256 collateralId;
+        bool checkCollateralStateFingerprint;
+        bytes32 collateralStateFingerprint;
+        address creditAddress;
+        bytes32 feedIntermediaryDenominationsHash; // encode array hash
+        bytes32 feedInvertFlagsHash; // encode array hash
+        uint256 loanToValue;
+        uint256 minCreditAmount;
+        uint256 availableCreditLimit;
+        bytes32 utilizedCreditId;
+        uint256 fixedInterestAmount;
+        uint24 accruingInterestAPR;
+        uint32 durationOrDate;
+        uint40 expiration;
+        address allowedAcceptor;
+        address proposer;
+        bytes32 proposerSpecHash;
+        bool isOffer;
+        uint256 refinancingLoanId;
+        uint256 nonceSpace;
+        uint256 nonce;
+        address loanContract;
+    }
+
+
     function test_shouldERC712EncodeProposal() external {
-        PWNSimpleLoanElasticChainlinkProposal.ERC712Proposal memory proposalErc712 = PWNSimpleLoanElasticChainlinkProposal.ERC712Proposal(
-            uint8(proposal.collateralCategory),
+        Proposal_ERC712 memory proposalErc712 = Proposal_ERC712(
+            proposal.collateralCategory,
             proposal.collateralAddress,
             proposal.collateralId,
             proposal.checkCollateralStateFingerprint,
@@ -626,8 +648,7 @@ contract PWNSimpleLoanElasticChainlinkProposal_Erc712EncodeProposal_Test is PWNS
             proposal.accruingInterestAPR,
             proposal.durationOrDate,
             proposal.expiration,
-            proposal.acceptorController,
-            keccak256(proposal.acceptorControllerData),
+            proposal.allowedAcceptor,
             proposal.proposer,
             proposal.proposerSpecHash,
             proposal.isOffer,

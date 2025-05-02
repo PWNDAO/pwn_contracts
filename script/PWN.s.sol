@@ -112,7 +112,7 @@ forge script script/PWN.s.sol:Deploy \
 
 /*
 forge script script/PWN.s.sol:Deploy \
---sig "deployUniswapProposals(string)" "sepolia" \
+--sig "deployUniswapProposals(string)" "chain" \
 --private-key $PRIVATE_KEY \
 --with-gas-price $(cast --to-wei 0.3 gwei) \
 --verify --broadcast

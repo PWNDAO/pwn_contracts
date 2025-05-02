@@ -34,18 +34,19 @@ Elastic Chainlink Proposal addresses differ across chains due to unique construc
 | Chain                                  | Address                                    |
 |----------------------------------------|--------------------------------------------|
 | Ethereum                               | 0xBA58E16BE93dAdcBB74a194bDfD9E5933b24016B |
-| Optimism                               | 0x983b0916dBA60F58Ea3E4190549DFD7a0c8aF7b4 |
-| Binance Smart Chain                    | 0x2d5F60E96442a45e9E3754412189ACaa3aA1AE3a |
-| Gnosis Chain                           | 0x116A5E7A95883973de303122025B4Af23512F315 |
+| Optimism                               | 0xC267A16836D475561b37e7166ABeB92d876C8A3c |
+| Binance Smart Chain                    | 0x79E1D066131C93610475C9AAEe3De861A8Cd2B71 |
+| Gnosis Chain                           | 0x1719591db6AD58643aD4804eF8C2f2E51768C30E |
 | Unichain                               | --- not deployed ---                       |
-| Polygon                                | 0x0FAbfAa5376625F07b954a5ad9b987a6b0f39E8F |
+| Polygon                                | 0x5A8164910e995781C154fb092653752cE6BCDCA7 |
+| Sonic                                  | 0xc2bCAFB3bf06FCeb54ae1f3902d6EEe020a4478B |
 | World Chain                            | --- not deployed ---                       |
-| Base                                   | 0x0dFf6CA171A1A7C7dE14826feB823386D82d1b36 |
-| Arbitrum                               | 0x3b252fD3B958d03C2861DA045ca8A418E7155234 |
-| Linea                                  | 0xEBd31872f39C42dDe954e5182BC4528C388A6a2B |
+| Base                                   | 0xB6E4B8Ba8E26ac8d4979a8227DAda26bD3Ac9A10 |
+| Arbitrum                               | 0xc566994F7c9D65C58a8f0C16F91b00Da6aE32BB6 |
+| Celo                                   | 0x53fb85416cAeEE7f4d142F88685e2094f6E9E985 |
+| Linea                                  | 0x8E9955B34606f601491c14d5cc8247F5E0477ff1 |
 | Ink                                    | --- not deployed ---                       |
-| Sonic                                  | 0x49d08582e9c2871F29BEF73D164bFF8fE90c3557 |
-| Sepolia                                | 0x39fd308D651F5add5A4826D12Bf92d9D91E732AC |
+| Sepolia                                | 0xC46170F43b97faE1A8B507d6fdDaFfBb7527D61B |
 
 Please note that some chains are currently not supported by Chainlink. As a result, the Elastic Chainlink Proposal has not been deployed on these chains. We are closely monitoring the support status and will deploy the necessary contracts as soon as Chainlink becomes available on these networks.
 
@@ -63,6 +64,7 @@ PWN is deployed on the following chains:
 - World Chain (480)
 - Base (8453)
 - Arbitrum (42161)
+- Celo (42220)
 - Ink (57073)
 - Linea (59144)
 - Sepolia (11155111)

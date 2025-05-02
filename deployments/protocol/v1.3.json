@@ -27,7 +27,7 @@
         "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
         "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
         "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
-        "simpleLoanElasticChainlinkProposal": "0x983b0916dBA60F58Ea3E4190549DFD7a0c8aF7b4",
+        "simpleLoanElasticChainlinkProposal": "0xC267A16836D475561b37e7166ABeB92d876C8A3c",
         "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
         "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
     },
@@ -59,7 +59,7 @@
         "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
         "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
         "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
-        "simpleLoanElasticChainlinkProposal": "0x2d5F60E96442a45e9E3754412189ACaa3aA1AE3a",
+        "simpleLoanElasticChainlinkProposal": "0x79E1D066131C93610475C9AAEe3De861A8Cd2B71",
         "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
         "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
     },
@@ -75,7 +75,7 @@
         "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
         "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
         "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
-        "simpleLoanElasticChainlinkProposal": "0x116A5E7A95883973de303122025B4Af23512F315",
+        "simpleLoanElasticChainlinkProposal": "0x1719591db6AD58643aD4804eF8C2f2E51768C30E",
         "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
         "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
     },
@@ -107,7 +107,7 @@
         "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
         "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
         "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
-        "simpleLoanElasticChainlinkProposal": "0x0FAbfAa5376625F07b954a5ad9b987a6b0f39E8F",
+        "simpleLoanElasticChainlinkProposal": "0x5A8164910e995781C154fb092653752cE6BCDCA7",
         "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
         "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
     },
@@ -123,7 +123,7 @@
         "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
         "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
         "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
-        "simpleLoanElasticChainlinkProposal": "0x49d08582e9c2871F29BEF73D164bFF8fE90c3557",
+        "simpleLoanElasticChainlinkProposal": "0xc2bCAFB3bf06FCeb54ae1f3902d6EEe020a4478B",
         "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
         "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
     },
@@ -155,7 +155,7 @@
         "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
         "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
         "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
-        "simpleLoanElasticChainlinkProposal": "0x0dFf6CA171A1A7C7dE14826feB823386D82d1b36",
+        "simpleLoanElasticChainlinkProposal": "0xB6E4B8Ba8E26ac8d4979a8227DAda26bD3Ac9A10",
         "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
         "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
     },
@@ -171,7 +171,23 @@
         "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
         "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
         "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
-        "simpleLoanElasticChainlinkProposal": "0x3b252fD3B958d03C2861DA045ca8A418E7155234",
+        "simpleLoanElasticChainlinkProposal": "0xc566994F7c9D65C58a8f0C16F91b00Da6aE32BB6",
+        "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
+        "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
+    },
+    "42220": {
+        "chainlinkFeedRegistry": "0x8D5e90706E52a52853dA9A14fA1c63889a412851",
+        "categoryRegistry": "0xbB2168d5546A94AE2DA9254e63D88F7f137B2534",
+        "configSingleton": "0x1f5febF0efA3aD487508b6Cc7f39a0a54DE9De72",
+        "config": "0xd52a2898d61636bB3eEF0d145f05352FF543bdCC",
+        "hub": "0x37807A2F031b3B44081F4b21500E5D70EbaDAdd5",
+        "loanToken": "0x4440C069272cC34b80C7B11bEE657D0349Ba9C23",
+        "revokedNonce": "0x972204fF33348ee6889B2d0A3967dB67d7b08e4c",
+        "utilizedCredit": "0x8E6F44DEa3c11d69C63655BDEcbA25Fa986BCE9D",
+        "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
+        "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
+        "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
+        "simpleLoanElasticChainlinkProposal": "0x53fb85416cAeEE7f4d142F88685e2094f6E9E985",
         "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
         "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
     },
@@ -203,7 +219,7 @@
         "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
         "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
         "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
-        "simpleLoanElasticChainlinkProposal": "0xEBd31872f39C42dDe954e5182BC4528C388A6a2B",
+        "simpleLoanElasticChainlinkProposal": "0x8E9955B34606f601491c14d5cc8247F5E0477ff1",
         "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
         "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
     },
@@ -237,7 +253,7 @@
         "simpleLoan": "0x719A69d0dc67bd3Aa7648D4694081B3c87952797",
         "simpleLoanSimpleProposal": "0xe624E7D33baC728bE2bdB606Da0018B6E05A84D9",
         "simpleLoanListProposal": "0x7160Ec33788Df9AFb8AAEe777e7Ae21151B51eDd",
-        "simpleLoanElasticChainlinkProposal": "0x39fd308D651F5add5A4826D12Bf92d9D91E732AC",
+        "simpleLoanElasticChainlinkProposal": "0xC46170F43b97faE1A8B507d6fdDaFfBb7527D61B",
         "simpleLoanElasticProposal": "0xeC6390D4B22FFfD22E5C5FDB56DaF653C3Cd0626",
         "simpleLoanDutchAuctionProposal": "0x1b1394F436cAeaE139131E9bca6f5d5A2A7e1369"
     }

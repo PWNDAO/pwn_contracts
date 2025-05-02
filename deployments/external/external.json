@@ -140,6 +140,17 @@
         "uniswapV3Factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
         "uniswapV3NFTPositionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88"
     },
+    "42220": {
+        "dao": "0x0000000000000000000000000000000000000000",
+        "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
+        "protocolTimelock": "0xd8dbdDf1c0FDdf9b5eCFA5C067C38DB66739FBAB",
+        "daoSafe": "0xd56635c0E91D31F88B89F195D3993a9e34516e59",
+        "deployerSafe": "0x42Cad20c964067f8e8b5c3E13fd0aa3C20a964C4",
+        "deployer": "0x706c9F2dd328E2C01483eCF705D2D9708F4aB727",
+        "chainlinkL2SequencerUptimeFeed": "0x0000000000000000000000000000000000000000",
+        "weth": "0x66803FB87aBd4aaC3cbB3fAd7C3aa01f6F3FB207",
+        "isL2": true
+    },
     "57073": {
         "dao": "0x0000000000000000000000000000000000000000",
         "adminTimelock": "0xd57e72A328AB1deC6b374c2babe2dc489819B5Ea",
