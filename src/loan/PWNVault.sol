@@ -6,8 +6,6 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 import { IERC721Receiver } from "openzeppelin/token/ERC721/IERC721Receiver.sol";
 import { IERC1155Receiver, IERC165 } from "openzeppelin/token/ERC1155/IERC1155Receiver.sol";
 
-import { IPoolAdapter } from "pwn/core/interfaces/IPoolAdapter.sol";
-
 
 /**
  * @title PWN Vault

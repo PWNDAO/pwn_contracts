@@ -5,24 +5,20 @@ import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.s
 
 import { ReentrancyGuard } from "openzeppelin/security/ReentrancyGuard.sol";
 import { Math } from "openzeppelin/utils/math/Math.sol";
-import { SafeCast } from "openzeppelin/utils/math/SafeCast.sol";
 
-import { PWNConfig } from "pwn/core/config/PWNConfig.sol";
-import { PWNHub } from "pwn/core/hub/PWNHub.sol";
-import { PWNHubTags } from "pwn/core/hub/PWNHubTags.sol";
-import { IERC5646 } from "pwn/core/interfaces/IERC5646.sol";
-import { IPWNDefaultModule } from "pwn/core/interfaces/IPWNDefaultModule.sol";
-import { IPWNInterestModule } from "pwn/core/interfaces/IPWNInterestModule.sol";
-import { IPWNLoanMetadataProvider } from "pwn/core/interfaces/IPWNLoanMetadataProvider.sol";
-import { LOANStatus } from "pwn/core/lib/LOANStatus.sol";
-import { PWNFeeCalculator } from "pwn/core/lib/PWNFeeCalculator.sol";
-import { PWNSignatureChecker } from "pwn/core/lib/PWNSignatureChecker.sol";
-import { PWNProposal } from "pwn/core/proposal/PWNProposal.sol";
-import { LoanTerms as Terms } from "pwn/core/loan/LoanTerms.sol";
-import { PWNLOAN } from "pwn/core/token/PWNLOAN.sol";
-import { PWNVault } from "pwn/core/loan/PWNVault.sol";
-import { Expired, AddressMissingHubTag } from "pwn/PWNErrors.sol";
-
+import { PWNConfig } from "pwn/config/PWNConfig.sol";
+import { PWNHub } from "pwn/hub/PWNHub.sol";
+import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
+import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
+import { IPWNLoanMetadataProvider } from "pwn/interfaces/IPWNLoanMetadataProvider.sol";
+import { LOANStatus } from "pwn/lib/LOANStatus.sol";
+import { PWNFeeCalculator } from "pwn/lib/PWNFeeCalculator.sol";
+import { IPWNDefaultModule } from "pwn/loan/default/IPWNDefaultModule.sol";
+import { IPWNInterestModule } from "pwn/loan/interest/IPWNInterestModule.sol";
+import { PWNProposal } from "pwn/proposal/PWNProposal.sol";
+import { LoanTerms as Terms } from "pwn/loan/LoanTerms.sol";
+import { PWNVault } from "pwn/loan/PWNVault.sol";
+import { PWNLOAN } from "pwn/token/PWNLOAN.sol";
 
 /**
  * @title PWN Loan
@@ -109,6 +105,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     |*  # ERRORS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
+    /** @notice Thrown when an address is missing a PWN Hub tag.*/
+    error AddressMissingHubTag(address addr, bytes32 tag);
     /** @notice Thrown when managed loan is running.*/
     error LoanNotRunning();
     /** @notice Thrown when manged loan is still running.*/
@@ -212,7 +210,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         // todo: check lender & borrower spec
 
         // Check loan credit and collateral validity
-        _checkValidAsset(loanTerms.credit);
+        _checkValidAsset(MultiToken.ERC20(loanTerms.creditAddress, loanTerms.principal));
         _checkValidAsset(loanTerms.collateral);
 
         // Create a new loan
@@ -232,7 +230,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
         emit LOANCreated({
             loanId: loanId,
-            proposalHash: proposalHash,
+            proposalHash: loanTerms.proposalHash,
             proposalContract: proposalSpec.proposalContract,
             terms: loanTerms,
             // todo: lender & borrower spec
@@ -255,8 +253,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         LOAN storage loan = LOANs[loanId];
         loan.borrower = loanTerms.borrower;
         loan.lastUpdateTimestamp = uint40(block.timestamp);
-        loan.creditAddress = loanTerms.credit.assetAddress;
-        loan.principal = loanTerms.credit.amount;
+        loan.creditAddress = loanTerms.creditAddress;
+        loan.principal = loanTerms.principal;
         loan.collateral = loanTerms.collateral;
         loan.interestModule = loanTerms.interestModule;
         loan.defaultModule = loanTerms.defaultModule;
@@ -278,10 +276,10 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
         // Calculate fee amount and new loan amount
         (uint256 feeAmount, uint256 newLoanAmount)
-            = PWNFeeCalculator.calculateFeeAmount(config.fee(), loanTerms.credit.amount);
+            = PWNFeeCalculator.calculateFeeAmount(config.fee(), loanTerms.principal);
 
         // Note: `creditHelper` must not be used before updating the amount.
-        MultiToken.Asset memory creditHelper = loanTerms.credit;
+        MultiToken.Asset memory creditHelper = MultiToken.ERC20(loanTerms.creditAddress, loanTerms.principal);
 
         // Collect fees
         if (feeAmount > 0) {
@@ -497,7 +495,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
             return bytes32(0);
 
         // The only mutable state properties are:
-        // - status: updated for expired loans based on block.timestamp
+        // - status: updated for repaid or defaulted loans
         // - lastUpdateTimestamp: updated on every loan repayment
         // - pastAccruedInterest: used to store currently unpaid accrued interest on every loan repayment
         // - principal: decreased on every loan repayment

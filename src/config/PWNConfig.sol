@@ -3,8 +3,8 @@ pragma solidity 0.8.16;
 
 import { Ownable2StepUpgradeable } from "openzeppelin-upgradeable/access/Ownable2StepUpgradeable.sol";
 
-import { IPoolAdapter } from "pwn/core/interfaces/IPoolAdapter.sol";
-import { IStateFingerpringComputer } from "pwn/core/interfaces/IStateFingerpringComputer.sol";
+import { IPoolAdapter } from "pwn/interfaces/IPoolAdapter.sol";
+import { IStateFingerpringComputer } from "pwn/interfaces/IStateFingerpringComputer.sol";
 
 
 /**

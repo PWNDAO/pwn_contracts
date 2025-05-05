@@ -3,9 +3,6 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { IPWNInterestModule } from "pwn/core/interfaces/IPWNInterestModule.sol";
-import { IPWNDefaultModule } from "pwn/core/interfaces/IPWNDefaultModule.sol";
-
 
 /**
  * @notice Struct defining loan terms.
@@ -13,26 +10,26 @@ import { IPWNDefaultModule } from "pwn/core/interfaces/IPWNDefaultModule.sol";
  * @param proposalHash Hash of a proposal that created this loan terms.
  * @param lender Address of a lender.
  * @param borrower Address of a borrower.
+ * @param proposerSpecHash Hash of a proposer specification.
  * @param duration Loan duration in seconds.
  * @param collateral Asset used as a loan collateral. For a definition see { MultiToken dependency lib }.
- * @param credit Asset used as a loan credit. For a definition see { MultiToken dependency lib }.
- * @param fixedInterestAmount Fixed interest amount in credit asset tokens. It is the minimum amount of interest which has to be paid by a borrower.
- * @param accruingInterestAPR Accruing interest APR with 2 decimals.
+ * @param creditAddress Address of an asset used as credit.
+ * @param principal Amount of credit.
+ * @param interestModule Address of an interest module. It is a contract which defines the interest rate.
+ * @param interestModuleProposerData Proposer data passed to an interest module when a loan is created.
  * @param defaultModule Address of a default module. It is a contract which defines the default conditions.
- * @param defaultModuleProposerData Data passed to a default module when a loan is created.
- * @param lenderSpecHash Hash of a lender specification.
- * @param borrowerSpecHash Hash of a borrower specification.
+ * @param defaultModuleProposerData Proposer data passed to a default module when a loan is created.
  */
 struct LoanTerms {
     bytes32 proposalHash;
     address lender;
     address borrower;
+    bytes32 proposerSpecHash;
     MultiToken.Asset collateral;
-    MultiToken.Asset credit;
-    IPWNInterestModule interestModule;
+    address creditAddress;
+    uint256 principal;
+    address interestModule;
     bytes interestModuleProposerData;
-    IPWNDefaultModule defaultModule;
+    address defaultModule;
     bytes defaultModuleProposerData;
-    bytes32 lenderSpecHash;
-    bytes32 borrowerSpecHash;
 }

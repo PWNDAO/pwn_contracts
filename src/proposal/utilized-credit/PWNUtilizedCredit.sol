@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-import { PWNHub } from "pwn/core/hub/PWNHub.sol";
+import { PWNHub } from "pwn/hub/PWNHub.sol";
 import { AddressMissingHubTag } from "pwn/PWNErrors.sol";
 
 
