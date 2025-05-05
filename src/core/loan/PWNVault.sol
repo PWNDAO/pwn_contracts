@@ -21,19 +21,11 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Emitted when asset transfer happens from an `origin` address to a vault.
-     */
+    /** @notice Emitted when asset transfer happens from an `origin` address to a vault.*/
     event VaultPull(MultiToken.Asset asset, address indexed origin);
-
-    /**
-     * @notice Emitted when asset transfer happens from a vault to a `beneficiary` address.
-     */
+    /** @notice Emitted when asset transfer happens from a vault to a `beneficiary` address.*/
     event VaultPush(MultiToken.Asset asset, address indexed beneficiary);
-
-    /**
-     * @notice Emitted when asset transfer happens from an `origin` address to a `beneficiary` address.
-     */
+    /** @notice Emitted when asset transfer happens from an `origin` address to a `beneficiary` address.*/
     event VaultPushFrom(MultiToken.Asset asset, address indexed origin, address indexed beneficiary);
 
 
@@ -41,19 +33,11 @@ abstract contract PWNVault is IERC721Receiver, IERC1155Receiver {
     |*  # ERRORS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Thrown when the Vault receives an asset that is not transferred by the Vault itself.
-     */
+    /** @notice Thrown when the Vault receives an asset that is not transferred by the Vault itself.*/
     error UnsupportedTransferFunction();
-
-    /**
-     * @notice Thrown when an asset transfer is incomplete.
-     */
+    /** @notice Thrown when an asset transfer is incomplete.*/
     error IncompleteTransfer();
-
-    /**
-     * @notice Thrown when an asset transfer source and destination address are the same.
-     */
+    /** @notice Thrown when an asset transfer source and destination address are the same.*/
     error VaultTransferSameSourceAndDestination(address addr);
 
 
