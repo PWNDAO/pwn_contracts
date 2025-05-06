@@ -13,9 +13,9 @@ import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
 import { IPWNLoanMetadataProvider } from "pwn/interfaces/IPWNLoanMetadataProvider.sol";
 import { LOANStatus } from "pwn/lib/LOANStatus.sol";
 import { PWNFeeCalculator } from "pwn/lib/PWNFeeCalculator.sol";
-import { IPWNDefaultModule } from "pwn/loan/default/IPWNDefaultModule.sol";
-import { IPWNInterestModule } from "pwn/loan/interest/IPWNInterestModule.sol";
-import { IPWNLiquidationManager } from "pwn/loan/liquidation/IPWNLiquidationManager.sol";
+import { IPWNDefaultModule } from "pwn/loan/module/default/IPWNDefaultModule.sol";
+import { IPWNInterestModule } from "pwn/loan/module/interest/IPWNInterestModule.sol";
+import { IPWNLiquidationModule } from "pwn/loan/module/liquidation/IPWNLiquidationModule.sol";
 import { PWNProposal } from "pwn/proposal/PWNProposal.sol";
 import { LoanTerms as Terms } from "pwn/loan/LoanTerms.sol";
 import { PWNVault } from "pwn/loan/PWNVault.sol";
@@ -37,7 +37,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
     bytes32 public constant INTEREST_MODULE_RETURN_VALUE = keccak256("PWNInterestModule.onLoanCreated");
     bytes32 public constant DEFAULT_MODULE_RETURN_VALUE = keccak256("PWNDefaultModule.onLoanCreated");
-    bytes32 public constant LIQUIDATION_MANAGER_RETURN_VALUE = keccak256("PWNLiquidationManager.onLoanCreated");
+    bytes32 public constant LIQUIDATION_MODULE_RETURN_VALUE = keccak256("PWNLiquidationModule.onLoanCreated");
 
     PWNHub public immutable hub;
     PWNLOAN public immutable loanToken;
@@ -71,7 +71,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @param unclaimedRepayment Amount of the credit asset that can be claimed by loan owner.
      * @param interestModule Address of an interest module. It is a contract which defines the interest conditions.
      * @param defaultModule Address of a default module. It is a contract which defines the default conditions.
-     * @param liquidationManager Address that can call liquidation for defaulted loans.
+     * @param liquidationModule Address that can call liquidation for defaulted loans.
      */
     struct LOAN {
         address borrower;
@@ -83,7 +83,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         uint256 unclaimedRepayment;
         IPWNInterestModule interestModule;
         IPWNDefaultModule defaultModule;
-        IPWNLiquidationManager liquidationManager;
+        IPWNLiquidationModule liquidationModule;
     }
 
     /** Mapping of all LOAN data by loan id.*/
@@ -157,8 +157,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     error NothingToClaim();
     /** @notice Thrown when hook returns an invalid value.*/
     error InvalidHookReturnValue(bytes32 expected, bytes32 current);
-    /** @notice Thrown when liquidation caller is not a liquidation manager.*/
-    error CallerNotLiquidationManager();
+    /** @notice Thrown when liquidation caller is not a liquidation module.*/
+    error CallerNotLiquidationModule();
 
 
     /*----------------------------------------------------------*|
@@ -236,10 +236,10 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
             revert InvalidHookReturnValue({ expected: DEFAULT_MODULE_RETURN_VALUE, current: hookReturnValue });
         }
 
-        // Initialize liquidation manager
-        hookReturnValue = IPWNLiquidationManager(loanTerms.liquidationManager).onLoanCreated(loanId, loanTerms.liquidationManagerProposerData);
-        if (hookReturnValue != LIQUIDATION_MANAGER_RETURN_VALUE) {
-            revert InvalidHookReturnValue({ expected: LIQUIDATION_MANAGER_RETURN_VALUE, current: hookReturnValue });
+        // Initialize liquidation module
+        hookReturnValue = IPWNLiquidationModule(loanTerms.liquidationModule).onLoanCreated(loanId, loanTerms.liquidationModuleProposerData);
+        if (hookReturnValue != LIQUIDATION_MODULE_RETURN_VALUE) {
+            revert InvalidHookReturnValue({ expected: LIQUIDATION_MODULE_RETURN_VALUE, current: hookReturnValue });
         }
 
         emit LOANCreated({
@@ -272,7 +272,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         loan.collateral = loanTerms.collateral;
         loan.interestModule = IPWNInterestModule(loanTerms.interestModule);
         loan.defaultModule = IPWNDefaultModule(loanTerms.defaultModule);
-        loan.liquidationManager = IPWNLiquidationManager(loanTerms.liquidationManager);
+        loan.liquidationModule = IPWNLiquidationModule(loanTerms.liquidationModule);
     }
 
     /**
@@ -363,13 +363,13 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Liquidate a defaulted loan by a liquidation manager.
-     * @dev The liquidation manager can choose any amount of credit asset to be repaid to lender for the liquidation.
+     * @notice Liquidate a defaulted loan by a liquidation module.
+     * @dev The liquidation module can use any amount of credit asset to be repaid to lender for the liquidation.
      * @param loanId Id of a loan that is being liquidated.
      * @param liquidationAmount Amount of a credit asset to be repaid to lender for the liquidation.
      */
     function liquidate(uint256 loanId, uint256 liquidationAmount) external nonReentrant {
-        if (address(LOANs[loanId].liquidationManager) != msg.sender) revert CallerNotLiquidationManager();
+        if (address(LOANs[loanId].liquidationModule) != msg.sender) revert CallerNotLiquidationModule();
         _liquidate(loanId, liquidationAmount);
     }
 
@@ -378,7 +378,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @param loanId Id of a loan that is being liquidated.
      */
     function liquidateByOwner(uint256 loanId) external nonReentrant {
-        if (address(LOANs[loanId].liquidationManager) != address(0)) revert CallerNotLiquidationManager();
+        if (address(LOANs[loanId].liquidationModule) != address(0)) revert CallerNotLiquidationModule();
         if (loanToken.ownerOf(loanId) != msg.sender) revert CallerNotLOANTokenHolder();
         _liquidate(loanId, 0);
     }
