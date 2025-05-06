@@ -12,11 +12,15 @@ import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
 import { IPWNLoanMetadataProvider } from "pwn/interfaces/IPWNLoanMetadataProvider.sol";
 import { LOANStatus } from "pwn/lib/LOANStatus.sol";
+import { IPWNBorrowerCollateralRepaymentHook } from "pwn/loan/hook/IPWNBorrowerCollateralRepaymentHook.sol";
+import { IPWNBorrowerCreateHook } from "pwn/loan/hook/IPWNBorrowerCreateHook.sol";
+import { IPWNLenderCreateHook } from "pwn/loan/hook/IPWNLenderCreateHook.sol";
+import { IPWNLenderRepaymentHook } from "pwn/loan/hook/IPWNLenderRepaymentHook.sol";
 import { PWNFeeCalculator } from "pwn/lib/PWNFeeCalculator.sol";
 import { IPWNDefaultModule } from "pwn/loan/module/default/IPWNDefaultModule.sol";
 import { IPWNInterestModule } from "pwn/loan/module/interest/IPWNInterestModule.sol";
 import { IPWNLiquidationModule } from "pwn/loan/module/liquidation/IPWNLiquidationModule.sol";
-import { PWNProposal } from "pwn/proposal/PWNProposal.sol";
+import { IPWNProposal } from "pwn/proposal/IPWNProposal.sol";
 import { LoanTerms as Terms } from "pwn/loan/LoanTerms.sol";
 import { PWNVault } from "pwn/loan/PWNVault.sol";
 import { PWNLOAN } from "pwn/token/PWNLOAN.sol";
@@ -38,6 +42,13 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     bytes32 public constant INTEREST_MODULE_RETURN_VALUE = keccak256("PWNInterestModule.onLoanCreated");
     bytes32 public constant DEFAULT_MODULE_RETURN_VALUE = keccak256("PWNDefaultModule.onLoanCreated");
     bytes32 public constant LIQUIDATION_MODULE_RETURN_VALUE = keccak256("PWNLiquidationModule.onLoanCreated");
+    bytes32 public constant LENDER_CREATE_HOOK_RETURN_VALUE = keccak256("PWNLenderCreateHook.onLoanCreated");
+    bytes32 public constant LENDER_REPAYMENT_HOOK_RETURN_VALUE = keccak256("PWNLenderRepaymentHook.onLoanRepaid");
+    bytes32 public constant BORROWER_CREATE_HOOK_RETURN_VALUE = keccak256("PWNBorrowerCreateHook.onLoanCreated");
+    bytes32 public constant BORROWER_REPAYMENT_HOOK_RETURN_VALUE = keccak256("PWNBorrowerCollateralRepaymentHook.onLoanRepaid");
+
+    bytes32 internal constant EMPTY_LENDER_SPEC_HASH = keccak256(abi.encode(LenderSpec(IPWNLenderCreateHook(address(0)), "", IPWNLenderRepaymentHook(address(0)), "")));
+    bytes32 internal constant EMPTY_BORROWER_SPEC_HASH = keccak256(abi.encode(BorrowerSpec(IPWNBorrowerCreateHook(address(0)), "")));
 
     PWNHub public immutable hub;
     PWNLOAN public immutable loanToken;
@@ -58,7 +69,17 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         bytes signature;
     }
 
-    // todo: lender & borrower spec
+    struct LenderSpec {
+        IPWNLenderCreateHook createHook;
+        bytes createHookData;
+        IPWNLenderRepaymentHook repaymentHook;
+        bytes repaymentHookData;
+    }
+
+    struct BorrowerSpec {
+        IPWNBorrowerCreateHook createHook;
+        bytes createHookData;
+    }
 
     /**
      * @notice Struct defining a loan.
@@ -95,8 +116,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     |*----------------------------------------------------------*/
 
     /** @notice Emitted when a new loan in created.*/
-    // todo: add lender & borrower spec
-    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, Terms terms, bytes extra);
+    event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, Terms terms, LenderSpec lenderSpec, BorrowerSpec borrowerSpec, bytes extra);
     /** @notice Emitted when a loan repayment is made.*/
     event LOANRepaid(uint256 indexed loanId, uint256 repaymentAmount, uint256 indexed newPrincipal);
     /** @notice Emitted when a loan repayment is claimed.*/
@@ -133,8 +153,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     error RefinanceCreditMismatch();
     /** @notice Thrown when refinancing loan terms have different collateral asset than the original loan.*/
     error RefinanceCollateralMismatch();
-    /** @notice Thrown when hash of provided lender spec doesn't match the one in loan terms.*/
-    error InvalidLenderSpecHash(bytes32 current, bytes32 expected);
+    /** @notice Thrown when hash of provided proposer spec doesn't match the one in loan terms.*/
+    error InvalidProposerSpecHash(bytes32 current, bytes32 expected);
     /** @notice Thrown when loan duration is below the minimum.*/
     error InvalidDuration(uint256 current, uint256 limit);
     /** @notice Thrown when accruing interest APR is above the maximum.*/
@@ -182,7 +202,27 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     |*  # LENDER & BORROWER SPEC                                *|
     |*----------------------------------------------------------*/
 
-    // todo: lender & borrower spec
+    /**
+     * @notice Get the hash of a lender specification.
+     * @dev The hash is used to verify the lender specification in the loan terms.
+     * @param lenderSpec Lender specification struct.
+     * @return Hash of the lender specification.
+     */
+    function getLenderSpecHash(LenderSpec calldata lenderSpec) public pure returns (bytes32) {
+        bytes32 specHash = keccak256(abi.encode(lenderSpec));
+        return specHash == EMPTY_LENDER_SPEC_HASH ? bytes32(0) : specHash;
+    }
+
+    /**
+     * @notice Get the hash of a borrower specification.
+     * @dev The hash is used to verify the borrower specification in the loan terms.
+     * @param borrowerSpec Borrower specification struct.
+     * @return Hash of the borrower specification.
+     */
+    function getBorrowerSpecHash(BorrowerSpec calldata borrowerSpec) public pure returns (bytes32) {
+        bytes32 specHash = keccak256(abi.encode(borrowerSpec));
+        return specHash == EMPTY_BORROWER_SPEC_HASH ? bytes32(0) : specHash;
+    }
 
 
     /*----------------------------------------------------------*|
@@ -193,12 +233,15 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @notice Create a new loan.
      * @dev The function assumes a prior token approval to a contract address.
      * @param proposalSpec Proposal specification struct.
+     * @param lenderSpec Lender specification struct.
+     * @param borrowerSpec Borrower specification struct.
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return loanId Id of the created LOAN token.
      */
     function create(
         ProposalSpec calldata proposalSpec,
-        // todo: lender & borrower spec
+        LenderSpec calldata lenderSpec,
+        BorrowerSpec calldata borrowerSpec,
         bytes calldata extra
     ) external nonReentrant returns (uint256 loanId) {
         // Check provided proposal contract
@@ -207,7 +250,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         }
 
         // Accept proposal and get loan terms
-        Terms memory loanTerms = PWNProposal(proposalSpec.proposalContract)
+        Terms memory loanTerms = IPWNProposal(proposalSpec.proposalContract)
             .acceptProposal({
                 acceptor: msg.sender,
                 proposalData: proposalSpec.proposalData,
@@ -215,14 +258,32 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
                 signature: proposalSpec.signature
             });
 
-        // todo: check lender & borrower spec
+        // Check that provided proposer spec is correct
+        bytes32 proposerSpecHash = msg.sender == loanTerms.lender
+            ? getBorrowerSpecHash(borrowerSpec)
+            : getLenderSpecHash(lenderSpec);
+        if (proposerSpecHash != loanTerms.proposerSpecHash) {
+            revert InvalidProposerSpecHash({ current: proposerSpecHash, expected: loanTerms.proposerSpecHash });
+        }
 
         // Check loan credit and collateral validity
-        _checkValidAsset(MultiToken.ERC20(loanTerms.creditAddress, loanTerms.principal));
+        _checkValidAsset(loanTerms.creditAddress.ERC20(loanTerms.principal));
         _checkValidAsset(loanTerms.collateral);
 
         // Create a new loan
         loanId = _createLoan(loanTerms);
+
+        emit LOANCreated({
+            loanId: loanId,
+            proposalHash: loanTerms.proposalHash,
+            proposalContract: proposalSpec.proposalContract,
+            terms: loanTerms,
+            lenderSpec: lenderSpec,
+            borrowerSpec: borrowerSpec,
+            extra: extra
+        });
+
+        // Note: !! DANGER ZONE !!
 
         // Initialize interest module
         bytes32 hookReturnValue = IPWNInterestModule(loanTerms.interestModule).onLoanCreated(loanId, loanTerms.interestModuleProposerData);
@@ -242,17 +303,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
             revert InvalidHookReturnValue({ expected: LIQUIDATION_MODULE_RETURN_VALUE, current: hookReturnValue });
         }
 
-        emit LOANCreated({
-            loanId: loanId,
-            proposalHash: loanTerms.proposalHash,
-            proposalContract: proposalSpec.proposalContract,
-            terms: loanTerms,
-            // todo: lender & borrower spec
-            extra: extra
-        });
-
         // Settle the loan
-        _settleNewLoan(loanTerms);
+        _settleNewLoan(loanTerms, lenderSpec, borrowerSpec);
     }
 
     /**
@@ -279,15 +331,26 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @notice Transfer collateral to Vault and credit to borrower.
      * @dev The function assumes a prior token approval to a contract address.
      * @param loanTerms Loan terms struct.
+     * @param lenderSpec Lender specification struct.
+     * @param borrowerSpec Borrower specification struct.
      */
     function _settleNewLoan(
-        Terms memory loanTerms
-        // todo: lender & borrower spec
+        Terms memory loanTerms,
+        LenderSpec calldata lenderSpec,
+        BorrowerSpec calldata borrowerSpec
     ) private {
-        // Transfer collateral to Vault
-        _pull(loanTerms.collateral, loanTerms.borrower);
-
-        // TODO: Hooks
+        // Call lender create hook
+        if (address(lenderSpec.createHook) != address(0)) {
+            bytes32 hookReturnValue = lenderSpec.createHook.onLoanCreated(
+                loanTerms.lender,
+                loanTerms.creditAddress,
+                loanTerms.principal,
+                lenderSpec.createHookData
+            );
+            if (hookReturnValue != LENDER_CREATE_HOOK_RETURN_VALUE) {
+                revert InvalidHookReturnValue({ expected: LENDER_CREATE_HOOK_RETURN_VALUE, current: hookReturnValue });
+            }
+        }
 
         // Calculate fee amount and new loan amount
         (uint256 feeAmount, uint256 newLoanAmount)
@@ -305,6 +368,23 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         // Transfer credit to borrower
         creditHelper.amount = newLoanAmount;
         _pushFrom(creditHelper, loanTerms.lender, loanTerms.borrower);
+
+        // Call borrower create hook
+        if (address(borrowerSpec.createHook) != address(0)) {
+            bytes32 hookReturnValue = borrowerSpec.createHook.onLoanCreated(
+                loanTerms.borrower,
+                loanTerms.collateral,
+                loanTerms.creditAddress,
+                newLoanAmount,
+                borrowerSpec.createHookData
+            );
+            if (hookReturnValue != BORROWER_CREATE_HOOK_RETURN_VALUE) {
+                revert InvalidHookReturnValue({ expected: BORROWER_CREATE_HOOK_RETURN_VALUE, current: hookReturnValue });
+            }
+        }
+
+        // Transfer collateral to Vault
+        _pull(loanTerms.collateral, loanTerms.borrower);
     }
 
 
@@ -346,7 +426,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         loan.unclaimedRepayment += repaymentAmount;
         loan.lastUpdateTimestamp = uint40(block.timestamp);
 
-        emit LOANRepaymentMade({ loanId: loanId, repaymentAmount: repaymentAmount, newPrincipal: loan.principal });
+        emit LOANRepaid({ loanId: loanId, repaymentAmount: repaymentAmount, newPrincipal: loan.principal });
 
         // Transfer the repaid credit to the Vault
         _pull(loan.creditAddress.ERC20(repaymentAmount), msg.sender);
@@ -434,7 +514,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
         MultiToken.Asset memory unclaimedCredit = loan.creditAddress.ERC20(loan.unclaimedRepayment);
 
-        if (status == LOANStatus.REPAID)
+        if (status == LOANStatus.REPAID) {
             // Loan ended with full repayment, claiming the unclaimed amount deletes the loan
             _deleteLoan(loanId);
         } else {
