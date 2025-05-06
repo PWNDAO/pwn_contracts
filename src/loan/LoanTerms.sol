@@ -19,6 +19,8 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
  * @param interestModuleProposerData Proposer data passed to an interest module when a loan is created.
  * @param defaultModule Address of a default module. It is a contract which defines the default conditions.
  * @param defaultModuleProposerData Proposer data passed to a default module when a loan is created.
+ * @param liquidationManager Address that can call liquidation for defaulted loans.
+ * @param liquidationManagerProposerData Proposer data passed to a liquidation manager when a loan is created.
  */
 struct LoanTerms {
     bytes32 proposalHash;
@@ -32,4 +34,6 @@ struct LoanTerms {
     bytes interestModuleProposerData;
     address defaultModule;
     bytes defaultModuleProposerData;
+    address liquidationManager;
+    bytes liquidationManagerProposerData;
 }

@@ -15,6 +15,7 @@ import { LOANStatus } from "pwn/lib/LOANStatus.sol";
 import { PWNFeeCalculator } from "pwn/lib/PWNFeeCalculator.sol";
 import { IPWNDefaultModule } from "pwn/loan/default/IPWNDefaultModule.sol";
 import { IPWNInterestModule } from "pwn/loan/interest/IPWNInterestModule.sol";
+import { IPWNLiquidationManager } from "pwn/loan/liquidation/IPWNLiquidationManager.sol";
 import { PWNProposal } from "pwn/proposal/PWNProposal.sol";
 import { LoanTerms as Terms } from "pwn/loan/LoanTerms.sol";
 import { PWNVault } from "pwn/loan/PWNVault.sol";
@@ -36,6 +37,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
     bytes32 public constant INTEREST_MODULE_RETURN_VALUE = keccak256("PWNInterestModule.onLoanCreated");
     bytes32 public constant DEFAULT_MODULE_RETURN_VALUE = keccak256("PWNDefaultModule.onLoanCreated");
+    bytes32 public constant LIQUIDATION_MANAGER_RETURN_VALUE = keccak256("PWNLiquidationManager.onLoanCreated");
 
     PWNHub public immutable hub;
     PWNLOAN public immutable loanToken;
@@ -69,6 +71,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @param unclaimedRepayment Amount of the credit asset that can be claimed by loan owner.
      * @param interestModule Address of an interest module. It is a contract which defines the interest conditions.
      * @param defaultModule Address of a default module. It is a contract which defines the default conditions.
+     * @param liquidationManager Address that can call liquidation for defaulted loans.
      */
     struct LOAN {
         address borrower;
@@ -80,6 +83,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         uint256 unclaimedRepayment;
         IPWNInterestModule interestModule;
         IPWNDefaultModule defaultModule;
+        IPWNLiquidationManager liquidationManager;
     }
 
     /** Mapping of all LOAN data by loan id.*/
@@ -91,14 +95,14 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     |*----------------------------------------------------------*/
 
     /** @notice Emitted when a new loan in created.*/
-    // todo: lender & borrower spec
+    // todo: add lender & borrower spec
     event LOANCreated(uint256 indexed loanId, bytes32 indexed proposalHash, address indexed proposalContract, Terms terms, bytes extra);
     /** @notice Emitted when a loan repayment is made.*/
-    event LOANRepaymentMade(uint256 indexed loanId, uint256 repaymentAmount, uint256 newPrincipal);
-    /** @notice Emitted when a loan is paid back.*/
-    event LOANPaidBack(uint256 indexed loanId);
-    /** @notice Emitted when a repaid or defaulted loan is claimed.*/
-    event LOANClaimed(uint256 indexed loanId, uint256 claimedAmount, bool claimedCollateral);
+    event LOANRepaid(uint256 indexed loanId, uint256 repaymentAmount, uint256 indexed newPrincipal);
+    /** @notice Emitted when a loan repayment is claimed.*/
+    event LOANRepaymentClaimed(uint256 indexed loanId, uint256 claimedAmount);
+    /** @notice Emitted when a loan collateral is liquidated.*/
+    event LOANLiquidated(uint256 indexed loanId, address indexed liquidator, uint256 liquidationAmount);
 
 
     /*----------------------------------------------------------*|
@@ -117,6 +121,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     error LoanNotRepaid();
     /** @notice Thrown when managed loan is defaulted.*/
     error LoanDefaulted();
+    /** @notice Thrown when managed loan is not defaulted.*/
+    error LoanNotDefaulted();
     /** @notice Thrown when loan doesn't exist.*/
     error NonExistingLoan();
     /** @notice Thrown when caller is not a LOAN token holder.*/
@@ -151,6 +157,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     error NothingToClaim();
     /** @notice Thrown when hook returns an invalid value.*/
     error InvalidHookReturnValue(bytes32 expected, bytes32 current);
+    /** @notice Thrown when liquidation caller is not a liquidation manager.*/
+    error CallerNotLiquidationManager();
 
 
     /*----------------------------------------------------------*|
@@ -188,7 +196,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @param extra Auxiliary data that are emitted in the loan creation event. They are not used in the contract logic.
      * @return loanId Id of the created LOAN token.
      */
-    function createLOAN(
+    function create(
         ProposalSpec calldata proposalSpec,
         // todo: lender & borrower spec
         bytes calldata extra
@@ -217,15 +225,21 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         loanId = _createLoan(loanTerms);
 
         // Initialize interest module
-        bytes32 hookReturnValue = loanTerms.interestModule.onLoanCreated(loanId, loanTerms.interestModuleProposerData);
+        bytes32 hookReturnValue = IPWNInterestModule(loanTerms.interestModule).onLoanCreated(loanId, loanTerms.interestModuleProposerData);
         if (hookReturnValue != INTEREST_MODULE_RETURN_VALUE) {
             revert InvalidHookReturnValue({ expected: INTEREST_MODULE_RETURN_VALUE, current: hookReturnValue });
         }
 
         // Initialize default module
-        hookReturnValue = loanTerms.defaultModule.onLoanCreated(loanId, loanTerms.defaultModuleProposerData);
+        hookReturnValue = IPWNDefaultModule(loanTerms.defaultModule).onLoanCreated(loanId, loanTerms.defaultModuleProposerData);
         if (hookReturnValue != DEFAULT_MODULE_RETURN_VALUE) {
             revert InvalidHookReturnValue({ expected: DEFAULT_MODULE_RETURN_VALUE, current: hookReturnValue });
+        }
+
+        // Initialize liquidation manager
+        hookReturnValue = IPWNLiquidationManager(loanTerms.liquidationManager).onLoanCreated(loanId, loanTerms.liquidationManagerProposerData);
+        if (hookReturnValue != LIQUIDATION_MANAGER_RETURN_VALUE) {
+            revert InvalidHookReturnValue({ expected: LIQUIDATION_MANAGER_RETURN_VALUE, current: hookReturnValue });
         }
 
         emit LOANCreated({
@@ -256,8 +270,9 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         loan.creditAddress = loanTerms.creditAddress;
         loan.principal = loanTerms.principal;
         loan.collateral = loanTerms.collateral;
-        loan.interestModule = loanTerms.interestModule;
-        loan.defaultModule = loanTerms.defaultModule;
+        loan.interestModule = IPWNInterestModule(loanTerms.interestModule);
+        loan.defaultModule = IPWNDefaultModule(loanTerms.defaultModule);
+        loan.liquidationManager = IPWNLiquidationManager(loanTerms.liquidationManager);
     }
 
     /**
@@ -304,7 +319,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @param loanId Id of a loan that is being repaid.
      * @param repaymentAmount Amount of a credit asset to be repaid. Use 0 to repay the whole loan.
      */
-    function repayLOAN(uint256 loanId, uint256 repaymentAmount) external nonReentrant {
+    function repay(uint256 loanId, uint256 repaymentAmount) external nonReentrant {
         LOAN storage loan = LOANs[loanId];
         uint8 status = getLOANStatus(loanId);
 
@@ -316,7 +331,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         if (status == LOANStatus.DEFAULTED) revert LoanDefaulted();
 
         // Check repayment amount
-        uint256 debt = loanDebt(loanId);
+        uint256 debt = getLOANDebt(loanId);
         if (repaymentAmount == 0) {
             repaymentAmount = debt;
         } else if (repaymentAmount > debt) {
@@ -339,24 +354,59 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         // If loan is fully repaid, transfer collateral to borrower
         if (loan.principal == 0) {
             _push(loan.collateral, loan.borrower);
-            emit LOANPaidBack({ loanId: loanId });
         }
     }
 
 
     /*----------------------------------------------------------*|
-    |*  # LOAN DEBT                                             *|
+    |*  # LIQUIDATE LOAN                                        *|
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Calculate the total debt of a loan.
-     * @dev The total debt is the sum of the principal amount and accrued interest.
-     * @param loanId Id of a loan.
-     * @return Total debt.
+     * @notice Liquidate a defaulted loan by a liquidation manager.
+     * @dev The liquidation manager can choose any amount of credit asset to be repaid to lender for the liquidation.
+     * @param loanId Id of a loan that is being liquidated.
+     * @param liquidationAmount Amount of a credit asset to be repaid to lender for the liquidation.
      */
-    function loanDebt(uint256 loanId) public view returns (uint256) {
+    function liquidate(uint256 loanId, uint256 liquidationAmount) external nonReentrant {
+        if (address(LOANs[loanId].liquidationManager) != msg.sender) revert CallerNotLiquidationManager();
+        _liquidate(loanId, liquidationAmount);
+    }
+
+    /**
+     * @notice Liquidate a defaulted loan by a loan owner.
+     * @param loanId Id of a loan that is being liquidated.
+     */
+    function liquidateByOwner(uint256 loanId) external nonReentrant {
+        if (address(LOANs[loanId].liquidationManager) != address(0)) revert CallerNotLiquidationManager();
+        if (loanToken.ownerOf(loanId) != msg.sender) revert CallerNotLOANTokenHolder();
+        _liquidate(loanId, 0);
+    }
+
+    function _liquidate(uint256 loanId, uint256 liquidationAmount) internal {
+        uint8 status = getLOANStatus(loanId);
+        if (status != LOANStatus.DEFAULTED) revert LoanNotDefaulted();
+
         LOAN storage loan = LOANs[loanId];
-        return loan.principal + loan.interestModule.interest(address(this), loanId);
+
+        loan.pastAccruedInterest = 0;
+        loan.principal = 0;
+        loan.unclaimedRepayment += liquidationAmount;
+        loan.lastUpdateTimestamp = uint40(block.timestamp);
+
+        emit LOANLiquidated({ loanId: loanId, liquidator: msg.sender, liquidationAmount: liquidationAmount });
+
+        MultiToken.Asset memory credit = loan.creditAddress.ERC20(liquidationAmount);
+        MultiToken.Asset memory collateral = loan.collateral;
+
+        if (getLOANStatus(loanId) == LOANStatus.DEAD) {
+            _deleteLoan(loanId);
+        }
+
+        if (liquidationAmount > 0) {
+            _pull(credit, msg.sender);
+        }
+        _push(collateral, msg.sender);
     }
 
 
@@ -365,12 +415,11 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     |*----------------------------------------------------------*/
 
     /**
-     * @notice Claim a repaid or defaulted loan.
-     * @dev Only a LOAN token holder can claim a repaid or defaulted loan.
-     * Claim will transfer the repaid credit or collateral to a LOAN token holder address and burn the LOAN token.
+     * @notice Claim a loan repayment.
+     * @dev Only a loan owner can claim a loan repayment.
      * @param loanId Id of a loan that is being claimed.
      */
-    function claimLOAN(uint256 loanId) external nonReentrant {
+    function claimRepayment(uint256 loanId) external nonReentrant {
         // Check that caller is LOAN token holder
         if (loanToken.ownerOf(loanId) != msg.sender) revert CallerNotLOANTokenHolder();
 
@@ -379,29 +428,22 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         // Loan is not existing or from a different loan contract
         if (status == LOANStatus.DEAD) revert NonExistingLoan();
         // Check that there is something to claim
-        if (loan.unclaimedRepayment == 0 && status != LOANStatus.DEFAULTED) revert NothingToClaim();
+        if (loan.unclaimedRepayment == 0) revert NothingToClaim();
 
-        emit LOANClaimed({
-            loanId: loanId,
-            claimedAmount: loan.unclaimedRepayment,
-            claimedCollateral: status == LOANStatus.DEFAULTED
-        });
+        emit LOANRepaymentClaimed({ loanId: loanId, claimedAmount: loan.unclaimedRepayment });
 
         MultiToken.Asset memory unclaimedCredit = loan.creditAddress.ERC20(loan.unclaimedRepayment);
-        MultiToken.Asset memory collateral = loan.collateral;
 
-        // Note: Both unclaimed amount and collateral are claimed in the one transaction.
-
-        if (status == LOANStatus.RUNNING) {
-            loan.unclaimedRepayment = 0;
-        } else {
+        if (status == LOANStatus.REPAID)
+            // Loan ended with full repayment, claiming the unclaimed amount deletes the loan
             _deleteLoan(loanId);
+        } else {
+            // Loan is still RUNNING or DEFAULTED, either way the loan is not deleted
+            loan.unclaimedRepayment = 0;
         }
 
-        // Transfer defaulted collateral to the loan owner
-        if (status == LOANStatus.DEFAULTED) _push(collateral, msg.sender);
         // Transfer unclaimed amount to the loan owner
-        if (unclaimedCredit.amount > 0) _push(unclaimedCredit, msg.sender);
+        _push(unclaimedCredit, msg.sender);
     }
 
     /**
@@ -439,6 +481,17 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         } else {
             return loan.defaultModule.isDefaulted(address(this), loanId) ? LOANStatus.DEFAULTED : LOANStatus.RUNNING;
         }
+    }
+
+    /**
+     * @notice Calculate the total debt of a loan.
+     * @dev The total debt is the sum of the principal amount and accrued interest.
+     * @param loanId Id of a loan.
+     * @return Total debt.
+     */
+    function getLOANDebt(uint256 loanId) public view returns (uint256) {
+        LOAN storage loan = LOANs[loanId];
+        return loan.principal + loan.interestModule.interest(address(this), loanId);
     }
 
 
