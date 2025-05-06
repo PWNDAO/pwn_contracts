@@ -35,5 +35,5 @@ struct LoanTerms {
     address defaultModule;
     bytes defaultModuleProposerData;
     address liquidationModule;
-    bytes liquidationManagerProposerData;
+    bytes liquidationModuleProposerData;
 }
