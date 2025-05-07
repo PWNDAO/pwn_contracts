@@ -47,7 +47,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     bytes32 public constant BORROWER_CREATE_HOOK_RETURN_VALUE = keccak256("PWNBorrowerCreateHook.onLoanCreated");
     bytes32 public constant BORROWER_REPAYMENT_HOOK_RETURN_VALUE = keccak256("PWNBorrowerCollateralRepaymentHook.onLoanRepaid");
 
-    bytes32 internal constant EMPTY_LENDER_SPEC_HASH = keccak256(abi.encode(LenderSpec(IPWNLenderCreateHook(address(0)), "", IPWNLenderRepaymentHook(address(0)), "")));
+    bytes32 internal constant EMPTY_LENDER_SPEC_HASH = keccak256(abi.encode(LenderSpec(IPWNLenderCreateHook(address(0)), "", IPWNLenderRepaymentHook(address(0)))));
     bytes32 internal constant EMPTY_BORROWER_SPEC_HASH = keccak256(abi.encode(BorrowerSpec(IPWNBorrowerCreateHook(address(0)), "")));
 
     PWNHub public immutable hub;
@@ -73,7 +73,6 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         IPWNLenderCreateHook createHook;
         bytes createHookData;
         IPWNLenderRepaymentHook repaymentHook;
-        bytes repaymentHookData;
     }
 
     struct BorrowerSpec {
@@ -109,6 +108,9 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
     /** Mapping of all LOAN data by loan id.*/
     mapping (uint256 => LOAN) private LOANs;
+
+    /** Mapping of lender repayment hook per loan id.*/
+    mapping (uint256 => IPWNLenderRepaymentHook) public lenderRepaymentHook;
 
 
     /*----------------------------------------------------------*|
@@ -199,33 +201,6 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
 
     /*----------------------------------------------------------*|
-    |*  # LENDER & BORROWER SPEC                                *|
-    |*----------------------------------------------------------*/
-
-    /**
-     * @notice Get the hash of a lender specification.
-     * @dev The hash is used to verify the lender specification in the loan terms.
-     * @param lenderSpec Lender specification struct.
-     * @return Hash of the lender specification.
-     */
-    function getLenderSpecHash(LenderSpec calldata lenderSpec) public pure returns (bytes32) {
-        bytes32 specHash = keccak256(abi.encode(lenderSpec));
-        return specHash == EMPTY_LENDER_SPEC_HASH ? bytes32(0) : specHash;
-    }
-
-    /**
-     * @notice Get the hash of a borrower specification.
-     * @dev The hash is used to verify the borrower specification in the loan terms.
-     * @param borrowerSpec Borrower specification struct.
-     * @return Hash of the borrower specification.
-     */
-    function getBorrowerSpecHash(BorrowerSpec calldata borrowerSpec) public pure returns (bytes32) {
-        bytes32 specHash = keccak256(abi.encode(borrowerSpec));
-        return specHash == EMPTY_BORROWER_SPEC_HASH ? bytes32(0) : specHash;
-    }
-
-
-    /*----------------------------------------------------------*|
     |*  # CREATE LOAN                                           *|
     |*----------------------------------------------------------*/
 
@@ -282,6 +257,11 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
             borrowerSpec: borrowerSpec,
             extra: extra
         });
+
+        // Store lender repayment hook
+        if (address(lenderSpec.repaymentHook) != address(0)) {
+            lenderRepaymentHook[loanId] = lenderSpec.repaymentHook;
+        }
 
         // Note: !! DANGER ZONE !!
 
@@ -418,23 +398,66 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
             revert InvalidRepaymentAmount({ current: repaymentAmount, limit: debt });
         }
 
-        // Decrease debt by the repayment amount
         // Note: The accrued interest is repaid first, then principal.
+
+        // Decrease debt by the repayment amount
         uint256 interest = debt - loan.principal;
         loan.pastAccruedInterest = repaymentAmount < interest ? interest - repaymentAmount : 0;
         loan.principal -= repaymentAmount > interest ? repaymentAmount - interest : 0;
-        loan.unclaimedRepayment += repaymentAmount;
         loan.lastUpdateTimestamp = uint40(block.timestamp);
 
         emit LOANRepaid({ loanId: loanId, repaymentAmount: repaymentAmount, newPrincipal: loan.principal });
 
-        // Transfer the repaid credit to the Vault
-        _pull(loan.creditAddress.ERC20(repaymentAmount), msg.sender);
+        // Note: Repayment is transferred into the Vault if no repayment hook is set or the hook reverts.
+
+        IPWNLenderRepaymentHook hook = lenderRepaymentHook[loanId];
+        if (address(hook) != address(0)) {
+            try this.tryCallRepaymentHook({
+                hook: hook,
+                repaymentOrigin: msg.sender,
+                loanOwner: loanToken.ownerOf(loanId),
+                creditAddress: loan.creditAddress,
+                repaymentAmount: repaymentAmount
+            }) {} catch {
+                _repaymentToVault(loan, msg.sender, repaymentAmount);
+            }
+        } else {
+            _repaymentToVault(loan, msg.sender, repaymentAmount);
+        }
 
         // If loan is fully repaid, transfer collateral to borrower
         if (loan.principal == 0) {
             _push(loan.collateral, loan.borrower);
         }
+    }
+
+
+    function tryCallRepaymentHook(
+        IPWNLenderRepaymentHook hook,
+        address repaymentOrigin,
+        address loanOwner,
+        address creditAddress,
+        uint256 repaymentAmount
+    ) external {
+        // Check that the caller is a vault
+        if (msg.sender != address(this)) revert CallerNotVault();
+
+        // Transfer repayment to lender repayment hook
+        _pushFrom(creditAddress.ERC20(repaymentAmount), repaymentOrigin, address(hook));
+
+        // Call hook and check hooks return value
+        bytes32 hookReturnValue = hook.onLoanRepaid(loanOwner, loan.creditAddress, repaymentAmount);
+        if (hookReturnValue != LENDER_REPAYMENT_HOOK_RETURN_VALUE) {
+            revert InvalidHookReturnValue({ expected: LENDER_REPAYMENT_HOOK_RETURN_VALUE, current: hookReturnValue });
+        }
+    }
+
+    /** @dev Called during loan repayment when loan owner has no lender repayment hook set or the hook reverts.*/
+    function _repaymentToVault(LOAN storage loan, address repaymentOrigin, uint256 repaymentAmount) internal {
+        // Update unclaimed repayment amount
+        loan.unclaimedRepayment += repaymentAmount;
+        // Transfer repayment amount to vault
+        _pull(loan.creditAddress.ERC20(repaymentAmount), repaymentOrigin);
     }
 
 
@@ -572,6 +595,49 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     function getLOANDebt(uint256 loanId) public view returns (uint256) {
         LOAN storage loan = LOANs[loanId];
         return loan.principal + loan.interestModule.interest(address(this), loanId);
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # LENDER & BORROWER SPEC                                *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Get the hash of a lender specification.
+     * @dev The hash is used to verify the lender specification in the loan terms.
+     * @param lenderSpec Lender specification struct.
+     * @return Hash of the lender specification.
+     */
+    function getLenderSpecHash(LenderSpec calldata lenderSpec) public pure returns (bytes32) {
+        bytes32 specHash = keccak256(abi.encode(lenderSpec));
+        return specHash == EMPTY_LENDER_SPEC_HASH ? bytes32(0) : specHash;
+    }
+
+    /**
+     * @notice Get the hash of a borrower specification.
+     * @dev The hash is used to verify the borrower specification in the loan terms.
+     * @param borrowerSpec Borrower specification struct.
+     * @return Hash of the borrower specification.
+     */
+    function getBorrowerSpecHash(BorrowerSpec calldata borrowerSpec) public pure returns (bytes32) {
+        bytes32 specHash = keccak256(abi.encode(borrowerSpec));
+        return specHash == EMPTY_BORROWER_SPEC_HASH ? bytes32(0) : specHash;
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # HOOKS                                                 *|
+    |*----------------------------------------------------------*/
+
+    /**
+     * @notice Update the lender repayment hook for a loan.
+     * @dev Only a LOAN token holder can update the lender repayment hook.
+     * @param loanId Id of a loan that is being updated.
+     * @param newHook New lender repayment hook.
+     */
+    function updateLenderRepaymentHook(uint256 loanId, IPWNLenderRepaymentHook newHook) external {
+        if (loanToken.ownerOf(loanId) != msg.sender) revert CallerNotLOANTokenHolder();
+        lenderRepaymentHook[loanId] = newHook;
     }
 
 

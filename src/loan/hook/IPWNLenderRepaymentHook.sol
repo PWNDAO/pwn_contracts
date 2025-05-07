@@ -6,7 +6,6 @@ interface IPWNLenderRepaymentHook {
     function onLoanRepaid(
         address lender,
         address creditAddress,
-        uint256 repayment,
-        bytes calldata lenderData
+        uint256 repayment
     ) external returns (bytes32);
 }
