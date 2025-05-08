@@ -4,6 +4,8 @@ pragma solidity 0.8.16;
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
 
+bytes32 constant BORROWER_CREATE_HOOK_RETURN_VALUE = keccak256("PWNBorrowerCreateHook.onLoanCreated");
+
 interface IPWNBorrowerCreateHook {
     /** @dev Must return keccak of "PWNBorrowerCreateHook.onLoanCreated"*/
     function onLoanCreated(

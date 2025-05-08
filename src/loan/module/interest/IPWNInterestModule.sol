@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.16;
 
-interface IPWNInterestModule {
-    function interest(address loanContract, uint256 loanId) external view returns (uint256);
-    function debt(address loanContract, uint256 loanId) external view returns (uint256);
+import { IPWNModuleInitializationHook } from "pwn/loan/hook/IPWNModuleInitializationHook.sol";
 
-    /** @dev Must return keccak of "PWNInterestModule.onLoanCreated"*/
-    function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32);
+
+bytes32 constant INTEREST_MODULE_INIT_HOOK_RETURN_VALUE = keccak256("PWNInterestModule.onLoanCreated");
+
+/** @dev Init hook must return keccak of "PWNInterestModule.onLoanCreated".*/
+interface IPWNInterestModule is IPWNModuleInitializationHook {
+    function interest(address loanContract, uint256 loanId) external view returns (uint256);
 }

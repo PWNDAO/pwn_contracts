@@ -12,14 +12,15 @@ import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
 import { IPWNLoanMetadataProvider } from "pwn/interfaces/IPWNLoanMetadataProvider.sol";
 import { LOANStatus } from "pwn/lib/LOANStatus.sol";
-import { IPWNBorrowerCollateralRepaymentHook } from "pwn/loan/hook/IPWNBorrowerCollateralRepaymentHook.sol";
-import { IPWNBorrowerCreateHook } from "pwn/loan/hook/IPWNBorrowerCreateHook.sol";
-import { IPWNLenderCreateHook } from "pwn/loan/hook/IPWNLenderCreateHook.sol";
-import { IPWNLenderRepaymentHook } from "pwn/loan/hook/IPWNLenderRepaymentHook.sol";
+import { IPWNBorrowerCollateralRepaymentHook, BORROWER_REPAYMENT_HOOK_RETURN_VALUE } from "pwn/loan/hook/IPWNBorrowerCollateralRepaymentHook.sol";
+import { IPWNBorrowerCreateHook, BORROWER_CREATE_HOOK_RETURN_VALUE } from "pwn/loan/hook/IPWNBorrowerCreateHook.sol";
+import { IPWNLenderCreateHook, LENDER_CREATE_HOOK_RETURN_VALUE } from "pwn/loan/hook/IPWNLenderCreateHook.sol";
+import { IPWNLenderRepaymentHook, LENDER_REPAYMENT_HOOK_RETURN_VALUE } from "pwn/loan/hook/IPWNLenderRepaymentHook.sol";
+import { IPWNModuleInitializationHook } from "pwn/loan/hook/IPWNModuleInitializationHook.sol";
 import { PWNFeeCalculator } from "pwn/lib/PWNFeeCalculator.sol";
-import { IPWNDefaultModule } from "pwn/loan/module/default/IPWNDefaultModule.sol";
-import { IPWNInterestModule } from "pwn/loan/module/interest/IPWNInterestModule.sol";
-import { IPWNLiquidationModule } from "pwn/loan/module/liquidation/IPWNLiquidationModule.sol";
+import { IPWNDefaultModule, DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE } from "pwn/loan/module/default/IPWNDefaultModule.sol";
+import { IPWNInterestModule, INTEREST_MODULE_INIT_HOOK_RETURN_VALUE } from "pwn/loan/module/interest/IPWNInterestModule.sol";
+import { IPWNLiquidationModule, LIQUIDATION_MODULE_INIT_HOOK_RETURN_VALUE } from "pwn/loan/module/liquidation/IPWNLiquidationModule.sol";
 import { IPWNProposal } from "pwn/proposal/IPWNProposal.sol";
 import { LoanTerms as Terms } from "pwn/loan/LoanTerms.sol";
 import { PWNVault } from "pwn/loan/PWNVault.sol";
@@ -38,14 +39,6 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     /*----------------------------------------------------------*|
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
-
-    bytes32 public constant INTEREST_MODULE_RETURN_VALUE = keccak256("PWNInterestModule.onLoanCreated");
-    bytes32 public constant DEFAULT_MODULE_RETURN_VALUE = keccak256("PWNDefaultModule.onLoanCreated");
-    bytes32 public constant LIQUIDATION_MODULE_RETURN_VALUE = keccak256("PWNLiquidationModule.onLoanCreated");
-    bytes32 public constant LENDER_CREATE_HOOK_RETURN_VALUE = keccak256("PWNLenderCreateHook.onLoanCreated");
-    bytes32 public constant LENDER_REPAYMENT_HOOK_RETURN_VALUE = keccak256("PWNLenderRepaymentHook.onLoanRepaid");
-    bytes32 public constant BORROWER_CREATE_HOOK_RETURN_VALUE = keccak256("PWNBorrowerCreateHook.onLoanCreated");
-    bytes32 public constant BORROWER_REPAYMENT_HOOK_RETURN_VALUE = keccak256("PWNBorrowerCollateralRepaymentHook.onLoanRepaid");
 
     bytes32 internal constant EMPTY_LENDER_SPEC_HASH = keccak256(abi.encode(LenderSpec(IPWNLenderCreateHook(address(0)), "", IPWNLenderRepaymentHook(address(0)))));
     bytes32 internal constant EMPTY_BORROWER_SPEC_HASH = keccak256(abi.encode(BorrowerSpec(IPWNBorrowerCreateHook(address(0)), "")));
@@ -181,6 +174,10 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     error InvalidHookReturnValue(bytes32 expected, bytes32 current);
     /** @notice Thrown when liquidation caller is not a liquidation module.*/
     error CallerNotLiquidationModule();
+    /** @notice Thrown when caller is not a loan borrower.*/
+    error CallerNotBorrower();
+    /** @notice Thrown when hook is not set or is zero address.*/
+    error HookZeroAddress();
 
 
     /*----------------------------------------------------------*|
@@ -220,9 +217,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         bytes calldata extra
     ) external nonReentrant returns (uint256 loanId) {
         // Check provided proposal contract
-        if (!hub.hasTag(proposalSpec.proposalContract, PWNHubTags.LOAN_PROPOSAL)) {
-            revert AddressMissingHubTag({ addr: proposalSpec.proposalContract, tag: PWNHubTags.LOAN_PROPOSAL });
-        }
+        _checkHubTag(proposalSpec.proposalContract, PWNHubTags.LOAN_PROPOSAL);
 
         // Accept proposal and get loan terms
         Terms memory loanTerms = IPWNProposal(proposalSpec.proposalContract)
@@ -265,23 +260,10 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
         // Note: !! DANGER ZONE !!
 
-        // Initialize interest module
-        bytes32 hookReturnValue = IPWNInterestModule(loanTerms.interestModule).onLoanCreated(loanId, loanTerms.interestModuleProposerData);
-        if (hookReturnValue != INTEREST_MODULE_RETURN_VALUE) {
-            revert InvalidHookReturnValue({ expected: INTEREST_MODULE_RETURN_VALUE, current: hookReturnValue });
-        }
-
-        // Initialize default module
-        hookReturnValue = IPWNDefaultModule(loanTerms.defaultModule).onLoanCreated(loanId, loanTerms.defaultModuleProposerData);
-        if (hookReturnValue != DEFAULT_MODULE_RETURN_VALUE) {
-            revert InvalidHookReturnValue({ expected: DEFAULT_MODULE_RETURN_VALUE, current: hookReturnValue });
-        }
-
-        // Initialize liquidation module
-        hookReturnValue = IPWNLiquidationModule(loanTerms.liquidationModule).onLoanCreated(loanId, loanTerms.liquidationModuleProposerData);
-        if (hookReturnValue != LIQUIDATION_MODULE_RETURN_VALUE) {
-            revert InvalidHookReturnValue({ expected: LIQUIDATION_MODULE_RETURN_VALUE, current: hookReturnValue });
-        }
+        // Initialize modules
+        _initializeModule(loanTerms.interestModule, INTEREST_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.interestModuleProposerData);
+        _initializeModule(loanTerms.defaultModule, DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.defaultModuleProposerData);
+        _initializeModule(loanTerms.liquidationModule, LIQUIDATION_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.liquidationModuleProposerData);
 
         // Settle the loan
         _settleNewLoan(loanTerms, lenderSpec, borrowerSpec);
@@ -307,6 +289,22 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         loan.liquidationModule = IPWNLiquidationModule(loanTerms.liquidationModule);
     }
 
+    /** @dev Initialize module by checking PWN Hub tag and call initialization hook.*/
+    function _initializeModule(
+        address module,
+        bytes32 expectedReturnValue,
+        uint256 loanId,
+        bytes memory proposerData
+    ) internal {
+        // Check PWN Hub tag
+        _checkHubTag(module, PWNHubTags.MODULE);
+        // Call module initialization hook
+        bytes32 hookReturnValue = IPWNModuleInitializationHook(module).onLoanCreated(loanId, proposerData);
+        if (hookReturnValue != expectedReturnValue) {
+            revert InvalidHookReturnValue({ expected: expectedReturnValue, current: hookReturnValue });
+        }
+    }
+
     /**
      * @notice Transfer collateral to Vault and credit to borrower.
      * @dev The function assumes a prior token approval to a contract address.
@@ -321,6 +319,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     ) private {
         // Call lender create hook
         if (address(lenderSpec.createHook) != address(0)) {
+            _checkHubTag(address(lenderSpec.createHook), PWNHubTags.HOOK);
             bytes32 hookReturnValue = lenderSpec.createHook.onLoanCreated(
                 loanTerms.lender,
                 loanTerms.creditAddress,
@@ -351,6 +350,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
         // Call borrower create hook
         if (address(borrowerSpec.createHook) != address(0)) {
+            _checkHubTag(address(borrowerSpec.createHook), PWNHubTags.HOOK);
             bytes32 hookReturnValue = borrowerSpec.createHook.onLoanCreated(
                 loanTerms.borrower,
                 loanTerms.collateral,
@@ -381,8 +381,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      */
     function repay(uint256 loanId, uint256 repaymentAmount) external nonReentrant {
         LOAN storage loan = LOANs[loanId];
-        uint8 status = getLOANStatus(loanId);
 
+        uint8 status = getLOANStatus(loanId);
         // Check that loan exists and is not from a different loan contract
         if (status == LOANStatus.DEAD) revert NonExistingLoan();
         // Check that loan is running
@@ -442,11 +442,14 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         // Check that the caller is a vault
         if (msg.sender != address(this)) revert CallerNotVault();
 
+        // Check that hook has PWN Hub tag
+        _checkHubTag(address(hook), PWNHubTags.HOOK);
+
         // Transfer repayment to lender repayment hook
         _pushFrom(creditAddress.ERC20(repaymentAmount), repaymentOrigin, address(hook));
 
         // Call hook and check hooks return value
-        bytes32 hookReturnValue = hook.onLoanRepaid(loanOwner, loan.creditAddress, repaymentAmount);
+        bytes32 hookReturnValue = hook.onLoanRepaid(loanOwner, creditAddress, repaymentAmount);
         if (hookReturnValue != LENDER_REPAYMENT_HOOK_RETURN_VALUE) {
             revert InvalidHookReturnValue({ expected: LENDER_REPAYMENT_HOOK_RETURN_VALUE, current: hookReturnValue });
         }
@@ -636,7 +639,10 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @param newHook New lender repayment hook.
      */
     function updateLenderRepaymentHook(uint256 loanId, IPWNLenderRepaymentHook newHook) external {
-        if (loanToken.ownerOf(loanId) != msg.sender) revert CallerNotLOANTokenHolder();
+        if (loanToken.ownerOf(loanId) != msg.sender) {
+            revert CallerNotLOANTokenHolder();
+        }
+        _checkHubTag(address(newHook), PWNHubTags.HOOK);
         lenderRepaymentHook[loanId] = newHook;
     }
 
@@ -707,6 +713,17 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
             loan.principal,
             loan.unclaimedRepayment
         ));
+    }
+
+
+    /*----------------------------------------------------------*|
+    |*  # UTILS                                                 *|
+    |*----------------------------------------------------------*/
+
+    function _checkHubTag(address addr, bytes32 tag) internal view {
+        if (!hub.hasTag(addr, tag)) {
+            revert AddressMissingHubTag({ addr: addr, tag: tag });
+        }
     }
 
 }
