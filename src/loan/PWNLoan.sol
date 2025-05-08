@@ -126,44 +126,16 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
     /** @notice Thrown when an address is missing a PWN Hub tag.*/
     error AddressMissingHubTag(address addr, bytes32 tag);
-    /** @notice Thrown when managed loan is running.*/
+    /** @notice Thrown when managed loan is not running.*/
     error LoanNotRunning();
-    /** @notice Thrown when manged loan is still running.*/
-    error LoanRunning();
-    /** @notice Thrown when managed loan is repaid.*/
-    error LoanRepaid();
-    /** @notice Thrown when managed loan is not repaid.*/
-    error LoanNotRepaid();
-    /** @notice Thrown when managed loan is defaulted.*/
-    error LoanDefaulted();
     /** @notice Thrown when managed loan is not defaulted.*/
     error LoanNotDefaulted();
-    /** @notice Thrown when loan doesn't exist.*/
-    error NonExistingLoan();
     /** @notice Thrown when caller is not a LOAN token holder.*/
     error CallerNotLOANTokenHolder();
-    /** @notice Thrown when refinancing loan terms have different borrower than the original loan.*/
-    error RefinanceBorrowerMismatch(address currentBorrower, address newBorrower);
-    /** @notice Thrown when refinancing loan terms have different credit asset than the original loan.*/
-    error RefinanceCreditMismatch();
-    /** @notice Thrown when refinancing loan terms have different collateral asset than the original loan.*/
-    error RefinanceCollateralMismatch();
     /** @notice Thrown when hash of provided proposer spec doesn't match the one in loan terms.*/
     error InvalidProposerSpecHash(bytes32 current, bytes32 expected);
-    /** @notice Thrown when loan duration is below the minimum.*/
-    error InvalidDuration(uint256 current, uint256 limit);
-    /** @notice Thrown when accruing interest APR is above the maximum.*/
-    error InterestAPROutOfBounds(uint256 current, uint256 limit);
     /** @notice Thrown when caller is not a vault.*/
     error CallerNotVault();
-    /** @notice Thrown when pool based source of funds doesn't have a registered adapter.*/
-    error InvalidSourceOfFunds(address sourceOfFunds);
-    /** @notice Thrown when caller is not a loan borrower or lender.*/
-    error InvalidExtensionCaller();
-    /** @notice Thrown when signer is not a loan extension proposer.*/
-    error InvalidExtensionSigner(address allowed, address current);
-    /** @notice Thrown when loan extension duration is out of bounds.*/
-    error InvalidExtensionDuration(uint256 duration, uint256 limit);
     /** @notice Thrown when MultiToken.Asset is invalid because of invalid category, address, id or amount.*/
     error InvalidMultiTokenAsset(uint8 category, address addr, uint256 id, uint256 amount);
     /** @notice Thrown when repayment amount is out of bounds.*/
