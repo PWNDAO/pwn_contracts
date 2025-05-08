@@ -346,21 +346,17 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
     /**
      * @notice Repay running loan.
-     * @dev Any address can repay a running loan, but a collateral will be transferred to a borrower address associated with the loan.
-     * The function assumes a prior token approval to Loan contract.
+     * @dev Any address can repay a running loan, but a collateral will be transferred to
+     * a borrower address associated with the loan.
+     * @dev The function assumes a prior token approval to Loan contract.
      * @param loanId Id of a loan that is being repaid.
      * @param repaymentAmount Amount of a credit asset to be repaid. Use 0 to repay the whole loan.
      */
     function repay(uint256 loanId, uint256 repaymentAmount) external nonReentrant {
         LOAN storage loan = LOANs[loanId];
 
-        uint8 status = getLOANStatus(loanId);
-        // Check that loan exists and is not from a different loan contract
-        if (status == LOANStatus.DEAD) revert NonExistingLoan();
         // Check that loan is running
-        if (status == LOANStatus.REPAID) revert LoanRepaid();
-        // Check that loan is not defaulted
-        if (status == LOANStatus.DEFAULTED) revert LoanDefaulted();
+        _checkRunningLoan(loanId);
 
         // Check repayment amount
         uint256 debt = getLOANDebt(loanId);
@@ -373,29 +369,11 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         // Note: The accrued interest is repaid first, then principal.
 
         // Decrease debt by the repayment amount
-        uint256 interest = debt - loan.principal;
-        loan.pastAccruedInterest = repaymentAmount < interest ? interest - repaymentAmount : 0;
-        loan.principal -= repaymentAmount > interest ? repaymentAmount - interest : 0;
-        loan.lastUpdateTimestamp = uint40(block.timestamp);
+        _decreaseDebt(loan, debt, repaymentAmount);
 
         emit LOANRepaid({ loanId: loanId, repaymentAmount: repaymentAmount, newPrincipal: loan.principal });
 
-        // Note: Repayment is transferred into the Vault if no repayment hook is set or the hook reverts.
-
-        IPWNLenderRepaymentHook hook = lenderRepaymentHook[loanId];
-        if (address(hook) != address(0)) {
-            try this.tryCallRepaymentHook({
-                hook: hook,
-                repaymentOrigin: msg.sender,
-                loanOwner: loanToken.ownerOf(loanId),
-                creditAddress: loan.creditAddress,
-                repaymentAmount: repaymentAmount
-            }) {} catch {
-                _repaymentToVault(loan, msg.sender, repaymentAmount);
-            }
-        } else {
-            _repaymentToVault(loan, msg.sender, repaymentAmount);
-        }
+        _settleRepayment(loanId, msg.sender, loan.creditAddress, repaymentAmount);
 
         // If loan is fully repaid, transfer collateral to borrower
         if (loan.principal == 0) {
@@ -403,6 +381,88 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         }
     }
 
+    /**
+     * @notice Repay running loan with collateral.
+     * @dev Only a borrower can repay a running loan with collateral.
+     * @dev The function transfers collateral to repayment hook before calling it,
+     * expecting approval and full repayment amount at the end of execution.
+     * @param loanId Id of a loan that is being repaid.
+     * @param borrowerHook Borrower repayment hook.
+     * @param borrowerHookData Data passed to the borrower repayment hook.
+     */
+    function repayWithCollateral(
+        uint256 loanId,
+        IPWNBorrowerCollateralRepaymentHook borrowerHook,
+        bytes calldata borrowerHookData
+    ) external nonReentrant {
+        LOAN storage loan = LOANs[loanId];
+
+        // Caller must be borrower
+        if (loan.borrower != msg.sender) revert CallerNotBorrower();
+        // Check that hook is set
+        if (address(borrowerHook) == address(0)) revert HookZeroAddress();
+        // Check that hook has PWN Hub tag
+        _checkHubTag(address(borrowerHook), PWNHubTags.HOOK);
+
+        // Check that loan is running
+        _checkRunningLoan(loanId);
+
+        // Get repayment amount
+        uint256 repaymentAmount = getLOANDebt(loanId);
+
+        // Erase debt
+        _decreaseDebt(loan, repaymentAmount, repaymentAmount);
+
+        emit LOANRepaid({ loanId: loanId, repaymentAmount: repaymentAmount, newPrincipal: 0 });
+
+        // Transfer collateral to borrower hook
+        _push(loan.collateral, address(borrowerHook));
+
+        // Call borrower collateral repayment hook
+        bytes32 hookReturnValue = borrowerHook.onLoanRepaid({
+            borrower: msg.sender,
+            collateral: loan.collateral,
+            creditAddress: loan.creditAddress,
+            repayment: repaymentAmount,
+            borrowerData: borrowerHookData
+        });
+        if (hookReturnValue != BORROWER_REPAYMENT_HOOK_RETURN_VALUE) {
+            revert InvalidHookReturnValue({ expected: BORROWER_REPAYMENT_HOOK_RETURN_VALUE, current: hookReturnValue });
+        }
+
+        _settleRepayment(loanId, address(borrowerHook), loan.creditAddress, repaymentAmount);
+    }
+
+    function _checkRunningLoan(uint256 loanId) internal view {
+        uint8 status = getLOANStatus(loanId);
+        if (status != LOANStatus.RUNNING) revert LoanNotRunning();
+    }
+
+    function _decreaseDebt(LOAN storage loan, uint256 currentDebt, uint256 repaymentAmount) internal {
+        uint256 interest = currentDebt - loan.principal;
+        loan.pastAccruedInterest = repaymentAmount < interest ? interest - repaymentAmount : 0;
+        loan.principal -= repaymentAmount > interest ? repaymentAmount - interest : 0;
+        loan.lastUpdateTimestamp = uint40(block.timestamp);
+    }
+
+    function _settleRepayment(uint256 loanId, address repaymentOrigin, address creditAddress, uint256 repaymentAmount) internal {
+        // Note: Repayment is transferred into the Vault if no repayment hook is set or the hook reverts.
+
+        IPWNLenderRepaymentHook lenderHook = lenderRepaymentHook[loanId];
+        if (address(lenderHook) != address(0)) {
+            try this.tryCallRepaymentHook({
+                hook: lenderHook,
+                repaymentOrigin: repaymentOrigin,
+                loanOwner: loanToken.ownerOf(loanId),
+                creditAddress: creditAddress,
+                repaymentAmount: repaymentAmount
+            }) {} catch {
+                _repaymentToVault(loanId, repaymentOrigin, creditAddress, repaymentAmount);
+            }
+        } else {
+            _repaymentToVault(loanId, repaymentOrigin, creditAddress, repaymentAmount);
+        }
+    }
 
     function tryCallRepaymentHook(
         IPWNLenderRepaymentHook hook,
@@ -428,11 +488,11 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     }
 
     /** @dev Called during loan repayment when loan owner has no lender repayment hook set or the hook reverts.*/
-    function _repaymentToVault(LOAN storage loan, address repaymentOrigin, uint256 repaymentAmount) internal {
+    function _repaymentToVault(uint256 loanId, address repaymentOrigin, address creditAddress, uint256 repaymentAmount) internal {
         // Update unclaimed repayment amount
-        loan.unclaimedRepayment += repaymentAmount;
+        LOANs[loanId].unclaimedRepayment += repaymentAmount;
         // Transfer repayment amount to vault
-        _pull(loan.creditAddress.ERC20(repaymentAmount), repaymentOrigin);
+        _pull(creditAddress.ERC20(repaymentAmount), repaymentOrigin);
     }
 
 
@@ -502,9 +562,6 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         if (loanToken.ownerOf(loanId) != msg.sender) revert CallerNotLOANTokenHolder();
 
         LOAN storage loan = LOANs[loanId];
-        uint8 status = getLOANStatus(loanId);
-        // Loan is not existing or from a different loan contract
-        if (status == LOANStatus.DEAD) revert NonExistingLoan();
         // Check that there is something to claim
         if (loan.unclaimedRepayment == 0) revert NothingToClaim();
 
@@ -512,11 +569,11 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
         MultiToken.Asset memory unclaimedCredit = loan.creditAddress.ERC20(loan.unclaimedRepayment);
 
-        if (status == LOANStatus.REPAID) {
-            // Loan ended with full repayment, claiming the unclaimed amount deletes the loan
+        if (loan.principal == 0) {
+            // Loan is full repaid, claiming the unclaimed amount deletes the loan
             _deleteLoan(loanId);
         } else {
-            // Loan is still RUNNING or DEFAULTED, either way the loan is not deleted
+            // Loan is still RUNNING or DEFAULTED, either way the loan is being deleted
             loan.unclaimedRepayment = 0;
         }
 
