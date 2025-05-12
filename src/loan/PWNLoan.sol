@@ -150,6 +150,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     error CallerNotBorrower();
     /** @notice Thrown when hook is not set or is zero address.*/
     error HookZeroAddress();
+    /** @notice Thrown when loan is defaulted on creation.*/
+    error DefaultedOnCreation();
 
 
     /*----------------------------------------------------------*|
@@ -236,6 +238,9 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         _initializeModule(loanTerms.interestModule, INTEREST_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.interestModuleProposerData);
         _initializeModule(loanTerms.defaultModule, DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.defaultModuleProposerData);
         _initializeModule(loanTerms.liquidationModule, LIQUIDATION_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.liquidationModuleProposerData);
+
+        // Check that loan is not defaulted on creation
+        if (IPWNDefaultModule(loanTerms.defaultModule).isDefaulted(address(this), loanId)) revert DefaultedOnCreation();
 
         // Settle the loan
         _settleNewLoan(loanTerms, lenderSpec, borrowerSpec);
