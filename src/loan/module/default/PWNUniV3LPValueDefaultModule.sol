@@ -80,7 +80,7 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
             });
         }
 
-        return PWNLoan(loanContract).getLOANDebt(loanId) >= lpValue.mulDiv(defaultData.lltv, LLTV_DECIMALS);
+        return PWNLoan(loanContract).getLOANDebt(loanId) >= lpValue.mulDiv(defaultData.lltv, 10 ** LLTV_DECIMALS);
     }
 
     function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {

@@ -68,7 +68,7 @@ contract PWNChainlinkValueDefaultModule is IPWNDefaultModule {
             feedInvertFlags: defaultData.feedInvertFlags
         });
 
-        return PWNLoan(loanContract).getLOANDebt(loanId) >= value.mulDiv(defaultData.lltv, LLTV_DECIMALS);
+        return PWNLoan(loanContract).getLOANDebt(loanId) >= value.mulDiv(defaultData.lltv, 10 ** LLTV_DECIMALS);
     }
 
     function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
