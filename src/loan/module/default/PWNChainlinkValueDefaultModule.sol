@@ -6,16 +6,14 @@ import { SafeCast } from "openzeppelin/utils/math/SafeCast.sol";
 
 import { PWNHub } from "pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
-import { UniswapV3, INonfungiblePositionManager } from "pwn/lib/UniswapV3.sol";
 import { Chainlink, IChainlinkAggregatorLike, IChainlinkFeedRegistryLike } from "pwn/lib/Chainlink.sol";
 import { IPWNDefaultModule, DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE } from "pwn/loan/module/default/IPWNDefaultModule.sol";
 import { PWNLoan } from "pwn/loan/PWNLoan.sol";
 
 
-contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
+contract PWNChainlinkValueDefaultModule is IPWNDefaultModule {
     using Math for uint256;
     using SafeCast for uint256;
-    using UniswapV3 for UniswapV3.Config;
     using Chainlink for Chainlink.Config;
 
     uint256 public constant MAX_CHAINLINK_INTERMEDIARY_DENOMINATIONS = 4;
@@ -26,19 +24,16 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
 
     PWNHub public hub;
 
-    UniswapV3.Config internal _uniswap;
     Chainlink.Config internal _chainlink;
 
     struct ProposerData {
         uint256 lltv;
-        bool token0Denominator;
         address[] feedIntermediaryDenominations;
         bool[] feedInvertFlags;
     }
 
     struct DefaultData {
-        uint248 lltv;
-        bool token0Denominator;
+        uint256 lltv;
         // todo: optimize storage
         address[] feedIntermediaryDenominations;
         bool[] feedInvertFlags;
@@ -49,15 +44,11 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
 
     constructor(
         PWNHub _hub,
-        INonfungiblePositionManager uniswapV3PositionManager,
-        address uniswapV3Factory,
         IChainlinkAggregatorLike chainlinkL2SequencerUptimeFeed,
         IChainlinkFeedRegistryLike chainlinkFeedRegistry,
         address weth
     ) {
         hub = _hub;
-        _uniswap.positionManager = uniswapV3PositionManager;
-        _uniswap.factory = uniswapV3Factory;
         _chainlink.l2SequencerUptimeFeed = chainlinkL2SequencerUptimeFeed;
         _chainlink.feedRegistry = chainlinkFeedRegistry;
         _chainlink.maxIntermediaryDenominations = MAX_CHAINLINK_INTERMEDIARY_DENOMINATIONS;
@@ -68,19 +59,16 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
     function isDefaulted(address loanContract, uint256 loanId) public view returns (bool) {
         DefaultData storage defaultData = _defaultData[loanContract][loanId];
         PWNLoan.LOAN memory loan = PWNLoan(loanContract).getLOAN(loanId);
-        (uint256 lpValue, address denominator) = _uniswap.getLPValue(loanId, defaultData.token0Denominator);
 
-        if (loan.creditAddress != denominator) {
-            lpValue = _chainlink.convertDenomination({
-                amount: lpValue,
-                oldDenomination: denominator,
-                newDenomination: loan.creditAddress,
-                feedIntermediaryDenominations: defaultData.feedIntermediaryDenominations,
-                feedInvertFlags: defaultData.feedInvertFlags
-            });
-        }
+        uint256 value = _chainlink.convertDenomination({
+            amount: loan.collateral.amount,
+            oldDenomination: loan.collateral.assetAddress,
+            newDenomination: loan.creditAddress,
+            feedIntermediaryDenominations: defaultData.feedIntermediaryDenominations,
+            feedInvertFlags: defaultData.feedInvertFlags
+        });
 
-        return PWNLoan(loanContract).getLOANDebt(loanId) >= lpValue.mulDiv(defaultData.lltv, LLTV_DECIMALS);
+        return PWNLoan(loanContract).getLOANDebt(loanId) >= value.mulDiv(defaultData.lltv, LLTV_DECIMALS);
     }
 
     function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
@@ -92,7 +80,6 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
 
         _defaultData[msg.sender][loanId] = DefaultData({
             lltv: proposer.lltv.toUint248(),
-            token0Denominator: proposer.token0Denominator,
             feedIntermediaryDenominations: proposer.feedIntermediaryDenominations,
             feedInvertFlags: proposer.feedInvertFlags
         });
