@@ -40,7 +40,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    bytes32 internal constant EMPTY_LENDER_SPEC_HASH = keccak256(abi.encode(LenderSpec(IPWNLenderCreateHook(address(0)), "", IPWNLenderRepaymentHook(address(0)))));
+    bytes32 internal constant EMPTY_LENDER_SPEC_HASH = keccak256(abi.encode(LenderSpec(IPWNLenderCreateHook(address(0)), "", IPWNLenderRepaymentHook(address(0)), "")));
     bytes32 internal constant EMPTY_BORROWER_SPEC_HASH = keccak256(abi.encode(BorrowerSpec(IPWNBorrowerCreateHook(address(0)), "")));
 
     PWNHub public immutable hub;
@@ -66,6 +66,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         IPWNLenderCreateHook createHook;
         bytes createHookData;
         IPWNLenderRepaymentHook repaymentHook;
+        bytes repaymentHookData;
     }
 
     struct BorrowerSpec {
@@ -102,8 +103,13 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     /** Mapping of all LOAN data by loan id.*/
     mapping (uint256 => LOAN) private LOANs;
 
-    /** Mapping of lender repayment hook per loan id.*/
-    mapping (uint256 => IPWNLenderRepaymentHook) public lenderRepaymentHook;
+    struct LenderRepaymentHookData {
+        IPWNLenderRepaymentHook hook;
+        bytes data;
+    }
+
+    /** Mapping of lender repayment hook data per loan id.*/
+    mapping (uint256 => LenderRepaymentHookData) public lenderRepaymentHook;
 
 
     /*----------------------------------------------------------*|
@@ -229,7 +235,10 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
         // Store lender repayment hook
         if (address(lenderSpec.repaymentHook) != address(0)) {
-            lenderRepaymentHook[loanId] = lenderSpec.repaymentHook;
+            lenderRepaymentHook[loanId] = LenderRepaymentHookData({
+                hook: lenderSpec.repaymentHook,
+                data: lenderSpec.repaymentHookData
+            });
         }
 
         // Note: !! DANGER ZONE !!
@@ -453,10 +462,10 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     function _settleRepayment(uint256 loanId, address repaymentOrigin, address creditAddress, uint256 repaymentAmount) internal {
         // Note: Repayment is transferred into the Vault if no repayment hook is set or the hook reverts.
 
-        IPWNLenderRepaymentHook lenderHook = lenderRepaymentHook[loanId];
-        if (address(lenderHook) != address(0)) {
+        LenderRepaymentHookData memory lenderHookData = lenderRepaymentHook[loanId];
+        if (address(lenderHookData.hook) != address(0)) {
             try this.tryCallRepaymentHook({
-                hook: lenderHook,
+                hookData: lenderHookData,
                 repaymentOrigin: repaymentOrigin,
                 loanOwner: loanToken.ownerOf(loanId),
                 creditAddress: creditAddress,
@@ -470,7 +479,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     }
 
     function tryCallRepaymentHook(
-        IPWNLenderRepaymentHook hook,
+        LenderRepaymentHookData memory hookData,
         address repaymentOrigin,
         address loanOwner,
         address creditAddress,
@@ -480,13 +489,13 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         if (msg.sender != address(this)) revert CallerNotVault();
 
         // Check that hook has PWN Hub tag
-        _checkHubTag(address(hook), PWNHubTags.HOOK);
+        _checkHubTag(address(hookData.hook), PWNHubTags.HOOK);
 
         // Transfer repayment to lender repayment hook
-        _pushFrom(creditAddress.ERC20(repaymentAmount), repaymentOrigin, address(hook));
+        _pushFrom(creditAddress.ERC20(repaymentAmount), repaymentOrigin, address(hookData.hook));
 
         // Call hook and check hooks return value
-        bytes32 hookReturnValue = hook.onLoanRepaid(loanOwner, creditAddress, repaymentAmount);
+        bytes32 hookReturnValue = hookData.hook.onLoanRepaid(loanOwner, creditAddress, repaymentAmount, hookData.data);
         if (hookReturnValue != LENDER_REPAYMENT_HOOK_RETURN_VALUE) {
             revert InvalidHookReturnValue({ expected: LENDER_REPAYMENT_HOOK_RETURN_VALUE, current: hookReturnValue });
         }
@@ -671,13 +680,19 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @dev Only a LOAN token holder can update the lender repayment hook.
      * @param loanId Id of a loan that is being updated.
      * @param newHook New lender repayment hook.
+     * @param newHookData New lender repayment hook data.
      */
-    function updateLenderRepaymentHook(uint256 loanId, IPWNLenderRepaymentHook newHook) external {
+    function updateLenderRepaymentHook(
+        uint256 loanId, IPWNLenderRepaymentHook newHook, bytes calldata newHookData
+    ) external {
         if (loanToken.ownerOf(loanId) != msg.sender) {
             revert CallerNotLOANTokenHolder();
         }
         _checkHubTag(address(newHook), PWNHubTags.HOOK);
-        lenderRepaymentHook[loanId] = newHook;
+        lenderRepaymentHook[loanId] = LenderRepaymentHookData({
+            hook: newHook,
+            data: newHookData
+        });
     }
 
 
