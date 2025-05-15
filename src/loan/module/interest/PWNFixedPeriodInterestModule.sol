@@ -19,7 +19,7 @@ contract PWNFixedPeriodInterestModule is IPWNInterestModule {
     error CallerNotActiveLoan();
     error InvalidLastUpdateTimestamp();
 
-    PWNHub public hub;
+    PWNHub public immutable hub;
 
     struct ProposerData {
         uint256 apr;

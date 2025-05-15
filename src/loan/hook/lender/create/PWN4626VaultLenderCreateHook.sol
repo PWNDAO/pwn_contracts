@@ -9,7 +9,7 @@ import { IPWNLenderCreateHook, LENDER_CREATE_HOOK_RETURN_VALUE } from "pwn/loan/
 
 contract PWN4626VaultLenderCreateHook is IPWNLenderCreateHook {
 
-    PWNHub public hub;
+    PWNHub public immutable hub;
 
     struct HookData {
         address vault;

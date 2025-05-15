@@ -13,7 +13,7 @@ contract PWNDurationDefaultModule is IPWNDefaultModule {
     error CallerNotActiveLoan();
     error DurationTooShort();
 
-    PWNHub public hub;
+    PWNHub public immutable hub;
 
     struct ProposerData {
         uint256 duration;

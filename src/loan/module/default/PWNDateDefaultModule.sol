@@ -14,7 +14,7 @@ contract PWNDateDefaultModule is IPWNDefaultModule {
     error PastDefaultTimestamp();
     error DurationTooShort();
 
-    PWNHub public hub;
+    PWNHub public immutable hub;
 
     struct ProposerData {
         uint256 defaultTimestamp;

@@ -22,7 +22,7 @@ contract PWNChainlinkValueDefaultModule is IPWNDefaultModule {
     error CallerNotActiveLoan();
     error InvalidLLTV();
 
-    PWNHub public hub;
+    PWNHub public immutable hub;
 
     Chainlink.Config internal _chainlink;
 

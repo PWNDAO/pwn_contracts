@@ -21,7 +21,7 @@ contract PWNLinearDebtLimitDefaultModule is IPWNDefaultModule {
     error DurationTooShort();
     error PostponementBiggerThanDuration();
 
-    PWNHub public hub;
+    PWNHub public immutable hub;
 
     struct ProposerData {
         uint256 postponement;

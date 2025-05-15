@@ -24,7 +24,7 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
     error CallerNotActiveLoan();
     error InvalidLLTV();
 
-    PWNHub public hub;
+    PWNHub public immutable hub;
 
     UniswapV3.Config internal _uniswap;
     Chainlink.Config internal _chainlink;
