@@ -7,7 +7,7 @@ import { IPWNLiquidationModule, LIQUIDATION_MODULE_INIT_HOOK_RETURN_VALUE } from
 import { PWNLoan } from "pwn/loan/PWNLoan.sol";
 
 
-contract PWNSimpleLiquidationModule is IPWNLiquidationModule {
+contract PWNOpenLiquidationModule is IPWNLiquidationModule {
     using MultiToken for address;
     using MultiToken for MultiToken.Asset;
 
