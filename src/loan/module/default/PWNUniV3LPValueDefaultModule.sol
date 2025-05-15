@@ -21,9 +21,6 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
     uint256 public constant MAX_CHAINLINK_INTERMEDIARY_DENOMINATIONS = 4;
     uint256 public constant LLTV_DECIMALS = 4; // 6231 = 0.6231 = 62.31%
 
-    error CallerNotActiveLoan();
-    error InvalidLLTV();
-
     PWNHub public immutable hub;
 
     UniswapV3.Config internal _uniswap;
@@ -46,6 +43,14 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
 
     mapping (address => mapping(uint256 => DefaultData)) internal _defaultData;
 
+    error HubZeroAddress();
+    error UniswapV3PositionManagerZeroAddress();
+    error UniswapV3FactoryZeroAddress();
+    error ChainlinkFeedRegistryZeroAddress();
+    error WethZeroAddress();
+    error CallerNotActiveLoan();
+    error InvalidLLTV();
+
 
     constructor(
         PWNHub _hub,
@@ -55,6 +60,12 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
         IChainlinkFeedRegistryLike chainlinkFeedRegistry,
         address weth
     ) {
+        if (address(_hub) == address(0)) revert HubZeroAddress();
+        if (address(uniswapV3PositionManager) == address(0)) revert UniswapV3PositionManagerZeroAddress();
+        if (address(uniswapV3Factory) == address(0)) revert UniswapV3FactoryZeroAddress();
+        if (address(chainlinkFeedRegistry) == address(0)) revert ChainlinkFeedRegistryZeroAddress();
+        if (address(weth) == address(0)) revert WethZeroAddress();
+
         hub = _hub;
         _uniswap.positionManager = uniswapV3PositionManager;
         _uniswap.factory = uniswapV3Factory;

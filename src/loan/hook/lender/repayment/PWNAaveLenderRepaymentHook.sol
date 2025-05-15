@@ -23,7 +23,6 @@ contract PWNAaveLenderRepaymentHook is IPWNLenderRepaymentHook {
 
     constructor(IAaveLike _pool) {
         if (address(_pool) == address(0)) revert PoolZeroAddress();
-
         pool = _pool;
     }
 

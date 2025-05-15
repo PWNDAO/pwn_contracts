@@ -19,9 +19,6 @@ contract PWNChainlinkValueDefaultModule is IPWNDefaultModule {
     uint256 public constant MAX_CHAINLINK_INTERMEDIARY_DENOMINATIONS = 4;
     uint256 public constant LLTV_DECIMALS = 4; // 6231 = 0.6231 = 62.31%
 
-    error CallerNotActiveLoan();
-    error InvalidLLTV();
-
     PWNHub public immutable hub;
 
     Chainlink.Config internal _chainlink;
@@ -41,6 +38,12 @@ contract PWNChainlinkValueDefaultModule is IPWNDefaultModule {
 
     mapping (address => mapping(uint256 => DefaultData)) internal _defaultData;
 
+    error HubZeroAddress();
+    error ChainlinkFeedRegistryZeroAddress();
+    error WethZeroAddress();
+    error CallerNotActiveLoan();
+    error InvalidLLTV();
+
 
     constructor(
         PWNHub _hub,
@@ -48,6 +51,10 @@ contract PWNChainlinkValueDefaultModule is IPWNDefaultModule {
         IChainlinkFeedRegistryLike chainlinkFeedRegistry,
         address weth
     ) {
+        if (address(_hub) == address(0)) revert HubZeroAddress();
+        if (address(chainlinkFeedRegistry) == address(0)) revert ChainlinkFeedRegistryZeroAddress();
+        if (address(weth) == address(0)) revert WethZeroAddress();
+
         hub = _hub;
         _chainlink.l2SequencerUptimeFeed = chainlinkL2SequencerUptimeFeed;
         _chainlink.feedRegistry = chainlinkFeedRegistry;

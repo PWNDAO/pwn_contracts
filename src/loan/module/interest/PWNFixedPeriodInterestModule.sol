@@ -16,9 +16,6 @@ contract PWNFixedPeriodInterestModule is IPWNInterestModule {
 
     uint256 public constant APR_DECIMALS = 4; // 6231 = 0.6231 = 62.31%
 
-    error CallerNotActiveLoan();
-    error InvalidLastUpdateTimestamp();
-
     PWNHub public immutable hub;
 
     struct ProposerData {
@@ -35,8 +32,13 @@ contract PWNFixedPeriodInterestModule is IPWNInterestModule {
 
     mapping (address => mapping(uint256 => InterestData)) internal _interestData;
 
+    error HubZeroAddress();
+    error CallerNotActiveLoan();
+    error InvalidLastUpdateTimestamp();
+
 
     constructor(PWNHub _hub) {
+        if (address(_hub) == address(0)) revert HubZeroAddress();
         hub = _hub;
     }
 

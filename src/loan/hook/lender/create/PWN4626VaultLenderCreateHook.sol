@@ -15,6 +15,7 @@ contract PWN4626VaultLenderCreateHook is IPWNLenderCreateHook {
         address vault;
     }
 
+    error HubZeroAddress();
     error CallerNotActiveLoan();
     error LenderZeroAddress();
     error CreditZeroAddress();
@@ -23,6 +24,7 @@ contract PWN4626VaultLenderCreateHook is IPWNLenderCreateHook {
 
 
     constructor(PWNHub _hub) {
+        if (address(_hub) == address(0)) revert HubZeroAddress();
         hub = _hub;
     }
 

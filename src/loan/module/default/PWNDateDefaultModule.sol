@@ -10,10 +10,6 @@ contract PWNDateDefaultModule is IPWNDefaultModule {
 
     uint256 public constant MIN_DURATION = 10 minutes;
 
-    error CallerNotActiveLoan();
-    error PastDefaultTimestamp();
-    error DurationTooShort();
-
     PWNHub public immutable hub;
 
     struct ProposerData {
@@ -22,8 +18,14 @@ contract PWNDateDefaultModule is IPWNDefaultModule {
 
     mapping (address => mapping(uint256 => uint256)) public defaultTimestamp;
 
+    error HubZeroAddress();
+    error CallerNotActiveLoan();
+    error PastDefaultTimestamp();
+    error DurationTooShort();
+
 
     constructor(PWNHub _hub) {
+        if (address(_hub) == address(0)) revert HubZeroAddress();
         hub = _hub;
     }
 

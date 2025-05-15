@@ -17,10 +17,6 @@ contract PWNLinearDebtLimitDefaultModule is IPWNDefaultModule {
     uint256 public constant MIN_DURATION = 10 minutes;
     uint256 public constant DEBT_LIMIT_TANGENT_DECIMALS = 8;
 
-    error CallerNotActiveLoan();
-    error DurationTooShort();
-    error PostponementBiggerThanDuration();
-
     PWNHub public immutable hub;
 
     struct ProposerData {
@@ -35,8 +31,14 @@ contract PWNLinearDebtLimitDefaultModule is IPWNDefaultModule {
 
     mapping (address => mapping(uint256 => DefaultData)) internal _defaultData;
 
+    error HubZeroAddress();
+    error CallerNotActiveLoan();
+    error DurationTooShort();
+    error PostponementBiggerThanDuration();
+
 
     constructor(PWNHub _hub) {
+        if (address(_hub) == address(0)) revert HubZeroAddress();
         hub = _hub;
     }
 
