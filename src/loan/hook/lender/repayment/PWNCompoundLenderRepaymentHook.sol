@@ -3,15 +3,15 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { IAaveLike } from "pwn/interfaces/IAaveLike.sol";
+import { ICometLike } from "pwn/interfaces/ICometLike.sol";
 import { IPWNLenderRepaymentHook, LENDER_REPAYMENT_HOOK_RETURN_VALUE } from "pwn/loan/hook/lender/repayment/IPWNLenderRepaymentHook.sol";
 
 
-contract PWNAaveLenderRepaymentHook is IPWNLenderRepaymentHook {
+contract PWNCompoundLenderRepaymentHook is IPWNLenderRepaymentHook {
     using MultiToken for address;
     using MultiToken for MultiToken.Asset;
 
-    IAaveLike public immutable pool;
+    ICometLike public immutable pool;
 
     error PoolZeroAddress();
     error LenderZeroAddress();
@@ -20,7 +20,7 @@ contract PWNAaveLenderRepaymentHook is IPWNLenderRepaymentHook {
     error DataNotEmpty();
 
 
-    constructor(IAaveLike _pool) {
+    constructor(ICometLike _pool) {
         if (address(_pool) == address(0)) revert PoolZeroAddress();
         pool = _pool;
     }
@@ -39,7 +39,7 @@ contract PWNAaveLenderRepaymentHook is IPWNLenderRepaymentHook {
 
         // Supply to the pool on behalf of the owner
         creditAddress.ERC20(repayment).approveAsset(address(pool));
-        pool.supply(creditAddress, repayment, lender, 0);
+        pool.supplyFrom(address(this), lender, creditAddress, repayment);
 
         return LENDER_REPAYMENT_HOOK_RETURN_VALUE;
     }
