@@ -3,7 +3,6 @@ pragma solidity 0.8.16;
 
 import { MultiToken, IMultiTokenCategoryRegistry } from "MultiToken/MultiToken.sol";
 
-import { ReentrancyGuard } from "openzeppelin/security/ReentrancyGuard.sol";
 import { Math } from "openzeppelin/utils/math/Math.sol";
 
 import { PWNConfig } from "pwn/config/PWNConfig.sol";
@@ -31,7 +30,7 @@ import { PWNLOAN } from "pwn/token/PWNLOAN.sol";
  * @notice Contract managing loans in PWN protocol.
  * @dev Acts as a vault for every loan created by this contract.
  */
-contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvider {
+contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     using MultiToken for address;
 
     string public constant VERSION = "1.5";
@@ -111,6 +110,9 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     /** Mapping of lender repayment hook data per loan id.*/
     mapping (uint256 => LenderRepaymentHookData) public lenderRepaymentHook;
 
+    // todo: update solc and use transient storage
+    mapping (uint256 => bool) public loanLock;
+
 
     /*----------------------------------------------------------*|
     |*  # EVENTS DEFINITIONS                                    *|
@@ -130,6 +132,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
     |*  # ERRORS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
+    /** @notice Thrown when a call tries to enter locked loan context.*/
+    error LoanContextLocked(uint256 loanId);
     /** @notice Thrown when an address is missing a PWN Hub tag.*/
     error AddressMissingHubTag(address addr, bytes32 tag);
     /** @notice Thrown when managed loan is not running.*/
@@ -178,6 +182,26 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
 
     /*----------------------------------------------------------*|
+    |*  # MODIFIERS                                             *|
+    |*----------------------------------------------------------*/
+
+    modifier nonLoanContextReentrant(uint256 loanId) {
+        _lockLoanContext(loanId);
+        _;
+        _unlockLoanContext(loanId);
+    }
+
+    function _lockLoanContext(uint256 loanId) private {
+        if (loanLock[loanId]) revert LoanContextLocked(loanId);
+        loanLock[loanId] = true;
+    }
+
+    function _unlockLoanContext(uint256 loanId) private {
+        loanLock[loanId] = false;
+    }
+
+
+    /*----------------------------------------------------------*|
     |*  # CREATE LOAN                                           *|
     |*----------------------------------------------------------*/
 
@@ -195,7 +219,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         LenderSpec calldata lenderSpec,
         BorrowerSpec calldata borrowerSpec,
         bytes calldata extra
-    ) external nonReentrant returns (uint256 loanId) {
+    ) external returns (uint256 loanId) {
         // Check provided proposal contract
         _checkHubTag(proposalSpec.proposalContract, PWNHubTags.LOAN_PROPOSAL);
 
@@ -220,8 +244,22 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         _checkValidAsset(loanTerms.creditAddress.ERC20(loanTerms.principal));
         _checkValidAsset(loanTerms.collateral);
 
-        // Create a new loan
-        loanId = _createLoan(loanTerms);
+        // Mint LOAN token for lender
+        loanId = loanToken.mint(loanTerms.lender);
+
+        // Store loan data under loan id
+        LOAN storage loan = LOANs[loanId];
+        loan.borrower = loanTerms.borrower;
+        loan.lastUpdateTimestamp = uint40(block.timestamp);
+        loan.creditAddress = loanTerms.creditAddress;
+        loan.principal = loanTerms.principal;
+        loan.collateral = loanTerms.collateral;
+        loan.interestModule = IPWNInterestModule(loanTerms.interestModule);
+        loan.defaultModule = IPWNDefaultModule(loanTerms.defaultModule);
+        loan.liquidationModule = IPWNLiquidationModule(loanTerms.liquidationModule);
+
+        // Lock loan context to prevent reentrancy
+        _lockLoanContext(loanId);
 
         emit LOANCreated({
             loanId: loanId,
@@ -255,26 +293,8 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
 
         // Settle the loan
         _settleNewLoan(loanTerms, lenderSpec, borrowerSpec);
-    }
 
-    /**
-     * @notice Mint LOAN token and store loan data under loan id.
-     * @param loanTerms Loan terms struct.
-     */
-    function _createLoan(Terms memory loanTerms) private returns (uint256 loanId) {
-        // Mint LOAN token for lender
-        loanId = loanToken.mint(loanTerms.lender);
-
-        // Store loan data under loan id
-        LOAN storage loan = LOANs[loanId];
-        loan.borrower = loanTerms.borrower;
-        loan.lastUpdateTimestamp = uint40(block.timestamp);
-        loan.creditAddress = loanTerms.creditAddress;
-        loan.principal = loanTerms.principal;
-        loan.collateral = loanTerms.collateral;
-        loan.interestModule = IPWNInterestModule(loanTerms.interestModule);
-        loan.defaultModule = IPWNDefaultModule(loanTerms.defaultModule);
-        loan.liquidationModule = IPWNLiquidationModule(loanTerms.liquidationModule);
+        _unlockLoanContext(loanId);
     }
 
     /** @dev Initialize module by checking PWN Hub tag and call initialization hook.*/
@@ -367,7 +387,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @param loanId Id of a loan that is being repaid.
      * @param repaymentAmount Amount of a credit asset to be repaid. Use 0 to repay the whole loan.
      */
-    function repay(uint256 loanId, uint256 repaymentAmount) external nonReentrant {
+    function repay(uint256 loanId, uint256 repaymentAmount) external nonLoanContextReentrant(loanId) {
         _repay(loanId, repaymentAmount, address(0), "");
     }
 
@@ -384,7 +404,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
         uint256 loanId,
         IPWNBorrowerCollateralRepaymentHook borrowerHook,
         bytes calldata borrowerHookData
-    ) external nonReentrant {
+    ) external nonLoanContextReentrant(loanId) {
         LOAN storage loan = LOANs[loanId];
 
         // Caller must be borrower
@@ -539,7 +559,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @param loanId Id of a loan that is being liquidated.
      * @param liquidationAmount Amount of a credit asset to be repaid to lender for the liquidation.
      */
-    function liquidate(uint256 loanId, uint256 liquidationAmount) external nonReentrant {
+    function liquidate(uint256 loanId, uint256 liquidationAmount) external nonLoanContextReentrant(loanId) {
         if (address(LOANs[loanId].liquidationModule) != msg.sender) revert CallerNotLiquidationModule();
         _liquidate(loanId, liquidationAmount);
     }
@@ -548,7 +568,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @notice Liquidate a defaulted loan by a loan owner.
      * @param loanId Id of a loan that is being liquidated.
      */
-    function liquidateByOwner(uint256 loanId) external nonReentrant {
+    function liquidateByOwner(uint256 loanId) external nonLoanContextReentrant(loanId) {
         if (address(LOANs[loanId].liquidationModule) != address(0)) revert CallerNotLiquidationModule();
         if (loanToken.ownerOf(loanId) != msg.sender) revert CallerNotLOANTokenHolder();
         _liquidate(loanId, 0);
@@ -586,7 +606,7 @@ contract PWNLoan is PWNVault, ReentrancyGuard, IERC5646, IPWNLoanMetadataProvide
      * @dev Only a loan owner can claim a loan repayment.
      * @param loanId Id of a loan that is being claimed.
      */
-    function claimRepayment(uint256 loanId) external nonReentrant {
+    function claimRepayment(uint256 loanId) external nonLoanContextReentrant(loanId) {
         // Check that caller is LOAN token holder
         if (loanToken.ownerOf(loanId) != msg.sender) revert CallerNotLOANTokenHolder();
 
