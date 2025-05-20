@@ -15,8 +15,10 @@ import { IChainlinkFeedRegistryLike } from "pwn/interfaces/IChainlinkFeedRegistr
 import { IPWNDeployer } from "pwn/interfaces/IPWNDeployer.sol";
 import { PWNLoan } from "pwn/loan/PWNLoan.sol";
 import { PWNSimpleProposal } from "pwn/proposal/PWNSimpleProposal.sol";
-import { PWNElasticProposal } from "pwn/proposal/PWNElasticProposal.sol";
+import { PWNListProposal } from "pwn/proposal/PWNListProposal.sol";
 import { PWNElasticChainlinkProposal } from "pwn/proposal/PWNElasticChainlinkProposal.sol";
+import { PWNElasticProposal } from "pwn/proposal/PWNElasticProposal.sol";
+import { PWNDutchAuctionProposal } from "pwn/proposal/PWNDutchAuctionProposal.sol";
 import { PWNUniswapV3LPIndividualProposal } from "pwn/proposal/PWNUniswapV3LPIndividualProposal.sol";
 import { PWNUniswapV3LPSetProposal } from "pwn/proposal/PWNUniswapV3LPSetProposal.sol";
 import { PWNLOAN } from "pwn/token/PWNLOAN.sol";
@@ -41,9 +43,11 @@ abstract contract Deployments is CommonBase {
         IChainlinkFeedRegistryLike chainlinkFeedRegistry;
         PWNConfig config;
         PWNConfig configSingleton;
+        PWNDutchAuctionProposal dutchAuctionProposal;
         PWNElasticChainlinkProposal elasticChainlinkProposal;
         PWNElasticProposal elasticProposal;
         PWNHub hub;
+        PWNListProposal listProposal;
         PWNLoan loan;
         PWNLOAN loanToken;
         PWNRevokedNonce revokedNonce;
