@@ -108,7 +108,7 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     }
 
     /** Mapping of lender repayment hook data per loan id.*/
-    mapping (uint256 => LenderRepaymentHookData) public lenderRepaymentHook;
+    mapping (address => mapping (uint256 => LenderRepaymentHookData)) public lenderRepaymentHook;
 
     // todo: update solc and use transient storage
     mapping (uint256 => bool) public loanLock;
@@ -273,7 +273,7 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
 
         // Store lender repayment hook
         if (address(lenderSpec.repaymentHook) != address(0)) {
-            lenderRepaymentHook[loanId] = LenderRepaymentHookData({
+            lenderRepaymentHook[loanTerms.lender][loanId] = LenderRepaymentHookData({
                 hook: lenderSpec.repaymentHook,
                 data: lenderSpec.repaymentHookData
             });
@@ -496,12 +496,13 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     ) internal {
         // Note: Repayment is transferred into the Vault if no repayment hook is set or the hook reverts.
 
-        LenderRepaymentHookData memory lenderHookData = lenderRepaymentHook[loanId];
+        address loanOwner = loanToken.ownerOf(loanId);
+        LenderRepaymentHookData memory lenderHookData = lenderRepaymentHook[loanOwner][loanId];
         if (address(lenderHookData.hook) != address(0)) {
             try this.tryCallRepaymentHook({
                 hookData: lenderHookData,
                 repaymentOrigin: repaymentOrigin,
-                loanOwner: loanToken.ownerOf(loanId),
+                loanOwner: loanOwner,
                 creditAddress: creditAddress,
                 repaymentAmount: repaymentAmount
             }) {} catch {
@@ -718,13 +719,15 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      * @param newHookData New lender repayment hook data.
      */
     function updateLenderRepaymentHook(
-        uint256 loanId, IPWNLenderRepaymentHook newHook, bytes calldata newHookData
+        uint256 loanId,
+        IPWNLenderRepaymentHook newHook,
+        bytes calldata newHookData
     ) external {
         if (loanToken.ownerOf(loanId) != msg.sender) {
             revert CallerNotLOANTokenHolder();
         }
         _checkHubTag(address(newHook), PWNHubTags.HOOK);
-        lenderRepaymentHook[loanId] = LenderRepaymentHookData({
+        lenderRepaymentHook[msg.sender][loanId] = LenderRepaymentHookData({
             hook: newHook,
             data: newHookData
         });
