@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import { MultiToken } from "MultiToken/MultiToken.sol";
 
-import { MerkleProof } from "openzeppelin/utils/cryptography/MerkleProof.sol";
+import { Math } from "openzeppelin/utils/math/Math.sol";
 
 import { PWNStableAPRInterestModule } from "pwn/loan/module/interest/PWNStableAPRInterestModule.sol";
 import { PWNDurationDefaultModule } from "pwn/loan/module/default/PWNDurationDefaultModule.sol";
@@ -11,17 +11,16 @@ import { PWNBaseProposal, Terms } from "pwn/proposal/PWNBaseProposal.sol";
 
 
 /**
- * @title PWN List Proposal
- * @notice Contract for creating and accepting list loan proposals.
- * @dev The proposal can define a list of acceptable collateral ids or the whole collection.
+ * @title PWN Dutch Auction Proposal
+ * @notice Contract for creating and accepting dutch auction loan proposals.
  */
-contract PWNListProposal is PWNBaseProposal {
+contract PWNDutchAuctionProposal is PWNBaseProposal {
 
     string public constant VERSION = "1.5";
 
     /** @dev EIP-712 simple proposal struct type hash.*/
     bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,bytes32 collateralIdsWhitelistMerkleRoot,uint256 collateralAmount,address creditAddress,uint256 creditAmount,uint256 interestAPR,uint256 duration,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 nonceSpace,uint256 nonce,uint256 expiration,address proposer,bytes32 proposerSpecHash,bool isProposerLender,address loanContract)"
+        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,uint256 collateralAmount,address creditAddress,uint256 minCreditAmount,uint256 maxCreditAmount,uint256 auctionStart,uint256 auctionDuration,uint256 interestAPR,uint256 duration,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 nonceSpace,uint256 nonce,uint256 expiration,address proposer,bytes32 proposerSpecHash,bool isProposerLender,address loanContract)"
     );
 
     /** @notice Stable interest module used in the proposal.*/
@@ -30,16 +29,18 @@ contract PWNListProposal is PWNBaseProposal {
     PWNDurationDefaultModule public immutable defaultModule;
 
     /**
-     * @notice Construct defining a list proposal.
+     * @notice Construct defining a simple proposal.
      * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
      * @param collateralAddress Address of an asset used as a collateral.
-     * @param collateralIdsWhitelistMerkleRoot Merkle tree root of a set of whitelisted collateral ids.
+     * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
      * @param collateralAmount Amount of tokens used as a collateral, in case of ERC721 should be 0.
-     * @param creditAddress Address of an asset which is lender to a borrower.
-     * @param creditAmount Amount of tokens which is proposed as a loan to a borrower.
+     * @param creditAddress Address of an asset which is lended to a borrower.
+     * @param minCreditAmount Minimum amount of tokens which is proposed as a loan to a borrower. If `isOffer` is true, auction will start with this amount, otherwise it will end with this amount.
+     * @param maxCreditAmount Maximum amount of tokens which is proposed as a loan to a borrower. If `isOffer` is true, auction will end with this amount, otherwise it will start with this amount.
+     * @param auctionStart Auction start timestamp in seconds.
+     * @param auctionDuration Auction duration in seconds.
      * @param interestAPR Accruing interest APR with 2 decimals.
      * @param duration Duration of a loan in seconds.
-     * @param minCreditAmount Minimum amount of tokens which can be borrowed using the proposal.
      * @param availableCreditLimit Available credit limit for the proposal. It is the maximum amount of tokens which can be borrowed using the proposal. If non-zero, proposal can be accepted more than once, until the credit limit is reached.
      * @param utilizedCreditId Id of utilized credit. Can be shared between multiple proposals.
      * @param nonceSpace Nonce space of a proposal nonce. All nonces in the same space can be revoked at once.
@@ -54,17 +55,19 @@ contract PWNListProposal is PWNBaseProposal {
         // Collateral
         MultiToken.Category collateralCategory;
         address collateralAddress;
-        bytes32 collateralIdsWhitelistMerkleRoot;
+        uint256 collateralId;
         uint256 collateralAmount;
         // Credit
         address creditAddress;
-        uint256 creditAmount;
+        uint256 minCreditAmount;
+        uint256 maxCreditAmount;
+        uint256 auctionStart;
+        uint256 auctionDuration;
         // Interest
         uint256 interestAPR;
         // Default
         uint256 duration;
         // Proposal validity
-        uint256 minCreditAmount;
         uint256 availableCreditLimit;
         bytes32 utilizedCreditId;
         uint256 nonceSpace;
@@ -79,21 +82,29 @@ contract PWNListProposal is PWNBaseProposal {
 
     /**
      * @notice Construct defining proposal concrete values.
-     * @param collateralId Selected collateral id to be used as a collateral.
-     * @param merkleInclusionProof Proof of inclusion, that selected collateral id is whitelisted.
-     * This proof should create same hash as the merkle tree root given in the proposal.
-     * Can be empty for a proposal on a whole collection.
+     * @dev At the time of execution, current auction credit amount must be in the range of `creditAmount` and `creditAmount` + `slippage`.
+     * @param intendedCreditAmount Amount of tokens which acceptor intends to borrow.
+     * @param slippage Slippage value that is acceptor willing to accept from the intended `creditAmount`.
+     * If proposal is an offer, slippage is added to the `creditAmount`, otherwise it is subtracted.
      */
     struct AcceptorValues {
-        uint256 collateralId;
-        bytes32[] merkleInclusionProof;
+        uint256 intendedCreditAmount;
+        uint256 slippage;
     }
 
     /** @notice Emitted when a proposal is made via an on-chain transaction.*/
     event ProposalMade(bytes32 indexed proposalHash, address indexed proposer, Proposal proposal);
 
-    /** @notice Thrown when a collateral id is not whitelisted.*/
-    error CollateralIdNotWhitelisted(uint256 id);
+    /** @notice Thrown when auction duration is less than min auction duration.*/
+    error InvalidAuctionDuration(uint256 current, uint256 limit);
+    /** @notice Thrown when auction duration is not in full minutes.*/
+    error AuctionDurationNotInFullMinutes(uint256 current);
+    /** @notice Thrown when min credit amount is greater than max credit amount.*/
+    error InvalidCreditAmountRange(uint256 minCreditAmount, uint256 maxCreditAmount);
+    /** @notice Thrown when current auction credit amount is not in the range of intended credit amount and slippage.*/
+    error InvalidCreditAmount(uint256 auctionCreditAmount, uint256 intendedCreditAmount, uint256 slippage);
+    /** @notice Thrown when auction has not started yet or has already ended.*/
+    error AuctionNotInProgress(uint256 currentTimestamp, uint256 auctionStart);
 
     constructor(
         address _hub,
@@ -102,7 +113,7 @@ contract PWNListProposal is PWNBaseProposal {
         address _utilizedCredit,
         address _interestModule,
         address _defaultModule
-    ) PWNBaseProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanListProposal", VERSION) {
+    ) PWNBaseProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanDutchAuctionProposal", VERSION) {
         interestModule = PWNStableAPRInterestModule(_interestModule);
         defaultModule = PWNDurationDefaultModule(_defaultModule);
     }
@@ -151,6 +162,65 @@ contract PWNListProposal is PWNBaseProposal {
         return abi.decode(proposalData, (Proposal, AcceptorValues));
     }
 
+    /**
+     * @notice Get credit amount for an auction in a specific timestamp.
+     * @dev Auction runs one minute longer than `auctionDuration` to have `maxCreditAmount` value in the last minute.
+     * @param proposal Proposal struct containing all proposal data.
+     * @param timestamp Timestamp to calculate auction credit amount for.
+     * @return Credit amount in the auction for provided timestamp.
+     */
+    function getCreditAmount(Proposal memory proposal, uint256 timestamp) public pure returns (uint256) {
+        // Check proposal
+        if (proposal.auctionDuration < 1 minutes) {
+            revert InvalidAuctionDuration({
+                current: proposal.auctionDuration,
+                limit: 1 minutes
+            });
+        }
+        if (proposal.auctionDuration % 1 minutes > 0) {
+            revert AuctionDurationNotInFullMinutes({
+                current: proposal.auctionDuration
+            });
+        }
+        if (proposal.maxCreditAmount <= proposal.minCreditAmount) {
+            revert InvalidCreditAmountRange({
+                minCreditAmount: proposal.minCreditAmount,
+                maxCreditAmount: proposal.maxCreditAmount
+            });
+        }
+
+        // Check auction is in progress
+        if (timestamp < proposal.auctionStart) {
+            revert AuctionNotInProgress({
+                currentTimestamp: timestamp,
+                auctionStart: proposal.auctionStart
+            });
+        }
+        if (proposal.auctionStart + proposal.auctionDuration + 1 minutes <= timestamp) {
+            revert Expired({
+                current: timestamp,
+                expiration: proposal.auctionStart + proposal.auctionDuration + 1 minutes
+            });
+        }
+
+        // Note: Auction duration is increased by 1 minute to have
+        // `maxCreditAmount` value in the last minutes of the auction.
+
+        uint256 creditAmountDelta = Math.mulDiv(
+            proposal.maxCreditAmount - proposal.minCreditAmount, // Max credit amount difference
+            (timestamp - proposal.auctionStart) / 1 minutes, // Time passed since auction start
+            proposal.auctionDuration / 1 minutes // Auction duration
+        );
+
+        // Note: Request auction is decreasing credit amount (dutch auction).
+        // Offer auction is increasing credit amount (reverse dutch auction).
+
+        // Return credit amount
+        return proposal.isProposerLender
+            ? proposal.minCreditAmount + creditAmountDelta
+            : proposal.maxCreditAmount - creditAmountDelta;
+    }
+
     function acceptProposal(
         address acceptor,
         bytes calldata proposalData,
@@ -163,31 +233,45 @@ contract PWNListProposal is PWNBaseProposal {
         // Make proposal hash
         bytes32 proposalHash = _getProposalHash(PROPOSAL_TYPEHASH, _erc712EncodeProposal(proposal));
 
-        // Check provided collateral id
-        if (proposal.collateralIdsWhitelistMerkleRoot != bytes32(0)) {
-            // Verify whitelisted collateral id
-            if (
-                !MerkleProof.verify({
-                    proof: acceptorValues.merkleInclusionProof,
-                    root: proposal.collateralIdsWhitelistMerkleRoot,
-                    leaf: keccak256(abi.encodePacked(acceptorValues.collateralId))
-                })
-            ) revert CollateralIdNotWhitelisted({ id: acceptorValues.collateralId });
-        }
+        // Calculate current credit amount
+        uint256 creditAmount = getCreditAmount(proposal, block.timestamp);
 
-        // Note: If the `collateralIdsWhitelistMerkleRoot` is empty, any collateral id can be used.
+        // Check acceptor values
+        if (proposal.isProposerLender) {
+            if (
+                creditAmount < acceptorValues.intendedCreditAmount ||
+                acceptorValues.intendedCreditAmount + acceptorValues.slippage < creditAmount
+            ) {
+                revert InvalidCreditAmount({
+                    auctionCreditAmount: creditAmount,
+                    intendedCreditAmount: acceptorValues.intendedCreditAmount,
+                    slippage: acceptorValues.slippage
+                });
+            }
+        } else {
+            if (
+                creditAmount > acceptorValues.intendedCreditAmount ||
+                acceptorValues.intendedCreditAmount - acceptorValues.slippage > creditAmount
+            ) {
+                revert InvalidCreditAmount({
+                    auctionCreditAmount: creditAmount,
+                    intendedCreditAmount: acceptorValues.intendedCreditAmount,
+                    slippage: acceptorValues.slippage
+                });
+            }
+        }
 
         // Check if proposal is valid
         _checkProposal(
             CheckInputs({
                 proposalHash: proposalHash,
                 acceptor: acceptor,
-                creditAmount: proposal.creditAmount,
+                creditAmount: creditAmount,
                 availableCreditLimit: proposal.availableCreditLimit,
                 utilizedCreditId: proposal.utilizedCreditId,
                 nonceSpace: proposal.nonceSpace,
                 nonce: proposal.nonce,
-                expiration: proposal.expiration,
+                expiration: proposal.auctionStart + proposal.auctionDuration + 1 minutes,
                 proposer: proposal.proposer,
                 loanContract: proposal.loanContract
             }),
@@ -204,11 +288,11 @@ contract PWNListProposal is PWNBaseProposal {
             collateral: MultiToken.Asset({
                 category: proposal.collateralCategory,
                 assetAddress: proposal.collateralAddress,
-                id: acceptorValues.collateralId,
+                id: proposal.collateralId,
                 amount: proposal.collateralAmount
             }),
             creditAddress: proposal.creditAddress,
-            principal: proposal.creditAmount,
+            principal: creditAmount,
             interestModule: address(interestModule),
             interestModuleProposerData: abi.encode(PWNStableAPRInterestModule.ProposerData(proposal.interestAPR)),
             defaultModule: address(defaultModule),
