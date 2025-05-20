@@ -8,22 +8,20 @@ import { MultiTokenCategoryRegistry } from "MultiToken/MultiTokenCategoryRegistr
 
 import { Strings } from "openzeppelin/utils/Strings.sol";
 
-import { PWNConfig } from "pwn/core/config/PWNConfig.sol";
-import { PWNHub } from "pwn/core/hub/PWNHub.sol";
-import { PWNHubTags } from "pwn/core/hub/PWNHubTags.sol";
-import { IChainlinkFeedRegistryLike } from "pwn/core/interfaces/IChainlinkFeedRegistryLike.sol";
-import { IPWNDeployer } from "pwn/core/interfaces/IPWNDeployer.sol";
-import { PWNLoan as PWNSimpleLoan } from "pwn/core/loan/PWNLoan.sol";
-import { PWNSimpleLoanDutchAuctionProposal } from "pwn/core/proposal/PWNSimpleLoanDutchAuctionProposal.sol";
-import { PWNSimpleLoanElasticChainlinkProposal } from "pwn/core/proposal/PWNSimpleLoanElasticChainlinkProposal.sol";
-import { PWNSimpleLoanElasticProposal } from "pwn/core/proposal/PWNSimpleLoanElasticProposal.sol";
-import { PWNSimpleLoanListProposal } from "pwn/core/proposal/PWNSimpleLoanListProposal.sol";
-import { PWNSimpleLoanSimpleProposal } from "pwn/core/proposal/PWNSimpleLoanSimpleProposal.sol";
-import { PWNSimpleLoanUniswapV3LPIndividualProposal } from "pwn/core/proposal/PWNSimpleLoanUniswapV3LPIndividualProposal.sol";
-import { PWNSimpleLoanUniswapV3LPSetProposal } from "pwn/core/proposal/PWNSimpleLoanUniswapV3LPSetProposal.sol";
-import { PWNLOAN } from "pwn/core/token/PWNLOAN.sol";
-import { PWNRevokedNonce } from "pwn/nonce/PWNRevokedNonce.sol";
-import { PWNUtilizedCredit } from "pwn/utilized-credit/PWNUtilizedCredit.sol";
+import { PWNConfig } from "pwn/config/PWNConfig.sol";
+import { PWNHub } from "pwn/hub/PWNHub.sol";
+import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
+import { IChainlinkFeedRegistryLike } from "pwn/interfaces/IChainlinkFeedRegistryLike.sol";
+import { IPWNDeployer } from "pwn/interfaces/IPWNDeployer.sol";
+import { PWNLoan } from "pwn/loan/PWNLoan.sol";
+import { PWNSimpleProposal } from "pwn/proposal/PWNSimpleProposal.sol";
+import { PWNElasticProposal } from "pwn/proposal/PWNElasticProposal.sol";
+import { PWNElasticChainlinkProposal } from "pwn/proposal/PWNElasticChainlinkProposal.sol";
+import { PWNUniswapV3LPIndividualProposal } from "pwn/proposal/PWNUniswapV3LPIndividualProposal.sol";
+import { PWNUniswapV3LPSetProposal } from "pwn/proposal/PWNUniswapV3LPSetProposal.sol";
+import { PWNLOAN } from "pwn/token/PWNLOAN.sol";
+import { PWNRevokedNonce } from "pwn/proposal/auxiliary/PWNRevokedNonce.sol";
+import { PWNUtilizedCredit } from "pwn/proposal/auxiliary/PWNUtilizedCredit.sol";
 
 
 abstract contract Deployments is CommonBase {
@@ -43,17 +41,15 @@ abstract contract Deployments is CommonBase {
         IChainlinkFeedRegistryLike chainlinkFeedRegistry;
         PWNConfig config;
         PWNConfig configSingleton;
+        PWNElasticChainlinkProposal elasticChainlinkProposal;
+        PWNElasticProposal elasticProposal;
         PWNHub hub;
+        PWNLoan loan;
         PWNLOAN loanToken;
         PWNRevokedNonce revokedNonce;
-        PWNSimpleLoan simpleLoan;
-        PWNSimpleLoanDutchAuctionProposal simpleLoanDutchAuctionProposal;
-        PWNSimpleLoanElasticChainlinkProposal simpleLoanElasticChainlinkProposal;
-        PWNSimpleLoanElasticProposal simpleLoanElasticProposal;
-        PWNSimpleLoanListProposal simpleLoanListProposal;
-        PWNSimpleLoanSimpleProposal simpleLoanSimpleProposal;
-        PWNSimpleLoanUniswapV3LPIndividualProposal simpleLoanUniswapV3LPIndividualProposal;
-        PWNSimpleLoanUniswapV3LPSetProposal simpleLoanUniswapV3LPSetProposal;
+        PWNSimpleProposal simpleProposal;
+        PWNUniswapV3LPIndividualProposal uniswapV3LPIndividualProposal;
+        PWNUniswapV3LPSetProposal uniswapV3LPSetProposal;
         PWNUtilizedCredit utilizedCredit;
     }
 
@@ -81,13 +77,8 @@ abstract contract Deployments is CommonBase {
         bytes hub;
         bytes loanToken;
         bytes revokedNonce;
-        bytes simpleLoanDutchAuctionProposal_v1_1;
-        bytes simpleLoanElasticChainlinkProposal_v1_0;
-        bytes simpleLoanElasticProposal_v1_1;
-        bytes simpleLoanListProposal_v1_3;
-        bytes simpleLoanSimpleProposal_v1_3;
-        bytes simpleLoan_v1_3;
         bytes utilizedCredit;
+        // todo: add loan & proposals
     }
 
 
@@ -102,7 +93,7 @@ abstract contract Deployments is CommonBase {
         bytes memory rawExternal = externalJson.parseRaw(string.concat(".", block.chainid.toString()));
         __e = abi.decode(rawExternal, (External));
 
-        string memory deploymentsJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/protocol/v1.4.json"));
+        string memory deploymentsJson = vm.readFile(string.concat(root, deploymentsSubpath, "/deployments/protocol/v1.5.json"));
         bytes memory rawDeployment = deploymentsJson.parseRaw(string.concat(".", block.chainid.toString()));
 
         if (rawDeployment.length > 0) {
