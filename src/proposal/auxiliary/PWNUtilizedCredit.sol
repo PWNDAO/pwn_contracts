@@ -16,7 +16,7 @@ contract PWNUtilizedCredit {
 
     /**
      * @notice Access tag that needs to be assigned to a caller in PWN Hub
-     *         to call functions that update utilized credit.
+     * to call functions that update utilized credit.
      */
     bytes32 public immutable accessTag;
 
@@ -28,7 +28,7 @@ contract PWNUtilizedCredit {
 
     /**
      * @notice Mapping of credit utilized by an id with defined available credit limit.
-     *         (owner => id => utilized credit)
+     * (owner => id => utilized credit)
      */
     mapping (address => mapping (bytes32 => uint256)) public utilizedCredit;
 
