@@ -2,7 +2,6 @@
 pragma solidity 0.8.16;
 
 import { PWNHub } from "pwn/hub/PWNHub.sol";
-import { AddressMissingHubTag } from "pwn/PWNErrors.sol";
 
 
 /**
@@ -38,9 +37,9 @@ contract PWNUtilizedCredit {
     |*  # ERRORS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Thrown when an id would exceed the available credit limit.
-     */
+    /** @notice Thrown when an address is missing a PWN Hub tag.*/
+    error AddressMissingHubTag(address addr, bytes32 tag);
+    /** @notice Thrown when an id would exceed the available credit limit.*/
     error AvailableCreditLimitExceeded(address owner, bytes32 id, uint256 utilized, uint256 limit);
 
 

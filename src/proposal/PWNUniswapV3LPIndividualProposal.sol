@@ -10,37 +10,41 @@ import {
     IChainlinkFeedRegistryLike,
     IChainlinkAggregatorLike
 } from "pwn/lib/Chainlink.sol";
+import {
+    UniswapV3,
+    INonfungiblePositionManager
+} from "pwn/lib/UniswapV3.sol";
 import { PWNStableAPRInterestModule } from "pwn/loan/module/interest/PWNStableAPRInterestModule.sol";
 import { PWNDurationDefaultModule } from "pwn/loan/module/default/PWNDurationDefaultModule.sol";
-import { PWNBaseProposal, Terms } from "pwn/proposal/type/PWNBaseProposal.sol";
+import { PWNBaseProposal, Terms } from "pwn/proposal/PWNBaseProposal.sol";
 
 
 /**
- * @title PWN Elastic Chainlink Proposal
- * @notice Contract for creating and accepting elastic loan proposals using Chainlink oracles.
- * Proposals are elastic, which means that they are not tied to a specific collateral or credit amount.
- * The amount of collateral and credit is specified during the proposal acceptance.
+ * @title PWN Uniswap V3 LP Individual Proposal
+ * @notice Proposal contract for an individual Uniswap V3 LP.
+ * Proposal uses Chainlink price feeds to get LP token value in credit token.
  */
-contract PWNElasticChainlinkProposal is PWNBaseProposal {
+contract PWNUniswapV3LPIndividualProposal is PWNBaseProposal {
+    using MultiToken for address;
     using Math for uint256;
+    using UniswapV3 for UniswapV3.Config;
     using Chainlink for Chainlink.Config;
 
     string public constant VERSION = "1.5";
 
     /** @notice Maximum number of intermediary denominations for price conversion.*/
     uint256 public constant MAX_INTERMEDIARY_DENOMINATIONS = 4;
-    /** @notice Loan to value decimals. It is used to calculate collateral amount from credit amount.*/
-    uint256 public constant LOAN_TO_VALUE_DECIMALS = 1e4;
-
-    /** @dev EIP-712 proposal type hash.*/
-    bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
-        "Proposal(uint8 collateralCategory,address collateralAddress,uint256 collateralId,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 interestAPR,uint256 duration,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 nonceSpace,uint256 nonce,uint256 expiration,address proposer,bytes32 proposerSpecHash,bool isProposerLender,address loanContract)"
-    );
+    /** @notice Loan to value decimals.*/
+    uint256 public constant LOAN_TO_VALUE_DECIMALS = 4;
 
     /** @notice Stable interest module used in the proposal.*/
     PWNStableAPRInterestModule public immutable interestModule;
     /** @notice Duration based default module used in the proposal.*/
     PWNDurationDefaultModule public immutable defaultModule;
+    /** @notice Uniswap V3 factory contract.*/
+    address public immutable uniswapV3Factory;
+    /** @notice Uniswap V3 NFT position manager contract.*/
+    INonfungiblePositionManager public immutable uniswapNFTPositionManager;
     /** @notice Chainlink feed registry contract.*/
     IChainlinkFeedRegistryLike public immutable chainlinkFeedRegistry;
     /** @notice Chainlink feed for L2 Sequencer uptime. Must be address(0) for L1s.*/
@@ -48,11 +52,15 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
     /** @notice WETH address. ETH price feed is used for WETH price.*/
     address public immutable WETH;
 
+    /** @dev EIP-712 proposal type hash.*/
+    bytes32 public constant PROPOSAL_TYPEHASH = keccak256(
+        "Proposal(uint256 collateralId,bool token0Denominator,address creditAddress,address[] feedIntermediaryDenominations,bool[] feedInvertFlags,uint256 loanToValue,uint256 interestAPR,uint256 duration,uint256 minCreditAmount,uint256 availableCreditLimit,bytes32 utilizedCreditId,uint256 nonceSpace,uint256 nonce,uint256 expiration,address proposer,bytes32 proposerSpecHash,bool isProposerLender,address loanContract)"
+    );
+
     /**
-     * @notice Construct defining an elastic chainlink proposal.
-     * @param collateralCategory Category of an asset used as a collateral (0 == ERC20, 1 == ERC721, 2 == ERC1155).
-     * @param collateralAddress Address of an asset used as a collateral.
-     * @param collateralId Token id of an asset used as a collateral, in case of ERC20 should be 0.
+     * @notice Construct defining a Uniswap LP proposal.
+     * @param collateralId Uniswap LP token ID.
+     * @param token0Denominator Flag indicating if token0 should be used as LPs first value denominator.
      * @param creditAddress Address of an asset which is lended to a borrower.
      * @param feedIntermediaryDenominations List of intermediary price feeds that will be fetched to get to the collateral asset denominator.
      * @param feedInvertFlags List of flags indicating if price feeds exist only for inverted base and quote assets.
@@ -72,9 +80,8 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
      */
     struct Proposal {
         // Collateral
-        MultiToken.Category collateralCategory;
-        address collateralAddress;
         uint256 collateralId;
+        bool token0Denominator;
         // Credit
         address creditAddress;
         address[] feedIntermediaryDenominations;
@@ -82,7 +89,7 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
         uint256 loanToValue;
         // Interest
         uint256 interestAPR;
-        // Default
+        // Defualt
         uint256 duration;
         // Proposal validity
         uint256 minCreditAmount;
@@ -90,20 +97,12 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
         bytes32 utilizedCreditId;
         uint256 nonceSpace;
         uint256 nonce;
-        uint256 expiration;
+        uint40 expiration;
         // General proposal
         address proposer;
         bytes32 proposerSpecHash;
         bool isProposerLender;
         address loanContract;
-    }
-
-    /**
-     * @notice Construct defining values provided by an acceptor.
-     * @param creditAmount Amount of credit to be borrowed.
-     */
-    struct AcceptorValues {
-        uint256 creditAmount;
     }
 
     /** @notice Emitted when a proposal is made via an on-chain transaction.*/
@@ -122,17 +121,20 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
         address _utilizedCredit,
         address _interestModule,
         address _defaultModule,
+        address _uniswapV3Factory,
+        address _uniswapNFTPositionManager,
         address _chainlinkFeedRegistry,
         address _chainlinkL2SequencerUptimeFeed,
         address _weth
-    ) PWNBaseProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanElasticChainlinkProposal", VERSION) {
+    ) PWNBaseProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanUniswapV3LPIndividualProposal", VERSION) {
         interestModule = PWNStableAPRInterestModule(_interestModule);
         defaultModule = PWNDurationDefaultModule(_defaultModule);
+        uniswapV3Factory = _uniswapV3Factory;
+        uniswapNFTPositionManager = INonfungiblePositionManager(_uniswapNFTPositionManager);
         chainlinkFeedRegistry = IChainlinkFeedRegistryLike(_chainlinkFeedRegistry);
         chainlinkL2SequencerUptimeFeed = IChainlinkAggregatorLike(_chainlinkL2SequencerUptimeFeed);
         WETH = _weth;
     }
-
 
     /**
      * @notice Get an proposal hash according to EIP-712
@@ -158,51 +160,55 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
     /**
      * @notice Encode proposal data.
      * @param proposal Proposal struct to be encoded.
-     * @param acceptorValues Acceptor values struct to be encoded.
      * @return Encoded proposal data.
      */
-    function encodeProposalData(
-        Proposal memory proposal,
-        AcceptorValues memory acceptorValues
-    ) external pure returns (bytes memory) {
-        return abi.encode(proposal, acceptorValues);
+    function encodeProposalData(Proposal memory proposal) external pure returns (bytes memory) {
+        return abi.encode(proposal);
     }
 
     /**
      * @notice Decode proposal data.
      * @param proposalData Encoded proposal data.
      * @return Decoded proposal struct.
-     * @return Decoded acceptor values struct.
      */
-    function decodeProposalData(bytes memory proposalData) public pure returns (Proposal memory, AcceptorValues memory) {
-        return abi.decode(proposalData, (Proposal, AcceptorValues));
+    function decodeProposalData(bytes memory proposalData) public pure returns (Proposal memory) {
+        return abi.decode(proposalData, (Proposal));
     }
 
     /**
-     * @notice Compute collateral amount from credit amount, LTV, and Chainlink price feeds.
-     * @param creditAddress Address of credit token.
-     * @param creditAmount Amount of credit.
-     * @param collateralAddress Address of collateral token.
-     * @param feedIntermediaryDenominations List of intermediary price feeds that will be fetched to get to the collateral asset denominator.
+     * @notice Get credit amount for a given LP token and loan to value.
+     * @param creditAddress Credit token address.
+     * @param collateralId LP token ID.
+     * @param token0Denominator Flag indicating if token0 should be used as LP value denominator.
+     * @param feedIntermediaryDenominations List of intermediary price assets that will be used to fetch prices to get to the correct asset denominator.
      * @param feedInvertFlags List of flags indicating if price feeds exist only for inverted base and quote assets.
      * @param loanToValue Loan to value ratio with 4 decimals. E.g., 6231 == 0.6231 == 62.31%.
-     * @return Amount of collateral.
+     * @return Amount of credit.
      */
-    function getCollateralAmount(
+    function getCreditAmount(
         address creditAddress,
-        uint256 creditAmount,
-        address collateralAddress,
+        uint256 collateralId,
+        bool token0Denominator,
         address[] memory feedIntermediaryDenominations,
         bool[] memory feedInvertFlags,
         uint256 loanToValue
     ) public view returns (uint256) {
-        return chainlink().convertDenomination({
-            amount: creditAmount,
-            oldDenomination: creditAddress,
-            newDenomination: collateralAddress,
-            feedIntermediaryDenominations: feedIntermediaryDenominations,
-            feedInvertFlags: feedInvertFlags
-        }).mulDiv(10 ** LOAN_TO_VALUE_DECIMALS, loanToValue);
+        (uint256 lpValue, address denominator) = uniswap().getLPValue({
+            tokenId: collateralId,
+            token0Denominator: token0Denominator
+        });
+
+        if (creditAddress != denominator) {
+            lpValue = chainlink().convertDenomination({
+                amount: lpValue,
+                oldDenomination: denominator,
+                newDenomination: creditAddress,
+                feedIntermediaryDenominations: feedIntermediaryDenominations,
+                feedInvertFlags: feedInvertFlags
+            });
+        }
+
+        return lpValue.mulDiv(loanToValue, 10 ** LOAN_TO_VALUE_DECIMALS);
     }
 
     function acceptProposal(
@@ -212,7 +218,7 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
         bytes calldata signature
     ) override external returns (Terms memory loanTerms) {
         // Decode proposal data
-        (Proposal memory proposal, AcceptorValues memory acceptorValues) = decodeProposalData(proposalData);
+        (Proposal memory proposal) = decodeProposalData(proposalData);
 
         // Make proposal hash
         bytes32 proposalHash = _getProposalHash(PROPOSAL_TYPEHASH, _erc712EncodeProposal(proposal));
@@ -222,9 +228,18 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
             revert MinCreditAmountNotSet();
         }
 
+        uint256 creditAmount = getCreditAmount(
+            proposal.creditAddress,
+            proposal.collateralId,
+            proposal.token0Denominator,
+            proposal.feedIntermediaryDenominations,
+            proposal.feedInvertFlags,
+            proposal.loanToValue
+        );
+
         // Check sufficient credit amount
-        if (acceptorValues.creditAmount < proposal.minCreditAmount) {
-            revert InsufficientCreditAmount({ current: acceptorValues.creditAmount, limit: proposal.minCreditAmount });
+        if (creditAmount < proposal.minCreditAmount) {
+            revert InsufficientCreditAmount({ current: creditAmount, limit: proposal.minCreditAmount });
         }
 
         // Check if proposal is valid
@@ -232,7 +247,7 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
             CheckInputs({
                 proposalHash: proposalHash,
                 acceptor: acceptor,
-                creditAmount: acceptorValues.creditAmount,
+                creditAmount: creditAmount,
                 availableCreditLimit: proposal.availableCreditLimit,
                 utilizedCreditId: proposal.utilizedCreditId,
                 nonceSpace: proposal.nonceSpace,
@@ -251,21 +266,9 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
             lender: proposal.isProposerLender ? proposal.proposer : acceptor,
             borrower: proposal.isProposerLender ? acceptor : proposal.proposer,
             proposerSpecHash: proposal.proposerSpecHash,
-            collateral: MultiToken.Asset({
-                category: proposal.collateralCategory,
-                assetAddress: proposal.collateralAddress,
-                id: proposal.collateralId,
-                amount: getCollateralAmount(
-                    proposal.creditAddress,
-                    acceptorValues.creditAmount,
-                    proposal.collateralAddress,
-                    proposal.feedIntermediaryDenominations,
-                    proposal.feedInvertFlags,
-                    proposal.loanToValue
-                )
-            }),
+            collateral: address(uniswapNFTPositionManager).ERC721(proposal.collateralId),
             creditAddress: proposal.creditAddress,
-            principal: acceptorValues.creditAmount,
+            principal: creditAmount,
             interestModule: address(interestModule),
             interestModuleProposerData: abi.encode(PWNStableAPRInterestModule.ProposerData(proposal.interestAPR)),
             defaultModule: address(defaultModule),
@@ -275,14 +278,10 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
         });
     }
 
-    /**
-     * @notice Proposal struct that can be encoded for EIP-712.
-     * @dev Is typecasting dynamic values to bytes32 to allow EIP-712 encoding.
-     */
+    /** @notice Proposal struct that is typecasting dynamic values to bytes32 to enable easy EIP-712 encoding.*/
     struct ERC712Proposal {
-        uint8 collateralCategory;
-        address collateralAddress;
         uint256 collateralId;
+        bool token0Denominator;
         address creditAddress;
         bytes32 feedIntermediaryDenominationsHash;
         bytes32 feedInvertFlagsHash;
@@ -301,16 +300,10 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
         address loanContract;
     }
 
-    /**
-     * @notice Encode proposal data for EIP-712.
-     * @param proposal Proposal struct to be encoded.
-     * @return Encoded proposal data.
-     */
     function _erc712EncodeProposal(Proposal memory proposal) internal pure returns (bytes memory) {
         ERC712Proposal memory erc712Proposal = ERC712Proposal({
-            collateralCategory: uint8(proposal.collateralCategory),
-            collateralAddress: proposal.collateralAddress,
             collateralId: proposal.collateralId,
+            token0Denominator: proposal.token0Denominator,
             creditAddress: proposal.creditAddress,
             feedIntermediaryDenominationsHash: keccak256(abi.encodePacked(proposal.feedIntermediaryDenominations)),
             feedInvertFlagsHash: keccak256(abi.encodePacked(proposal.feedInvertFlags)),
@@ -329,6 +322,13 @@ contract PWNElasticChainlinkProposal is PWNBaseProposal {
             loanContract: proposal.loanContract
         });
         return abi.encode(erc712Proposal);
+    }
+
+    function uniswap() internal view returns (UniswapV3.Config memory) {
+        return UniswapV3.Config({
+            positionManager: uniswapNFTPositionManager,
+            factory: uniswapV3Factory
+        });
     }
 
     function chainlink() internal view returns (Chainlink.Config memory) {

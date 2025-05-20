@@ -16,7 +16,7 @@ import {
 } from "pwn/lib/UniswapV3.sol";
 import { PWNStableAPRInterestModule } from "pwn/loan/module/interest/PWNStableAPRInterestModule.sol";
 import { PWNDurationDefaultModule } from "pwn/loan/module/default/PWNDurationDefaultModule.sol";
-import { PWNBaseProposal, Terms } from "pwn/proposal/type/PWNBaseProposal.sol";
+import { PWNBaseProposal, Terms } from "pwn/proposal/PWNBaseProposal.sol";
 
 
 /**

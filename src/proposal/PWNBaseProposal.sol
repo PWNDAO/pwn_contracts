@@ -8,8 +8,8 @@ import { PWNHub } from "pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import { PWNSignatureChecker } from "pwn/lib/PWNSignatureChecker.sol";
 import { LoanTerms as Terms } from "pwn/loan/LoanTerms.sol";
-import { PWNRevokedNonce } from "pwn/proposal/nonce/PWNRevokedNonce.sol";
-import { PWNUtilizedCredit } from "pwn/proposal/utilized-credit/PWNUtilizedCredit.sol";
+import { PWNRevokedNonce } from "pwn/proposal/auxiliary/PWNRevokedNonce.sol";
+import { PWNUtilizedCredit } from "pwn/proposal/auxiliary/PWNUtilizedCredit.sol";
 import { IPWNProposal } from "pwn/proposal/IPWNProposal.sol";
 
 

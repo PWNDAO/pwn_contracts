@@ -3,7 +3,6 @@ pragma solidity 0.8.16;
 
 import { PWNHub } from "pwn/hub/PWNHub.sol";
 import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
-import { AddressMissingHubTag } from "pwn/PWNErrors.sol";
 
 
 /**
@@ -18,7 +17,7 @@ contract PWNRevokedNonce {
 
     /**
      * @notice Access tag that needs to be assigned to a caller in PWN Hub
-     *         to call functions that revoke nonces on behalf of an owner.
+     * to call functions that revoke nonces on behalf of an owner.
      */
     bytes32 public immutable accessTag;
 
@@ -28,15 +27,10 @@ contract PWNRevokedNonce {
      */
     PWNHub public immutable hub;
 
-    /**
-     * @notice Mapping of revoked nonces by an address. Every address has its own nonce space.
-     *         (owner => nonce space => nonce => is revoked)
-     */
+    /** @notice Mapping of revoked nonces by an address. Every address has its own nonce space.*/
     mapping (address => mapping (uint256 => mapping (uint256 => bool))) private _revokedNonce;
 
-    /**
-     * @notice Mapping of current nonce space for an address.
-     */
+    /** @notice Mapping of current nonce space for an address.*/
     mapping (address => uint256) private _nonceSpace;
 
 
@@ -44,14 +38,9 @@ contract PWNRevokedNonce {
     |*  # EVENTS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Emitted when a nonce is revoked.
-     */
+    /** @notice Emitted when a nonce is revoked.*/
     event NonceRevoked(address indexed owner, uint256 indexed nonceSpace, uint256 indexed nonce);
-
-    /**
-     * @notice Emitted when a nonce is revoked.
-     */
+    /** @notice Emitted when a nonce is revoked.*/
     event NonceSpaceRevoked(address indexed owner, uint256 indexed nonceSpace);
 
 
@@ -59,9 +48,9 @@ contract PWNRevokedNonce {
     |*  # ERRORS DEFINITIONS                                    *|
     |*----------------------------------------------------------*/
 
-    /**
-     * @notice Thrown when trying to revoke a nonce that is already revoked.
-     */
+    /** @notice Thrown when an address is missing a PWN Hub tag.*/
+    error AddressMissingHubTag(address addr, bytes32 tag);
+    /** @notice Thrown when trying to revoke a nonce that is already revoked.*/
     error NonceAlreadyRevoked(address addr, uint256 nonceSpace, uint256 nonce);
 
     /**
