@@ -43,17 +43,6 @@ contract PWNLinearDebtLimitDefaultModule is IPWNDefaultModule {
     }
 
 
-    function isDefaulted(address loanContract, uint256 loanId) external view returns (bool) {
-        DefaultData memory defaultData = _defaultData[loanContract][loanId];
-
-        if (block.timestamp >= defaultData.defaultTimestamp) return true;
-
-        uint256 debtLimit = uint256(defaultData.debtLimitTangent).mulDiv(
-            uint256(defaultData.defaultTimestamp) - block.timestamp, 10 ** DEBT_LIMIT_TANGENT_DECIMALS
-        );
-        return PWNLoan(loanContract).getLOANDebt(loanId) >= debtLimit;
-    }
-
     function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
         if (!hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN)) revert CallerNotActiveLoan();
 
@@ -68,6 +57,17 @@ contract PWNLinearDebtLimitDefaultModule is IPWNDefaultModule {
         });
 
         return DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE;
+    }
+
+    function isDefaulted(address loanContract, uint256 loanId) external view returns (bool) {
+        DefaultData memory defaultData = _defaultData[loanContract][loanId];
+
+        if (block.timestamp >= defaultData.defaultTimestamp) return true;
+
+        uint256 debtLimit = uint256(defaultData.debtLimitTangent).mulDiv(
+            uint256(defaultData.defaultTimestamp) - block.timestamp, 10 ** DEBT_LIMIT_TANGENT_DECIMALS
+        );
+        return PWNLoan(loanContract).getLOANDebt(loanId) >= debtLimit;
     }
 
 }

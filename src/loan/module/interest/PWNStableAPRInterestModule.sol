@@ -33,15 +33,6 @@ contract PWNStableAPRInterestModule is IPWNInterestModule {
     }
 
 
-    function interest(address loanContract, uint256 loanId) external view returns (uint256) {
-        PWNLoan.LOAN memory loan = PWNLoan(loanContract).getLOAN(loanId);
-
-        if (block.timestamp < loan.lastUpdateTimestamp) revert InvalidLastUpdateTimestamp();
-
-        uint256 accruingMinutes = (block.timestamp - loan.lastUpdateTimestamp) / 1 minutes;
-        return loan.principal.mulDiv(apr[loanContract][loanId] * accruingMinutes, 10 ** APR_DECIMALS);
-    }
-
     function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
         if (!hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN)) revert CallerNotActiveLoan();
 
@@ -49,6 +40,15 @@ contract PWNStableAPRInterestModule is IPWNInterestModule {
         apr[msg.sender][loanId] = proposer.apr;
 
         return INTEREST_MODULE_INIT_HOOK_RETURN_VALUE;
+    }
+
+    function interest(address loanContract, uint256 loanId) external view returns (uint256) {
+        PWNLoan.LOAN memory loan = PWNLoan(loanContract).getLOAN(loanId);
+
+        if (block.timestamp < loan.lastUpdateTimestamp) revert InvalidLastUpdateTimestamp();
+
+        uint256 accruingMinutes = (block.timestamp - loan.lastUpdateTimestamp) / 1 minutes;
+        return loan.principal.mulDiv(apr[loanContract][loanId] * accruingMinutes, 10 ** APR_DECIMALS);
     }
 
 }

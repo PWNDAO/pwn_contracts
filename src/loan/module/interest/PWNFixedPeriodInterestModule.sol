@@ -43,6 +43,22 @@ contract PWNFixedPeriodInterestModule is IPWNInterestModule {
     }
 
 
+    function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
+        if (!hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN)) revert CallerNotActiveLoan();
+
+        ProposerData memory proposer = abi.decode(proposerData, (ProposerData));
+        PWNLoan.LOAN memory loan = PWNLoan(msg.sender).getLOAN(loanId);
+
+        _interestData[msg.sender][loanId] = InterestData({
+            fixedInterest: _interestForDuration(loan.principal, proposer.apr, proposer.fixationPeriod).toUint152(),
+            loanStart: block.timestamp.toUint40(),
+            fixationDeadline: (block.timestamp + proposer.fixationPeriod).toUint40(),
+            apr: proposer.apr.toUint24()
+        });
+
+        return INTEREST_MODULE_INIT_HOOK_RETURN_VALUE;
+    }
+
     function interest(address loanContract, uint256 loanId) external view returns (uint256) {
         PWNLoan.LOAN memory loan = PWNLoan(loanContract).getLOAN(loanId);
         InterestData storage interestData = _interestData[loanContract][loanId];
@@ -68,22 +84,6 @@ contract PWNFixedPeriodInterestModule is IPWNInterestModule {
         }
 
         return interest_;
-    }
-
-    function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
-        if (!hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN)) revert CallerNotActiveLoan();
-
-        ProposerData memory proposer = abi.decode(proposerData, (ProposerData));
-        PWNLoan.LOAN memory loan = PWNLoan(msg.sender).getLOAN(loanId);
-
-        _interestData[msg.sender][loanId] = InterestData({
-            fixedInterest: _interestForDuration(loan.principal, proposer.apr, proposer.fixationPeriod).toUint152(),
-            loanStart: block.timestamp.toUint40(),
-            fixationDeadline: (block.timestamp + proposer.fixationPeriod).toUint40(),
-            apr: proposer.apr.toUint24()
-        });
-
-        return INTEREST_MODULE_INIT_HOOK_RETURN_VALUE;
     }
 
 

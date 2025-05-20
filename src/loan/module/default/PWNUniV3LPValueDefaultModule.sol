@@ -76,6 +76,23 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
     }
 
 
+    function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
+        if (!hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN)) revert CallerNotActiveLoan();
+
+        ProposerData memory proposer = abi.decode(proposerData, (ProposerData));
+
+        if (proposer.lltv > 10 ** LLTV_DECIMALS) revert InvalidLLTV();
+
+        _defaultData[msg.sender][loanId] = DefaultData({
+            lltv: proposer.lltv.toUint248(),
+            token0Denominator: proposer.token0Denominator,
+            feedIntermediaryDenominations: proposer.feedIntermediaryDenominations,
+            feedInvertFlags: proposer.feedInvertFlags
+        });
+
+        return DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE;
+    }
+
     function isDefaulted(address loanContract, uint256 loanId) public view returns (bool) {
         DefaultData storage defaultData = _defaultData[loanContract][loanId];
         PWNLoan.LOAN memory loan = PWNLoan(loanContract).getLOAN(loanId);
@@ -92,23 +109,6 @@ contract PWNUniV3LPValueDefaultModule is IPWNDefaultModule {
         }
 
         return PWNLoan(loanContract).getLOANDebt(loanId) >= lpValue.mulDiv(defaultData.lltv, 10 ** LLTV_DECIMALS);
-    }
-
-    function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
-        if (!hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN)) revert CallerNotActiveLoan();
-
-        ProposerData memory proposer = abi.decode(proposerData, (ProposerData));
-
-        if (proposer.lltv > 10 ** LLTV_DECIMALS) revert InvalidLLTV();
-
-        _defaultData[msg.sender][loanId] = DefaultData({
-            lltv: proposer.lltv.toUint248(),
-            token0Denominator: proposer.token0Denominator,
-            feedIntermediaryDenominations: proposer.feedIntermediaryDenominations,
-            feedInvertFlags: proposer.feedInvertFlags
-        });
-
-        return DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE;
     }
 
 }

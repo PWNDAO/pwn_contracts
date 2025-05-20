@@ -30,10 +30,6 @@ contract PWNDateDefaultModule is IPWNDefaultModule {
     }
 
 
-    function isDefaulted(address loanContract, uint256 loanId) external view returns (bool) {
-        return defaultTimestamp[loanContract][loanId] >= block.timestamp;
-    }
-
     function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
         if (!hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN)) revert CallerNotActiveLoan();
 
@@ -44,6 +40,10 @@ contract PWNDateDefaultModule is IPWNDefaultModule {
         defaultTimestamp[msg.sender][loanId] = proposer.defaultTimestamp;
 
         return DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE;
+    }
+
+    function isDefaulted(address loanContract, uint256 loanId) external view returns (bool) {
+        return defaultTimestamp[loanContract][loanId] >= block.timestamp;
     }
 
 }

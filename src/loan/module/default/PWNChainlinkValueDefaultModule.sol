@@ -63,21 +63,6 @@ contract PWNChainlinkValueDefaultModule is IPWNDefaultModule {
     }
 
 
-    function isDefaulted(address loanContract, uint256 loanId) public view returns (bool) {
-        DefaultData storage defaultData = _defaultData[loanContract][loanId];
-        PWNLoan.LOAN memory loan = PWNLoan(loanContract).getLOAN(loanId);
-
-        uint256 value = _chainlink.convertDenomination({
-            amount: loan.collateral.amount,
-            oldDenomination: loan.collateral.assetAddress,
-            newDenomination: loan.creditAddress,
-            feedIntermediaryDenominations: defaultData.feedIntermediaryDenominations,
-            feedInvertFlags: defaultData.feedInvertFlags
-        });
-
-        return PWNLoan(loanContract).getLOANDebt(loanId) >= value.mulDiv(defaultData.lltv, 10 ** LLTV_DECIMALS);
-    }
-
     function onLoanCreated(uint256 loanId, bytes calldata proposerData) external returns (bytes32) {
         if (!hub.hasTag(msg.sender, PWNHubTags.ACTIVE_LOAN)) revert CallerNotActiveLoan();
 
@@ -92,6 +77,21 @@ contract PWNChainlinkValueDefaultModule is IPWNDefaultModule {
         });
 
         return DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE;
+    }
+
+    function isDefaulted(address loanContract, uint256 loanId) public view returns (bool) {
+        DefaultData storage defaultData = _defaultData[loanContract][loanId];
+        PWNLoan.LOAN memory loan = PWNLoan(loanContract).getLOAN(loanId);
+
+        uint256 value = _chainlink.convertDenomination({
+            amount: loan.collateral.amount,
+            oldDenomination: loan.collateral.assetAddress,
+            newDenomination: loan.creditAddress,
+            feedIntermediaryDenominations: defaultData.feedIntermediaryDenominations,
+            feedInvertFlags: defaultData.feedInvertFlags
+        });
+
+        return PWNLoan(loanContract).getLOANDebt(loanId) >= value.mulDiv(defaultData.lltv, 10 ** LLTV_DECIMALS);
     }
 
 }
