@@ -8,7 +8,7 @@ import {
     IChainlinkFeedRegistryLike,
     IChainlinkAggregatorLike,
     Math
-} from "pwn/loan/lib/Chainlink.sol";
+} from "pwn/lib/Chainlink.sol";
 
 import { ChainlinkHarness } from "test/harness/ChainlinkHarness.sol";
 import { ChainlinkDenominations } from "test/helper/ChainlinkDenominations.sol";

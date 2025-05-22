@@ -3,10 +3,7 @@ pragma solidity 0.8.16;
 
 import { Test } from "forge-std/Test.sol";
 
-import {
-    PWNUtilizedCredit,
-    AddressMissingHubTag
-} from "pwn/utilized-credit/PWNUtilizedCredit.sol";
+import { PWNUtilizedCredit } from "pwn/proposal/auxiliary/PWNUtilizedCredit.sol";
 
 
 abstract contract PWNUtilizedCreditTest is Test {
@@ -66,7 +63,9 @@ contract PWNUtilizedCredit_UtilizeCredit_Test is PWNUtilizedCreditTest {
     function test_shouldFail_whenCallerWithoutHubTag() external {
         address caller = makeAddr("prank");
 
-        vm.expectRevert(abi.encodeWithSelector(AddressMissingHubTag.selector, caller, utilizedCredit.accessTag()));
+        vm.expectRevert(abi.encodeWithSelector(
+            PWNUtilizedCredit.AddressMissingHubTag.selector, caller, utilizedCredit.accessTag())
+        );
         vm.prank(caller);
         utilizedCredit.utilizeCredit(owner, id, amount, limit);
     }

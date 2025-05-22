@@ -5,7 +5,7 @@ import { Test } from "forge-std/Test.sol";
 
 import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import { IERC5646 } from "pwn/interfaces/IERC5646.sol";
-import { PWNLOAN } from "pwn/loan/token/PWNLOAN.sol";
+import { PWNLOAN } from "pwn/token/PWNLOAN.sol";
 
 
 abstract contract PWNLOANTest is Test {
