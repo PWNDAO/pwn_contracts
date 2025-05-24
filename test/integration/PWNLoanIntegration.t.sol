@@ -2,6 +2,15 @@
 pragma solidity 0.8.16;
 
 import {
+    PWNDirectLenderRepaymentHook,
+    IPWNLenderRepaymentHook
+} from "pwn/loan/hook/lender/repayment/PWNDirectLenderRepaymentHook.sol";
+import {
+    PWNRefinanceBorrowerCreateHook,
+    IPWNBorrowerCreateHook
+} from "pwn/loan/hook/borrower/create/PWNRefinanceBorrowerCreateHook.sol";
+
+import {
     MultiToken,
     MultiTokenCategoryRegistry,
     BaseIntegrationTest,
@@ -400,6 +409,82 @@ contract PWNLoanIntegrationTest is BaseIntegrationTest {
         assertEq(t1155.balanceOf(lender, 42), 10e18);
         assertEq(t1155.balanceOf(borrower, 42), 0);
         assertEq(t1155.balanceOf(address(__d.loan), 42), 0);
+    }
+
+    // Hooks
+
+    function test_shouldRepayDirectlyToLender() external {
+        PWNDirectLenderRepaymentHook lenderRepaymentHook = new PWNDirectLenderRepaymentHook();
+
+        vm.prank(__e.protocolTimelock);
+        __d.hub.setTag(address(lenderRepaymentHook), PWNHubTags.HOOK, true);
+
+        lenderSpec.repaymentHook = IPWNLenderRepaymentHook(lenderRepaymentHook);
+
+        simpleProposal.proposerSpecHash = __d.loan.getLenderSpecHash(lenderSpec);
+
+        // Create LOAN
+        uint256 loanId = _createERC1155Loan();
+
+        // Repay loan
+        _repayLoan(loanId);
+
+        // Assert final state
+        assertEq(credit.balanceOf(lender), 100e18);
+        assertEq(credit.balanceOf(borrower), 0);
+        assertEq(credit.balanceOf(address(__d.loan)), 0);
+
+        assertEq(t1155.balanceOf(lender, 42), 0);
+        assertEq(t1155.balanceOf(borrower, 42), 10e18);
+        assertEq(t1155.balanceOf(address(__d.loan), 42), 0);
+    }
+
+    function test_shouldRefinanceLoan() external {
+        PWNRefinanceBorrowerCreateHook borrowerCreateHook = new PWNRefinanceBorrowerCreateHook(__d.hub);
+
+        vm.prank(__e.protocolTimelock);
+        __d.hub.setTag(address(borrowerCreateHook), PWNHubTags.HOOK, true);
+
+        // Create LOAN
+        simpleProposal.creditAmount = 20e18;
+        uint256 loanId = _createERC1155Loan();
+
+        borrowerSpec.createHook = IPWNBorrowerCreateHook(borrowerCreateHook);
+        borrowerSpec.createHookData = abi.encode(
+            PWNRefinanceBorrowerCreateHook.HookData({
+                refinanceLoanId: loanId
+            })
+        );
+
+        assertEq(credit.balanceOf(lender), 80e18);
+        assertEq(credit.balanceOf(borrower), 20e18);
+        assertEq(credit.balanceOf(address(__d.loan)), 0);
+
+        assertEq(t1155.balanceOf(lender, 42), 0);
+        assertEq(t1155.balanceOf(borrower, 42), 0);
+        assertEq(t1155.balanceOf(address(__d.loan), 42), 10e18);
+
+        // Refinance loan
+        vm.prank(borrower);
+        credit.approve(address(borrowerCreateHook), 50e18);
+
+        simpleProposal.creditAmount = 80e18;
+        simpleProposal.nonce = 1;
+        uint256 refinancedLoanId = _createERC1155Loan({ mint: false });
+
+        // Assert final state
+        assertEq(__d.loanToken.ownerOf(refinancedLoanId), lender);
+
+        assertEq(credit.balanceOf(lender), 0);
+        assertEq(credit.balanceOf(borrower), 80e18);
+        assertEq(credit.balanceOf(address(__d.loan)), 20e18);
+
+        assertEq(t1155.balanceOf(lender, 42), 0);
+        assertEq(t1155.balanceOf(borrower, 42), 0);
+        assertEq(t1155.balanceOf(address(__d.loan), 42), 10e18);
+
+        assertEq(__d.loan.getLOANStatus(loanId), 3);
+        assertEq(__d.loan.getLOANStatus(refinancedLoanId), 2);
     }
 
 }

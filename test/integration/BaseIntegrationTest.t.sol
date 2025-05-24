@@ -85,7 +85,7 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         t20.approve(address(__d.loan), 10e18);
 
         // Create LOAN
-        return _createLoan(simpleProposal, "");
+        return _createLoan(true, simpleProposal, "");
     }
 
     function _createERC721Loan() internal returns (uint256) {
@@ -103,14 +103,18 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         t721.approve(address(__d.loan), 42);
 
         // Create LOAN
-        return _createLoan(simpleProposal, "");
+        return _createLoan(true, simpleProposal, "");
     }
 
     function _createERC1155Loan() internal returns (uint256) {
-        return _createERC1155LoanFailing("");
+        return _createERC1155LoanFailing(true, "");
     }
 
-    function _createERC1155LoanFailing(bytes memory revertData) internal returns (uint256) {
+    function _createERC1155Loan(bool mint) internal returns (uint256) {
+        return _createERC1155LoanFailing(mint, "");
+    }
+
+    function _createERC1155LoanFailing(bool mint, bytes memory revertData) internal returns (uint256) {
         // Offer
         simpleProposal.collateralCategory = MultiToken.Category.ERC1155;
         simpleProposal.collateralAddress = address(t1155);
@@ -118,29 +122,32 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         simpleProposal.collateralAmount = 10e18;
 
         // Mint initial state
-        t1155.mint(borrower, 42, 10e18);
+        if (mint) t1155.mint(borrower, 42, 10e18);
 
         // Approve collateral
         vm.prank(borrower);
         t1155.setApprovalForAll(address(__d.loan), true);
 
         // Create LOAN
-        return _createLoan(simpleProposal, revertData);
+        return _createLoan(mint, simpleProposal, revertData);
     }
 
     function _createLoan(
+        bool mint,
         PWNSimpleProposal.Proposal memory _proposal,
         bytes memory revertData
     ) private returns (uint256) {
         // Sign proposal
         bytes memory signature = _sign(lenderPK, __d.simpleProposal.getProposalHash(_proposal));
 
-        // Mint initial state
-        credit.mint(lender, 100e18);
+        if (mint) {
+            // Mint initial state
+            credit.mint(lender, 100e18);
 
-        // Approve loan asset
-        vm.prank(lender);
-        credit.approve(address(__d.loan), 100e18);
+            // Approve loan asset
+            vm.prank(lender);
+            credit.approve(address(__d.loan), 100e18);
+        }
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
         bytes memory proposalData = __d.simpleProposal.encodeProposalData(_proposal);

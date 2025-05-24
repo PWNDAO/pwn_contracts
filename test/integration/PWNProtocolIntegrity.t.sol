@@ -30,7 +30,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
         // Try to create LOAN
         _createERC1155LoanFailing(
-            abi.encodeWithSelector(PWNLoan.AddressMissingHubTag.selector, address(__d.loan), PWNHubTags.ACTIVE_LOAN)
+            true, abi.encodeWithSelector(PWNLoan.AddressMissingHubTag.selector, address(__d.loan), PWNHubTags.ACTIVE_LOAN)
         );
     }
 
@@ -118,7 +118,7 @@ contract PWNProtocolIntegrityTest is BaseIntegrationTest {
 
         // Try to create LOAN
         _createERC1155LoanFailing(
-            abi.encodeWithSelector(
+            true, abi.encodeWithSelector(
                 PWNLoan.AddressMissingHubTag.selector, address(__d.simpleProposal), PWNHubTags.LOAN_PROPOSAL
             )
         );
