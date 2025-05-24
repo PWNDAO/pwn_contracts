@@ -12,14 +12,16 @@ import {
     IPWNDeployer,
     PWNHub,
     PWNHubTags,
-    PWNSimpleLoan,
-    PWNSimpleLoanDutchAuctionProposal,
-    PWNSimpleLoanElasticChainlinkProposal,
-    PWNSimpleLoanElasticProposal,
-    PWNSimpleLoanListProposal,
-    PWNSimpleLoanSimpleProposal,
-    PWNSimpleLoanUniswapV3LPIndividualProposal,
-    PWNSimpleLoanUniswapV3LPSetProposal,
+    PWNLoan,
+    PWNDurationDefaultModule,
+    PWNStableInterestModule,
+    PWNDutchAuctionProposal,
+    PWNElasticChainlinkProposal,
+    PWNElasticProposal,
+    PWNListProposal,
+    PWNSimpleProposal,
+    PWNUniswapV3LPIndividualProposal,
+    PWNUniswapV3LPSetProposal,
     PWNLOAN,
     PWNRevokedNonce,
     PWNUtilizedCredit,
@@ -82,64 +84,80 @@ abstract contract DeploymentTest is Deployments, Test {
         __d.revokedNonce = new PWNRevokedNonce(address(__d.hub), PWNHubTags.NONCE_MANAGER);
         __d.utilizedCredit = new PWNUtilizedCredit(address(__d.hub), PWNHubTags.LOAN_PROPOSAL);
 
+        __d.stableInterestModule = new PWNStableInterestModule(__d.hub);
+        __d.durationDefaultModule = new PWNDurationDefaultModule(__d.hub);
+
         __d.loanToken = new PWNLOAN(address(__d.hub));
-        __d.simpleLoan = new PWNSimpleLoan(
+        __d.loan = new PWNLoan(
             address(__d.hub),
             address(__d.loanToken),
             address(__d.config),
-            address(__d.revokedNonce),
             address(__d.categoryRegistry)
         );
 
-        __d.simpleLoanSimpleProposal = new PWNSimpleLoanSimpleProposal(
-            address(__d.hub),
-            address(__d.revokedNonce),
-            address(__d.config),
-            address(__d.utilizedCredit)
-        );
-        __d.simpleLoanListProposal = new PWNSimpleLoanListProposal(
-            address(__d.hub),
-            address(__d.revokedNonce),
-            address(__d.config),
-            address(__d.utilizedCredit)
-        );
-        __d.simpleLoanElasticChainlinkProposal = new PWNSimpleLoanElasticChainlinkProposal(
+        __d.simpleProposal = new PWNSimpleProposal(
             address(__d.hub),
             address(__d.revokedNonce),
             address(__d.config),
             address(__d.utilizedCredit),
+            address(__d.stableInterestModule),
+            address(__d.durationDefaultModule)
+        );
+        __d.listProposal = new PWNListProposal(
+            address(__d.hub),
+            address(__d.revokedNonce),
+            address(__d.config),
+            address(__d.utilizedCredit),
+            address(__d.stableInterestModule),
+            address(__d.durationDefaultModule)
+        );
+        __d.elasticChainlinkProposal = new PWNElasticChainlinkProposal(
+            address(__d.hub),
+            address(__d.revokedNonce),
+            address(__d.config),
+            address(__d.utilizedCredit),
+            address(__d.stableInterestModule),
+            address(__d.durationDefaultModule),
             address(__d.chainlinkFeedRegistry),
             __e.chainlinkL2SequencerUptimeFeed,
             __e.weth
         );
-        __d.simpleLoanElasticProposal = new PWNSimpleLoanElasticProposal(
-            address(__d.hub),
-            address(__d.revokedNonce),
-            address(__d.config),
-            address(__d.utilizedCredit)
-        );
-        __d.simpleLoanDutchAuctionProposal = new PWNSimpleLoanDutchAuctionProposal(
-            address(__d.hub),
-            address(__d.revokedNonce),
-            address(__d.config),
-            address(__d.utilizedCredit)
-        );
-        __d.simpleLoanUniswapV3LPIndividualProposal = new PWNSimpleLoanUniswapV3LPIndividualProposal(
+        __d.elasticProposal = new PWNElasticProposal(
             address(__d.hub),
             address(__d.revokedNonce),
             address(__d.config),
             address(__d.utilizedCredit),
+            address(__d.stableInterestModule),
+            address(__d.durationDefaultModule)
+        );
+        __d.dutchAuctionProposal = new PWNDutchAuctionProposal(
+            address(__d.hub),
+            address(__d.revokedNonce),
+            address(__d.config),
+            address(__d.utilizedCredit),
+            address(__d.stableInterestModule),
+            address(__d.durationDefaultModule)
+        );
+        __d.uniswapV3LPIndividualProposal = new PWNUniswapV3LPIndividualProposal(
+            address(__d.hub),
+            address(__d.revokedNonce),
+            address(__d.config),
+            address(__d.utilizedCredit),
+            address(__d.stableInterestModule),
+            address(__d.durationDefaultModule),
             __e.uniswapV3Factory,
             __e.uniswapV3NFTPositionManager,
             address(__d.chainlinkFeedRegistry),
             __e.chainlinkL2SequencerUptimeFeed,
             __e.weth
         );
-        __d.simpleLoanUniswapV3LPSetProposal = new PWNSimpleLoanUniswapV3LPSetProposal(
+        __d.uniswapV3LPSetProposal = new PWNUniswapV3LPSetProposal(
             address(__d.hub),
             address(__d.revokedNonce),
             address(__d.config),
             address(__d.utilizedCredit),
+            address(__d.stableInterestModule),
+            address(__d.durationDefaultModule),
             __e.uniswapV3Factory,
             __e.uniswapV3NFTPositionManager,
             address(__d.chainlinkFeedRegistry),
@@ -148,32 +166,35 @@ abstract contract DeploymentTest is Deployments, Test {
         );
 
         // Set hub tags
-        address[] memory addrs = new address[](16);
-        addrs[0] = address(__d.simpleLoan);
-        addrs[1] = address(__d.simpleLoan);
+        address[] memory addrs = new address[](18);
+        addrs[0] = address(__d.loan);
+        addrs[1] = address(__d.loan);
 
-        addrs[2] = address(__d.simpleLoanSimpleProposal);
-        addrs[3] = address(__d.simpleLoanSimpleProposal);
+        addrs[2] = address(__d.simpleProposal);
+        addrs[3] = address(__d.simpleProposal);
 
-        addrs[4] = address(__d.simpleLoanListProposal);
-        addrs[5] = address(__d.simpleLoanListProposal);
+        addrs[4] = address(__d.listProposal);
+        addrs[5] = address(__d.listProposal);
 
-        addrs[6] = address(__d.simpleLoanElasticChainlinkProposal);
-        addrs[7] = address(__d.simpleLoanElasticChainlinkProposal);
+        addrs[6] = address(__d.elasticChainlinkProposal);
+        addrs[7] = address(__d.elasticChainlinkProposal);
 
-        addrs[8] = address(__d.simpleLoanElasticProposal);
-        addrs[9] = address(__d.simpleLoanElasticProposal);
+        addrs[8] = address(__d.elasticProposal);
+        addrs[9] = address(__d.elasticProposal);
 
-        addrs[10] = address(__d.simpleLoanDutchAuctionProposal);
-        addrs[11] = address(__d.simpleLoanDutchAuctionProposal);
+        addrs[10] = address(__d.dutchAuctionProposal);
+        addrs[11] = address(__d.dutchAuctionProposal);
 
-        addrs[12] = address(__d.simpleLoanUniswapV3LPIndividualProposal);
-        addrs[13] = address(__d.simpleLoanUniswapV3LPIndividualProposal);
+        addrs[12] = address(__d.uniswapV3LPIndividualProposal);
+        addrs[13] = address(__d.uniswapV3LPIndividualProposal);
 
-        addrs[14] = address(__d.simpleLoanUniswapV3LPSetProposal);
-        addrs[15] = address(__d.simpleLoanUniswapV3LPSetProposal);
+        addrs[14] = address(__d.uniswapV3LPSetProposal);
+        addrs[15] = address(__d.uniswapV3LPSetProposal);
 
-        bytes32[] memory tags = new bytes32[](16);
+        addrs[16] = address(__d.stableInterestModule);
+        addrs[17] = address(__d.durationDefaultModule);
+
+        bytes32[] memory tags = new bytes32[](18);
         tags[0] = PWNHubTags.ACTIVE_LOAN;
         tags[1] = PWNHubTags.NONCE_MANAGER;
 
@@ -197,6 +218,9 @@ abstract contract DeploymentTest is Deployments, Test {
 
         tags[14] = PWNHubTags.LOAN_PROPOSAL;
         tags[15] = PWNHubTags.NONCE_MANAGER;
+
+        tags[16] = PWNHubTags.MODULE;
+        tags[17] = PWNHubTags.MODULE;
 
         vm.prank(__e.protocolTimelock);
         __d.hub.setTags(addrs, tags, true);

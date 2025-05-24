@@ -14,6 +14,8 @@ import { PWNHubTags } from "pwn/hub/PWNHubTags.sol";
 import { IChainlinkFeedRegistryLike } from "pwn/interfaces/IChainlinkFeedRegistryLike.sol";
 import { IPWNDeployer } from "pwn/interfaces/IPWNDeployer.sol";
 import { PWNLoan } from "pwn/loan/PWNLoan.sol";
+import { PWNDurationDefaultModule } from "pwn/loan/module/default/PWNDurationDefaultModule.sol";
+import { PWNStableInterestModule } from "pwn/loan/module/interest/PWNStableInterestModule.sol";
 import { PWNSimpleProposal } from "pwn/proposal/PWNSimpleProposal.sol";
 import { PWNListProposal } from "pwn/proposal/PWNListProposal.sol";
 import { PWNElasticChainlinkProposal } from "pwn/proposal/PWNElasticChainlinkProposal.sol";
@@ -43,6 +45,7 @@ abstract contract Deployments is CommonBase {
         IChainlinkFeedRegistryLike chainlinkFeedRegistry;
         PWNConfig config;
         PWNConfig configSingleton;
+        PWNDurationDefaultModule durationDefaultModule;
         PWNDutchAuctionProposal dutchAuctionProposal;
         PWNElasticChainlinkProposal elasticChainlinkProposal;
         PWNElasticProposal elasticProposal;
@@ -52,6 +55,7 @@ abstract contract Deployments is CommonBase {
         PWNLOAN loanToken;
         PWNRevokedNonce revokedNonce;
         PWNSimpleProposal simpleProposal;
+        PWNStableInterestModule stableInterestModule;
         PWNUniswapV3LPIndividualProposal uniswapV3LPIndividualProposal;
         PWNUniswapV3LPSetProposal uniswapV3LPSetProposal;
         PWNUtilizedCredit utilizedCredit;
