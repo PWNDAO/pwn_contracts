@@ -15,7 +15,7 @@ import { IPWNBorrowerCreateHook, BORROWER_CREATE_HOOK_RETURN_VALUE } from "pwn/l
 import { IPWNBorrowerCollateralRepaymentHook, BORROWER_REPAYMENT_HOOK_RETURN_VALUE } from "pwn/loan/hook/borrower/repayment/IPWNBorrowerCollateralRepaymentHook.sol";
 import { IPWNLenderCreateHook, LENDER_CREATE_HOOK_RETURN_VALUE } from "pwn/loan/hook/lender/create/IPWNLenderCreateHook.sol";
 import { IPWNLenderRepaymentHook, LENDER_REPAYMENT_HOOK_RETURN_VALUE } from "pwn/loan/hook/lender/repayment/IPWNLenderRepaymentHook.sol";
-import { IPWNModuleInitializationHook } from "pwn/loan/hook/module/IPWNModuleInitializationHook.sol";
+import { IPWNModuleInitializationHook } from "pwn/loan/module/IPWNModuleInitializationHook.sol";
 import { PWNFeeCalculator } from "pwn/lib/PWNFeeCalculator.sol";
 import { IPWNDefaultModule, DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE } from "pwn/loan/module/default/IPWNDefaultModule.sol";
 import { IPWNInterestModule, INTEREST_MODULE_INIT_HOOK_RETURN_VALUE } from "pwn/loan/module/interest/IPWNInterestModule.sol";
