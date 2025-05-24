@@ -12,11 +12,11 @@ import {
     IPWNDeployer,
     PWNHub,
     PWNHubTags,
-    PWNSimpleLoan,
-    PWNSimpleLoanDutchAuctionProposal,
-    PWNSimpleLoanElasticProposal,
-    PWNSimpleLoanListProposal,
-    PWNSimpleLoanSimpleProposal,
+    PWNLoan,
+    PWNDutchAuctionProposal,
+    PWNElasticProposal,
+    PWNListProposal,
+    PWNSimpleProposal,
     PWNLOAN,
     PWNRevokedNonce,
     PWNUtilizedCredit,
@@ -31,8 +31,10 @@ abstract contract BaseIntegrationTest is DeploymentTest {
     T1155 t1155;
     T20 credit;
 
-    PWNSimpleLoanSimpleProposal.Proposal simpleProposal;
-    PWNSimpleLoanSimpleProposal.ProposalValues simpleProposalValues;
+    PWNSimpleProposal.Proposal simpleProposal;
+
+    PWNLoan.LenderSpec lenderSpec;
+    PWNLoan.BorrowerSpec borrowerSpec;
 
     function setUp() public override {
         super.setUp();
@@ -44,34 +46,24 @@ abstract contract BaseIntegrationTest is DeploymentTest {
         credit = new T20();
 
         // Default offer
-        simpleProposal = PWNSimpleLoanSimpleProposal.Proposal({
+        simpleProposal = PWNSimpleProposal.Proposal({
             collateralCategory: MultiToken.Category.ERC1155,
             collateralAddress: address(t1155),
             collateralId: 42,
             collateralAmount: 10e18,
-            checkCollateralStateFingerprint: false,
-            collateralStateFingerprint: bytes32(0),
             creditAddress: address(credit),
             creditAmount: 100e18,
+            interestAPR: 0,
+            duration: 1 days,
             availableCreditLimit: 0,
             utilizedCreditId: 0,
-            fixedInterestAmount: 10e18,
-            accruingInterestAPR: 0,
-            durationOrDate: 1 days,
-            expiration: uint40(block.timestamp + 7 days),
-            acceptorController: address(0),
-            acceptorControllerData: "",
-            proposer: lender,
-            proposerSpecHash: __d.simpleLoan.getLenderSpecHash(PWNSimpleLoan.LenderSpec(lender)),
-            isOffer: true,
-            refinancingLoanId: 0,
             nonceSpace: 0,
             nonce: 0,
-            loanContract: address(__d.simpleLoan)
-        });
-
-        simpleProposalValues = PWNSimpleLoanSimpleProposal.ProposalValues({
-            acceptorControllerData: ""
+            expiration: uint40(block.timestamp + 7 days),
+            proposer: lender,
+            proposerSpecHash: bytes32(0),
+            isProposerLender: true,
+            loanContract: address(__d.loan)
         });
     }
 
@@ -90,10 +82,10 @@ abstract contract BaseIntegrationTest is DeploymentTest {
 
         // Approve collateral
         vm.prank(borrower);
-        t20.approve(address(__d.simpleLoan), 10e18);
+        t20.approve(address(__d.loan), 10e18);
 
         // Create LOAN
-        return _createLoan(simpleProposal, simpleProposalValues, "");
+        return _createLoan(simpleProposal, "");
     }
 
     function _createERC721Loan() internal returns (uint256) {
@@ -108,10 +100,10 @@ abstract contract BaseIntegrationTest is DeploymentTest {
 
         // Approve collateral
         vm.prank(borrower);
-        t721.approve(address(__d.simpleLoan), 42);
+        t721.approve(address(__d.loan), 42);
 
         // Create LOAN
-        return _createLoan(simpleProposal, simpleProposalValues, "");
+        return _createLoan(simpleProposal, "");
     }
 
     function _createERC1155Loan() internal returns (uint256) {
@@ -130,50 +122,43 @@ abstract contract BaseIntegrationTest is DeploymentTest {
 
         // Approve collateral
         vm.prank(borrower);
-        t1155.setApprovalForAll(address(__d.simpleLoan), true);
+        t1155.setApprovalForAll(address(__d.loan), true);
 
         // Create LOAN
-        return _createLoan(simpleProposal, simpleProposalValues, revertData);
+        return _createLoan(simpleProposal, revertData);
     }
 
     function _createLoan(
-        PWNSimpleLoanSimpleProposal.Proposal memory _proposal,
-        PWNSimpleLoanSimpleProposal.ProposalValues memory _proposalValues,
+        PWNSimpleProposal.Proposal memory _proposal,
         bytes memory revertData
     ) private returns (uint256) {
         // Sign proposal
-        bytes memory signature = _sign(lenderPK, __d.simpleLoanSimpleProposal.getProposalHash(_proposal));
+        bytes memory signature = _sign(lenderPK, __d.simpleProposal.getProposalHash(_proposal));
 
         // Mint initial state
         credit.mint(lender, 100e18);
 
         // Approve loan asset
         vm.prank(lender);
-        credit.approve(address(__d.simpleLoan), 100e18);
+        credit.approve(address(__d.loan), 100e18);
 
         // Proposal data (need for vm.prank to work properly when creating a loan)
-        bytes memory proposalData = __d.simpleLoanSimpleProposal.encodeProposalData(_proposal, _proposalValues);
+        bytes memory proposalData = __d.simpleProposal.encodeProposalData(_proposal);
 
         // Create LOAN
         if (keccak256(revertData) != keccak256("")) {
             vm.expectRevert(revertData);
         }
         vm.prank(borrower);
-        return __d.simpleLoan.createLOAN({
-            proposalSpec: PWNSimpleLoan.ProposalSpec({
-                proposalContract: address(__d.simpleLoanSimpleProposal),
+        return __d.loan.create({
+            proposalSpec: PWNLoan.ProposalSpec({
+                proposalContract: address(__d.simpleProposal),
                 proposalData: proposalData,
                 proposalInclusionProof: new bytes32[](0),
                 signature: signature
             }),
-            lenderSpec: PWNSimpleLoan.LenderSpec({
-                sourceOfFunds: lender
-            }),
-            callerSpec: PWNSimpleLoan.CallerSpec({
-                refinancingLoanId: 0,
-                revokeNonce: false,
-                nonce: 0
-            }),
+            lenderSpec: lenderSpec,
+            borrowerSpec: borrowerSpec,
             extra: ""
         });
     }
@@ -185,19 +170,16 @@ abstract contract BaseIntegrationTest is DeploymentTest {
     }
 
     function _repayLoanFailing(uint256 loanId, bytes memory revertData) internal {
-        // Get the yield by farming 100000% APR food tokens
-        credit.mint(borrower, 10e18);
-
         // Approve loan asset
         vm.prank(borrower);
-        credit.approve(address(__d.simpleLoan), 110e18);
+        credit.approve(address(__d.loan), 100e18);
 
         // Repay loan
         if (keccak256(revertData) != keccak256("")) {
             vm.expectRevert(revertData);
         }
         vm.prank(borrower);
-        __d.simpleLoan.repayLOAN(loanId);
+        __d.loan.repay(loanId, 0);
     }
 
 }
