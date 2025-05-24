@@ -9,7 +9,7 @@ import { IPWNInterestModule, INTEREST_MODULE_INIT_HOOK_RETURN_VALUE } from "pwn/
 import { PWNLoan } from "pwn/loan/PWNLoan.sol";
 
 
-contract PWNStableAPRInterestModule is IPWNInterestModule {
+contract PWNStableInterestModule is IPWNInterestModule {
     using Math for uint256;
 
     uint256 public constant APR_DECIMALS = 4; // 6231 = 0.6231 = 62.31%

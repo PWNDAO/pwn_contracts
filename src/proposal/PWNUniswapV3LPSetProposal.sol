@@ -14,7 +14,7 @@ import {
     UniswapV3,
     INonfungiblePositionManager
 } from "pwn/lib/UniswapV3.sol";
-import { PWNStableAPRInterestModule } from "pwn/loan/module/interest/PWNStableAPRInterestModule.sol";
+import { PWNStableInterestModule } from "pwn/loan/module/interest/PWNStableInterestModule.sol";
 import { PWNDurationDefaultModule } from "pwn/loan/module/default/PWNDurationDefaultModule.sol";
 import { PWNBaseProposal, Terms } from "pwn/proposal/PWNBaseProposal.sol";
 
@@ -38,7 +38,7 @@ contract PWNUniswapV3LPSetProposal is PWNBaseProposal {
     uint256 public constant LOAN_TO_VALUE_DECIMALS = 4;
 
     /** @notice Stable interest module used in the proposal.*/
-    PWNStableAPRInterestModule public immutable interestModule;
+    PWNStableInterestModule public immutable interestModule;
     /** @notice Duration based default module used in the proposal.*/
     PWNDurationDefaultModule public immutable defaultModule;
     /** @notice Uniswap V3 factory contract.*/
@@ -141,7 +141,7 @@ contract PWNUniswapV3LPSetProposal is PWNBaseProposal {
         address _chainlinkL2SequencerUptimeFeed,
         address _weth
     ) PWNBaseProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanUniswapV3LPSetProposal", VERSION) {
-        interestModule = PWNStableAPRInterestModule(_interestModule);
+        interestModule = PWNStableInterestModule(_interestModule);
         defaultModule = PWNDurationDefaultModule(_defaultModule);
         uniswapV3Factory = _uniswapV3Factory;
         uniswapNFTPositionManager = INonfungiblePositionManager(_uniswapNFTPositionManager);
@@ -290,7 +290,7 @@ contract PWNUniswapV3LPSetProposal is PWNBaseProposal {
             creditAddress: proposal.creditAddress,
             principal: creditAmount,
             interestModule: address(interestModule),
-            interestModuleProposerData: abi.encode(PWNStableAPRInterestModule.ProposerData(proposal.interestAPR)),
+            interestModuleProposerData: abi.encode(PWNStableInterestModule.ProposerData(proposal.interestAPR)),
             defaultModule: address(defaultModule),
             defaultModuleProposerData: abi.encode(PWNDurationDefaultModule.ProposerData(proposal.duration)),
             liquidationModule: address(0),

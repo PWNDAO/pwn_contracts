@@ -5,7 +5,7 @@ import { MultiToken } from "MultiToken/MultiToken.sol";
 
 import { Math } from "openzeppelin/utils/math/Math.sol";
 
-import { PWNStableAPRInterestModule } from "pwn/loan/module/interest/PWNStableAPRInterestModule.sol";
+import { PWNStableInterestModule } from "pwn/loan/module/interest/PWNStableInterestModule.sol";
 import { PWNDurationDefaultModule } from "pwn/loan/module/default/PWNDurationDefaultModule.sol";
 import { PWNBaseProposal, Terms } from "pwn/proposal/PWNBaseProposal.sol";
 
@@ -24,7 +24,7 @@ contract PWNDutchAuctionProposal is PWNBaseProposal {
     );
 
     /** @notice Stable interest module used in the proposal.*/
-    PWNStableAPRInterestModule public immutable interestModule;
+    PWNStableInterestModule public immutable interestModule;
     /** @notice Duration based default module used in the proposal.*/
     PWNDurationDefaultModule public immutable defaultModule;
 
@@ -114,7 +114,7 @@ contract PWNDutchAuctionProposal is PWNBaseProposal {
         address _interestModule,
         address _defaultModule
     ) PWNBaseProposal(_hub, _revokedNonce, _config, _utilizedCredit, "PWNSimpleLoanDutchAuctionProposal", VERSION) {
-        interestModule = PWNStableAPRInterestModule(_interestModule);
+        interestModule = PWNStableInterestModule(_interestModule);
         defaultModule = PWNDurationDefaultModule(_defaultModule);
     }
 
@@ -294,7 +294,7 @@ contract PWNDutchAuctionProposal is PWNBaseProposal {
             creditAddress: proposal.creditAddress,
             principal: creditAmount,
             interestModule: address(interestModule),
-            interestModuleProposerData: abi.encode(PWNStableAPRInterestModule.ProposerData(proposal.interestAPR)),
+            interestModuleProposerData: abi.encode(PWNStableInterestModule.ProposerData(proposal.interestAPR)),
             defaultModule: address(defaultModule),
             defaultModuleProposerData: abi.encode(PWNDurationDefaultModule.ProposerData(proposal.duration)),
             liquidationModule: address(0),
