@@ -20,7 +20,7 @@ import {
 } from "test/integration/BaseIntegrationTest.t.sol";
 
 
-contract PWNSimpleLoanIntegrationTest is BaseIntegrationTest {
+contract PWNLoanIntegrationTest is BaseIntegrationTest {
 
     // Create Loan
 
