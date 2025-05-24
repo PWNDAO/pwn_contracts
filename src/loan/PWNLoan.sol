@@ -296,7 +296,10 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         // Initialize modules
         _initializeModule(loanTerms.interestModule, INTEREST_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.interestModuleProposerData);
         _initializeModule(loanTerms.defaultModule, DEFAULT_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.defaultModuleProposerData);
-        _initializeModule(loanTerms.liquidationModule, LIQUIDATION_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.liquidationModuleProposerData);
+        if (loanTerms.liquidationModule != address(0)) {
+            // Initialize liquidation module only if it is set
+            _initializeModule(loanTerms.liquidationModule, LIQUIDATION_MODULE_INIT_HOOK_RETURN_VALUE, loanId, loanTerms.liquidationModuleProposerData);
+        }
 
         // Check that loan is not defaulted on creation
         if (IPWNDefaultModule(loanTerms.defaultModule).isDefaulted(address(this), loanId)) {
