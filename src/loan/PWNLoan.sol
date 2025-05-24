@@ -39,8 +39,8 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
     |*  # VARIABLES & CONSTANTS DEFINITIONS                     *|
     |*----------------------------------------------------------*/
 
-    bytes32 internal constant EMPTY_LENDER_SPEC_HASH = keccak256(abi.encode(LenderSpec(IPWNLenderCreateHook(address(0)), "", IPWNLenderRepaymentHook(address(0)), "")));
-    bytes32 internal constant EMPTY_BORROWER_SPEC_HASH = keccak256(abi.encode(BorrowerSpec(IPWNBorrowerCreateHook(address(0)), "")));
+    bytes32 internal constant _EMPTY_LENDER_SPEC_HASH = keccak256(abi.encode(LenderSpec(IPWNLenderCreateHook(address(0)), "", IPWNLenderRepaymentHook(address(0)), "")));
+    bytes32 internal constant _EMPTY_BORROWER_SPEC_HASH = keccak256(abi.encode(BorrowerSpec(IPWNBorrowerCreateHook(address(0)), "")));
 
     PWNHub public immutable hub;
     PWNLOAN public immutable loanToken;
@@ -61,6 +61,13 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bytes signature;
     }
 
+    /**
+     * @notice Struct defining a lender specification.
+     * @param createHook Lender create hook that is called during loan creation.
+     * @param createHookData Data passed to the lender create hook.
+     * @param repaymentHook Lender repayment hook that is called during loan repayment.
+     * @param repaymentHookData Data passed to the lender repayment hook.
+     */
     struct LenderSpec {
         IPWNLenderCreateHook createHook;
         bytes createHookData;
@@ -68,6 +75,11 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
         bytes repaymentHookData;
     }
 
+    /**
+     * @notice Struct defining a borrower specification.
+     * @param createHook Borrower create hook that is called during loan creation.
+     * @param createHookData Data passed to the borrower create hook.
+     */
     struct BorrowerSpec {
         IPWNBorrowerCreateHook createHook;
         bytes createHookData;
@@ -692,7 +704,7 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     function getLenderSpecHash(LenderSpec calldata lenderSpec) public pure returns (bytes32) {
         bytes32 specHash = keccak256(abi.encode(lenderSpec));
-        return specHash == EMPTY_LENDER_SPEC_HASH ? bytes32(0) : specHash;
+        return specHash == _EMPTY_LENDER_SPEC_HASH ? bytes32(0) : specHash;
     }
 
     /**
@@ -703,7 +715,7 @@ contract PWNLoan is PWNVault, IERC5646, IPWNLoanMetadataProvider {
      */
     function getBorrowerSpecHash(BorrowerSpec calldata borrowerSpec) public pure returns (bytes32) {
         bytes32 specHash = keccak256(abi.encode(borrowerSpec));
-        return specHash == EMPTY_BORROWER_SPEC_HASH ? bytes32(0) : specHash;
+        return specHash == _EMPTY_BORROWER_SPEC_HASH ? bytes32(0) : specHash;
     }
 
 
