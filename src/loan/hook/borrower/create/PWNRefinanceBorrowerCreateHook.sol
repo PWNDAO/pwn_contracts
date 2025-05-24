@@ -54,7 +54,9 @@ contract PWNRefinanceBorrowerCreateHook is IPWNBorrowerCreateHook {
         if (loan.creditAddress != creditAddress) revert CreditMismatch();
         if (!loan.collateral.isSameAs(collateral)) revert CollateralMismatch();
 
-        creditAddress.ERC20(debt).transferAssetFrom(borrower, address(this));
+        MultiToken.Asset memory credit = creditAddress.ERC20(debt);
+        credit.transferAssetFrom(borrower, address(this));
+        credit.approveAsset(msg.sender);
         PWNLoan(msg.sender).repay(data.refinanceLoanId, 0);
 
         return BORROWER_CREATE_HOOK_RETURN_VALUE;
