@@ -41,7 +41,7 @@ contract PWNDurationDefaultModule is IPWNDefaultModule {
     }
 
     function isDefaulted(address loanContract, uint256 loanId) external view returns (bool) {
-        return defaultTimestamp[loanContract][loanId] >= block.timestamp;
+        return defaultTimestamp[loanContract][loanId] <= block.timestamp;
     }
 
 }
