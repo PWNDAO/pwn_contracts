@@ -2,7 +2,18 @@
 
 Welcome to the "Build Your Own Mortgage Protocol" workshop! This guide will help you get started, set up your environment, and understand the goals and context of the workshop.
 
-## 1. Cloning or Forking the Repository
+## 1. Required Tools
+
+Before starting, make sure you have the following tools installed:
+
+- [**Foundry**](https://book.getfoundry.sh/getting-started/installation): Ethereum development toolkit for smart contract development and testing.
+- [**VSCode**](https://code.visualstudio.com/): Recommended code editor for Solidity and smart contract development.
+- [**Git**](https://git-scm.com/): For version control and collaboration.
+
+Optional but helpful:
+- [Solidity VSCode extension](https://marketplace.visualstudio.com/items?itemName=JuanBlanco.solidity)
+
+## 2. Cloning or Forking the Repository
 
 To participate, you need your own copy of this repository. You can either **fork** it to your GitHub account or **clone** it directly:
 
@@ -21,16 +32,25 @@ git clone https://github.com/PWNDAO/pwn_protocol.git
 cd pwn_protocol
 ```
 
-## 2. Required Tools
+## 2.1 Switch to the Workshop Branch
 
-Before starting, make sure you have the following tools installed:
+After cloning or forking the repository, make sure to switch to the `eth-prg-workshop` branch to access the workshop materials:
 
-- [**Foundry**](https://book.getfoundry.sh/getting-started/installation): Ethereum development toolkit for smart contract development and testing.
-- [**VSCode**](https://code.visualstudio.com/): Recommended code editor for Solidity and smart contract development.
-- [**Git**](https://git-scm.com/): For version control and collaboration.
+```sh
+git checkout eth-prg-workshop
+```
 
-Optional but helpful:
-- [Solidity VSCode extension](https://marketplace.visualstudio.com/items?itemName=JuanBlanco.solidity)
+This branch contains the latest code and setup for the workshop exercises.
+
+## 2.2 Install Dependencies and Build the Project
+
+After cloning or forking the repository, you need to install all necessary dependencies and build the project. Run the following command in your project directory:
+
+```sh
+forge build
+```
+
+This will fetch all required dependencies and compile the smart contracts, ensuring your environment is ready for development and testing.
 
 ## 3. Workshop Goal
 
@@ -86,16 +106,33 @@ To ensure security, the contract implements a reentrancy guard scoped to each lo
 
 By extending or composing with `PWNLoan`, developers can build advanced lending products, such as the custom mortgage flow in this workshop.
 
+## 4.1 Role of Interest, Default, and Liquidation Modules
+
+PWN protocol achieves flexibility and composability through the use of modules for interest, default, and liquidation logic. These modules are set individually for each loan at the time of loan creation, but once set, they are immutable for the lifetime of the loan.
+
+- **Interest Module:**
+  - Defines how interest accrues on the loan (e.g., fixed APR, variable rate).
+  - Exposes a view function `interest` that the `PWNLoan` contract calls to calculate the current interest due.
+
+- **Default Module:**
+  - Determines the conditions under which a loan is considered in default (e.g., time-based limits, total debt limit).
+  - Exposes a view function `isDefaulted` that the `PWNLoan` contract calls to check the loan's default status.
+
+- **Liquidation Module:**
+  - Specifies the process for handling collateral if a loan defaults (e.g., auction, direct transfer).
+  - Does not expose a view function, as liquidation is not triggered by the `PWNLoan` contract when default conditions are met.
+
+Each module implements an `onLoanCreated` hook to configure itself with the loan's parameters at the time of loan origination. This allows the module to initialize any necessary state or settings specific to the loan.
+
+These modules allow each loan to have custom logic while maintaining security and predictability, as their configuration cannot be changed after loan origination. The `PWNLoan` contract interacts with these modules via their view functions and hooks to enforce the loan's terms throughout its lifecycle.
+
 ## 5. Workshop Project Goal: Building a Custom Mortgage Flow
 
 In this workshop, your main objective is to implement a custom mortgage protocol that enables a user to "buy" a House token using borrowed funds. You will achieve this by building and integrating the following components:
 
-- **Borrower Create Hook:**
-  - Uses the borrower's funds to purchase a House token (NFT).
-  - Transfers the House token to the borrower's address upon successful purchase.
-
-- **Lender Repayment Hook:**
-  - Ensures that any repayment made by the borrower is automatically transferred to the lender's address.
+- **Proposal Type for Custom Mortgage Loans:**
+  - Design and implement a new proposal type that enables users to create and test loans with the custom mortgage flow.
+  - Use this proposal type to simulate and validate the end-to-end mortgage process during the workshop.
 
 - **Custom Interest Module:**
   - Recommended: Implement a fixed APR (Annual Percentage Rate) for the first 5 years, followed by a gradual interest rate increase.
@@ -104,9 +141,12 @@ In this workshop, your main objective is to implement a custom mortgage protocol
 - **Custom Default Module:**
   - Recommended: Implement a module where the debt limit decreases over time, reducing the borrower's available credit and managing risk.
 
-- **Proposal Type for Custom Mortgage Loans:**
-  - Design and implement a new proposal type that enables users to create and test loans with the custom mortgage flow described above.
-  - Use this proposal type to simulate and validate the end-to-end mortgage process during the workshop.
+- **Borrower Create Hook:**
+  - Uses the borrower's funds to purchase a House token (NFT).
+  - Transfers the House token to the borrower's address upon successful purchase.
+
+- **Lender Repayment Hook:**
+  - Ensures that any repayment made by the borrower is automatically transferred to the lender's address.
 
 - **Optional Extensions:**
   - Build a refinancing Borrower Create Hook to allow for loan refinancing.
